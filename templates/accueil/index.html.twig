@@ -1,20 +1,114 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Conception du site de la MABB{% endblock %}
+{% block title %}MABB – Amiens Métropole Basket Ball{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+<div class="min-vh-100 d-flex align-items-center"
+     style="">
 
-    page index en construction
-    <ul>
-        <li>Your controller at <code>/home/claveliito/mabb-site/src/Controller/AccueilController.php</code></li>
-        <li>Your template at <code>/home/claveliito/mabb-site/templates/accueil/index.html.twig</code></li>
-    </ul>
+  <div class="container">
+    <div class="row align-items-center g-5">
+
+      {# ===== BLOC IMAGE + TITRE (GAUCHE) ===== #}
+      <div class="col-lg-6 text-center">
+
+        <div class="bg-white p-3 rounded-4 shadow">
+          <img
+            src="/images/manar.jpg"
+            alt="MABB"
+            class="img-fluid rounded-4">
+        </div>
+
+        <h1 class="fw-bold text-white mt-4 mabb-title">
+          Amiens Métropole<br>Basket Ball
+        </h1>
+        <div class="mabb-desc mt-3">
+            <p class="text-white-50">
+                Club de basketball exclusivement féminin implanté sur le territoire d’Amiens Métropole. 
+                Il porte un projet sportif, éducatif et citoyen structuré de l’initiation à la performance. 
+                La MABB se distingue par ses résultats sportifs, la qualité de son encadrement et 
+                son engagement en faveur de l’égalité des chances.
+            </p>
+        
+            <p class="mb-0">
+                Le club mène toute l’année des actions d’intérêt général dans les établissements scolaires 
+                et des quartiers prioritaires, faisant du basketball un levier d’émancipation et de
+                rayonnement du sport féminin.
+            </p>
+        </div>
+
+
+      </div>
+
+      {# ===== BLOC BOUTONS RÉSEAUX (DROITE) ===== #}
+      <div class="col-lg-6">
+
+        <div class="d-grid gap-3">
+
+          <a href="https://www.facebook.com/mabb.fr/?locale=fr_FR"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+            Facebook
+          </a>
+
+          <a href="https://www.instagram.com/_m_a_b_b_/"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+            Instagram
+          </a>
+
+          <a href="https://www.tiktok.com/@m_a_b_b_"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+
+            TikTok
+          </a>
+
+          <a href="https://www.youtube.com/@mabbamiens/videos"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+            YouTube
+          </a>
+
+          <a href="https://x.com/_M_A_B_B_"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+            X
+          </a>
+
+          <a href="https://www.linkedin.com/in/m-a-b-b-amiens-501279297/"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+            LinkedIn
+          </a>
+
+          <a href="https://share.google/3vmUlWbysBuFLNAYs"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+
+            Google
+          </a>
+
+          <a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+
+            Scorenco
+          </a>
+
+
+          <a href="https://le-savoir-pour-tous.pass-education.fr/inscription?slug=mabb-amiens-metropole-basket-ball&token=b8db9981-d307-4e79-a539-ac30aafd2041"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+            Le savoir pour tous
+          </a>
+
+         <a href="mailto:contact@mabb.fr"
+             class="btn btn-lg rounded-pill fw-semibold text-white mabb-btn">
+            Email
+          </a>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
 </div>
+
 {% endblock %}
+
+
