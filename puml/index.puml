@@ -1,0 +1,15 @@
+@startuml
+class Client {
+	**id : int**
+	nom : string
+	prenom : string
+	adresse : string
+}
+
+
+
+hide methods
+
+hide circle
+
+@enduml
