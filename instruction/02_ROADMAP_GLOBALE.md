@@ -1,14 +1,28 @@
 # Roadmap globale — MABB / PIRB
 
+## Stack technique
+Symfony 7.4, PHP 8.2+, Doctrine ORM, MySQL 8, Twig + Symfony UX, API Platform, JWT.
+
 ## Vision
-V1 = socle stable utilisable en club réel
+V1 = socle stable utilisable en club reel
 V2 = enrichissement fonctionnel (com, ENT, gamification, notifications)
-V3 = extension stratégique (mobile, comité, SaaS)
+V3 = extension strategique (mobile, comite, SaaS)
 
 ## Modules (macro)
-- Core (auth, multi-tenant, rôles cumulables, voters)
-- Sport (saisons, équipes, joueurs, événements, présences, convocations)
+- Core (auth, multi-tenant, roles cumulables, voters)
+- Sport (saisons, equipes, joueurs, evenements, presences, convocations)
 - Stats (shot tracking, timeline, validation match, calculs auto)
-- PIRB (profil joueur, stats perso, shot chart, feedback anonyme, visibilité)
+- PIRB (profil joueur, stats perso, shot chart, feedback anonyme, visibilite)
 - Vitrine (CMS pages, articles, galerie, calendrier, contact, SEO)
 - System (logs, audit actions sensibles, RGPD de base)
+
+## Etat d'avancement V1
+
+| Phase | Module | Statut | Detail |
+|-------|--------|--------|--------|
+| Phase 1 (sem 1-4) | Core | EN COURS | Socle pose : arborescence modulaire, routage multi-host, firewalls, role_hierarchy (7 roles). Reste : entites User/Club, JWT, voters |
+| Phase 2 (sem 5-8) | Sport | A FAIRE | Saisons, equipes, joueurs, evenements, presences |
+| Phase 3 (sem 9-14) | Stats | A FAIRE | Saisie match, shot tracking, timeline, validation |
+| Phase 4 (sem 15-18) | PIRB | A FAIRE | Dashboard, shot chart, feedback anonyme |
+| Phase 5 (sem 19-22) | Vitrine | EN COURS | Pages statiques OK (8 pages), CMS back-office a faire |
+| Phase 6 (sem 23-26) | System | A FAIRE | Securite, tests, optimisation, documentation |

@@ -1,0 +1,13 @@
+# Routes manager — manager.mabb.fr
+manager_controllers:
+    resource:
+        path: ../../src/Controller/Manager/
+        namespace: App\Controller\Manager
+    type: attribute
+    host: '{subdomain}.{domain}'
+    defaults:
+        subdomain: manager
+        domain: mabb.fr
+    requirements:
+        subdomain: 'manager'
+        domain: 'mabb\.fr|localhost'

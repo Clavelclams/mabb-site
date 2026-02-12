@@ -2,7 +2,7 @@
 
 ## Objectif
 Assurer une documentation non redondante, maintenable et traçable.
-Le dossier /instruction/ est la source de vérité du projet.
+Le dossier /instruction/ est la source de vérité du projet. il y a également le dossier CDC dans instruction avec les deux cahier des charges en pdf pour plus de contexte au projet
 
 ## Règles
 1. Ne pas renommer / déplacer des fichiers sans le documenter dans 13_CLAUDE_LOG.md.

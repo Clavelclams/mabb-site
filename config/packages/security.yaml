@@ -6,32 +6,78 @@ security:
     # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
         users_in_memory: { memory: null }
+        # TODO: remplacer par un provider Doctrine quand l'entite User sera creee
+        # app_user_provider:
+        #     entity:
+        #         class: App\Entity\Core\User
+        #         property: email
 
     firewalls:
+        # --- Dev tools (toujours accessible) ---
         dev:
-            # Ensure dev tools and static assets are always allowed
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
+
+        # --- API (JWT stateless) ---
+        api:
+            pattern: ^/api
+            stateless: true
+            # TODO: activer quand LexikJWT sera installe
+            # jwt: ~
+            # provider: app_user_provider
+
+        # --- Vitrine (mabb.fr) — public, auth optionnelle pour le back-office CMS ---
+        vitrine:
+            host: '^(mabb\.fr|localhost)(:\d+)?$'
+            lazy: true
+            provider: users_in_memory
+
+        # --- Manager (manager.mabb.fr) — auth obligatoire ---
+        manager:
+            host: '^manager\.(mabb\.fr|localhost)(:\d+)?$'
+            lazy: true
+            provider: users_in_memory
+            # TODO: configurer form_login ou JWT quand l'auth sera en place
+
+        # --- PIRB (pirb.mabb.fr) — auth obligatoire ---
+        pirb:
+            host: '^pirb\.(mabb\.fr|localhost)(:\d+)?$'
+            lazy: true
+            provider: users_in_memory
+            # TODO: configurer form_login ou JWT quand l'auth sera en place
+
+        # --- Fallback ---
         main:
             lazy: true
             provider: users_in_memory
 
-            # Activate different ways to authenticate:
-            # https://symfony.com/doc/current/security.html#the-firewall
-
-            # https://symfony.com/doc/current/security/impersonating_user.html
-            # switch_user: true
+    # Hierarchie des roles (CDC)
+    role_hierarchy:
+        ROLE_SUPER_ADMIN: [ROLE_CLUB_ADMIN, ROLE_COACH, ROLE_STAFF]
+        ROLE_CLUB_ADMIN:  [ROLE_USER]
+        ROLE_COACH:       [ROLE_USER]
+        ROLE_STAFF:       [ROLE_USER]
+        ROLE_PLAYER:      [ROLE_USER]
+        ROLE_PARENT:      [ROLE_USER]
+        ROLE_BENEVOLE:    [ROLE_USER]
 
     # Note: Only the *first* matching rule is applied
     access_control:
+        # API : authentifie obligatoire
+        # - { path: ^/api, roles: ROLE_USER }
+
+        # Manager : authentifie obligatoire
+        # - { host: '^manager\.', roles: ROLE_USER }
+
+        # PIRB : authentifie obligatoire
+        # - { host: '^pirb\.', roles: ROLE_USER }
+
+        # Vitrine : public par defaut
         # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
 
 when@test:
     security:
         password_hashers:
-            # Password hashers are resource-intensive by design to ensure security.
-            # In tests, it's safe to reduce their cost to improve performance.
             Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
                 algorithm: auto
                 cost: 4 # Lowest possible value for bcrypt

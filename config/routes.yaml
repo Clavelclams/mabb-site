@@ -1,11 +1,26 @@
-# yaml-language-server: $schema=../vendor/symfony/routing/Loader/schema/routing.schema.json
+# Routes principales — monolithe multi-host MABB
+#
+# Chaque espace (vitrine, manager, pirb) a son propre fichier de routes
+# avec une contrainte de host pour isoler les espaces.
+#
+# En dev (localhost), seules les routes vitrine repondent par defaut.
+# Pour tester manager/pirb en local, ajouter dans le fichier hosts :
+#   127.0.0.1  manager.localhost  pirb.localhost
 
-# This file is the entry point to configure the routes of your app.
-# Methods with the #[Route] attribute are automatically imported.
-# See also https://symfony.com/doc/current/routing.html
+# Import des routes par espace
+vitrine:
+    resource: routes/vitrine.yaml
 
-# To list all registered routes, run the following command:
-#   bin/console debug:router
+manager:
+    resource: routes/manager.yaml
 
-controllers:
-    resource: routing.controllers
+pirb:
+    resource: routes/pirb.yaml
+
+# API (pas de contrainte host — securise par JWT)
+api_controllers:
+    resource:
+        path: ../src/Controller/Api/
+        namespace: App\Controller\Api
+    type: attribute
+    prefix: /api

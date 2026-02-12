@@ -1,0 +1,13 @@
+# Routes PIRB — pirb.mabb.fr
+pirb_controllers:
+    resource:
+        path: ../../src/Controller/Pirb/
+        namespace: App\Controller\Pirb
+    type: attribute
+    host: '{subdomain}.{domain}'
+    defaults:
+        subdomain: pirb
+        domain: mabb.fr
+    requirements:
+        subdomain: 'pirb'
+        domain: 'mabb\.fr|localhost'

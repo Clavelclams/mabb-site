@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(for dir in src/Controller/Manager src/Controller/Pirb src/Controller/Api src/Entity/Core src/Entity/Sport src/Entity/Vitrine src/Entity/Pirb src/Repository/Core src/Repository/Sport src/Repository/Vitrine src/Repository/Pirb src/Security/Voter src/Security/Tenant src/Service templates/manager templates/pirb)",
+      "Bash(do touch \"$dir/.gitkeep\")",
+      "Bash(done)",
+      "Bash(php bin/console:*)",
+      "Bash(composer install:*)",
+      "Bash(php -l:*)"
     ]
   }
 }
