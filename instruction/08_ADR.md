@@ -38,3 +38,13 @@ Chaque ADR suit le format : Date / Contexte / Options / Decision / Consequences.
 - Options : (A) SPA full JS (B) Twig + Symfony UX (Stimulus/Turbo) pour le web, API Platform pour le mobile (C) SSR Next.js
 - Decision : (B) Hybride. La V1 web utilise Twig + Stimulus/Turbo. API Platform expose des endpoints REST/JSON pour le futur mobile (V3). La vitrine est en MVC classique (Twig).
 - Consequences : UX rapide sans complexite SPA. Le mobile V3 consommera l'API Platform sans refonte backend. Les modules critiques (stats, PIRB) sont API-first.
+- Note : Cette decision supersede la recommandation Node.js/React du CDC "Site web MABB.fr" pour la vitrine.
+
+---
+
+### ADR-0005 — Symfony 7.4 (au lieu de 6.4 LTS du CDC)
+- Date : 2026-02-12
+- Contexte : Le CDC MABB/PIRB V1 mentionne "Symfony 6.4 LTS" comme stack. Or le projet a ete initialise avec Symfony 7.4 (derniere version stable au moment du demarrage).
+- Options : (A) Rester sur 6.4 LTS (support long terme garanti) (B) Utiliser 7.4 (fonctionnalites recentes, performances ameliorees)
+- Decision : (B) Symfony 7.4. Le projet est en phase de developpement initial (pas de contrainte de stabilite LTS en production). Symfony 7.4 apporte des ameliorations de performance et des fonctionnalites recentes. Le passage en LTS (8.4 ou suivant) sera evalue avant la mise en production.
+- Consequences : composer.json configure sur "7.4.*". Les dependances Symfony sont toutes en 7.4. Le CDC reste valide comme reference fonctionnelle mais la version Symfony y est obsolete.

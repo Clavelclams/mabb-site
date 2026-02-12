@@ -1,7 +1,10 @@
 # Roadmap globale — MABB / PIRB
 
+> Dernière mise à jour : 2026-02-12
+
 ## Stack technique
-Symfony 7.4, PHP 8.2+, Doctrine ORM, MySQL 8, Twig + Symfony UX, API Platform, JWT.
+Symfony 7.4 (cf. ADR-0005), PHP 8.2+, Doctrine ORM, MySQL 8, Twig + Symfony UX (Stimulus/Turbo), API Platform (à installer Phase 3), JWT via LexikJWTAuthenticationBundle (à installer Phase 1).
+Voir 01_LIRE_AVANT_TOUT.md pour le contexte complet.
 
 ## Vision
 V1 = socle stable utilisable en club reel
@@ -18,11 +21,16 @@ V3 = extension strategique (mobile, comite, SaaS)
 
 ## Etat d'avancement V1
 
+> Note : Phase 1 et Phase 5 ont ete demarrees en parallele (socle technique + pages statiques vitrine).
+> Voir 03_ROADMAP_V1.md pour le detail du perimetre V1.
+
 | Phase | Module | Statut | Detail |
 |-------|--------|--------|--------|
 | Phase 1 (sem 1-4) | Core | EN COURS | Socle pose : arborescence modulaire, routage multi-host, firewalls, role_hierarchy (7 roles). Reste : entites User/Club, JWT, voters |
 | Phase 2 (sem 5-8) | Sport | A FAIRE | Saisons, equipes, joueurs, evenements, presences |
-| Phase 3 (sem 9-14) | Stats | A FAIRE | Saisie match, shot tracking, timeline, validation |
+| Phase 3 (sem 9-14) | Stats | A FAIRE | Saisie match, shot tracking, timeline, validation (necessite API Platform) |
 | Phase 4 (sem 15-18) | PIRB | A FAIRE | Dashboard, shot chart, feedback anonyme |
 | Phase 5 (sem 19-22) | Vitrine | EN COURS | Pages statiques OK (8 pages), CMS back-office a faire |
 | Phase 6 (sem 23-26) | System | A FAIRE | Securite, tests, optimisation, documentation |
+
+**Rappel** : Tout module manipulant des donnees metier doit respecter le filtrage multi-tenant par `club_id` (cf. ADR-0003, RT-0001).

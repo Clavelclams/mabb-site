@@ -1,8 +1,15 @@
 # Roadmap V2 — Enrichissement (post-V1)
 
+> Dernière mise à jour : 2026-02-12
+
 ## Objectif V2
-Consolider l’usage club au quotidien avec plus de communication, d’ENT, de suivi et d’automatisations.
+Consolider l'usage club au quotidien avec plus de communication, d'ENT, de suivi et d'automatisations.
 V2 ne doit pas casser les fondations V1 (multi-tenant, rôles, sécurité, stats).
+
+## Rappel contraintes structurantes (héritées de V1)
+- **Multi-tenant strict** : toute nouvelle table métier DOIT porter un `club_id` et être filtrée côté serveur (cf. ADR-0003, RT-0001).
+- **RBAC + Voters** : tout nouvel accès doit passer par un Voter Symfony. Pas de contrôle uniquement côté front.
+- **RGPD** : tout nouveau traitement de données personnelles doit être documenté dans 07_REGISTRE_SECURITE_RGPD.md.
 
 ## Périmètre V2 (fonctionnel)
 ### 1) Communication & notifications

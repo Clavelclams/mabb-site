@@ -1,7 +1,9 @@
 # Roadmap V3 — Extension stratégique (mobile, comité, industrialisation)
 
+> Dernière mise à jour : 2026-02-12
+
 ## Objectif V3
-Passer d’un outil club “web solide” à un produit complet :
+Passer d'un outil club "web solide" à un produit complet :
 - expérience mobile
 - extension gouvernance (comité)
 - capacité d’industrialisation (SaaS / multi-clubs)
@@ -49,6 +51,11 @@ Passer d’un outil club “web solide” à un produit complet :
 ## Hors V3 (si trop ambitieux)
 - IA coaching automatique / scouting IA (à cadrer séparément)
 - Marketplace / recrutement joueurs inter-clubs
+
+## Rappel contraintes structurantes (héritées de V1/V2)
+- **Multi-tenant strict** : toute fonctionnalité V3 DOIT respecter le filtrage par `club_id` (cf. ADR-0003, RT-0001).
+- **RBAC + Voters** : tout accès contrôlé par Voter Symfony.
+- **API Platform** : les endpoints mobiles consomment l'API Platform posée en V1 Phase 3 (cf. ADR-0004).
 
 ## Jalons (indicatifs)
 - V3.1 Push + app PIRB (MVP)

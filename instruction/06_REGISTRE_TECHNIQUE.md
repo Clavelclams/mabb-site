@@ -58,3 +58,30 @@ Lister les sujets qui peuvent casser le projet si mal geres (DB, perfs, infra, d
 - Decision : Stockage hors du dossier public/. Acces via controller avec verification Voter. URLs signees ou temporaires si S3 (V3). Limites : taille max 10 Mo, types autorises (images, PDF, docs).
 - Impact : code (FileController + Voter) + infra (dossier var/uploads/ ou S3)
 - Statut : a faire (V1 galerie vitrine, V2 ENT)
+
+---
+
+### RT-0006 — Suppression logique (soft delete via deleted_at)
+- Date : 2026-02-12
+- Risque : Perte de donnees irreversible si suppression physique. Rupture d'integrite referentielle.
+- Decision : Privilegier la suppression logique (champ `deleted_at` nullable) sur les entites metier (User, Player, Team, Club, Event, Match, Article). La suppression physique est reservee aux donnees ephemeres (sessions, tokens expires). Cf. CDC section 4.6.
+- Impact : code (trait SoftDeletable ou champ deleted_at sur chaque entite) + DB (index sur deleted_at) + repositories (filtrage automatique)
+- Statut : a faire (Phase 1, a poser des la creation des entites)
+
+---
+
+### RT-0007 — Hachage des mots de passe (bcrypt/argon2)
+- Date : 2026-02-12
+- Risque : Fuite de mots de passe en clair en cas de compromission de la DB
+- Decision : Hachage obligatoire via le PasswordHasher Symfony. Algorithme : auto (Symfony choisit le meilleur disponible, generalement argon2id si extension installee, sinon bcrypt). Jamais de stockage en clair. Cf. CDC section 8.1.
+- Impact : code (security.yaml password_hashers) + infra (extension sodium recommandee)
+- Statut : a faire (Phase 1, configuration User entity)
+
+---
+
+### RT-0008 — API Platform : CORS, serialization, securite
+- Date : 2026-02-12
+- Risque : Exposition de donnees sensibles via l'API. Acces cross-origin non controle. Fuite de champs internes dans les reponses JSON.
+- Decision : Groupes de serialisation stricts (read:public, read:club, read:player, write:coach, write:admin — cf. CDC section 9.3). CORS configure pour n'accepter que les domaines autorises (mabb.fr, manager.mabb.fr, pirb.mabb.fr). Filtrage club_id + Voters sur chaque endpoint. Rate limiting sur /api/auth/login.
+- Impact : code (API Platform config, serialization groups, NelmioCorsBundle) + infra (headers CORS)
+- Statut : a faire (Phase 3, a l'installation d'API Platform)

@@ -51,3 +51,27 @@ Centraliser les obligations de securite + RGPD (tracabilite, conservation, droit
 - Regle : Les feedbacks d'entrainement deposes par les joueurs sont anonymes vis-a-vis du coach. Le coach voit les retours mais pas l'auteur.
 - Implementation : Table feedback sans FK vers joueur visible par le coach. Stockage auteur uniquement pour admin/super-admin (si besoin de moderation).
 - Statut : a faire (Phase 4 PIRB)
+
+---
+
+### RGPD-0006 — Consentement explicite a l'inscription
+- Categorie : RGPD
+- Regle : L'inscription requiert un consentement explicite (case a cocher non pre-cochee) pour les CGU et la politique de confidentialite. Le consentement doit etre horodate et stocke. Cf. CDC section 5.1.1 et 8.3.
+- Implementation : Champs `cgu_accepted_at` et `privacy_accepted_at` (datetime) sur User. Case checkbox obligatoire dans le formulaire d'inscription. Refus = inscription impossible.
+- Statut : a faire (Phase 1)
+
+---
+
+### RGPD-0007 — Droit d'acces et portabilite (export)
+- Categorie : RGPD
+- Regle : Tout utilisateur peut demander l'export de ses donnees personnelles dans un format structure (JSON ou PDF). Cf. CDC section 8.3.
+- Implementation : Endpoint ou commande Symfony generant un export JSON/PDF des donnees personnelles de l'utilisateur (profil, presences, stats, feedbacks). Accessible via le profil utilisateur.
+- Statut : a faire (Phase 6)
+
+---
+
+### RGPD-0008 — Droit a l'effacement et anonymisation
+- Categorie : RGPD
+- Regle : Tout utilisateur peut demander la suppression de son compte. Les donnees personnelles sont supprimees ou anonymisees. Les donnees sportives (stats, presences) sont anonymisees plutot que supprimees pour preserver l'integrite historique. Cf. CDC section 8.3.
+- Implementation : Commande ou service d'anonymisation : remplacer nom/prenom/email par des valeurs generiques, conserver les stats avec player_id anonymise. Soft delete du compte.
+- Statut : a faire (Phase 6)

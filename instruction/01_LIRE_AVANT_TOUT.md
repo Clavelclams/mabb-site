@@ -29,8 +29,13 @@ Voir arborescence.md pour le detail complet.
 ## Documents de reference
 - shemas/dictionnaire_db.md : dictionnaire complet de la base de donnees
 
+## Note sur les CDCs
+- Le CDC "Site web MABB.fr" (PDF) recommandait un stack Node.js/React. Cette recommandation a été **supersédée** par les ADR-0001 (monolithe Symfony) et ADR-0004 (Twig + Symfony UX). La vitrine est servie par le même monolithe Symfony.
+- Le CDC "MABB Manager & PIRB" mentionnait Symfony 6.4 LTS. Le projet utilise **Symfony 7.4** (cf. ADR-0005, composer.json).
+
 ## Avant de coder
 1) Lire 02_ROADMAP_GLOBALE.md + la roadmap de version en cours
 2) Vérifier 06_REGISTRE_TECHNIQUE.md (points critiques)
-3) Si décision structurante : ajouter une entrée dans 08_ADR.md
-4) Après : loguer dans 13_CLAUDE_LOG.md
+3) Vérifier 07_REGISTRE_SECURITE_RGPD.md (obligations sécurité/RGPD)
+4) Si décision structurante : ajouter une entrée dans 08_ADR.md
+5) Après : loguer dans 13_CLAUDE_LOG.md
