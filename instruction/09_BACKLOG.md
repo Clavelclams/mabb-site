@@ -1,6 +1,6 @@
 # Backlog — MABB / PIRB
 
-> Dernière mise à jour : 2026-02-12
+> Dernière mise à jour : 2026-02-13
 > Items priorisés par phase. Voir 02_ROADMAP_GLOBALE.md pour la vue macro.
 
 ## Format
@@ -13,25 +13,40 @@
 | Priorité | P0 (bloquant) / P1 (important) / P2 (souhaitable) |
 | Statut | a faire / en cours / fait |
 
+## Règle transverse obligatoire
+
+Toute entité métier manipulant des données club doit :
+- soit contenir explicitement un champ `club_id`
+- soit être filtrable de manière sûre via relation Doctrine
+- être protégée par ClubScopeVoter côté serveur
+
+### Contraintes d'unicité DB (obligatoires)
+- `UNIQUE (user_id, club_id)` sur ClubUser
+- `UNIQUE (code)` sur Role
+- `UNIQUE (club_user_id, role_id)` sur ClubUserRole
+
 ---
 
 ## Phase 1 — Core
 
 | ID | Description | Priorité | Statut |
 |----|-------------|----------|--------|
+| BL-0000 | Résoudre blocage installation dépendances (composer SSL + vendor + php.ini) | P0 | a faire |
 | BL-0001 | Créer entité User (email, password, nom, prénom, statut, created_at, deleted_at) | P0 | a faire |
 | BL-0002 | Créer entité Club (nom, logo, couleurs, statut, club_id_ffbb) | P0 | a faire |
-| BL-0003 | Créer entité ClubUser (pivot user-club avec role_in_club, statut) | P0 | a faire |
-| BL-0004 | Créer table/entité Role + relation M:N User-Role | P0 | a faire |
+| BL-0003 | Créer entité ClubUser (pivot user-club : user_id, club_id, statut, created_at, deleted_at) | P0 | a faire |
+| BL-0004 | Créer entité Role + pivot ClubUserRole (rôles par club, M:N ClubUser-Role) | P0 | a faire |
+| BL-0004b | Créer entité ClubUserRole (club_user_id, role_id, created_at, created_by) + contraintes uniques | P0 | a faire |
 | BL-0005 | Implémenter ClubScopeVoter (filtrage multi-tenant par club_id) | P0 | a faire |
 | BL-0006 | Implémenter OwnershipVoter (mes données / mon enfant) | P0 | a faire |
 | BL-0007 | Implémenter TeamCoachVoter (coach affecté à l'équipe) | P1 | a faire |
 | BL-0008 | Configurer JWT (LexikJWTAuthenticationBundle) | P0 | a faire |
-| BL-0009 | Formulaire inscription (avec case bénévole pré-cochée, CGU/RGPD) | P0 | a faire |
+| BL-0009 | Formulaire inscription (opt-in explicite bénévole + consentement CGU/RGPD obligatoire non pré-coché) | P0 | a faire |
 | BL-0010 | Configurer password_hashers (bcrypt/argon2) dans security.yaml | P0 | a faire |
-| BL-0011 | Première migration Doctrine (User, Club, ClubUser, Role) | P0 | a faire |
+| BL-0011 | Première migration Doctrine (User, Club, ClubUser, Role, ClubUserRole) | P0 | a faire |
 | BL-0012 | Rate limiting sur login (max 5 tentatives/min) | P1 | a faire |
 | BL-0013 | Récupération mot de passe par lien sécurisé | P1 | a faire |
+| BL-0014 | Créer endpoints API auth + contexte club sans API Platform (Controller Symfony natif) | P1 | a faire |
 
 ## Phase 2 — Sport
 

@@ -85,3 +85,12 @@ Lister les sujets qui peuvent casser le projet si mal geres (DB, perfs, infra, d
 - Decision : Groupes de serialisation stricts (read:public, read:club, read:player, write:coach, write:admin — cf. CDC section 9.3). CORS configure pour n'accepter que les domaines autorises (mabb.fr, manager.mabb.fr, pirb.mabb.fr). Filtrage club_id + Voters sur chaque endpoint. Rate limiting sur /api/auth/login.
 - Impact : code (API Platform config, serialization groups, NelmioCorsBundle) + infra (headers CORS)
 - Statut : a faire (Phase 3, a l'installation d'API Platform)
+
+---
+
+### RT-0009 — Gestion roles par club (pivot ClubUserRole)
+- Date : 2026-02-13
+- Risque : Incoherence securite si les roles ne sont pas resolus selon le club courant. Un utilisateur Coach dans le club A pourrait avoir des droits Coach dans le club B si le resolver est mal implemente.
+- Decision : Implementer un TenantContext (ou equivalent) qui identifie le club courant (depuis l'URL, le token JWT, ou la session). Creer un RoleResolver qui interroge ClubUserRole pour le club courant et fournit les roles effectifs au SecurityBundle. Les Voters doivent utiliser les roles resolus, pas les roles globaux du token. Cf. ADR-0006.
+- Impact : code (TenantContext, RoleResolver, adaptation Voters + authenticators) + DB (tables Role, ClubUserRole avec index)
+- Statut : a faire (Phase 1, apres creation des entites User/Club/ClubUser)

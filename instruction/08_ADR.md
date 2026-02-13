@@ -48,3 +48,18 @@ Chaque ADR suit le format : Date / Contexte / Options / Decision / Consequences.
 - Options : (A) Rester sur 6.4 LTS (support long terme garanti) (B) Utiliser 7.4 (fonctionnalites recentes, performances ameliorees)
 - Decision : (B) Symfony 7.4. Le projet est en phase de developpement initial (pas de contrainte de stabilite LTS en production). Symfony 7.4 apporte des ameliorations de performance et des fonctionnalites recentes. Le passage en LTS (8.4 ou suivant) sera evalue avant la mise en production.
 - Consequences : composer.json configure sur "7.4.*". Les dependances Symfony sont toutes en 7.4. Le CDC reste valide comme reference fonctionnelle mais la version Symfony y est obsolete.
+
+---
+
+### ADR-0006 — Roles par club via Role + ClubUserRole (enterprise)
+- Date : 2026-02-13
+- Contexte : Les roles doivent etre attribues par club (un utilisateur peut etre Coach dans le club A et Parent dans le club B). Comment modeliser cette relation ?
+- Options : (A) Champ JSON `roles` sur ClubUser (simple, pas d'audit, pas de catalogue) (B) Entite Role (catalogue) + pivot ClubUserRole (club_user_id, role_id, created_at, created_by) avec contraintes uniques
+- Decision : (B) Modele "enterprise". Table `Role` = catalogue des roles disponibles (code unique : ROLE_COACH, ROLE_PLAYER, etc.). Table `ClubUserRole` = pivot M:N entre ClubUser et Role, avec horodatage et auteur de l'attribution.
+- Consequences :
+  - Audit natif : on sait qui a attribue quel role et quand
+  - Scalabilite : ajout de roles sans migration (insert dans Role)
+  - Complexite : necessite un RoleResolver/TenantContext pour fournir les roles du club courant au SecurityBundle Symfony
+  - La `role_hierarchy` de security.yaml reste utilisee pour la hierarchie globale, mais les roles effectifs sont resolus depuis ClubUserRole selon le club courant
+  - Contraintes DB : UNIQUE(user_id, club_id) sur ClubUser, UNIQUE(code) sur Role, UNIQUE(club_user_id, role_id) sur ClubUserRole
+- Alternative rejetee : (A) JSON — plus simple mais pas d'audit, pas de catalogue centralise, difficulte a lister "tous les coachs du club X" efficacement

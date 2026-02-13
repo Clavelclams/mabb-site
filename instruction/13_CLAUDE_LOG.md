@@ -59,3 +59,46 @@
   - API Platform et LexikJWTAuthenticationBundle doivent être installés respectivement en Phase 3 et Phase 1
   - Le CDC Vitrine (Node/React) est obsolète sur le plan technique mais reste valide fonctionnellement
   - 4 fichiers étaient vides (09, 10, 11, 12) → maintenant peuplés, à maintenir activement
+
+---
+
+### 2026-02-13 (session 3) — Correction structurée du backlog
+- Objectif : Corriger 09_BACKLOG.md (rôles multi-tenant, RGPD inscription, blocage composer, règle club_id, API auth)
+- Actions réalisées :
+  - Ajout BL-0000 (P0 bloquant) : résolution blocage installation dépendances composer SSL + vendor + php.ini
+  - Correction BL-0004 : rôles liés à ClubUser (par club) au lieu de relation M:N globale User-Role
+  - Correction BL-0009 : opt-in explicite bénévole + consentement CGU/RGPD non pré-coché (conformité RGPD)
+  - Ajout section "Règle transverse obligatoire" après Format (club_id + ClubScopeVoter)
+  - Ajout BL-0014 (P1) : endpoints API auth + contexte club sans API Platform (Controller Symfony natif)
+  - Date mise à jour → 2026-02-13
+- Fichiers modifiés :
+  - instruction/09_BACKLOG.md (5 modifications)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire (corrections de cohérence, pas de décision structurante nouvelle)
+- Points de vigilance :
+  - BL-0000 doit être résolu avant tout autre item de Phase 1
+  - La gestion des rôles par club (BL-0004) impactera le modèle ClubUser — à aligner avec shemas/dictionnaire_db.md lors de l'implémentation
+
+---
+
+### 2026-02-13 (session 4) — Passage rôles enterprise + doc
+- Objectif : Passer la gestion des rôles en modèle "enterprise" (Role + ClubUserRole) et mettre à jour la documentation correspondante.
+- Actions réalisées :
+  - **09_BACKLOG.md** :
+    - BL-0003 reformulé : ClubUser simplifié (user_id, club_id, statut, created_at, deleted_at) — les rôles ne sont plus portés par ClubUser
+    - BL-0004 reformulé : création entité Role + pivot ClubUserRole (M:N ClubUser-Role)
+    - BL-0004b ajouté (P0) : création entité ClubUserRole (club_user_id, role_id, created_at, created_by) + contraintes uniques
+    - BL-0011 mis à jour : migration inclut désormais ClubUserRole en plus de User, Club, ClubUser, Role
+    - Ajout contraintes d'unicité DB sous "Règle transverse obligatoire"
+  - **08_ADR.md** : ADR-0006 créée — "Rôles par club via Role + ClubUserRole (enterprise)"
+  - **06_REGISTRE_TECHNIQUE.md** : RT-0009 ajouté — "Gestion rôles par club (pivot ClubUserRole)"
+- Fichiers modifiés :
+  - instruction/09_BACKLOG.md (BL-0003, BL-0004, BL-0004b, BL-0011, contraintes unicité)
+  - instruction/08_ADR.md (ADR-0006)
+  - instruction/06_REGISTRE_TECHNIQUE.md (RT-0009)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : ADR-0006 créée (rôles enterprise vs JSON — choix du pivot auditable)
+- Points de vigilance :
+  - Implémenter TenantContext + RoleResolver en Phase 1 pour résoudre les rôles selon le club courant (RT-0009)
+  - La role_hierarchy de security.yaml reste valide pour la hiérarchie globale, mais les rôles effectifs viennent de ClubUserRole
+  - Aligner shemas/dictionnaire_db.md avec le nouveau modèle lors de la création des entités
