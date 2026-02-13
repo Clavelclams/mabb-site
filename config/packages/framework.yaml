@@ -1,15 +1,20 @@
 # see https://symfony.com/doc/current/reference/configuration/framework.html
 framework:
     secret: '%env(APP_SECRET)%'
+    default_locale: fr
+    timezone: '%env(APP_TIMEZONE)%'
 
-    # Note that the session will be started ONLY if you read or write from it.
+    http_client:
+        default_options:
+            cafile: '%kernel.project_dir%/config/certs/cacert.pem'
+
     session: true
 
-    #esi: true
-    #fragments: true
-
-when@test:
+when@dev:
     framework:
-        test: true
-        session:
-            storage_factory_id: session.storage.factory.mock_file
+        http_client:
+            default_options:
+                verify_peer: false
+                verify_host: false
+
+
