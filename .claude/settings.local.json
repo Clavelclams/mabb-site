@@ -7,7 +7,11 @@
       "Bash(done)",
       "Bash(php bin/console:*)",
       "Bash(composer install:*)",
-      "Bash(php -l:*)"
+      "Bash(php -l:*)",
+      "Bash(symfony console route:list)",
+      "Bash(grep -r \"APP_SECRET\" /home/claveliito/mabb-site/.env*)",
+      "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -20 {}')",
+      "Bash(php -r \"echo ''PHP Version: '' . PHP_VERSION . PHP_EOL;\")"
     ]
   }
 }
