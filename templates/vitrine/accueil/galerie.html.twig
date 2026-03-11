@@ -1,14 +1,61 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Hello AccueilController!{% endblock %}
+{% block title %}Galerie — MABB Amiens{% endblock %}
+{% block meta_description %}Galerie photos et vidéos de la MABB : matchs, entraînements, événements et vie du club.{% endblock %}
 
 {% block body %}
-<div >
-    test
+
+<div class="page-header">
+    <div class="container">
+        <h1>Galerie</h1>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li><li class="breadcrumb-item active">Galerie</li></ol></nav>
+    </div>
 </div>
-<style>
-div {
-    /* border: 1px red dotted */
-}
-</style>
+
+<section class="section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">La MABB <span>en images</span></h2>
+            <p class="section-subtitle">Matchs, entraînements, tournois et moments de vie</p>
+        </div>
+
+        {# TODO: Remplacer par une boucle sur les entités Media quand le CMS sera en place #}
+        {# Pour l'instant, placeholders avec la photo existante #}
+
+        <div class="row g-3">
+            {# Photo réelle #}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="card card-mabb overflow-hidden" style="cursor:pointer">
+                    <img src="{{ asset('images/manar.jpg') }}" alt="Joueuse MABB" class="img-fluid" style="height:250px;object-fit:cover;width:100%">
+                </div>
+            </div>
+
+            {# Placeholders — à remplacer avec les vraies photos de Clavel #}
+            {% for i in 1..11 %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="card card-mabb overflow-hidden">
+                    <div style="height:250px;background:linear-gradient({{ 135 + i * 20 }}deg, var(--mabb-dark), var(--mabb-blue));display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,.3)">
+                        <i class="bi bi-camera" style="font-size:2rem"></i>
+                        <small class="mt-1">Photo {{ i + 1 }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-5">
+            <div class="card card-mabb p-4 d-inline-block">
+                <i class="bi bi-camera text-mabb-orange" style="font-size:2rem"></i>
+                <h5 class="fw-bold mt-2">Photos à venir</h5>
+                <p class="text-muted mb-2">La galerie sera alimentée avec les photos du club.</p>
+                <p class="text-muted small mb-0">En attendant, suivez-nous sur les réseaux sociaux pour voir nos dernières photos.</p>
+                <div class="mt-3">
+                    <a href="https://www.instagram.com/_m_a_b_b_/" class="btn btn-outline-mabb btn-sm me-2" target="_blank"><i class="bi bi-instagram me-1"></i>Instagram</a>
+                    <a href="https://www.facebook.com/mabb.fr/" class="btn btn-outline-mabb btn-sm" target="_blank"><i class="bi bi-facebook me-1"></i>Facebook</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 {% endblock %}

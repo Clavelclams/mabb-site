@@ -1,20 +1,94 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Hello AccueilController!{% endblock %}
+{% block title %}Nos Équipes — MABB Amiens{% endblock %}
+{% block meta_description %}Les équipes de la MABB : U11, U13, U15, U18, Seniors et 3x3. Résultats, catégories et encadrement.{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
-
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/claveliito/mabb-site/src/Controller/AccueilController.php</code></li>
-        <li>Your template at <code>/home/claveliito/mabb-site/templates/accueil/index.html.twig</code></li>
-    </ul>
+<div class="page-header">
+    <div class="container">
+        <h1>Nos Équipes</h1>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li><li class="breadcrumb-item active">Équipes</li></ol></nav>
+    </div>
 </div>
+
+<section class="section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Saison <span>2025-2026</span></h2>
+            <p class="section-subtitle">Du Mini Basket aux Seniors, la MABB forme à tous les niveaux</p>
+        </div>
+
+        {# TODO: Quand les entités Team seront créées, cette liste sera dynamique #}
+        <div class="row g-4">
+            {% set equipes = [
+                {cat: 'Micro Basket', ages: '3-5 ans', niveau: 'Éveil', lieu: 'Étouvie', color: '#e74c3c', icon: 'bi-balloon', desc: 'Découverte ludique, éveil psychomoteur. Matériel adapté.'},
+                {cat: 'U7 / U9', ages: '5-8 ans', niveau: 'Mini Basket', lieu: '3 sites', color: '#f39c12', icon: 'bi-stars', desc: 'Apprentissage des fondamentaux. Étouvie, Nord, Est.'},
+                {cat: 'U11 Féminine', ages: '9-10 ans', niveau: 'Départemental', lieu: 'Étouvie', color: '#e67e22', icon: 'bi-dribbble', desc: 'Championnes départementales invaincues. 2 équipes engagées.'},
+                {cat: 'U13 Féminine', ages: '11-12 ans', niveau: 'Régional / Pré-Nat', lieu: 'Étouvie', color: '#3498db', icon: 'bi-lightning', desc: '2 équipes : régionale (R2B) et départementale. Objectif Pré-Nationale.'},
+                {cat: 'U15 Féminine', ages: '13-14 ans', niveau: 'Régional', lieu: 'Étouvie', color: '#2980b9', icon: 'bi-lightning-fill', desc: '2 équipes en régionale et départementale. Vivier d\'excellence.'},
+                {cat: 'U18 Féminine', ages: '15-17 ans', niveau: 'Inter-Départemental', lieu: 'Étouvie', color: '#8e44ad', icon: 'bi-fire', desc: 'Pré-Nationale la saison passée. Quadruple championnes Coupe de la Somme.'},
+                {cat: 'Senior Féminine', ages: '18+ ans', niveau: 'Pré-Régional', lieu: 'Étouvie', color: '#0b4fa3', icon: 'bi-trophy', desc: 'Objectif : stabiliser en régional solide. Noyau de joueuses formées au club.'},
+                {cat: 'Basket 3x3', ages: '11-25+ ans', niveau: 'Ligue MABB / FFBB', lieu: 'Divers', color: '#27ae60', icon: 'bi-dribbble', desc: 'Ligue officielle MABB (10 tournois classés). 25+ tournois QPV par an.'},
+            ] %}
+
+            {% for eq in equipes %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-mabb h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div style="width:50px;height:50px;border-radius:12px;background:{{ eq.color }}15;display:flex;align-items:center;justify-content:center">
+                                <i class="bi {{ eq.icon }}" style="font-size:1.4rem;color:{{ eq.color }}"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold">{{ eq.cat }}</h5>
+                                <small class="text-muted">{{ eq.ages }}</small>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-3">{{ eq.desc }}</p>
+                        <div class="d-flex justify-content-between">
+                            <span class="badge bg-light text-dark"><i class="bi bi-bar-chart me-1"></i>{{ eq.niveau }}</span>
+                            <span class="badge bg-light text-dark"><i class="bi bi-geo-alt me-1"></i>{{ eq.lieu }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Lien Scorenco #}
+        <div class="text-center mt-5">
+            <p class="text-muted mb-2">Résultats et classements en temps réel :</p>
+            <a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" class="btn btn-outline-mabb" target="_blank">
+                <i class="bi bi-bar-chart-line me-2"></i>Voir sur Scorenco
+            </a>
+        </div>
+    </div>
+</section>
+
+{# ENCADREMENT #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Encadrement <span>technique</span></h2>
+            <p class="section-subtitle">Des éducateurs formés et passionnés</p>
+        </div>
+        {# TODO: Compléter avec les noms des coachs fournis par Clavel #}
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-8">
+                <div class="card card-mabb p-4">
+                    <div class="card-body text-center">
+                        <i class="bi bi-people text-mabb-blue" style="font-size:3rem"></i>
+                        <h5 class="fw-bold mt-3">Staff technique à compléter</h5>
+                        <p class="text-muted">
+                            Envoie-moi les noms et rôles de tes coachs et je mets à jour cette section.
+                            Tu pourras aussi les modifier depuis le CMS une fois en place.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 {% endblock %}

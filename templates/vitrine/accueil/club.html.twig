@@ -1,22 +1,132 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Hello AccueilController!{% endblock %}
+{% block title %}Le Club — MABB Amiens Métropole Basket Ball{% endblock %}
+{% block meta_description %}Découvrez la MABB : histoire, valeurs, bureau dirigeant, labels FFBB et projet éducatif du club de basket féminin d'Amiens.{% endblock %}
 
 {% block body %}
 
-<div class="col-12 col-md-6 text-light">
-club
-</div>
-
-
-
-<div class="col-12 col-md-6 texte-rouge">
-    <div class="row">
-        <div class="col-4">654654654</div>
-        <div class="col-8">654654654</div>
+{# HEADER #}
+<div class="page-header">
+    <div class="container">
+        <h1>Le Club</h1>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li><li class="breadcrumb-item active">Le Club</li></ol></nav>
     </div>
-
 </div>
 
+{# HISTOIRE #}
+<section class="section">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <h2 class="section-title">Plus de <span>20 ans</span> d'engagement</h2>
+                <p>
+                    La Métropole Amiénoise Basket Ball (MABB) est une association sportive loi 1901 dédiée au basket-ball féminin.
+                    Implantée sur le territoire d'Amiens Métropole, elle accueille chaque année plus de 400 licenciées,
+                    du Micro Basket (dès 3 ans) jusqu'aux équipes Seniors.
+                </p>
+                <p>
+                    Le club se distingue par la qualité de son encadrement technique et sportif. La MABB a formé et continue
+                    de former d'excellentes joueuses, dont certaines ont été sélectionnées en équipes de France jeunes.
+                    Le projet du club s'articule autour de trois piliers : l'école, le terrain et la performance.
+                </p>
+                <p>
+                    Classée en première place parmi les 330 clubs de basket de la région Hauts-de-France,
+                    la MABB est une référence incontournable du basket féminin et de l'accès au sport pour tous.
+                </p>
+            </div>
+            <div class="col-lg-5">
+                {# TODO: Photo historique du club #}
+                <div class="bg-light rounded-4 p-5 text-center" style="min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                    <i class="bi bi-image text-muted" style="font-size:3rem"></i>
+                    <p class="text-muted mt-2">Photo du club à ajouter</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# VALEURS #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Nos <span>valeurs</span></h2>
+        </div>
+        <div class="row g-4">
+            {% set valeurs = [
+                {icon: 'bi-heart-fill', title: 'Inclusion', desc: 'Permettre au plus grand nombre de jeunes filles de pratiquer le basket, quels que soient leur quartier ou leur situation.', color: '#e74c3c'},
+                {icon: 'bi-mortarboard-fill', title: 'Éducation', desc: 'Le sport comme vecteur d\'éducation et d\'éveil à la citoyenneté. Aide aux devoirs, accompagnement scolaire.', color: '#3498db'},
+                {icon: 'bi-trophy-fill', title: 'Excellence', desc: 'Former des joueuses de haut niveau tout en maintenant un encadrement bienveillant et exigeant.', color: '#f39c12'},
+                {icon: 'bi-people-fill', title: 'Solidarité', desc: 'Actions dans les quartiers prioritaires, stages gratuits, déplacements culturels et partenariats scolaires.', color: '#2ecc71'},
+            ] %}
+            {% for v in valeurs %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-mabb text-center h-100 p-4">
+                    <i class="bi {{ v.icon }}" style="font-size:2.5rem;color:{{ v.color }}"></i>
+                    <h5 class="fw-bold mt-3">{{ v.title }}</h5>
+                    <p class="text-muted small mb-0">{{ v.desc }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# BUREAU #}
+<section class="section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Le <span>bureau</span> dirigeant</h2>
+            <p class="section-subtitle">L'équipe qui fait vivre le club au quotidien</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            {# TODO: Compléter avec les vrais noms et photos fournis par Clavel #}
+            {% set bureau = [
+                {nom: 'Willy Dufossé', role: 'Président', icon: 'bi-person-badge'},
+                {nom: 'À compléter', role: 'Vice-Président(e)', icon: 'bi-person'},
+                {nom: 'À compléter', role: 'Secrétaire Général(e)', icon: 'bi-pencil-square'},
+                {nom: 'À compléter', role: 'Trésorier(ère)', icon: 'bi-wallet2'},
+            ] %}
+            {% for m in bureau %}
+            <div class="col-6 col-md-3">
+                <div class="card card-mabb text-center p-4 h-100">
+                    <div class="mx-auto mb-3" style="width:80px;height:80px;border-radius:50%;background:var(--mabb-gray);display:flex;align-items:center;justify-content:center">
+                        <i class="bi {{ m.icon }}" style="font-size:2rem;color:var(--mabb-blue)"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">{{ m.nom }}</h6>
+                    <small class="text-mabb-orange fw-semibold">{{ m.role }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# LABELS #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Nos <span>labels</span> FFBB</h2>
+            <p class="section-subtitle">Reconnus par la Fédération Française de Basket-Ball</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            {% set labels = [
+                {title: 'Club Formateur', stars: 3, desc: 'Excellence dans la formation des jeunes joueuses, de l\'école de mini-basket à la performance.'},
+                {title: 'Citoyenneté', stars: 3, desc: 'Engagement citoyen reconnu : actions QPV, partenariats scolaires, inclusion sociale.'},
+                {title: 'École Française de Mini Basket', stars: 3, desc: 'Qualité de l\'accueil et de l\'enseignement du basket pour les enfants de 3 à 10 ans.'},
+            ] %}
+            {% for l in labels %}
+            <div class="col-md-4">
+                <div class="card card-mabb text-center h-100 p-4">
+                    <div class="mb-2">
+                        {% for i in 1..l.stars %}<i class="bi bi-star-fill text-warning" style="font-size:1.3rem"></i>{% endfor %}
+                    </div>
+                    <h5 class="fw-bold">{{ l.title }}</h5>
+                    <p class="text-muted small mb-0">{{ l.desc }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
 
 {% endblock %}

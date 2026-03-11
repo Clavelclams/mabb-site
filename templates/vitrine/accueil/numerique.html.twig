@@ -1,20 +1,105 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Hello AccueilController!{% endblock %}
+{% block title %}Espace Numérique — MABB Amiens{% endblock %}
+{% block meta_description %}L'espace numérique de la MABB : application de gestion du club, espace joueur PIRB et outils digitaux.{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
-
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/claveliito/mabb-site/src/Controller/AccueilController.php</code></li>
-        <li>Your template at <code>/home/claveliito/mabb-site/templates/accueil/index.html.twig</code></li>
-    </ul>
+<div class="page-header">
+    <div class="container">
+        <h1>Espace Numérique</h1>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li><li class="breadcrumb-item active">Numérique</li></ol></nav>
+    </div>
 </div>
+
+{# INTRO #}
+<section class="section">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <span class="badge-label mb-3"><i class="bi bi-code-slash"></i> En développement</span>
+                <h2 class="section-title">La MABB passe au <span>numérique</span></h2>
+                <p class="lead">
+                    Nous développons des outils digitaux pour moderniser la gestion du club
+                    et offrir à chaque joueuse un suivi personnalisé de sa progression.
+                </p>
+                <p>
+                    Deux plateformes complémentaires sont en cours de création :
+                    <strong>MABB Manager</strong> pour la gestion du club (équipes, matchs, stats, événements)
+                    et <strong>PIRB</strong> (Player Individual Record Book) pour l'espace personnel des joueuses.
+                </p>
+            </div>
+            <div class="col-lg-6">
+                <div class="bg-light rounded-4 p-5 text-center">
+                    <i class="bi bi-phone text-mabb-blue" style="font-size:4rem"></i>
+                    <h5 class="fw-bold mt-3">Bientôt disponible</h5>
+                    <p class="text-muted">Accès réservé aux membres du club</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# FONCTIONNALITÉS #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Ce qui <span>arrive</span></h2>
+        </div>
+        <div class="row g-4">
+            {% set features = [
+                {icon: 'bi-people', title: 'Gestion des équipes', desc: 'Effectifs, catégories, composition d\'équipe par saison. Tout centralisé.', app: 'MABB Manager'},
+                {icon: 'bi-clipboard-data', title: 'Saisie de match en direct', desc: 'Interface terrain sur tablette : tirs, fautes, remplacements en quelques touches.', app: 'MABB Manager'},
+                {icon: 'bi-calendar-check', title: 'Planning et présences', desc: 'Entraînements, matchs, événements. Convocations et suivi des présences.', app: 'MABB Manager'},
+                {icon: 'bi-person-badge', title: 'Profil joueur', desc: 'Photo, poste, numéro, historique. Chaque joueuse a son espace personnel.', app: 'PIRB'},
+                {icon: 'bi-graph-up', title: 'Shot Chart', desc: 'Carte visuelle de tous les tirs sur le terrain. Pourcentages par zone.', app: 'PIRB'},
+                {icon: 'bi-chat-dots', title: 'Feedback anonyme', desc: 'Les joueuses notent les séances de façon anonyme. Le coach voit les tendances.', app: 'PIRB'},
+            ] %}
+            {% for f in features %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-mabb h-100 p-4">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div style="width:50px;height:50px;border-radius:12px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center">
+                            <i class="bi {{ f.icon }}" style="font-size:1.3rem;color:#fff"></i>
+                        </div>
+                        <span class="badge {% if f.app == 'PIRB' %}bg-warning text-dark{% else %}bg-primary{% endif %} rounded-pill">{{ f.app }}</span>
+                    </div>
+                    <h5 class="fw-bold">{{ f.title }}</h5>
+                    <p class="text-muted mb-0">{{ f.desc }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# TIMELINE #}
+<section class="section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Calendrier de <span>lancement</span></h2>
+        </div>
+        <div class="row g-4 justify-content-center">
+            {% set phases = [
+                {date: 'Mars 2026', title: 'Site vitrine mabb.fr', status: 'En cours', icon: 'bi-globe', color: '#f39c12'},
+                {date: 'Mai 2026', title: 'Gestion sportive', status: 'Planifié', icon: 'bi-people', color: '#3498db'},
+                {date: 'Juin 2026', title: 'Saisie matchs & stats', status: 'Planifié', icon: 'bi-clipboard-data', color: '#2980b9'},
+                {date: 'Juillet 2026', title: 'PIRB joueur', status: 'Planifié', icon: 'bi-person-badge', color: '#27ae60'},
+            ] %}
+            {% for p in phases %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-mabb text-center p-4 h-100">
+                    <div class="mx-auto mb-3" style="width:60px;height:60px;border-radius:50%;background:{{ p.color }}20;display:flex;align-items:center;justify-content:center">
+                        <i class="bi {{ p.icon }}" style="font-size:1.5rem;color:{{ p.color }}"></i>
+                    </div>
+                    <small class="text-mabb-orange fw-bold">{{ p.date }}</small>
+                    <h6 class="fw-bold mt-2">{{ p.title }}</h6>
+                    <span class="badge {% if p.status == 'En cours' %}bg-warning text-dark{% else %}bg-light text-muted{% endif %} mt-2">{{ p.status }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
 {% endblock %}

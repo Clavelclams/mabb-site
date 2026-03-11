@@ -1,20 +1,82 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Hello AccueilController!{% endblock %}
+{% block title %}Calendrier — MABB Amiens{% endblock %}
+{% block meta_description %}Calendrier des matchs, entraînements et événements de la MABB Amiens Métropole Basket Ball.{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
-
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/claveliito/mabb-site/src/Controller/AccueilController.php</code></li>
-        <li>Your template at <code>/home/claveliito/mabb-site/templates/accueil/index.html.twig</code></li>
-    </ul>
+<div class="page-header">
+    <div class="container">
+        <h1>Calendrier</h1>
+        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li><li class="breadcrumb-item active">Calendrier</li></ol></nav>
+    </div>
 </div>
+
+<section class="section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Saison <span>2025-2026</span></h2>
+            <p class="section-subtitle">Matchs, entraînements et événements du club</p>
+        </div>
+
+        {# TODO: Remplacer par un calendrier dynamique depuis les entités Event/GameMatch #}
+
+        {# Horaires d'entraînement — à compléter par Clavel #}
+        <div class="row g-4 mb-5">
+            <div class="col-lg-8 mx-auto">
+                <div class="card card-mabb p-4">
+                    <h4 class="fw-bold mb-4"><i class="bi bi-clock text-mabb-orange me-2"></i>Horaires d'entraînement</h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>Catégorie</th><th>Jour</th><th>Horaire</th><th>Lieu</th></tr>
+                            </thead>
+                            <tbody>
+                                {# TODO: Compléter avec les vrais horaires fournis par Clavel #}
+                                <tr><td>Micro Basket</td><td>Mercredi</td><td>À confirmer</td><td>Gymnase É. Moiroud</td></tr>
+                                <tr><td>U7 / U9</td><td>Mercredi + Samedi</td><td>À confirmer</td><td>3 sites</td></tr>
+                                <tr><td>U11</td><td>Mercredi + Samedi</td><td>À confirmer</td><td>Gymnase É. Moiroud</td></tr>
+                                <tr><td>U13</td><td>Lundi + Mercredi + Samedi</td><td>À confirmer</td><td>Gymnase É. Moiroud</td></tr>
+                                <tr><td>U15</td><td>Lundi + Mercredi + Vendredi</td><td>À confirmer</td><td>Gymnase É. Moiroud</td></tr>
+                                <tr><td>U18</td><td>Mardi + Jeudi + Samedi</td><td>À confirmer</td><td>Gymnase É. Moiroud</td></tr>
+                                <tr><td>Seniors</td><td>Mardi + Jeudi</td><td>À confirmer</td><td>Gymnase É. Moiroud</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted small mt-3 mb-0"><i class="bi bi-info-circle me-1"></i>Horaires indicatifs — contactez le club pour les horaires exacts de la saison en cours.</p>
+                </div>
+            </div>
+        </div>
+
+        {# Événements récurrents #}
+        <h3 class="section-title text-center mb-4">Événements <span>récurrents</span></h3>
+        <div class="row g-4 mb-5">
+            {% set events = [
+                {icon: 'bi-gift', title: 'Centre Génération Basket', period: 'Chaque vacances scolaires', desc: 'Stage gratuit FFBB, ouvert aux 7-15 ans. Au gymnase Émile Moiroud.'},
+                {icon: 'bi-dribbble', title: 'Ligue MABB 3x3', period: 'Octobre → Juin', desc: '10 tournois classés FFBB pour les 16+ ans. Format libre et créatif.'},
+                {icon: 'bi-trophy', title: 'Tournois QPV', period: 'Toute l\'année', desc: '25+ tournois 3x3 homologués FFBB pour les jeunes de 11 à 25 ans.'},
+                {icon: 'bi-calendar-event', title: 'Journées portes ouvertes', period: 'Septembre', desc: 'Rentrée du club : essais gratuits, inscriptions, rencontre avec les coachs.'},
+            ] %}
+            {% for ev in events %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-mabb text-center h-100 p-4">
+                    <i class="bi {{ ev.icon }} text-mabb-orange" style="font-size:2rem"></i>
+                    <h6 class="fw-bold mt-3">{{ ev.title }}</h6>
+                    <small class="text-mabb-blue fw-semibold d-block mb-2">{{ ev.period }}</small>
+                    <p class="text-muted small mb-0">{{ ev.desc }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Lien Scorenco pour les résultats #}
+        <div class="text-center">
+            <p class="text-muted">Pour les résultats et le calendrier des matchs officiels :</p>
+            <a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" class="btn btn-outline-mabb" target="_blank">
+                <i class="bi bi-bar-chart-line me-2"></i>Résultats sur Scorenco
+            </a>
+        </div>
+    </div>
+</section>
+
 {% endblock %}

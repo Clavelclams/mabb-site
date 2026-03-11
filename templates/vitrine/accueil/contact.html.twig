@@ -1,20 +1,144 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Hello AccueilController!{% endblock %}
+{% block title %}Contact — MABB Amiens
+{% endblock %}
+{% block meta_description %}Contactez la MABB : formulaire, email, adresse du gymnase et informations d'inscription.
+{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+	<div class="page-header">
+		<div class="container">
+			<h1>Contact</h1>
+			<nav aria-label="breadcrumb">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item">
+						<a href="{{ path('vitrine_accueil') }}">Accueil</a>
+					</li>
+					<li class="breadcrumb-item active">Contact</li>
+				</ol>
+			</nav>
+		</div>
+	</div>
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/claveliito/mabb-site/src/Controller/AccueilController.php</code></li>
-        <li>Your template at <code>/home/claveliito/mabb-site/templates/accueil/index.html.twig</code></li>
-    </ul>
-</div>
+	<section class="section">
+		<div class="container">
+			<div
+				class="row g-5">
+
+				{# FORMULAIRE #}
+				<div class="col-lg-7">
+					<h2 class="section-title mb-4">Écrivez-<span>nous</span>
+					</h2>
+
+					{# TODO: Connecter à un vrai form Symfony avec envoi d'email quand le mailer sera configuré #}
+					<form method="post" action="{{ path('vitrine_contact') }}">
+						<div class="row g-3">
+							<div class="col-md-6">
+								<label for="nom" class="form-label fw-semibold">Nom
+									<span class="text-danger">*</span>
+								</label>
+								<input type="text" class="form-control form-control-lg" id="nom" name="nom" required placeholder="Votre nom">
+							</div>
+							<div class="col-md-6">
+								<label for="prenom" class="form-label fw-semibold">Prénom
+									<span class="text-danger">*</span>
+								</label>
+								<input type="text" class="form-control form-control-lg" id="prenom" name="prenom" required placeholder="Votre prénom">
+							</div>
+							<div class="col-md-6">
+								<label for="email" class="form-label fw-semibold">Email
+									<span class="text-danger">*</span>
+								</label>
+								<input type="email" class="form-control form-control-lg" id="email" name="email" required placeholder="votre@email.com">
+							</div>
+							<div class="col-md-6">
+								<label for="telephone" class="form-label fw-semibold">Téléphone</label>
+								<input type="tel" class="form-control form-control-lg" id="telephone" name="telephone" placeholder="06 XX XX XX XX">
+							</div>
+							<div class="col-12">
+								<label for="sujet" class="form-label fw-semibold">Sujet
+									<span class="text-danger">*</span>
+								</label>
+								<select class="form-select form-select-lg" id="sujet" name="sujet" required>
+									<option value="" disabled selected>Choisir un sujet</option>
+									<option value="inscription">Inscription au club</option>
+									<option value="renseignement">Renseignement général</option>
+									<option value="partenariat">Partenariat / Sponsoring</option>
+									<option value="presse">Presse / Média</option>
+									<option value="autre">Autre</option>
+								</select>
+							</div>
+							<div class="col-12">
+								<label for="message" class="form-label fw-semibold">Message
+									<span class="text-danger">*</span>
+								</label>
+								<textarea class="form-control form-control-lg" id="message" name="message" rows="5" required placeholder="Votre message..."></textarea>
+							</div>
+							<div class="col-12">
+								<button type="submit" class="btn btn-mabb btn-lg">
+									<i class="bi bi-send me-2"></i>Envoyer
+								</button>
+							</div>
+						</div>
+					</form>
+				</div>
+
+				{# INFOS PRATIQUES #}
+				<div class="col-lg-5">
+					<h2 class="section-title mb-4">Infos
+						<span>pratiques</span>
+					</h2>
+
+					<div class="card card-mabb p-4 mb-4">
+						<h5 class="fw-bold mb-3">
+							<i class="bi bi-geo-alt-fill text-mabb-orange me-2"></i>Gymnase principal</h5>
+						<p class="mb-1 fw-semibold">Gymnase Émile Moiroud</p>
+						<p class="text-muted mb-3">Quartier Étouvie, Amiens</p>
+
+						<h5 class="fw-bold mb-3">
+							<i class="bi bi-building text-mabb-orange me-2"></i>Siège social</h5>
+						<p class="text-muted mb-3">12 rue d'Artois, 80000 Amiens</p>
+
+						<h5 class="fw-bold mb-3">
+							<i class="bi bi-envelope-fill text-mabb-orange me-2"></i>Email</h5>
+						<p class="mb-3">
+							<a href="mailto:contact@mabb.fr" class="text-mabb-blue fw-semibold">contact@mabb.fr</a>
+						</p>
+
+						<h5 class="fw-bold mb-3">
+							<i class="bi bi-hash text-mabb-orange me-2"></i>Identifiants</h5>
+						<ul class="list-unstyled text-muted small">
+							<li class="mb-1">Code FFBB : HDF080036</li>
+							<li class="mb-1">SIRET : 49077890900021</li>
+							<li class="mb-1">Agrément J&S : D80S1069</li>
+						</ul>
+					</div>
+
+					{# CARTE — Google Maps embed #}
+					<div class="card card-mabb overflow-hidden">
+						<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2560.5!2d2.2647!3d49.8942!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e7842c2dc2e3e3%3A0x0!2sGymnase%20Emile%20Moiroud!5e0!3m2!1sfr!2sfr!4v1710000000000" width="100%" height="250" style="border:0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Localisation du gymnase Émile Moiroud"></iframe>
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</section>
+
+	{# CTA INSCRIPTION #}
+	<section class="section section-gray">
+		<div class="container text-center">
+			<h2 class="section-title">Envie de
+				<span>rejoindre</span>
+				la MABB ?</h2>
+			<p class="section-subtitle">Inscriptions ouvertes toute l'année, de 3 à 25+ ans.</p>
+			<div class="d-flex flex-wrap gap-3 justify-content-center">
+				<a href="mailto:contact@mabb.fr" class="btn btn-mabb btn-lg">
+					<i class="bi bi-envelope me-2"></i>contact@mabb.fr</a>
+				<a href="https://www.facebook.com/mabb.fr/" class="btn btn-outline-mabb btn-lg" target="_blank">
+					<i class="bi bi-facebook me-2"></i>Facebook</a>
+			</div>
+		</div>
+	</section>
+
 {% endblock %}

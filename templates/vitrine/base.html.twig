@@ -1,31 +1,159 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}Welcome!{% endblock %}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text><text y=%221.3em%22 x=%220.2em%22 font-size=%2276%22 fill=%22%23fff%22>sf</text></svg>">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}MABB — Amiens Métropole Basket Ball{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Club de basket-ball féminin à Amiens. Formation, compétition et inclusion par le sport depuis plus de 20 ans.{% endblock %}">
+    <link rel="icon" href="{{ asset('images/logo.jpg') }}" type="image/jpeg">
+    <meta property="og:title" content="{% block og_title %}MABB — Amiens Métropole Basket Ball{% endblock %}">
+    <meta property="og:description" content="Club de basket-ball féminin à Amiens.">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
 
-        {% block stylesheets %}
-        {% endblock %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
 
-        {% block javascripts %}
-            {% block importmap %}{{ importmap('app') }}{% endblock %}
-        {% endblock %}
-    </head>
-    <body>
-        <div class="container-fluid">
-            <div class="row">
-                {{ include('vitrine/navbar.html.twig') }}
+    {% block stylesheets %}{% endblock %}
+
+    <style>
+    :root{--mabb-blue:#0b4fa3;--mabb-dark:#063a55;--mabb-light:#1c88b6;--mabb-orange:#ff7a00;--mabb-red:#ff3b2f;--mabb-gray:#f8f9fa}
+    body{font-family:'Inter',sans-serif;color:#343a40;overflow-x:hidden}
+    h1,h2,h3,h4,h5,.display-1,.display-2,.display-3{font-family:'Montserrat',sans-serif}
+
+    .navbar-mabb{background:rgba(6,58,85,.95)!important;backdrop-filter:blur(10px);box-shadow:0 2px 20px rgba(0,0,0,.15);padding:.6rem 0}
+    .navbar-mabb .navbar-brand img{height:45px}
+    .navbar-mabb .nav-link{color:rgba(255,255,255,.85)!important;font-weight:500;font-size:.95rem;padding:.5rem 1rem!important;transition:color .2s}
+    .navbar-mabb .nav-link:hover,.navbar-mabb .nav-link.active{color:var(--mabb-orange)!important}
+    .btn-inscription{background:linear-gradient(135deg,var(--mabb-orange),var(--mabb-red));color:#fff!important;border:none;border-radius:50px;padding:.45rem 1.3rem!important;font-weight:600;font-size:.9rem;transition:transform .2s,box-shadow .2s}
+    .btn-inscription:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(255,122,0,.4)}
+
+    .page-header{background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));color:#fff;padding:100px 0 50px;text-align:center}
+    .page-header h1{font-weight:800;font-size:2.5rem;margin-bottom:.5rem}
+    .page-header .breadcrumb{justify-content:center;margin-bottom:0}
+    .page-header .breadcrumb-item a{color:rgba(255,255,255,.7);text-decoration:none}
+    .page-header .breadcrumb-item.active{color:var(--mabb-orange)}
+
+    .section{padding:80px 0}.section-gray{background:var(--mabb-gray)}
+    .section-title{font-weight:800;font-size:2rem;margin-bottom:1rem;color:var(--mabb-dark)}
+    .section-title span{color:var(--mabb-orange)}
+    .section-subtitle{color:#6c757d;font-size:1.1rem;margin-bottom:3rem}
+
+    .card-mabb{border:none;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);transition:transform .3s,box-shadow .3s;overflow:hidden}
+    .card-mabb:hover{transform:translateY(-5px);box-shadow:0 12px 35px rgba(0,0,0,.12)}
+
+    .badge-label{display:inline-flex;align-items:center;gap:.4rem;background:linear-gradient(135deg,var(--mabb-orange),var(--mabb-red));color:#fff;padding:.4rem 1rem;border-radius:50px;font-size:.85rem;font-weight:600}
+    .btn-mabb{background:linear-gradient(135deg,var(--mabb-orange),var(--mabb-red));color:#fff;border:none;border-radius:50px;padding:.7rem 2rem;font-weight:600;transition:transform .2s,box-shadow .2s}
+    .btn-mabb:hover{color:#fff;transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,122,0,.35)}
+    .btn-outline-mabb{color:var(--mabb-blue);border:2px solid var(--mabb-blue);border-radius:50px;padding:.65rem 2rem;font-weight:600;background:transparent;transition:all .2s}
+    .btn-outline-mabb:hover{background:var(--mabb-blue);color:#fff}
+
+    .footer-mabb{background:var(--mabb-dark);color:rgba(255,255,255,.8);padding:60px 0 30px}
+    .footer-mabb h5{color:#fff;font-weight:700;margin-bottom:1.2rem;font-size:1.05rem}
+    .footer-mabb a{color:rgba(255,255,255,.7);text-decoration:none;transition:color .2s}
+    .footer-mabb a:hover{color:var(--mabb-orange)}
+    .social-icon{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.1);color:#fff;font-size:1.1rem;transition:all .2s;margin-right:.5rem}
+    .social-icon:hover{background:var(--mabb-orange);transform:translateY(-3px);color:#fff}
+    .footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:1.5rem;margin-top:2.5rem;font-size:.85rem}
+
+    .text-mabb-orange{color:var(--mabb-orange)}.text-mabb-blue{color:var(--mabb-blue)}
+
+    @media(max-width:768px){.page-header{padding:80px 0 40px}.page-header h1{font-size:1.8rem}.section{padding:50px 0}.section-title{font-size:1.6rem}}
+    </style>
+    {% block extra_css %}{% endblock %}
+    {% block javascripts %}{% block importmap %}{{ importmap('app') }}{% endblock %}{% endblock %}
+</head>
+<body>
+
+{# NAVBAR #}
+<nav class="navbar navbar-expand-lg navbar-dark navbar-mabb fixed-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ path('vitrine_accueil') }}">
+            <img src="{{ asset('images/logo.jpg') }}" alt="Logo MABB" class="rounded-circle">
+            <span class="fw-bold d-none d-md-inline">MABB</span>
+        </a>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <ul class="navbar-nav ms-auto me-3 align-items-lg-center">
+                <li class="nav-item"><a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_accueil' %}active{% endif %}" href="{{ path('vitrine_accueil') }}">Accueil</a></li>
+                <li class="nav-item"><a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_club' %}active{% endif %}" href="{{ path('vitrine_club') }}">Le Club</a></li>
+                <li class="nav-item"><a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_equipes' %}active{% endif %}" href="{{ path('vitrine_equipes') }}">Équipes</a></li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Actualités</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ path('vitrine_news') }}"><i class="bi bi-newspaper me-2"></i>Actualités</a></li>
+                        <li><a class="dropdown-item" href="{{ path('vitrine_calendrier') }}"><i class="bi bi-calendar3 me-2"></i>Calendrier</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ path('vitrine_galerie') }}"><i class="bi bi-camera me-2"></i>Galerie</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item"><a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_numerique' %}active{% endif %}" href="{{ path('vitrine_numerique') }}">Numérique</a></li>
+                <li class="nav-item"><a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_contact' %}active{% endif %}" href="{{ path('vitrine_contact') }}">Contact</a></li>
+            </ul>
+            <a href="{{ path('vitrine_contact') }}" class="btn btn-inscription"><i class="bi bi-person-plus me-1"></i> S'inscrire</a>
+        </div>
+    </div>
+</nav>
+
+<main>{% block body %}{% endblock %}</main>
+
+{# FOOTER #}
+<footer class="footer-mabb">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <img src="{{ asset('images/logo.jpg') }}" alt="Logo MABB" height="50" class="rounded-circle">
+                    <div><h5 class="mb-0">MABB</h5><small class="text-white-50">Amiens Métropole Basket Ball</small></div>
+                </div>
+                <p class="small">Club de basket-ball féminin implanté à Amiens Métropole. Formation, compétition et inclusion par le sport depuis plus de 20 ans.</p>
+                <span class="badge-label"><i class="bi bi-star-fill"></i> Triple label FFBB 3 étoiles</span>
             </div>
-
-            <div class="row">
-                {% block body %}{% endblock %}
-
+            <div class="col-lg-2 col-md-6">
+                <h5>Navigation</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li>
+                    <li class="mb-2"><a href="{{ path('vitrine_club') }}">Le Club</a></li>
+                    <li class="mb-2"><a href="{{ path('vitrine_equipes') }}">Équipes</a></li>
+                    <li class="mb-2"><a href="{{ path('vitrine_news') }}">Actualités</a></li>
+                    <li class="mb-2"><a href="{{ path('vitrine_contact') }}">Contact</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <h5>Infos pratiques</h5>
+                <ul class="list-unstyled small">
+                    <li class="mb-2"><i class="bi bi-geo-alt text-mabb-orange me-2"></i>Gymnase Émile Moiroud, Étouvie — Amiens</li>
+                    <li class="mb-2"><i class="bi bi-building text-mabb-orange me-2"></i>12 rue d'Artois, 80000 Amiens</li>
+                    <li class="mb-2"><i class="bi bi-envelope text-mabb-orange me-2"></i><a href="mailto:contact@mabb.fr">contact@mabb.fr</a></li>
+                    <li class="mb-2"><i class="bi bi-hash text-mabb-orange me-2"></i>Code FFBB : HDF080036</li>
+                </ul>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <h5>Suivez-nous</h5>
+                <div class="mb-3">
+                    <a href="https://www.facebook.com/mabb.fr/" class="social-icon" target="_blank" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
+                    <a href="https://www.instagram.com/_m_a_b_b_/" class="social-icon" target="_blank" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+                    <a href="https://www.tiktok.com/@m_a_b_b_" class="social-icon" target="_blank" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
+                    <a href="https://x.com/_M_A_B_B_" class="social-icon" target="_blank" aria-label="X"><i class="bi bi-twitter-x"></i></a>
+                    <a href="https://www.youtube.com/@mabbamiens/videos" class="social-icon" target="_blank" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
+                    <a href="https://www.linkedin.com/in/m-a-b-b-amiens-501279297/" class="social-icon" target="_blank" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                </div>
+                <p class="small text-white-50"><i class="bi bi-trophy me-1"></i> 1er club de la région Hauts-de-France</p>
             </div>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+        <div class="footer-bottom text-center text-white-50">
+            <p class="mb-1">&copy; {{ "now"|date("Y") }} MABB — Amiens Métropole Basket Ball | Association loi 1901</p>
+            <p class="mb-0">SIRET 49077890900021 — Agrément Jeunesse et Sport D80S1069</p>
+        </div>
+    </div>
+</footer>
 
-    </body>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
 </html>
