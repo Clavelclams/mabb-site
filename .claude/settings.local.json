@@ -11,7 +11,20 @@
       "Bash(symfony console route:list)",
       "Bash(grep -r \"APP_SECRET\" /home/claveliito/mabb-site/.env*)",
       "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -20 {}')",
-      "Bash(php -r \"echo ''PHP Version: '' . PHP_VERSION . PHP_EOL;\")"
+      "Bash(php -r \"echo ''PHP Version: '' . PHP_VERSION . PHP_EOL;\")",
+      "Bash(php -v)",
+      "Bash(\"/c/Users/Velito Adventure/scoop/shims/symfony.exe\" local:php --version)",
+      "Bash(\"/c/Users/Velito Adventure/scoop/shims/symfony.exe\" local:php:list)",
+      "Bash(\"/c/Users/Velito Adventure/scoop/shims/php.exe\" -v)",
+      "Bash(\"/c/Users/Velito Adventure/scoop/shims/symfony.exe\" local:php:refresh)",
+      "Bash(\"/c/Users/Velito Adventure/scoop/shims/php.exe\" -S localhost:8000 -t public/)",
+      "Bash(symfony server:start)",
+      "Bash(php --ini)",
+      "Bash(php -r \"var_dump\\(openssl_get_cert_locations\\(\\)\\);\")",
+      "Read(//c/Users/Velito Adventure/scoop/apps/cacert/2025-12-02/**)",
+      "Bash(php -r \"echo stream_context_create\\([''ssl'' => [''cafile'' => ''C:/Users/Velito Adventure/scoop/apps/cacert/2025-12-02/cacert.pem'']]\\) ? ''context ok'' : ''fail'';\")",
+      "Bash(COMPOSER_CAFILE=\"C:/Users/Velito Adventure/scoop/apps/cacert/2025-12-02/cacert.pem\" composer config --global disable-tls false)",
+      "Bash(composer config:*)"
     ]
   }
 }
