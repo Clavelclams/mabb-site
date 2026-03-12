@@ -102,3 +102,29 @@
   - Implémenter TenantContext + RoleResolver en Phase 1 pour résoudre les rôles selon le club courant (RT-0009)
   - La role_hierarchy de security.yaml reste valide pour la hiérarchie globale, mais les rôles effectifs viennent de ClubUserRole
   - Aligner shemas/dictionnaire_db.md avec le nouveau modèle lors de la création des entités
+
+---
+
+### 2026-03-12 (session 5) — Vitrine compte + suivi CDC
+- Objectif : Créer les pages Connexion/Inscription + fichier de suivi CDC
+- Actions réalisées :
+  - Création `src/Controller/Vitrine/CompteController.php` (routes `vitrine_compte_se_connecter` + `vitrine_compte_s_inscrire`)
+  - Création `templates/vitrine/compte/se_connecter.html.twig` (formulaire connexion, design MABB)
+  - Création `templates/vitrine/compte/s_inscrire.html.twig` (formulaire inscription + jauge force mot de passe)
+  - Mise à jour `templates/vitrine/base.html.twig` : remplacement bouton "S'inscrire → contact" par boutons "Connexion" + "S'inscrire" pointant vers CompteController
+  - Nettoyage `templates/vitrine/accueil/news.html.twig` : suppression `<li>` mal placé avec liens connexion/inscription
+  - Création `instruction/14_SUIVI_CDC_MARS.md` : tableau de suivi complet fait/en cours/à faire (70 items, ~24% d'avancement)
+  - Mise à jour `instruction/00_GOUVERNANCE_DOC.md` : ajout 14 dans l'inventaire
+- Fichiers modifiés :
+  - src/Controller/Vitrine/CompteController.php (nouveau)
+  - templates/vitrine/compte/se_connecter.html.twig (nouveau)
+  - templates/vitrine/compte/s_inscrire.html.twig (nouveau)
+  - templates/vitrine/base.html.twig (navbar)
+  - templates/vitrine/accueil/news.html.twig (nettoyage)
+  - instruction/14_SUIVI_CDC_MARS.md (nouveau)
+  - instruction/00_GOUVERNANCE_DOC.md (inventaire)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - Les pages Connexion/Inscription sont des templates HTML uniquement — le SecurityBundle Symfony (security.yaml, UserAuthenticator, firewalls) reste à implémenter (BL-0008 à BL-0013)
+  - BL-0000 (blocage composer SSL) reste le vrai bloquant pour démarrer Phase 1

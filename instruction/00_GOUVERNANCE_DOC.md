@@ -24,6 +24,7 @@ Le dossier `/instruction/` est la **source de vérité** du projet.
 | 11 | 11_CHECKLIST_RELEASE.md | Vérifications avant mise en production |
 | 12 | 12_TEMPLATE_PROMPTS_IA.md | Templates de prompts pour assistants IA |
 | 13 | 13_CLAUDE_LOG.md | Journal d'exécution (log de chaque session) |
+| 14 | 14_SUIVI_CDC_MARS.md | Suivi CDC — état d'avancement fait / en cours / à faire |
 | — | arborescence.md | Structure complète du projet |
 | — | CDC/CDC_MABB_PIRB_V1_Definitif.pdf | Cahier des charges Manager & PIRB (référence initiale) |
 | — | CDC/Cahier des charges – Site web MABB.fr.pdf | Cahier des charges vitrine (référence initiale, stack supersédé par ADR-0001/0004) |
