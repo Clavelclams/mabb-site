@@ -75,6 +75,7 @@ mabb-site/
 │   ├── 11_CHECKLIST_RELEASE.md
 │   ├── 12_TEMPLATE_PROMPTS_IA.md
 │   ├── 13_CLAUDE_LOG.md
+│   ├── 14_SUIVI_CDC_MARS.md             # Suivi fait / en cours / à faire vs CDC
 │   └── arborescence.md                  # (ce fichier)
 │
 ├── migrations/                          # Migrations Doctrine
@@ -99,7 +100,8 @@ mabb-site/
 │   │
 │   ├── Controller/                      # Controllers HTTP (par espace)
 │   │   ├── Vitrine/                     # mabb.fr
-│   │   │   └── AccueilController.php
+│   │   │   ├── AccueilController.php    # Routes vitrine principales (8 pages)
+│   │   │   └── CompteController.php     # /compte/se-connecter + /compte/s-inscrire
 │   │   ├── Manager/                     # manager.mabb.fr
 │   │   ├── Pirb/                        # pirb.mabb.fr
 │   │   └── Api/                         # /api (REST, stateless)
@@ -124,17 +126,20 @@ mabb-site/
 │
 ├── templates/                           # Templates Twig (par espace)
 │   ├── vitrine/                         # mabb.fr
-│   │   ├── base.html.twig              # Layout vitrine
-│   │   ├── navbar.html.twig            # Navbar vitrine
-│   │   └── accueil/                    # Pages vitrine
-│   │       ├── index.html.twig
-│   │       ├── calendrier.html.twig
-│   │       ├── club.html.twig
-│   │       ├── contact.html.twig
-│   │       ├── equipes.html.twig
-│   │       ├── galerie.html.twig
-│   │       ├── news.html.twig
-│   │       └── numerique.html.twig
+│   │   ├── base.html.twig              # Layout vitrine (navbar + footer + design system)
+│   │   ├── navbar.html.twig            # Navbar vitrine (non utilisée — intégrée dans base)
+│   │   ├── accueil/                    # Pages publiques vitrine
+│   │   │   ├── index.html.twig
+│   │   │   ├── calendrier.html.twig
+│   │   │   ├── club.html.twig
+│   │   │   ├── contact.html.twig
+│   │   │   ├── equipes.html.twig
+│   │   │   ├── galerie.html.twig
+│   │   │   ├── news.html.twig
+│   │   │   └── numerique.html.twig
+│   │   └── compte/                     # Espace membre vitrine
+│   │       ├── se_connecter.html.twig  # Page connexion
+│   │       └── s_inscrire.html.twig    # Page inscription
 │   ├── manager/                         # manager.mabb.fr
 │   └── pirb/                            # pirb.mabb.fr
 │

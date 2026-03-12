@@ -1,6 +1,6 @@
 # Roadmap globale — MABB / PIRB
 
-> Dernière mise à jour : 2026-02-12
+> Dernière mise à jour : 2026-03-13
 
 ## Stack technique
 Symfony 7.4 (cf. ADR-0005), PHP 8.2+, Doctrine ORM, MySQL 8, Twig + Symfony UX (Stimulus/Turbo), API Platform (à installer Phase 3), JWT via LexikJWTAuthenticationBundle (à installer Phase 1).
@@ -30,7 +30,7 @@ V3 = extension strategique (mobile, comite, SaaS)
 | Phase 2 (sem 5-8) | Sport | A FAIRE | Saisons, equipes, joueurs, evenements, presences |
 | Phase 3 (sem 9-14) | Stats | A FAIRE | Saisie match, shot tracking, timeline, validation (necessite API Platform) |
 | Phase 4 (sem 15-18) | PIRB | A FAIRE | Dashboard, shot chart, feedback anonyme |
-| Phase 5 (sem 19-22) | Vitrine | EN COURS | Pages statiques OK (8 pages), CMS back-office a faire |
+| Phase 5 (sem 19-22) | Vitrine | EN COURS | Pages statiques OK (8 pages + compte/connexion + compte/inscription), navbar Connexion+Inscription, CMS back-office a faire |
 | Phase 6 (sem 23-26) | System | A FAIRE | Securite, tests, optimisation, documentation |
 
 **Rappel** : Tout module manipulant des donnees metier doit respecter le filtrage multi-tenant par `club_id` (cf. ADR-0003, RT-0001).

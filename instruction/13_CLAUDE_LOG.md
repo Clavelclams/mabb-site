@@ -128,3 +128,41 @@
 - Points de vigilance :
   - Les pages Connexion/Inscription sont des templates HTML uniquement — le SecurityBundle Symfony (security.yaml, UserAuthenticator, firewalls) reste à implémenter (BL-0008 à BL-0013)
   - BL-0000 (blocage composer SSL) reste le vrai bloquant pour démarrer Phase 1
+
+---
+
+### 2026-03-13 (session 6) — Mise à jour documentation post-session 5
+- Objectif : Synchroniser toute la documentation MD avec l'état réel du code
+- Actions réalisées :
+  - `instruction/arborescence.md` : ajout `CompteController.php`, dossier `templates/vitrine/compte/` avec les 2 templates, ajout `14_SUIVI_CDC_MARS.md`
+  - `instruction/02_ROADMAP_GLOBALE.md` : date + détail Phase 5 mis à jour (pages compte ajoutées)
+  - `instruction/14_SUIVI_CDC_MARS.md` : date + notes affinées sur les templates connexion/inscription (formulaires HTML + CSRF + consentement RGPD présents)
+- Fichiers modifiés :
+  - instruction/arborescence.md
+  - instruction/02_ROADMAP_GLOBALE.md
+  - instruction/14_SUIVI_CDC_MARS.md
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune
+- Points de vigilance :
+  - Les templates `se_connecter` et `s_inscrire` ont été simplifiés (HTML structuré sans Bootstrap élaboré) — à styler avec le design system MABB quand le SecurityBundle sera branché
+
+---
+
+### 2026-03-13 (session 7) — Correction structure Repository
+- Objectif : Déplacer les Repository mal placés dans src/Entity/Repository/ vers src/Repository/Core/
+- Actions réalisées :
+  - Déplacement `ClubRepository.php` : `src/Entity/Repository/` → `src/Repository/Core/`
+  - Déplacement `UserRepository.php` : `src/Entity/Repository/` → `src/Repository/Core/`
+  - Déplacement `UserClubRoleRepository.php` : `src/Entity/Repository/` → `src/Repository/Core/`
+  - Suppression du dossier vide `src/Entity/Repository/`
+  - Vérification : les 3 namespaces `App\Repository\Core` étaient déjà corrects — aucune modification de contenu
+  - `php bin/console cache:clear` exécuté avec succès (env dev)
+- Fichiers modifiés :
+  - src/Repository/Core/ClubRepository.php (déplacé)
+  - src/Repository/Core/UserRepository.php (déplacé)
+  - src/Repository/Core/UserClubRoleRepository.php (déplacé)
+  - src/Entity/Repository/ (dossier supprimé)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire (correction structurelle, pas de décision d'architecture)
+- Points de vigilance :
+  - Vérifier que les entités Core (User, Club, UserClubRole) référencent bien ces repositories via l'attribut `#[ORM\Entity(repositoryClass: ...)]` lors de leur création (BL-0001 à BL-0004b)

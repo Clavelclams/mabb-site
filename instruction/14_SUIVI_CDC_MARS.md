@@ -1,7 +1,7 @@
-# Suivi CDC — État d'avancement au 2026-03-12
+# Suivi CDC — État d'avancement au 2026-03-13
 
 > Référence : `instruction/CDC/CDC_MABB_PIRB_V1_Definitif.pdf` + `instruction/CDC/Cahier des charges – Site web MABB.fr.pdf`
-> Mise à jour : 2026-03-12
+> Mise à jour : 2026-03-13
 > Légende : ✅ Fait · 🔄 En cours · ⬜ À faire · ❌ Hors périmètre V1
 
 ---
@@ -10,7 +10,7 @@
 
 | #    | Item                                   | Statut | Notes                             |
 | ---- | -------------------------------------- | ------ | --------------------------------- |
-| G-01 | Fichiers de gouvernance (00 à 13)      | ✅     | Créés en sessions 1-4 (fév. 2026) |
+| G-01 | Fichiers de gouvernance (00 à 14)      | ✅     | Créés en sessions 1-5 (fév.-mars 2026) |
 | G-02 | Backlog 67 items priorisés             | ✅     | 09_BACKLOG.md                     |
 | G-03 | ADR 0001-0006 documentées              | ✅     | 08_ADR.md                         |
 | G-04 | Registre technique + sécurité RGPD     | ✅     | 06, 07                            |
@@ -101,8 +101,8 @@
 | —       | Page Numérique (`/numerique`)                                | ✅     | Statique                                  |
 | —       | Page Contact (`/contact`)                                    | ✅     | Formulaire HTML (envoi email à brancher)  |
 | —       | Navbar : boutons Connexion + S'inscrire                      | ✅     | Pointe vers `CompteController`            |
-| —       | Page Connexion (`/compte/se-connecter`)                      | 🔄     | Template créé — SecurityBundle à brancher |
-| —       | Page Inscription (`/compte/s-inscrire`)                      | 🔄     | Template créé — logique User à brancher   |
+| —       | Page Connexion (`/compte/se-connecter`)                      | 🔄     | Template HTML fonctionnel (formulaire + CSRF) — SecurityBundle à brancher |
+| —       | Page Inscription (`/compte/s-inscrire`)                      | 🔄     | Template HTML fonctionnel (formulaire + consentement RGPD) — entité User + validation à faire |
 | BL-0050 | Back-office CMS (édition pages, articles, médias)            | ⬜     |                                           |
 | BL-0051 | Entités `Article`, `Page`, `Media` (Vitrine)                 | ⬜     |                                           |
 | BL-0052 | Éditeur WYSIWYG                                              | ⬜     |                                           |
