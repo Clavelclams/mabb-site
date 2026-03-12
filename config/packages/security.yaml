@@ -1,16 +1,12 @@
 security:
-    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
-    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
     providers:
-        users_in_memory: { memory: null }
-        # TODO: remplacer par un provider Doctrine quand l'entite User sera creee
-        # app_user_provider:
-        #     entity:
-        #         class: App\Entity\Core\User
-        #         property: email
+        app_user_provider:
+            entity:
+                class: App\Entity\Core\User
+                property: email
 
     firewalls:
         # --- Dev tools (toujours accessible) ---
@@ -18,68 +14,81 @@ security:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
 
-        # --- API (JWT stateless) ---
+        # --- API (JWT stateless) — à activer en Phase 2+ ---
         api:
             pattern: ^/api
             stateless: true
-            # TODO: activer quand LexikJWT sera installe
-            # jwt: ~
-            # provider: app_user_provider
+            provider: app_user_provider
+            # jwt: ~   # décommenter quand LexikJWT sera installé
 
-        # --- Vitrine (mabb.fr) — public, auth optionnelle pour le back-office CMS ---
+        # --- Vitrine (mabb.fr / localhost) — public, login form ---
         vitrine:
             host: '^(mabb\.fr|localhost)(:\d+)?$'
             lazy: true
-            provider: users_in_memory
+            provider: app_user_provider
+            form_login:
+                login_path: vitrine_compte_se_connecter
+                check_path: vitrine_compte_se_connecter
+                username_parameter: _email
+                password_parameter: _password
+                default_target_path: vitrine_accueil
+                always_use_default_target_path: false
+            logout:
+                path: vitrine_logout
+                target: vitrine_accueil
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 604800  # 7 jours
 
         # --- Manager (manager.mabb.fr) — auth obligatoire ---
         manager:
             host: '^manager\.(mabb\.fr|localhost)(:\d+)?$'
             lazy: true
-            provider: users_in_memory
-            # TODO: configurer form_login ou JWT quand l'auth sera en place
+            provider: app_user_provider
+            form_login:
+                login_path: manager_login
+                check_path: manager_login
+                username_parameter: _email
+                password_parameter: _password
+                default_target_path: manager_dashboard
+            logout:
+                path: manager_logout
+                target: manager_login
 
         # --- PIRB (pirb.mabb.fr) — auth obligatoire ---
         pirb:
             host: '^pirb\.(mabb\.fr|localhost)(:\d+)?$'
             lazy: true
-            provider: users_in_memory
-            # TODO: configurer form_login ou JWT quand l'auth sera en place
+            provider: app_user_provider
+            form_login:
+                login_path: pirb_login
+                check_path: pirb_login
+                username_parameter: _email
+                password_parameter: _password
+                default_target_path: pirb_dashboard
+            logout:
+                path: pirb_logout
+                target: pirb_login
 
-        # --- Fallback ---
+        # --- Fallback (ne devrait pas être atteint en prod) ---
         main:
             lazy: true
-            provider: users_in_memory
+            provider: app_user_provider
 
-    # Hierarchie des roles (CDC)
+    # Hiérarchie des rôles Symfony (héritage)
+    # NB : les rôles métier (COACH, JOUEUR...) sont dans UserClubRole, PAS ici
     role_hierarchy:
-        ROLE_SUPER_ADMIN: [ROLE_CLUB_ADMIN, ROLE_COACH, ROLE_STAFF]
-        ROLE_CLUB_ADMIN:  [ROLE_USER]
-        ROLE_COACH:       [ROLE_USER]
-        ROLE_STAFF:       [ROLE_USER]
-        ROLE_PLAYER:      [ROLE_USER]
-        ROLE_PARENT:      [ROLE_USER]
-        ROLE_BENEVOLE:    [ROLE_USER]
+        ROLE_SUPER_ADMIN: [ROLE_USER]
 
-    # Note: Only the *first* matching rule is applied
     access_control:
-        # API : authentifie obligatoire
+        # API : auth obligatoire
         # - { path: ^/api, roles: ROLE_USER }
 
-        # Manager : authentifie obligatoire
+        # Manager : tout le sous-domaine manager.* nécessite d'être connecté
         # - { host: '^manager\.', roles: ROLE_USER }
 
-        # PIRB : authentifie obligatoire
+        # PIRB : tout le sous-domaine pirb.* nécessite d'être connecté
         # - { host: '^pirb\.', roles: ROLE_USER }
 
-        # Vitrine : public par defaut
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-
-when@test:
-    security:
-        password_hashers:
-            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
-                algorithm: auto
-                cost: 4 # Lowest possible value for bcrypt
-                time_cost: 3 # Lowest possible value for argon
-                memory_cost: 10 # Lowest possible value for argon
+        # Vitrine : public par défaut, sauf /compte/profil etc.
+        # - { path: ^/compte/profil, roles: ROLE_USER }

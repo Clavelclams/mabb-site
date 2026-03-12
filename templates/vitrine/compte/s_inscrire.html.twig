@@ -1,230 +1,109 @@
+{# templates/vitrine/compte/s_inscrire.html.twig #}
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}S'inscrire — MABB Amiens{% endblock %}
-{% block meta_description %}Créez votre espace membre MABB et rejoignez le club.{% endblock %}
-
-{% block extra_css %}
-<style>
-.auth-section {
-    min-height: calc(100vh - 76px);
-    padding: 120px 0 60px;
-    background: linear-gradient(135deg, var(--mabb-dark) 0%, var(--mabb-blue) 60%, #1a6fa8 100%);
-    position: relative;
-    overflow: hidden;
-}
-.auth-section::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    pointer-events: none;
-}
-.auth-card {
-    background: #fff;
-    border-radius: 24px;
-    box-shadow: 0 24px 64px rgba(0,0,0,.22);
-    overflow: hidden;
-    max-width: 520px;
-    width: 100%;
-    margin: 0 auto;
-    animation: slideUp .5s ease both;
-}
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-.auth-card-header {
-    background: linear-gradient(135deg, var(--mabb-dark), var(--mabb-blue));
-    padding: 2.5rem 2.5rem 2rem;
-    text-align: center;
-    color: #fff;
-}
-.auth-card-header img { height: 60px; margin-bottom: 1rem; }
-.auth-card-header h2 { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.6rem; margin: 0; }
-.auth-card-header p { opacity: .75; font-size: .9rem; margin: .4rem 0 0; }
-.auth-card-body { padding: 2.5rem; }
-
-.form-label { font-weight: 600; font-size: .9rem; color: var(--mabb-dark); margin-bottom: .4rem; }
-.form-control, .form-select {
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    padding: .7rem 1rem;
-    font-size: .95rem;
-    transition: border-color .2s, box-shadow .2s;
-}
-.form-control:focus, .form-select:focus {
-    border-color: var(--mabb-blue);
-    box-shadow: 0 0 0 3px rgba(11,79,163,.12);
-    outline: none;
-}
-.input-group-text {
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
-    border-right: none;
-    border-radius: 10px 0 0 10px;
-    color: var(--mabb-blue);
-}
-.input-group .form-control { border-left: none; border-radius: 0 10px 10px 0; }
-.input-group .form-control:focus { border-color: var(--mabb-blue); }
-
-.section-label {
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 700;
-    font-size: .8rem;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    color: var(--mabb-blue);
-    border-bottom: 2px solid #e9ecef;
-    padding-bottom: .5rem;
-    margin-bottom: 1.2rem;
-}
-
-.btn-auth {
-    background: linear-gradient(135deg, var(--mabb-orange), var(--mabb-red));
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    padding: .8rem 2rem;
-    font-weight: 700;
-    font-size: 1rem;
-    width: 100%;
-    transition: transform .2s, box-shadow .2s;
-    letter-spacing: .02em;
-}
-.btn-auth:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,122,0,.4); }
-
-.divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: #adb5bd; font-size: .85rem; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e9ecef; }
-
-.link-auth { color: var(--mabb-blue); font-weight: 600; text-decoration: none; }
-.link-auth:hover { color: var(--mabb-orange); text-decoration: underline; }
-
-.forgot-link { font-size: .85rem; color: #6c757d; text-decoration: none; }
-.forgot-link:hover { color: var(--mabb-orange); }
-
-.password-strength { height: 4px; border-radius: 4px; background: #e9ecef; margin-top: .5rem; overflow: hidden; }
-.password-strength-bar { height: 100%; width: 0; border-radius: 4px; transition: width .3s, background .3s; }
-</style>
-{% endblock %}
+{% block title %}Créer un compte — MABB{% endblock %}
 
 {% block body %}
 <section class="auth-section">
-    <div class="container">
-        <div class="auth-card">
-            <div class="auth-card-header">
-                <img src="{{ asset('images/logo.jpg') }}" alt="Logo MABB" class="rounded-circle">
-                <h2>Créer un compte</h2>
-                <p>Rejoignez l'espace membre MABB</p>
+    <div class="auth-container">
+        <h1>Créer un compte</h1>
+
+        {# Affiche les erreurs de validation #}
+        {% if errors is defined and errors|length > 0 %}
+            <div class="alert alert-error">
+                <ul>
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
             </div>
-            <div class="auth-card-body">
+        {% endif %}
 
-                <form method="post" action="{{ path('vitrine_compte_s_inscrire') }}" novalidate>
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('register') }}">
+        <form method="post" action="{{ path('vitrine_compte_s_inscrire') }}" novalidate>
 
-                    <p class="section-label"><i class="bi bi-person me-1"></i>Informations personnelles</p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="prenom">Prénom <span class="required">*</span></label>
+                    <input
+                        type="text"
+                        id="prenom"
+                        name="prenom"
+                        required
+                        autocomplete="given-name"
+                        autofocus
+                    >
+                </div>
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
-                            <label for="prenom" class="form-label">Prénom</label>
-                            <input type="text" id="prenom" name="prenom" class="form-control"
-                                   placeholder="Prénom" autocomplete="given-name" required>
-                        </div>
-                        <div class="col-sm-6">
-                            <label for="nom" class="form-label">Nom</label>
-                            <input type="text" id="nom" name="nom" class="form-control"
-                                   placeholder="Nom de famille" autocomplete="family-name" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="email" class="form-label"><i class="bi bi-envelope me-1"></i>Adresse e-mail</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" id="email" name="email" class="form-control"
-                                   placeholder="votre@email.fr" autocomplete="email" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="date_naissance" class="form-label"><i class="bi bi-calendar me-1"></i>Date de naissance</label>
-                        <input type="date" id="date_naissance" name="date_naissance" class="form-control" required>
-                    </div>
-
-                    <p class="section-label"><i class="bi bi-lock me-1"></i>Sécurité</p>
-
-                    <div class="mb-3">
-                        <label for="password" class="form-label">Mot de passe</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            <input type="password" id="password" name="password" class="form-control"
-                                   placeholder="Minimum 8 caractères" autocomplete="new-password" required minlength="8"
-                                   oninput="updateStrength(this.value)">
-                        </div>
-                        <div class="password-strength mt-2">
-                            <div class="password-strength-bar" id="strengthBar"></div>
-                        </div>
-                        <small class="text-muted" id="strengthLabel"></small>
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="password_confirm" class="form-label">Confirmer le mot de passe</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
-                            <input type="password" id="password_confirm" name="password_confirm" class="form-control"
-                                   placeholder="Répétez le mot de passe" autocomplete="new-password" required>
-                        </div>
-                    </div>
-
-                    <div class="form-check mb-4">
-                        <input class="form-check-input" type="checkbox" id="cgv" name="cgv" required>
-                        <label class="form-check-label small" for="cgv">
-                            J'accepte les <a href="#" class="link-auth">conditions d'utilisation</a> et la
-                            <a href="#" class="link-auth">politique de confidentialité</a>
-                        </label>
-                    </div>
-
-                    <button type="submit" class="btn btn-auth">
-                        <i class="bi bi-person-check me-2"></i>Créer mon compte
-                    </button>
-                </form>
-
-                <div class="divider">ou</div>
-
-                <p class="text-center mb-0 small">
-                    Déjà membre ?
-                    <a href="{{ path('vitrine_compte_se_connecter') }}" class="link-auth">Se connecter</a>
-                </p>
-                <p class="text-center mt-2 mb-0 small">
-                    <a href="{{ path('vitrine_accueil') }}" class="forgot-link"><i class="bi bi-arrow-left me-1"></i>Retour à l'accueil</a>
-                </p>
+                <div class="form-group">
+                    <label for="nom">Nom <span class="required">*</span></label>
+                    <input
+                        type="text"
+                        id="nom"
+                        name="nom"
+                        required
+                        autocomplete="family-name"
+                    >
+                </div>
             </div>
-        </div>
+
+            <div class="form-group">
+                <label for="email">Adresse email <span class="required">*</span></label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    required
+                    autocomplete="email"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe <span class="required">*</span></label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    autocomplete="new-password"
+                    minlength="8"
+                >
+                <small>Minimum 8 caractères.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="password_confirm">Confirmer le mot de passe <span class="required">*</span></label>
+                <input
+                    type="password"
+                    id="password_confirm"
+                    name="password_confirm"
+                    required
+                    autocomplete="new-password"
+                >
+            </div>
+
+            <div class="form-group form-check">
+                <input
+                    type="checkbox"
+                    id="rgpd_consent"
+                    name="rgpd_consent"
+                    required
+                >
+                <label for="rgpd_consent">
+                    J'accepte la
+                    <a href="#" target="_blank">politique de confidentialité</a>
+                    et le traitement de mes données personnelles.
+                    <span class="required">*</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Créer mon compte</button>
+
+        </form>
+
+        <p class="auth-link">
+            Déjà un compte ?
+            <a href="{{ path('vitrine_compte_se_connecter') }}">Se connecter</a>
+        </p>
     </div>
 </section>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function updateStrength(val) {
-    const bar = document.getElementById('strengthBar');
-    const label = document.getElementById('strengthLabel');
-    let score = 0;
-    if (val.length >= 8) score++;
-    if (/[A-Z]/.test(val)) score++;
-    if (/[0-9]/.test(val)) score++;
-    if (/[^A-Za-z0-9]/.test(val)) score++;
-    const levels = [
-        { w: '25%', bg: '#dc3545', text: 'Très faible' },
-        { w: '50%', bg: '#fd7e14', text: 'Faible' },
-        { w: '75%', bg: '#ffc107', text: 'Moyen' },
-        { w: '100%', bg: '#198754', text: 'Fort' },
-    ];
-    if (val.length === 0) { bar.style.width = '0'; label.textContent = ''; return; }
-    const lvl = levels[Math.max(0, score - 1)];
-    bar.style.width = lvl.w;
-    bar.style.background = lvl.bg;
-    label.textContent = lvl.text;
-    label.style.color = lvl.bg;
-}
-</script>
 {% endblock %}

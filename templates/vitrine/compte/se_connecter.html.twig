@@ -1,162 +1,74 @@
+{# templates/vitrine/compte/se_connecter.html.twig #}
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Se connecter — MABB Amiens{% endblock %}
-{% block meta_description %}Connectez-vous à votre espace membre MABB.{% endblock %}
-
-{% block extra_css %}
-<style>
-.auth-section {
-    min-height: calc(100vh - 76px);
-    padding: 120px 0 60px;
-    background: linear-gradient(135deg, var(--mabb-dark) 0%, var(--mabb-blue) 60%, #1a6fa8 100%);
-    position: relative;
-    overflow: hidden;
-}
-.auth-section::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    pointer-events: none;
-}
-.auth-card {
-    background: #fff;
-    border-radius: 24px;
-    box-shadow: 0 24px 64px rgba(0,0,0,.22);
-    overflow: hidden;
-    max-width: 460px;
-    width: 100%;
-    margin: 0 auto;
-    animation: slideUp .5s ease both;
-}
-@keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-.auth-card-header {
-    background: linear-gradient(135deg, var(--mabb-dark), var(--mabb-blue));
-    padding: 2.5rem 2.5rem 2rem;
-    text-align: center;
-    color: #fff;
-}
-.auth-card-header img { height: 60px; margin-bottom: 1rem; }
-.auth-card-header h2 { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 1.6rem; margin: 0; }
-.auth-card-header p { opacity: .75; font-size: .9rem; margin: .4rem 0 0; }
-.auth-card-body { padding: 2.5rem; }
-
-.form-label { font-weight: 600; font-size: .9rem; color: var(--mabb-dark); margin-bottom: .4rem; }
-.form-control {
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    padding: .7rem 1rem;
-    font-size: .95rem;
-    transition: border-color .2s, box-shadow .2s;
-}
-.form-control:focus {
-    border-color: var(--mabb-blue);
-    box-shadow: 0 0 0 3px rgba(11,79,163,.12);
-    outline: none;
-}
-.input-group-text {
-    background: #f8f9fa;
-    border: 2px solid #e9ecef;
-    border-right: none;
-    border-radius: 10px 0 0 10px;
-    color: var(--mabb-blue);
-}
-.input-group .form-control { border-left: none; border-radius: 0 10px 10px 0; }
-.input-group .form-control:focus { border-color: var(--mabb-blue); }
-
-.btn-auth {
-    background: linear-gradient(135deg, var(--mabb-orange), var(--mabb-red));
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    padding: .8rem 2rem;
-    font-weight: 700;
-    font-size: 1rem;
-    width: 100%;
-    transition: transform .2s, box-shadow .2s;
-    letter-spacing: .02em;
-}
-.btn-auth:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,122,0,.4); }
-
-.divider { display: flex; align-items: center; gap: 1rem; margin: 1.5rem 0; color: #adb5bd; font-size: .85rem; }
-.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e9ecef; }
-
-.link-auth { color: var(--mabb-blue); font-weight: 600; text-decoration: none; }
-.link-auth:hover { color: var(--mabb-orange); text-decoration: underline; }
-
-.forgot-link { font-size: .85rem; color: #6c757d; text-decoration: none; }
-.forgot-link:hover { color: var(--mabb-orange); }
-</style>
-{% endblock %}
+{% block title %}Connexion — MABB{% endblock %}
 
 {% block body %}
 <section class="auth-section">
-    <div class="container">
-        <div class="auth-card">
-            <div class="auth-card-header">
-                <img src="{{ asset('images/logo.jpg') }}" alt="Logo MABB" class="rounded-circle">
-                <h2>Espace Membre</h2>
-                <p>Connectez-vous pour accéder à votre compte</p>
+    <div class="auth-container">
+        <h1>Connexion</h1>
+
+        {# Affiche les flash messages (ex: compte créé avec succès) #}
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+
+        {# Affiche l'erreur d'authentification si identifiants mauvais #}
+        {% if error %}
+            <div class="alert alert-error">
+                {{ error.messageKey | trans(error.messageData, 'security') }}
             </div>
-            <div class="auth-card-body">
+        {% endif %}
 
-                {# Affichage des erreurs de connexion #}
-                {% if error is defined and error %}
-                <div class="alert alert-danger d-flex align-items-center gap-2 rounded-3 mb-4" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                    <span>{{ error.messageKey|trans(error.messageData, 'security') }}</span>
-                </div>
-                {% endif %}
+        {#
+            IMPORTANT : l'action pointe sur la MÊME route (check_path = login_path dans security.yaml).
+            Symfony intercepte le POST automatiquement via le firewall.
+            Les noms des champs doivent correspondre à :
+            - username_parameter: _email  (défini dans security.yaml)
+            - password_parameter: _password
+        #}
+        <form method="post" action="{{ path('vitrine_compte_se_connecter') }}">
 
-                <form method="post" action="{{ path('vitrine_compte_se_connecter') }}" novalidate>
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
-
-                    <div class="mb-4">
-                        <label for="email" class="form-label"><i class="bi bi-envelope me-1"></i> Adresse e-mail</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                            <input type="email" id="email" name="_username" class="form-control"
-                                   value="{{ last_username ?? '' }}"
-                                   placeholder="votre@email.fr" autocomplete="email" required autofocus>
-                        </div>
-                    </div>
-
-                    <div class="mb-2">
-                        <label for="password" class="form-label"><i class="bi bi-lock me-1"></i> Mot de passe</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                            <input type="password" id="password" name="_password" class="form-control"
-                                   placeholder="••••••••" autocomplete="current-password" required>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="remember_me" name="_remember_me">
-                            <label class="form-check-label small" for="remember_me">Se souvenir de moi</label>
-                        </div>
-                        <a href="#" class="forgot-link">Mot de passe oublié ?</a>
-                    </div>
-
-                    <button type="submit" class="btn btn-auth">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
-                    </button>
-                </form>
-
-                <div class="divider">ou</div>
-
-                <p class="text-center mb-0 small">
-                    Pas encore membre ?
-                    <a href="{{ path('vitrine_compte_s_inscrire') }}" class="link-auth">Créer un compte</a>
-                </p>
-                <p class="text-center mt-2 mb-0 small">
-                    <a href="{{ path('vitrine_accueil') }}" class="forgot-link"><i class="bi bi-arrow-left me-1"></i>Retour à l'accueil</a>
-                </p>
+            <div class="form-group">
+                <label for="email">Adresse email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="_email"
+                    value="{{ last_username }}"
+                    required
+                    autocomplete="email"
+                    autofocus
+                >
             </div>
-        </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="_password"
+                    required
+                    autocomplete="current-password"
+                >
+            </div>
+
+            <div class="form-group form-check">
+                <input type="checkbox" id="remember_me" name="_remember_me" value="on">
+                <label for="remember_me">Se souvenir de moi</label>
+            </div>
+
+            {# Token CSRF généré automatiquement par Symfony — NE PAS ENLEVER #}
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+            <button type="submit" class="btn btn-primary">Se connecter</button>
+
+        </form>
+
+        <p class="auth-link">
+            Pas encore de compte ?
+            <a href="{{ path('vitrine_compte_s_inscrire') }}">Créer un compte</a>
+        </p>
     </div>
 </section>
 {% endblock %}
