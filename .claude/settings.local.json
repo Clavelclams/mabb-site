@@ -24,7 +24,25 @@
       "Read(//c/Users/Velito Adventure/scoop/apps/cacert/2025-12-02/**)",
       "Bash(php -r \"echo stream_context_create\\([''ssl'' => [''cafile'' => ''C:/Users/Velito Adventure/scoop/apps/cacert/2025-12-02/cacert.pem'']]\\) ? ''context ok'' : ''fail'';\")",
       "Bash(COMPOSER_CAFILE=\"C:/Users/Velito Adventure/scoop/apps/cacert/2025-12-02/cacert.pem\" composer config --global disable-tls false)",
-      "Bash(composer config:*)"
+      "Bash(composer config:*)",
+      "Bash(php -r \"echo PHP_VERSION . ''\\\\n''; echo php_ini_loaded_file\\(\\) . ''\\\\n'';\")",
+      "Bash(php -r \"echo php_ini_loaded_file\\(\\); echo ''\\\\n''; var_dump\\(extension_loaded\\(''pdo_mysql''\\)\\);\")",
+      "Bash(where php:*)",
+      "Bash(php -r \"echo PHP_BINARY;\")",
+      "Read(//c/laragon/bin/php/**)",
+      "Read(//c/Users/Velito Adventure/laragon/bin/**)",
+      "Bash(php -r \"print_r\\(PDO::getAvailableDrivers\\(\\)\\);\")",
+      "Bash(composer require:*)",
+      "Bash(where composer:*)",
+      "Bash(php -r \"echo php_ini_loaded_file\\(\\) . ''\\\\n''; var_dump\\(ini_get\\(''curl.cainfo''\\)\\);\")",
+      "Read(//c/Users/Velito Adventure/scoop/apps/composer/2.9.5/**)",
+      "Bash(\"C:/laragon/bin/php/php-8.3.30-Win32-vs16-x64/php.exe\" \"C:/Users/Velito Adventure/scoop/apps/composer/current/composer.phar\" require doctrine/doctrine-fixtures-bundle --dev)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:/Users/Velito Adventure/Documents/mabb-site/export-ca.ps1\")",
+      "Bash(php -r \"var_dump\\(ini_get\\(''curl.cainfo''\\), ini_get\\(''openssl.cafile''\\)\\);\")",
+      "Bash(CURL_CA_BUNDLE=\"C:/Users/Velito Adventure/Documents/mabb-site/windows-ca.pem\" composer require doctrine/doctrine-fixtures-bundle --dev)",
+      "Bash(powershell -Command \"try { Invoke-WebRequest -Uri ''https://packagist.org'' -UseBasicParsing -TimeoutSec 5 | Select-Object -ExpandProperty StatusCode } catch { Write-Host ''ERREUR:'' $_.Exception.Message }\")",
+      "Bash(php load_fixtures_manual.php)",
+      "Bash(symfony server:status)"
     ]
   }
 }

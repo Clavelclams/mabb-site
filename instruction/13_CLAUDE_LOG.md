@@ -211,3 +211,54 @@
   - templates/vitrine/compte/s_inscrire.html.twig (bloc style uniquement)
   - instruction/13_CLAUDE_LOG.md (cette entrée)
 - Décisions : aucune
+
+---
+
+### 2026-03-13 (session 10) — Connexion BDD + migrations + fixtures Phase 1
+- Objectif : finaliser connexion MySQL, créer les tables, charger les données initiales
+- Actions réalisées :
+  1. **PDO manquant** → créé `php.ini` depuis `php.ini-development` dans Scoop PHP 8.5.3 + activé `extension=pdo_mysql` + `extension_dir="ext"` → PDO mysql OK
+  2. **Cache vidé** → `php bin/console cache:clear` OK
+  3. **Connexion Doctrine** → `SELECT 1` OK (mabb_db joignable)
+  4. **Migration générée** → `Version20260313190624.php` (6 SQL queries)
+  5. **Migration exécutée** → tables créées (club, user, user_club_role, messenger_messages)
+  6. **DoctrineFixturesBundle** → impossible à installer via Composer (curl error 60, antivirus intercepte SSL)
+  7. **Contournement** → créé `src/Command/LoadFixturesManualCommand.php` (commande Symfony temporaire avec DI)
+  8. **Fixtures chargées** → 1 club + 5 users + UserClubRole via `php bin/console app:load-fixtures-manual`
+  9. **Tables vérifiées** → 5 tables présentes dans mabb_db
+- Fichiers créés/modifiés :
+  - `C:/Users/Velito Adventure/scoop/apps/php/current/php.ini` (créé + pdo_mysql activé)
+  - `migrations/Version20260313190624.php` (généré automatiquement)
+  - `src/Command/LoadFixturesManualCommand.php` (créé, temporaire — supprimer après install du bundle)
+  - `instruction/13_CLAUDE_LOG.md` (cette entrée)
+- Décisions :
+  - Blocage SSL `curl error 60` structurel (antivirus). Résolution : désactiver interception SSL antivirus pour PHP, puis `composer require doctrine/doctrine-fixtures-bundle --dev`, puis supprimer `LoadFixturesManualCommand`.
+  - BL-0011 ✅ Migration exécutée — Phase 1 BDD opérationnelle
+
+---
+
+### 2026-03-13 (session 11) — Correction firewall vitrine host pattern
+- Objectif : autoriser 127.0.0.1 dans le firewall vitrine pour les tests en dev
+- Actions réalisées :
+  - `config/packages/security.yaml` firewall `vitrine` : `localhost` → `localhost|127\.0\.0\.1` dans le pattern host
+  - `php bin/console cache:clear` OK
+- Fichiers modifiés :
+  - config/packages/security.yaml
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune — changement dev uniquement, à ne pas reporter en prod
+
+---
+
+### 2026-03-13 (session 12) — Correction 404 sur /compte/se-connecter
+- Objectif : diagnostiquer et corriger le 404 sur les routes /compte/*
+- Diagnostic :
+  - Les routes `vitrine_compte_*` existaient bien dans le router (`debug:router` OK)
+  - Le host constraint dans `config/routes/vitrine.yaml` ne contenait pas `127.0.0.1`
+  - → Le routeur rejetait les requêtes venant de `127.0.0.1:8000` (domain non matché)
+- Actions réalisées :
+  - `config/routes/vitrine.yaml` requirements.domain : ajout de `127\.0\.0\.1`
+  - `php bin/console cache:clear` OK
+- Fichiers modifiés :
+  - config/routes/vitrine.yaml
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : même pattern à corriger dans manager.yaml et pirb.yaml si tests locaux nécessaires

@@ -8,4 +8,4 @@ vitrine_controllers:
     defaults:
         domain: localhost
     requirements:
-        domain: 'mabb\.fr|localhost'
+        domain: 'mabb\.fr|localhost|127\.0\.0\.1'
