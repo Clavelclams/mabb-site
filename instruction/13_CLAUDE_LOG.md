@@ -262,3 +262,18 @@
   - config/routes/vitrine.yaml
   - instruction/13_CLAUDE_LOG.md (cette entrée)
 - Décisions : même pattern à corriger dans manager.yaml et pirb.yaml si tests locaux nécessaires
+
+---
+
+### 2026-03-14 (session 13) — Navbar : bloc auth app.user
+- Objectif : Remplacer le formulaire de recherche de la navbar vitrine par le bloc Connexion/Déconnexion contextuel
+- Actions réalisées :
+  - `templates/vitrine/navbar.html.twig` : remplacement du `<form class="d-flex">` (search) par le bloc `{% if app.user %}` avec lien Mon compte + Déconnexion / `{% else %}` Connexion + S'inscrire
+  - `php bin/console cache:clear` OK
+- Fichiers modifiés :
+  - templates/vitrine/navbar.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - `app.user.prenom` suppose que l'entité User expose un getter `getPrenom()` — à vérifier lors du branchement SecurityBundle
+  - La route `/deconnexion` doit être configurée dans security.yaml (logout path)
