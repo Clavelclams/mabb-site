@@ -3,72 +3,241 @@
 
 {% block title %}Connexion — MABB{% endblock %}
 
-{% block body %}
-<section class="auth-section">
-    <div class="auth-container">
-        <h1>Connexion</h1>
+{% block stylesheets %}
+<style>
+/* Fond = bg.jpg avec overlay léger pour lisibilité */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 16px 60px;
+    background:
+        linear-gradient(135deg, rgba(6,58,85,0.55) 0%, rgba(11,79,163,0.45) 50%, rgba(28,136,182,0.40) 100%),
+        url('/images/bg.jpg') center center / cover no-repeat;
+}
 
-        {# Affiche les flash messages (ex: compte créé avec succès) #}
+/* Card blanche */
+.auth-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 440px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+}
+
+/* Titre noir */
+.auth-card h1 {
+    color: #0b1f3a;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: .3px;
+}
+
+/* Sous-titre */
+.auth-card .auth-subtitle {
+    color: #64748b;
+    text-align: center;
+    font-size: 0.88rem;
+    margin-bottom: 28px;
+}
+
+/* Labels noirs */
+.auth-card .form-label {
+    color: #1e293b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+/* Inputs normaux clairs */
+.auth-card .form-control {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    color: #0f172a;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    transition: border-color .2s, box-shadow .2s;
+}
+.auth-card .form-control::placeholder { color: #94a3b8; }
+.auth-card .form-control:focus {
+    border-color: #ff7a00;
+    box-shadow: 0 0 0 3px rgba(255,122,0,.12);
+    background: #fff;
+    outline: none;
+}
+
+/* Checkbox */
+.auth-card .form-check-input {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid #cbd5e1;
+    border-radius: 5px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+    accent-color: #ff7a00;
+    flex-shrink: 0;
+}
+.auth-card .form-check-input:hover {
+    border-color: #ff7a00;
+}
+.auth-card .form-check-input:checked {
+    background-color: #ff7a00;
+    border-color: #ff7a00;
+    accent-color: #ff7a00;
+}
+.auth-card .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(255,122,0,.15);
+    border-color: #ff7a00;
+    outline: none;
+}
+.auth-card .form-check-label {
+    color: #475569;
+    font-size: .82rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+.auth-card .form-check-label a {
+    color: #ff7a00;
+    text-decoration: underline;
+}
+
+/* Bouton orange */
+.btn-auth {
+    width: 100%;
+    padding: 13px;
+    background: #ff7a00;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: .3px;
+    margin-top: 8px;
+    transition: background .2s, transform .1s, box-shadow .2s;
+}
+.btn-auth:hover {
+    background: #e06d00;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(255,122,0,.35);
+    color: #fff;
+}
+
+/* Lien bas */
+.auth-footer {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.88rem;
+    margin-top: 22px;
+}
+.auth-footer a { color: #ff7a00; font-weight: 600; text-decoration: none; }
+.auth-footer a:hover { text-decoration: underline; }
+
+/* Divider logo */
+.auth-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.auth-logo img { height: 52px; width: auto; }
+
+/* Alertes */
+.alert-err {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #dc2626;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    margin-bottom: 20px;
+}
+.alert-ok {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    color: #16a34a;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            <img src="{{ asset('images/logo.jpg') }}" alt="MABB">
+        </div>
+
+        <h1>Connexion</h1>
+        <p class="auth-subtitle">Accédez à votre espace MABB</p>
+
         {% for message in app.flashes('success') %}
-            <div class="alert alert-success">{{ message }}</div>
+            <div class="alert-ok">✅ {{ message }}</div>
         {% endfor %}
 
-        {# Affiche l'erreur d'authentification si identifiants mauvais #}
         {% if error %}
-            <div class="alert alert-error">
-                {{ error.messageKey | trans(error.messageData, 'security') }}
+            <div class="alert-err">
+                ❌ {{ error.messageKey | trans(error.messageData, 'security') }}
             </div>
         {% endif %}
 
-        {#
-            IMPORTANT : l'action pointe sur la MÊME route (check_path = login_path dans security.yaml).
-            Symfony intercepte le POST automatiquement via le firewall.
-            Les noms des champs doivent correspondre à :
-            - username_parameter: _email  (défini dans security.yaml)
-            - password_parameter: _password
-        #}
         <form method="post" action="{{ path('vitrine_compte_se_connecter') }}">
 
-            <div class="form-group">
-                <label for="email">Adresse email</label>
+            <div class="mb-3">
+                <label for="email" class="form-label">Adresse email</label>
                 <input
                     type="email"
+                    class="form-control"
                     id="email"
                     name="_email"
                     value="{{ last_username }}"
                     required
                     autocomplete="email"
                     autofocus
+                    placeholder="votre@email.fr"
                 >
             </div>
 
-            <div class="form-group">
-                <label for="password">Mot de passe</label>
+            <div class="mb-3">
+                <label for="password" class="form-label">Mot de passe</label>
                 <input
                     type="password"
+                    class="form-control"
                     id="password"
                     name="_password"
                     required
                     autocomplete="current-password"
+                    placeholder="••••••••"
                 >
             </div>
 
-            <div class="form-group form-check">
-                <input type="checkbox" id="remember_me" name="_remember_me" value="on">
-                <label for="remember_me">Se souvenir de moi</label>
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="remember_me" name="_remember_me" value="on">
+                <label class="form-check-label" for="remember_me">Se souvenir de moi (7 jours)</label>
             </div>
 
-            {# Token CSRF généré automatiquement par Symfony — NE PAS ENLEVER #}
+            {# Token CSRF — NE JAMAIS SUPPRIMER #}
             <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
 
-            <button type="submit" class="btn btn-primary">Se connecter</button>
+            <button type="submit" class="btn btn-auth">Se connecter</button>
 
         </form>
 
-        <p class="auth-link">
+        <p class="auth-footer">
             Pas encore de compte ?
             <a href="{{ path('vitrine_compte_s_inscrire') }}">Créer un compte</a>
         </p>
+
     </div>
-</section>
+</div>
 {% endblock %}

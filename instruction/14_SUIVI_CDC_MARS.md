@@ -24,18 +24,18 @@
 | BL       | Item                                                             | Statut | Notes                                                                                            |
 | -------- | ---------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------ |
 | BL-0000  | Résolution blocage composer SSL / php.ini                        | ⬜     | P0 bloquant — à traiter en premier                                                               |
-| BL-0001  | Entité `User` (email, password, nom, prénom, statut, timestamps) | ⬜     |                                                                                                  |
-| BL-0002  | Entité `Club` (nom, logo, couleurs, statut, club_id_ffbb)        | ⬜     |                                                                                                  |
-| BL-0003  | Entité `ClubUser` (pivot user-club)                              | ⬜     |                                                                                                  |
-| BL-0004  | Entité `Role`                                                    | ⬜     |                                                                                                  |
-| BL-0004b | Entité `ClubUserRole` + contraintes unicité DB                   | ⬜     |                                                                                                  |
-| BL-0005  | `ClubScopeVoter` (filtrage multi-tenant)                         | ⬜     |                                                                                                  |
+| BL-0001  | Entité `User` (email, password, nom, prénom, statut, timestamps) | ✅     | `src/Entity/Core/User.php` — UserInterface, RGPD consent, lifecycle callbacks, relation UserClubRole |
+| BL-0002  | Entité `Club` (nom, logo, couleurs, statut, club_id_ffbb)        | ✅     | `src/Entity/Core/Club.php` — slug unique, isActive, lifecycle callbacks (pas de club_id_ffbb — champ slug utilisé à la place) |
+| BL-0003  | Entité `ClubUser` (pivot user-club)                              | ✅     | Fusionné dans `UserClubRole` — design simplifié (3 tables au lieu de 4)                          |
+| BL-0004  | Entité `Role`                                                    | ✅     | Rôles définis comme constantes dans `UserClubRole` (DIRIGEANT, COACH, STAFF, JOUEUR, PARENT, BENEVOLE) |
+| BL-0004b | Entité `ClubUserRole` + contraintes unicité DB                   | ✅     | `src/Entity/Core/UserClubRole.php` — `UNIQUE(user_id, club_id, role)` défini                     |
+| BL-0005  | `ClubScopeVoter` (filtrage multi-tenant)                         | ✅     | `src/Security/Voter/ClubVoter.php` (CLUB_MEMBER/COACH/ADMIN/STAFF/JOUEUR) + `TenantResolver.php` |
 | BL-0006  | `OwnershipVoter`                                                 | ⬜     |                                                                                                  |
 | BL-0007  | `TeamCoachVoter`                                                 | ⬜     |                                                                                                  |
 | BL-0008  | JWT (LexikJWTAuthenticationBundle) + `security.yaml`             | ⬜     |                                                                                                  |
-| BL-0009  | Formulaire inscription (opt-in bénévole + consentement CGU/RGPD) | 🔄     | Template `s_inscrire.html.twig` créé — logique métier (entité User, validation, hachage) à faire |
+| BL-0009  | Formulaire inscription (opt-in bénévole + consentement CGU/RGPD) | 🔄     | Template `s_inscrire.html.twig` fonctionnel — controller + persistance User à faire              |
 | BL-0010  | `password_hashers` bcrypt/argon2 dans `security.yaml`            | ⬜     |                                                                                                  |
-| BL-0011  | Première migration Doctrine                                      | ⬜     | Dépend BL-0001 à 0004b                                                                           |
+| BL-0011  | Première migration Doctrine                                      | ⬜     | Entités prêtes (User, Club, UserClubRole) — migration à générer                                  |
 | BL-0012  | Rate limiting login (5 tentatives/min)                           | ⬜     |                                                                                                  |
 | BL-0013  | Récupération mot de passe (lien sécurisé)                        | ⬜     |                                                                                                  |
 | BL-0014  | Endpoints API auth + contexte club (Controller Symfony natif)    | ⬜     |                                                                                                  |
@@ -134,15 +134,15 @@
 | Phase             | Total items | ✅ Fait | 🔄 En cours | ⬜ À faire |
 | ----------------- | ----------- | ------- | ----------- | ---------- |
 | Gouvernance       | 6           | 6       | 0           | 0          |
-| Phase 1 — Core    | 15          | 0       | 1           | 14         |
+| Phase 1 — Core    | 15          | 6       | 1           | 8          |
 | Phase 2 — Sport   | 9           | 0       | 0           | 9          |
 | Phase 3 — Stats   | 8           | 0       | 0           | 8          |
 | Phase 4 — PIRB    | 6           | 0       | 0           | 6          |
 | Phase 5 — Vitrine | 18          | 11      | 2           | 5          |
 | Phase 6 — Système | 8           | 0       | 0           | 8          |
-| **TOTAL**         | **70**      | **17**  | **3**       | **50**     |
+| **TOTAL**         | **70**      | **23**  | **3**       | **44**     |
 
-**Avancement global : ~24 %** (documentation + vitrine statique posée)
+**Avancement global : ~33 %** (entités Core + sécurité multi-tenant posées)
 
 ---
 

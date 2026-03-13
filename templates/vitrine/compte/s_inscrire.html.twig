@@ -3,14 +3,168 @@
 
 {% block title %}Créer un compte — MABB{% endblock %}
 
-{% block body %}
-<section class="auth-section">
-    <div class="auth-container">
-        <h1>Créer un compte</h1>
+{% block stylesheets %}
+<style>
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 16px 60px;
+    background:
+        linear-gradient(135deg, rgba(6,58,85,0.55) 0%, rgba(11,79,163,0.45) 50%, rgba(28,136,182,0.40) 100%),
+        url('/images/bg.jpg') center center / cover no-repeat;
+}
 
-        {# Affiche les erreurs de validation #}
+.auth-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+}
+
+.auth-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.auth-logo img { height: 52px; width: auto; }
+
+.auth-card h1 {
+    color: #0b1f3a;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 800;
+    font-size: 1.8rem;
+    text-align: center;
+    margin-bottom: 8px;
+    letter-spacing: .3px;
+}
+.auth-card .auth-subtitle {
+    color: #64748b;
+    text-align: center;
+    font-size: 0.88rem;
+    margin-bottom: 28px;
+}
+
+.auth-card .form-label {
+    color: #1e293b;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.auth-card .form-control {
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    color: #0f172a;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    transition: border-color .2s, box-shadow .2s;
+}
+.auth-card .form-control::placeholder { color: #94a3b8; }
+.auth-card .form-control:focus {
+    border-color: #ff7a00;
+    box-shadow: 0 0 0 3px rgba(255,122,0,.12);
+    background: #fff;
+    outline: none;
+}
+.auth-card .form-text { color: #94a3b8; font-size: .75rem; }
+
+.auth-card .form-check-input {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    border: 2px solid #cbd5e1;
+    border-radius: 5px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: border-color .2s, box-shadow .2s;
+    accent-color: #ff7a00;
+    flex-shrink: 0;
+}
+.auth-card .form-check-input:hover {
+    border-color: #ff7a00;
+}
+.auth-card .form-check-input:checked {
+    background-color: #ff7a00;
+    border-color: #ff7a00;
+    accent-color: #ff7a00;
+}
+.auth-card .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(255,122,0,.15);
+    border-color: #ff7a00;
+    outline: none;
+}
+.auth-card .form-check-label {
+    color: #475569;
+    font-size: .82rem;
+    line-height: 1.4;
+    cursor: pointer;
+}
+.auth-card .form-check-label a {
+    color: #ff7a00;
+    text-decoration: underline;
+}
+
+.required { color: #ff7a00; }
+
+.btn-auth {
+    width: 100%;
+    padding: 13px;
+    background: #ff7a00;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 8px;
+    transition: background .2s, transform .1s, box-shadow .2s;
+}
+.btn-auth:hover {
+    background: #e06d00;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(255,122,0,.35);
+    color: #fff;
+}
+
+.auth-footer {
+    text-align: center;
+    color: #64748b;
+    font-size: .88rem;
+    margin-top: 22px;
+}
+.auth-footer a { color: #ff7a00; font-weight: 600; text-decoration: none; }
+.auth-footer a:hover { text-decoration: underline; }
+
+.alert-err {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    color: #dc2626;
+    padding: 12px 16px;
+    font-size: .88rem;
+    margin-bottom: 20px;
+}
+.alert-err ul { margin: 0; padding-left: 18px; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+
+        <div class="auth-logo">
+            <img src="{{ asset('images/logo.jpg') }}" alt="MABB">
+        </div>
+
+        <h1>Créer un compte</h1>
+        <p class="auth-subtitle">Rejoignez l'espace numérique du club</p>
+
         {% if errors is defined and errors|length > 0 %}
-            <div class="alert alert-error">
+            <div class="alert-err">
                 <ul>
                     {% for error in errors %}
                         <li>{{ error }}</li>
@@ -21,89 +175,56 @@
 
         <form method="post" action="{{ path('vitrine_compte_s_inscrire') }}" novalidate>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="prenom">Prénom <span class="required">*</span></label>
-                    <input
-                        type="text"
-                        id="prenom"
-                        name="prenom"
-                        required
-                        autocomplete="given-name"
-                        autofocus
-                    >
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label for="prenom" class="form-label">Prénom <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="prenom" name="prenom"
+                        required autocomplete="given-name" autofocus placeholder="Prénom">
                 </div>
-
-                <div class="form-group">
-                    <label for="nom">Nom <span class="required">*</span></label>
-                    <input
-                        type="text"
-                        id="nom"
-                        name="nom"
-                        required
-                        autocomplete="family-name"
-                    >
+                <div class="col-6">
+                    <label for="nom" class="form-label">Nom <span class="required">*</span></label>
+                    <input type="text" class="form-control" id="nom" name="nom"
+                        required autocomplete="family-name" placeholder="Nom">
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="email">Adresse email <span class="required">*</span></label>
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    required
-                    autocomplete="email"
-                >
+            <div class="mb-3">
+                <label for="email" class="form-label">Adresse email <span class="required">*</span></label>
+                <input type="email" class="form-control" id="email" name="email"
+                    required autocomplete="email" placeholder="votre@email.fr">
             </div>
 
-            <div class="form-group">
-                <label for="password">Mot de passe <span class="required">*</span></label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    autocomplete="new-password"
-                    minlength="8"
-                >
-                <small>Minimum 8 caractères.</small>
+            <div class="mb-3">
+                <label for="password" class="form-label">Mot de passe <span class="required">*</span></label>
+                <input type="password" class="form-control" id="password" name="password"
+                    required autocomplete="new-password" minlength="8" placeholder="••••••••">
+                <div class="form-text">Minimum 8 caractères.</div>
             </div>
 
-            <div class="form-group">
-                <label for="password_confirm">Confirmer le mot de passe <span class="required">*</span></label>
-                <input
-                    type="password"
-                    id="password_confirm"
-                    name="password_confirm"
-                    required
-                    autocomplete="new-password"
-                >
+            <div class="mb-3">
+                <label for="password_confirm" class="form-label">Confirmer le mot de passe <span class="required">*</span></label>
+                <input type="password" class="form-control" id="password_confirm" name="password_confirm"
+                    required autocomplete="new-password" placeholder="••••••••">
             </div>
 
-            <div class="form-group form-check">
-                <input
-                    type="checkbox"
-                    id="rgpd_consent"
-                    name="rgpd_consent"
-                    required
-                >
-                <label for="rgpd_consent">
-                    J'accepte la
-                    <a href="#" target="_blank">politique de confidentialité</a>
+            <div class="form-check mb-4 d-flex gap-2 align-items-start">
+                <input class="form-check-input mt-1" type="checkbox" id="rgpd_consent" name="rgpd_consent" required>
+                <label class="form-check-label" for="rgpd_consent">
+                    J'accepte la <a href="#">politique de confidentialité</a>
                     et le traitement de mes données personnelles.
                     <span class="required">*</span>
                 </label>
             </div>
 
-            <button type="submit" class="btn btn-primary">Créer mon compte</button>
+            <button type="submit" class="btn btn-auth">Créer mon compte</button>
 
         </form>
 
-        <p class="auth-link">
+        <p class="auth-footer">
             Déjà un compte ?
             <a href="{{ path('vitrine_compte_se_connecter') }}">Se connecter</a>
         </p>
+
     </div>
-</section>
+</div>
 {% endblock %}

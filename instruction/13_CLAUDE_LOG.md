@@ -166,3 +166,48 @@
 - Décisions : aucune ADR nécessaire (correction structurelle, pas de décision d'architecture)
 - Points de vigilance :
   - Vérifier que les entités Core (User, Club, UserClubRole) référencent bien ces repositories via l'attribut `#[ORM\Entity(repositoryClass: ...)]` lors de leur création (BL-0001 à BL-0004b)
+  - ✅ Confirmé lors de la session 8 : les 3 entités référencent bien leurs repositories
+
+---
+
+### 2026-03-13 (session 8) — Synchronisation documentation avec état réel du code
+- Objectif : Mettre à jour toute la doc MD pour refléter les fichiers existants non documentés
+- Constat : audit du répertoire `src/` révèle que les entités Core, repositories et sécurité ont été créés sans mise à jour de la doc
+- Fichiers existants découverts non documentés :
+  - `src/Entity/Core/User.php` (UserInterface, RGPD consent, lifecycle callbacks)
+  - `src/Entity/Core/Club.php` (slug unique, isActive, lifecycle callbacks)
+  - `src/Entity/Core/UserClubRole.php` (pivot User<->Club<->Rôle, UNIQUE user_id+club_id+role)
+  - `src/Repository/Core/UserRepository.php` (upgradePassword, findActiveByEmail)
+  - `src/Repository/Core/ClubRepository.php` (findActiveBySlug)
+  - `src/Repository/Core/UserClubRoleRepository.php` (findActiveRolesForUserInClub, hasRole)
+  - `src/Security/Voter/ClubVoter.php` (CLUB_MEMBER/COACH/ADMIN/STAFF/JOUEUR)
+  - `src/Security/Tenant/TenantResolver.php` (résolution club actif en session, multi-clubs)
+  - `src/DataFixtures/AppFixtures.php`
+- Actions réalisées :
+  - `instruction/arborescence.md` : liste détaillée de tous les fichiers src/ existants avec descriptions
+  - `instruction/14_SUIVI_CDC_MARS.md` : BL-0001 à BL-0005 passés en ✅, compteurs mis à jour (~33%)
+  - `instruction/02_ROADMAP_GLOBALE.md` : Phase 1 détail mis à jour
+  - `instruction/13_CLAUDE_LOG.md` : cette entrée
+- Fichiers modifiés :
+  - instruction/arborescence.md
+  - instruction/14_SUIVI_CDC_MARS.md
+  - instruction/02_ROADMAP_GLOBALE.md
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune — audit documentaire uniquement
+- Points de vigilance :
+  - BL-0011 (migration Doctrine) est débloqué : les 3 entités Core sont prêtes → prochaine priorité après BL-0000
+  - L'architecture a fusionné ClubUser + Role + ClubUserRole en une seule entité `UserClubRole` — cohérent avec ADR-0006 mais différent du backlog initial (BL-0003/0004/0004b)
+
+---
+
+### 2026-03-13 (session 9) — Correction CSS checkbox pages compte
+- Objectif : Remplacer les règles `.form-check-input` / `.form-check-label` dans les deux pages compte
+- Actions réalisées :
+  - `templates/vitrine/compte/se_connecter.html.twig` : remplacement des 2 règles `.form-check-*` par le bloc complet (width, height, border, states hover/checked/focus, cursor, label)
+  - `templates/vitrine/compte/s_inscrire.html.twig` : idem — remplacement des 3 règles `.form-check-*` par le même bloc complet
+  - Aucune modification HTML, Twig ni routes
+- Fichiers modifiés :
+  - templates/vitrine/compte/se_connecter.html.twig (bloc style uniquement)
+  - templates/vitrine/compte/s_inscrire.html.twig (bloc style uniquement)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune

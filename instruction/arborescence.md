@@ -106,23 +106,34 @@ mabb-site/
 │   │   ├── Pirb/                        # pirb.mabb.fr
 │   │   └── Api/                         # /api (REST, stateless)
 │   │
+│   ├── DataFixtures/                    # Fixtures de développement
+│   │   └── AppFixtures.php
+│   │
 │   ├── Entity/                          # Entites Doctrine (par module)
-│   │   ├── Core/                        # User, Role, Club, ClubUser
-│   │   ├── Sport/                       # Team, Player, Match, Event, Stats...
-│   │   ├── Vitrine/                     # Article, Page, Media
-│   │   └── Pirb/                        # PlayerProfile, ShotRecord...
+│   │   ├── Core/                        # Entités de base (créées)
+│   │   │   ├── User.php                 # UserInterface + PasswordAuthenticatedUserInterface, RGPD
+│   │   │   ├── Club.php                 # Club (slug unique, isActive, lifecycle callbacks)
+│   │   │   └── UserClubRole.php         # Pivot User<->Club<->Rôle métier (UNIQUE user_id+club_id+role)
+│   │   ├── Sport/                       # Team, Player, Match, Event, Stats... (à créer)
+│   │   ├── Vitrine/                     # Article, Page, Media (à créer)
+│   │   └── Pirb/                        # PlayerProfile, ShotRecord... (à créer)
 │   │
 │   ├── Repository/                      # Repositories Doctrine (par module)
-│   │   ├── Core/
-│   │   ├── Sport/
-│   │   ├── Vitrine/
-│   │   └── Pirb/
+│   │   ├── Core/                        # Repositories créés
+│   │   │   ├── UserRepository.php       # + upgradePassword(), findActiveByEmail()
+│   │   │   ├── ClubRepository.php       # + findActiveBySlug()
+│   │   │   └── UserClubRoleRepository.php # + findActiveRolesForUserInClub(), hasRole()
+│   │   ├── Sport/                       # (à créer)
+│   │   ├── Vitrine/                     # (à créer)
+│   │   └── Pirb/                        # (à créer)
 │   │
 │   ├── Security/                        # Securite
-│   │   ├── Voter/                       # ClubScopeVoter, OwnershipVoter...
-│   │   └── Tenant/                      # Filtrage multi-tenant par club_id
+│   │   ├── Voter/
+│   │   │   └── ClubVoter.php            # CLUB_MEMBER / CLUB_COACH / CLUB_ADMIN / CLUB_STAFF / CLUB_JOUEUR
+│   │   └── Tenant/
+│   │       └── TenantResolver.php       # Résolution club actif en session (multi-clubs)
 │   │
-│   └── Service/                         # Services metier
+│   └── Service/                         # Services metier (à créer)
 │
 ├── templates/                           # Templates Twig (par espace)
 │   ├── vitrine/                         # mabb.fr

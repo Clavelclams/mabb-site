@@ -26,7 +26,7 @@ V3 = extension strategique (mobile, comite, SaaS)
 
 | Phase | Module | Statut | Detail |
 |-------|--------|--------|--------|
-| Phase 1 (sem 1-4) | Core | EN COURS | Socle pose : arborescence modulaire, routage multi-host, firewalls, role_hierarchy (7 roles). Reste : entites User/Club, JWT, voters |
+| Phase 1 (sem 1-4) | Core | EN COURS | Entites User/Club/UserClubRole creees, ClubVoter + TenantResolver implementes. Reste : JWT, security.yaml, migration, OwnershipVoter, rate limiting |
 | Phase 2 (sem 5-8) | Sport | A FAIRE | Saisons, equipes, joueurs, evenements, presences |
 | Phase 3 (sem 9-14) | Stats | A FAIRE | Saisie match, shot tracking, timeline, validation (necessite API Platform) |
 | Phase 4 (sem 15-18) | PIRB | A FAIRE | Dashboard, shot chart, feedback anonyme |
