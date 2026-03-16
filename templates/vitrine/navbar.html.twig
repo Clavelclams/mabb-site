@@ -1,47 +1,79 @@
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="/">MABB</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="/">Accueil</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="/club">Club</a>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Actualités
-          </a>
-          <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li><a class="dropdown-item" href="/news">Actualités</a></li>
-            <li><a class="dropdown-item" href="/calendrier">Calendrier</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/galerie">Galerie du club</a></li>
-          </ul>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link disabled" href="/numerique" tabindex="-1" aria-disabled="true">Espace numérique</a>
-        </li>
-      </ul>
-      {% if app.user %}
-        <a href="/compte/mon-compte" class="btn btn-outline-light btn-sm rounded-pill me-2">
-          <i class="bi bi-person-circle"></i> {{ app.user.prenom }}
+{# templates/vitrine/navbar.html.twig #}
+{# MODIFS vs original :
+   1. navbar-light bg-light → navbar-dark navbar-mabb fixed-top (fond bleu)
+   2. Ajout bandeau 🚧 après le brand
+   3. Ajout <li> Membres (après Club) et Formation (après Actualités)
+   4. "Espace numérique" disabled → "Numérique" actif
+   5. {% if app.user %} déjà en place — conservé tel quel
+#}
+<nav class="navbar navbar-expand-lg navbar-dark navbar-mabb fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">MABB</a>
+
+        {# Bandeau site en construction — visible sur desktop entre logo et nav #}
+        <a href="/clavel" class="d-none d-lg-inline-flex align-items-center gap-1 text-decoration-none ms-2"
+           style="background:rgba(255,140,0,.15);border:1px solid rgba(255,140,0,.4);color:#ffb347;border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:600">
+            🚧 Site en construction
         </a>
-        <a href="/deconnexion" class="btn btn-sm rounded-pill" style="background:#ff8c00;color:#fff;border:none">
-          <i class="bi bi-box-arrow-right"></i> Déconnexion
-        </a>
-      {% else %}
-        <a href="/compte/se-connecter" class="btn btn-outline-light btn-sm rounded-pill me-2">
-          <i class="bi bi-box-arrow-in-right"></i> Connexion
-        </a>
-        <a href="/compte/s-inscrire" class="btn btn-sm rounded-pill" style="background:#ff8c00;color:#fff;border:none">
-          <i class="bi bi-person-plus"></i> S'inscrire
-        </a>
-      {% endif %}
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="/">Accueil</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/club">Le Club</a>
+                </li>
+                {# AJOUT : Membres #}
+                <li class="nav-item">
+                    <a class="nav-link" href="/membres">Membres</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Actualités
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                        <li><a class="dropdown-item" href="/news">Actualités</a></li>
+                        <li><a class="dropdown-item" href="/calendrier">Calendrier</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/galerie">Galerie du club</a></li>
+                    </ul>
+                </li>
+                {# AJOUT : Formation #}
+                <li class="nav-item">
+                    <a class="nav-link" href="/formation">Formation</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/numerique">Numérique</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/equipes">Équipes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/contact">Contact</a>
+                </li>
+            </ul>
+
+            {# Boutons auth — {% if app.user %} déjà présent, conservé #}
+            {% if app.user %}
+                <a href="/compte/mon-compte" class="btn btn-outline-light btn-sm rounded-pill me-2">
+                    <i class="bi bi-person-circle"></i> {{ app.user.prenom }}
+                </a>
+                <a href="{{ path('vitrine_logout') }}" class="btn btn-sm rounded-pill btn-inscription">
+                    <i class="bi bi-box-arrow-right"></i> Déconnexion
+                </a>
+            {% else %}
+                <a href="/compte/se-connecter" class="btn btn-outline-light btn-sm rounded-pill me-2">
+                    <i class="bi bi-box-arrow-in-right"></i> Connexion
+                </a>
+                <a href="/compte/s-inscrire" class="btn btn-sm rounded-pill btn-inscription">
+                    <i class="bi bi-person-plus"></i> S'inscrire
+                </a>
+            {% endif %}
+        </div>
     </div>
-  </div>
 </nav>
