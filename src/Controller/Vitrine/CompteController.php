@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+use Symfony\Component\String\Slugger\SluggerInterface;
 
 #[Route('/compte')]
 final class CompteController extends AbstractController
@@ -119,5 +120,61 @@ final class CompteController extends AbstractController
         return $this->render('vitrine/compte/s_inscrire.html.twig', [
             'errors' => $errors,
         ]);
+    }
+
+    #[Route('/mon-compte', name: 'vitrine_compte_mon_compte')]
+    public function monCompte(): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+
+        return $this->render('vitrine/compte/mon_compte.html.twig');
+    }
+
+    #[Route('/update-profil', name: 'vitrine_compte_update_profil', methods: ['POST'])]
+    public function updateProfil(
+        Request $request,
+        EntityManagerInterface $em,
+        SluggerInterface $slugger
+    ): Response {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+
+        if (!$this->isCsrfTokenValid('update_profil', $request->request->get('_csrf_token'))) {
+            $this->addFlash('error', 'Token CSRF invalide.');
+            return $this->redirectToRoute('vitrine_compte_mon_compte');
+        }
+
+        /** @var \App\Entity\Core\User $user */
+        $user = $this->getUser();
+
+        $bio = $request->request->get('bio');
+        $user->setBio($bio ? substr(strip_tags($bio), 0, 200) : null);
+
+        $rolesValides = ['benevole', 'coach', 'staff', 'dirigeant', 'service-civique', 'joueur'];
+        $roleMembre = $request->request->get('roleMembre');
+        if (in_array($roleMembre, $rolesValides)) {
+            $user->setRoleMembre($roleMembre);
+        }
+
+        $user->setIsPublic($request->request->has('isPublic'));
+
+        $photoFile = $request->files->get('photo');
+        if ($photoFile) {
+            $safeFilename = $slugger->slug(pathinfo($photoFile->getClientOriginalName(), PATHINFO_FILENAME));
+            $newFilename = $safeFilename . '-' . uniqid() . '.' . $photoFile->guessExtension();
+            try {
+                $photoFile->move(
+                    $this->getParameter('kernel.project_dir') . '/public/uploads/avatars',
+                    $newFilename
+                );
+                $user->setPhotoPath($newFilename);
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Erreur upload photo.');
+            }
+        }
+
+        $em->flush();
+        $this->addFlash('success', 'Profil mis à jour ✅');
+
+        return $this->redirectToRoute('vitrine_compte_mon_compte');
     }
 }

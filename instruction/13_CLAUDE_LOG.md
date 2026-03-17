@@ -277,3 +277,126 @@
 - Points de vigilance :
   - `app.user.prenom` suppose que l'entité User expose un getter `getPrenom()` — à vérifier lors du branchement SecurityBundle
   - La route `/deconnexion` doit être configurée dans security.yaml (logout path)
+
+---
+
+### 2026-03-17 (session 14) — Navbar : bandeau construction + liens Membres/Formation + auth conditionnels + footer 23 ans
+- Objectif : 4 modifications sur `templates/vitrine/base.html.twig`
+- Actions réalisées :
+  1. **Bandeau 🚧 Site en construction** ajouté après le brand MABB (visible desktop uniquement via `d-none d-lg-inline-flex`), pointant vers `vitrine_clavel`
+  2. **Lien "Membres"** ajouté dans la navbar après "Le Club" (route `vitrine_membres`)
+  3. **Lien "Formation"** ajouté dans la navbar avant "Numérique" (route `vitrine_formation`)
+  4. **Bloc auth conditionnel** : `{% if app.user %}` → Mon compte + Déconnexion / `{% else %}` → Connexion + S'inscrire (remplace les boutons statiques)
+  5. **Footer** : "depuis plus de 20 ans" → "depuis plus de 23 ans" (corrigé dans la `<meta>` description ET le paragraphe footer pour cohérence)
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement (PHP non disponible dans le sandbox Claude)
+- Fichiers modifiés :
+  - templates/vitrine/base.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - Les routes `vitrine_membres`, `vitrine_formation` et `vitrine_clavel` doivent exister (controllers + YAML) — Twig lèvera une exception sinon
+  - La route `vitrine_logout` doit être configurée dans security.yaml (logout path) — cf. session 13 même remarque
+  - `app.user.prenom` → getter `getPrenom()` requis sur l'entité User (idem session 13)
+
+---
+
+### 2026-03-17 (session 15) — Accueil : chiffres clés + bouton Aide au devoir
+- Objectif : 2 modifications sur `templates/vitrine/accueil/index.html.twig`
+- Actions réalisées :
+  1. **Chiffres clés** : `'3' / 'Sites à Amiens'` → `'7' / 'Quartiers'`
+  2. **Chiffres clés** : `'20+' / 'Ans d'engagement'` → `'23+' / 'Ans d'engagement'`
+  3. **Hero** : ajout d'un 3ᵉ bouton "Aide au devoir" (bleu `#1c88b6`, `rounded-pill`) pointant vers `vitrine_club#aide-au-devoir`
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+- Fichiers modifiés :
+  - templates/vitrine/accueil/index.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - L'ancre `#aide-au-devoir` dans `vitrine_club` doit exister côté HTML pour que le scroll fonctionne — sinon navigation OK mais pas de scroll automatique
+
+---
+
+### 2026-03-17 (session 16) — Nouveaux controllers : NumeriquePagesController + CompteController (mon-compte / update-profil)
+- Objectif : créer les routes manquantes `vitrine_membres`, `vitrine_formation`, `vitrine_cite_educative`, `vitrine_clavel`, `vitrine_compte_mon_compte`, `vitrine_compte_update_profil`
+- Actions réalisées :
+  1. **Création** `src/Controller/Vitrine/NumeriquePagesController.php` (4 routes) :
+     - `GET /membres` → `vitrine_membres` (liste membres publics filtrables par rôle via `UserRepository::findPublicMembers`)
+     - `GET /formation` → `vitrine_formation`
+     - `GET /cite-educative` → `vitrine_cite_educative`
+     - `GET /clavel` → `vitrine_clavel`
+  2. **Mise à jour** `src/Controller/Vitrine/CompteController.php` (2 méthodes + 1 use) :
+     - Ajout `use Symfony\Component\String\Slugger\SluggerInterface` (absent)
+     - Ajout `GET /compte/mon-compte` → `vitrine_compte_mon_compte` (accès ROLE_USER, render `mon_compte.html.twig`)
+     - Ajout `POST /compte/update-profil` → `vitrine_compte_update_profil` (CSRF, bio/roleMembre/isPublic/photo, upload dans `public/uploads/avatars/`)
+  - ⚠️ `php bin/console cache:clear` + vérif `debug:router` à lancer manuellement
+- Fichiers créés/modifiés :
+  - src/Controller/Vitrine/NumeriquePagesController.php (nouveau)
+  - src/Controller/Vitrine/CompteController.php (SluggerInterface + 2 méthodes)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - `UserRepository::findPublicMembers($role)` doit être implémentée dans `src/Repository/Core/UserRepository.php` — elle n'existe pas encore
+  - Les templates `vitrine/membres/index.html.twig`, `vitrine/formation/index.html.twig`, `vitrine/clavel/index.html.twig`, `vitrine/compte/mon_compte.html.twig` sont à créer
+  - `vitrine/club/cite_educative.html.twig` est à créer (ou vérifier s'il existe déjà)
+  - L'entité `User` doit exposer `setBio()`, `setRoleMembre()`, `setIsPublic()`, `setPhotoPath()` — à vérifier/créer si absent (migration nécessaire si champs manquants)
+  - Le dossier `public/uploads/avatars/` doit exister et être accessible en écriture
+  - Ces routes sont définies sans host constraint (`#[Route]` sur le controller, pas dans vitrine.yaml) — vérifier qu'elles sont bien importées par la config de routage vitrine
+
+---
+
+### 2026-03-17 (session 17) — User : profil public + migration + dossier avatars
+- Objectif : compléter l'entité User (bio/photo/isPublic/roleMembre), implémenter findPublicMembers, créer le dossier uploads
+- Actions réalisées :
+  1. **`src/Entity/Core/User.php`** — ajout de 4 propriétés Doctrine :
+     - `bio` : `text nullable`
+     - `photoPath` : `string(255) nullable`
+     - `isPublic` : `boolean default false`
+     - `roleMembre` : `string(50) nullable, default 'benevole'`
+     - + 8 getters/setters correspondants (`getBio/setBio`, `getPhotoPath/setPhotoPath`, `isPublic/setIsPublic`, `getRoleMembre/setRoleMembre`)
+  2. **`src/Repository/Core/UserRepository.php`** — ajout `findPublicMembers(?string $role)` : filtre `isPublic=true`, tri `roleMembre ASC` + `prenom ASC`, filtre optionnel par rôle
+  3. **`public/uploads/avatars/`** — dossier créé + `.gitkeep` pour suivi Git
+  4. **Migration Doctrine** — à lancer manuellement (PHP absent du sandbox) :
+     ```
+     php bin/console cache:clear
+     php bin/console doctrine:migrations:diff
+     php bin/console doctrine:migrations:migrate --no-interaction
+     php bin/console doctrine:query:sql "DESCRIBE user"
+     ```
+- Fichiers modifiés/créés :
+  - src/Entity/Core/User.php (4 propriétés + 8 accesseurs)
+  - src/Repository/Core/UserRepository.php (findPublicMembers)
+  - public/uploads/avatars/.gitkeep (nouveau)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - ✅ `findPublicMembers` implémentée — point de vigilance session 16 résolu
+  - ✅ `setBio/setRoleMembre/setIsPublic/setPhotoPath` implémentés — point de vigilance session 16 résolu
+  - ✅ `public/uploads/avatars/` créé — point de vigilance session 16 résolu
+  - La migration `doctrine:migrations:diff` va générer les 4 colonnes : `bio TEXT NULL`, `photo_path VARCHAR(255) NULL`, `is_public TINYINT(1) DEFAULT 0`, `role_membre VARCHAR(50) NULL`
+  - Les templates restants (`vitrine/membres/index.html.twig`, `vitrine/formation/index.html.twig`, `vitrine/clavel/index.html.twig`, `vitrine/compte/mon_compte.html.twig`, `vitrine/club/cite_educative.html.twig`) restent à créer
+
+---
+
+### 2026-03-17 (session 18) — Création des 5 templates Twig manquants
+- Objectif : créer les templates des 5 routes introduites en sessions 16/17
+- Actions réalisées :
+  1. **`templates/vitrine/compte/mon_compte.html.twig`** — page profil connecté : avatar, bio, roleMembre, toggle isPublic, upload photo, flash messages, liens espaces + déconnexion
+  2. **`templates/vitrine/membres/index.html.twig`** — grille cards membres publics, filtres par rôle (Twig for sur hash), état vide, bannière CTA selon app.user
+  3. **`templates/vitrine/formation/index.html.twig`** — 3 cards parcours (Clavel/Moussa/Ugo) + section "Et bien d'autres..." avec prénoms
+  4. **`templates/vitrine/clavel/index.html.twig`** — page perso Clavel : rôle MABB, VENA, 3 projets (Vitrine/App/PIRB) sur card gradient
+  5. **`templates/vitrine/club/cite_educative.html.twig`** — 3 niveaux scolaires (École/Collège/Lycée), lien Aide au devoir Amiens, lien vitrine_formation
+  - Dossiers créés automatiquement : `membres/`, `formation/`, `clavel/`, `club/`
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+- Fichiers créés :
+  - templates/vitrine/compte/mon_compte.html.twig
+  - templates/vitrine/membres/index.html.twig
+  - templates/vitrine/formation/index.html.twig
+  - templates/vitrine/clavel/index.html.twig
+  - templates/vitrine/club/cite_educative.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - ✅ Tous les templates manquants (sessions 16/17) sont maintenant créés
+  - `btn-filtre-mabb` dans membres/index.html.twig est une classe CSS custom — à ajouter dans base.html.twig si elle n'existe pas encore (sinon les filtres n'ont pas de style)
+  - La migration Doctrine (session 17) doit être jouée avant de tester `/compte/mon-compte` et `/membres`
+  - `/membres` retournera une liste vide tant qu'aucun user n'a `isPublic = true`

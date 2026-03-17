@@ -71,6 +71,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $lastLoginAt = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $bio = null;
+
+    #[ORM\Column(type: 'string', length: 255, nullable: true)]
+    private ?string $photoPath = null;
+
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $isPublic = false;
+
+    #[ORM\Column(type: 'string', length: 50, nullable: true)]
+    private ?string $roleMembre = 'benevole';
+
     /** Relation vers les clubs/rôles métier de cet utilisateur */
     #[ORM\OneToMany(targetEntity: UserClubRole::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
     private Collection $userClubRoles;
@@ -274,4 +286,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->userClubRoles->removeElement($userClubRole);
         return $this;
     }
+
+    public function getBio(): ?string { return $this->bio; }
+    public function setBio(?string $bio): static { $this->bio = $bio; return $this; }
+
+    public function getPhotoPath(): ?string { return $this->photoPath; }
+    public function setPhotoPath(?string $photoPath): static { $this->photoPath = $photoPath; return $this; }
+
+    public function isPublic(): bool { return $this->isPublic; }
+    public function setIsPublic(bool $isPublic): static { $this->isPublic = $isPublic; return $this; }
+
+    public function getRoleMembre(): ?string { return $this->roleMembre; }
+    public function setRoleMembre(?string $roleMembre): static { $this->roleMembre = $roleMembre; return $this; }
 }

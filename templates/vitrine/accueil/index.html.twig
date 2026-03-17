@@ -1,53 +1,60 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}MABB — Amiens Métropole Basket Ball | Club de basket féminin{% endblock %}
-{% block meta_description %}Club de basket-ball exclusivement féminin à Amiens. Triple label FFBB 3 étoiles. Formation, compétition, 3x3 et inclusion par le sport.{% endblock %}
+{% block title %}MABB — Amiens Métropole Basket Ball | Club de basket féminin
+{% endblock %}
+{% block meta_description %}Club de basket-ball exclusivement féminin à Amiens. Triple label FFBB 3 étoiles. Formation, compétition, 3x3 et inclusion par le sport.
+{% endblock %}
 
 {% block body %}
 
-{# ===== HERO ===== #}
-<section style="background:linear-gradient(135deg,#063a55 0%,#0b4fa3 50%,#1c88b6 100%);color:#fff;padding:140px 0 100px;position:relative;overflow:hidden">
-    <div style="position:absolute;top:0;left:0;right:0;bottom:0;background:url('{{ asset('images/bg.jpg') }}') center/cover;opacity:.08"></div>
-    <div class="container position-relative">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-6">
-                <span class="badge-label mb-3"><i class="bi bi-star-fill"></i> Triple label FFBB 3 étoiles</span>
-                <h1 class="display-4 fw-bold mb-3" style="line-height:1.1">
-                    Amiens Métropole<br>
-                    <span class="text-mabb-orange">Basket Ball</span>
-                </h1>
-                <p class="lead mb-4" style="color:rgba(255,255,255,.9);font-size:1.15rem;line-height:1.7">
-                    Club de basket-ball exclusivement féminin implanté sur le territoire
-                    d'Amiens Métropole. De l'initiation à la performance, nous formons
-                    les championnes de demain.
-                </p>
-                <div class="d-flex flex-wrap gap-3">
-                    <a href="{{ path('vitrine_contact') }}" class="btn btn-mabb btn-lg">
-                        <i class="bi bi-person-plus me-2"></i>Rejoindre le club
-                    </a>
-                    <a href="{{ path('vitrine_club') }}" class="btn btn-outline-light btn-lg rounded-pill">
-                        <i class="bi bi-info-circle me-2"></i>Découvrir
-                    </a>
-                </div>
-            </div>
-            <div class="col-lg-6 text-center">
-                <div class="p-3 bg-white rounded-4 shadow-lg d-inline-block" style="transform:rotate(2deg)">
-                    <img src="{{ asset('images/manar.jpg') }}" alt="Joueuse MABB" class="img-fluid rounded-3" style="max-height:450px;object-fit:cover">
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+	{# ===== HERO ===== #}
+	<section style="background:linear-gradient(135deg,#063a55 0%,#0b4fa3 50%,#1c88b6 100%);color:#fff;padding:140px 0 100px;position:relative;overflow:hidden">
+		<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:url('{{ asset('images/bg.jpg') }}') center/cover;opacity:.08"></div>
+		<div class="container position-relative">
+			<div class="row align-items-center g-5">
+				<div class="col-lg-6">
+					<span class="badge-label mb-3">
+						<i class="bi bi-star-fill"></i>
+						Triple label FFBB 3 étoiles</span>
+					<h1 class="display-4 fw-bold mb-3" style="line-height:1.1">
+						Amiens Métropole<br>
+						<span class="text-mabb-orange">Basket Ball</span>
+					</h1>
+					<p class="lead mb-4" style="color:rgba(255,255,255,.9);font-size:1.15rem;line-height:1.7">
+						Club de basket-ball exclusivement féminin implanté sur le territoire
+																		                    d'Amiens Métropole. De l'initiation à la performance, nous formons
+																		                    les championnes de demain.
+					</p>
+					<div class="d-flex flex-wrap gap-3">
+						<a href="{{ path('vitrine_contact') }}" class="btn btn-mabb btn-lg">
+							<i class="bi bi-person-plus me-2"></i>Rejoindre le club
+						</a>
+						<a href="{{ path('vitrine_club') }}" class="btn btn-outline-light btn-lg rounded-pill">
+							<i class="bi bi-info-circle me-2"></i>Découvrir
+						</a>
+						<a href="https://le-savoir-pour-tous.pass-education.fr/inscription?slug=mabb-amiens-metropole-basket-ball&token=b8db9981-d307-4e79-a539-ac30aafd2041" target="_blank" class="btn btn-lg rounded-pill" style="background:#1c88b6;color:#fff;border:none;font-weight:600">
+							<i class="bi bi-book-half me-2"></i>Aide au devoir
+						</a>
+					</div>
+				</div>
+				<div class="col-lg-6 text-center">
+					<div class="p-3 bg-white rounded-4 shadow-lg d-inline-block" style="transform:rotate(2deg)">
+						<img src="{{ asset('images/manar.jpg') }}" alt="Joueuse MABB" class="img-fluid rounded-3" style="max-height:450px;object-fit:cover">
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
 
-{# ===== CHIFFRES CLÉS ===== #}
-<section style="margin-top:-50px;position:relative;z-index:10">
-    <div class="container">
-        <div class="row g-3 justify-content-center">
-            {% set chiffres = [
+	{# ===== CHIFFRES CLÉS ===== #}
+	<section style="margin-top:-50px;position:relative;z-index:10">
+		<div class="container">
+			<div class="row g-3 justify-content-center">
+				{% set chiffres = [
                 {icon: 'bi-people-fill', number: '400+', label: 'Licenciées'},
                 {icon: 'bi-trophy-fill', number: '3', label: 'Labels FFBB 3★'},
-                {icon: 'bi-building', number: '3', label: 'Sites à Amiens'},
-                {icon: 'bi-calendar-heart', number: '20+', label: 'Ans d\'engagement'},
+                {icon: 'bi-building', number: '7', label: 'Quartiers'},
+                {icon: 'bi-calendar-heart', number: '23+', label: 'Ans d\'engagement'},
             ] %}
             {% for c in chiffres %}
             <div class="col-6 col-md-3">
@@ -113,72 +120,84 @@
                 {icon: 'bi-mortarboard', title: 'Section Sportive', ages: 'Collège', desc: 'Academy César Franck 100% féminine. Horaires aménagés, 4 entraînements/semaine, double projet scolaire-sportif.', color: '#9b59b6'},
                 {icon: 'bi-heart', title: 'Actions Citoyennes', ages: 'Toute l\'année', desc: 'Centres Génération Basket gratuits, aide aux devoirs, interventions scolaires, tournois QPV.', color: '#1abc9c'},
             ] %}
-            {% for s in sections %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card card-mabb h-100">
-                    <div class="card-body p-4">
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div style="width:50px;height:50px;border-radius:12px;background:{{ s.color }}15;display:flex;align-items:center;justify-content:center">
-                                <i class="bi {{ s.icon }}" style="font-size:1.5rem;color:{{ s.color }}"></i>
-                            </div>
-                            <div>
-                                <h5 class="mb-0 fw-bold">{{ s.title }}</h5>
-                                <small class="text-muted">{{ s.ages }}</small>
-                            </div>
-                        </div>
-                        <p class="text-muted mb-0">{{ s.desc }}</p>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</section>
+				{% for s in sections %}
+					<div class="col-md-6 col-lg-4">
+						<div class="card card-mabb h-100">
+							<div class="card-body p-4">
+								<div class="d-flex align-items-center gap-3 mb-3">
+									<div style="width:50px;height:50px;border-radius:12px;background:{{ s.color }}15;display:flex;align-items:center;justify-content:center">
+										<i class="bi {{ s.icon }}" style="font-size:1.5rem;color:{{ s.color }}"></i>
+									</div>
+									<div>
+										<h5 class="mb-0 fw-bold">{{ s.title }}</h5>
+										<small class="text-muted">{{ s.ages }}</small>
+									</div>
+								</div>
+								<p class="text-muted mb-0">{{ s.desc }}</p>
+							</div>
+						</div>
+					</div>
+				{% endfor %}
+			</div>
+		</div>
+	</section>
 
-{# ===== DERNIÈRES ACTUS (placeholder — sera dynamique avec le CMS) ===== #}
-<section class="section">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="section-title mb-0">Dernières <span>actualités</span></h2>
-            <a href="{{ path('vitrine_news') }}" class="btn btn-outline-mabb text-white-force">Voir tout <i class="bi bi-arrow-right ms-1"></i></a>
-        </div>
-        <div class="row g-4">
-            {# TODO: Boucle dynamique sur les articles quand le CMS sera en place #}
-            {% set actus = [
+	{# ===== DERNIÈRES ACTUS (placeholder — sera dynamique avec le CMS) ===== #}
+	<section class="section">
+		<div class="container">
+			<div class="d-flex justify-content-between align-items-center mb-4">
+				<h2 class="section-title mb-0">Dernières
+					<span>actualités</span>
+				</h2>
+				<a href="{{ path('vitrine_news') }}" class="btn btn-outline-mabb text-white-force">Voir tout
+					<i class="bi bi-arrow-right ms-1"></i>
+				</a>
+			</div>
+			<div
+				class="row g-4">
+				{# TODO: Boucle dynamique sur les articles quand le CMS sera en place #}
+				{% set actus = [
                 {title: 'Saison 2025-2026 : objectif Pré-Nationale', date: 'Juillet 2025', excerpt: 'La MABB vise la Pré-Nationale pour les U13, U15 et U18. Les Seniors se stabilisent en régional.'},
                 {title: '4 titres en Coupe de la Somme', date: 'Mai 2025', excerpt: 'U11, U13, U15 et U18 remportent la Coupe de la Somme. Un quadruplé historique pour le club.'},
                 {title: 'Christina Kpadan sélectionnée en Équipe de France U15', date: 'Mars 2025', excerpt: 'Notre joueuse U15 est retenue pour le projet de performance fédéral de la FFBB.'},
             ] %}
-            {% for actu in actus %}
-            <div class="col-md-4">
-                <div class="card card-mabb h-100">
-                    <div class="card-body p-4">
-                        <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ actu.date }}</small>
-                        <h5 class="fw-bold mt-2 mb-2">{{ actu.title }}</h5>
-                        <p class="text-muted">{{ actu.excerpt }}</p>
-                        <a href="{{ path('vitrine_news') }}" class="text-mabb-orange fw-semibold text-decoration-none">
-                            Lire la suite <i class="bi bi-arrow-right"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</section>
+				{% for actu in actus %}
+					<div class="col-md-4">
+						<div class="card card-mabb h-100">
+							<div class="card-body p-4">
+								<small class="text-muted">
+									<i class="bi bi-calendar3 me-1"></i>
+									{{ actu.date }}</small>
+								<h5 class="fw-bold mt-2 mb-2">{{ actu.title }}</h5>
+								<p class="text-muted">{{ actu.excerpt }}</p>
+								<a href="{{ path('vitrine_news') }}" class="text-mabb-orange fw-semibold text-decoration-none">
+									Lire la suite
+									<i class="bi bi-arrow-right"></i>
+								</a>
+							</div>
+						</div>
+					</div>
+				{% endfor %}
+			</div>
+		</div>
+	</section>
 
-{# ===== CTA INSCRIPTION ===== #}
-<section style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));padding:80px 0;color:#fff;text-align:center">
-    <div class="container">
-        <h2 class="display-5 fw-bold mb-3">Rejoins la <span class="text-mabb-orange">MABB</span></h2>
-        <p class="lead mb-4" style="color:rgba(255,255,255,.85);max-width:600px;margin:0 auto">
-            De 3 à 25+ ans, il y a une place pour toi. Inscriptions ouvertes toute l'année.
-        </p>
-        <div class="d-flex flex-wrap gap-3 justify-content-center">
-            <a href="{{ path('vitrine_compte_s_inscrire') }}" class="btn btn-mabb btn-lg"><i class="bi bi-person-plus me-2"></i>S'inscrire</a>
-            <a href="mailto:contact@mabb.fr" class="btn btn-outline-light btn-lg rounded-pill"><i class="bi bi-envelope me-2"></i>contact@mabb.fr</a>
-        </div>
-    </div>
-</section>
+	{# ===== CTA INSCRIPTION ===== #}
+	<section style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));padding:80px 0;color:#fff;text-align:center">
+		<div class="container">
+			<h2 class="display-5 fw-bold mb-3">Rejoins la
+				<span class="text-mabb-orange">MABB</span>
+			</h2>
+			<p class="lead mb-4" style="color:rgba(255,255,255,.85);max-width:600px;margin:0 auto">
+				De 3 à 25+ ans, il y a une place pour toi. Inscriptions ouvertes toute l'année.
+			</p>
+			<div class="d-flex flex-wrap gap-3 justify-content-center">
+				<a href="{{ path('vitrine_compte_s_inscrire') }}" class="btn btn-mabb btn-lg">
+					<i class="bi bi-person-plus me-2"></i>S'inscrire</a>
+				<a href="mailto:contact@mabb.fr" class="btn btn-outline-light btn-lg rounded-pill">
+					<i class="bi bi-envelope me-2"></i>contact@mabb.fr</a>
+			</div>
+		</div>
+	</section>
 
 {% endblock %}

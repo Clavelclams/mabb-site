@@ -44,4 +44,23 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->getQuery()
             ->getOneOrNullResult();
     }
+
+    /**
+     * Retourne les membres dont le profil est public, filtrables par rôle.
+     */
+    public function findPublicMembers(?string $role = null): array
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->where('u.isPublic = :public')
+            ->setParameter('public', true)
+            ->orderBy('u.roleMembre', 'ASC')
+            ->addOrderBy('u.prenom', 'ASC');
+
+        if ($role) {
+            $qb->andWhere('u.roleMembre = :role')
+               ->setParameter('role', $role);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }

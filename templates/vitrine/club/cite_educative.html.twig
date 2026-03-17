@@ -1,0 +1,49 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Cité Éducative — MABB{% endblock %}
+{% block body %}
+<div class="page-header">
+    <div class="container text-center">
+        <h1>Cité Éducative</h1>
+        <p style="color:rgba(255,255,255,.75)">MABB partenaire des établissements scolaires d'Amiens Métropole</p>
+    </div>
+</div>
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-8 text-center">
+                <h2 class="section-title">Un club ancré dans son territoire</h2>
+                <p class="section-subtitle">La MABB s'inscrit dans le dispositif Cité Éducative d'Amiens en proposant des actions sportives et éducatives en lien avec les établissements scolaires des quartiers prioritaires.</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100">
+                    <div style="font-size:2rem;margin-bottom:16px">🏫</div>
+                    <h3 class="fw-bold mb-3" style="color:#063a55">École</h3>
+                    <p class="text-muted">Interventions en milieu scolaire, initiation au basket pour les enfants de 3 à 11 ans. Partenariats avec les écoles primaires des quartiers d'Étouvie, Nord et Est.</p>
+                    <p class="text-muted small fst-italic">Contenu à compléter</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100" style="border-top:4px solid var(--mabb-orange)">
+                    <div style="font-size:2rem;margin-bottom:16px">📚</div>
+                    <h3 class="fw-bold mb-3" style="color:#063a55">Collège</h3>
+                    <p class="text-muted">Actions de sensibilisation, soutien scolaire via l'aide au devoir, accompagnement des collégiens vers la pratique sportive.</p>
+                    <a href="https://www.amiens.fr/Vivre-a-Amiens/Education-Jeunesse/Aide-aux-devoirs"
+                       target="_blank" rel="noopener" class="btn btn-mabb mt-3 w-100">
+                        <i class="bi bi-book-half me-1"></i>Aide au devoir
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100">
+                    <div style="font-size:2rem;margin-bottom:16px">🎓</div>
+                    <h3 class="fw-bold mb-3" style="color:#063a55">Lycée</h3>
+                    <p class="text-muted">Service Civique, formation et projet de vie. La MABB comme tremplin pour les jeunes adultes.</p>
+                    <a href="{{ path('vitrine_formation') }}" class="btn btn-outline-mabb mt-3 w-100">Voir les parcours →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

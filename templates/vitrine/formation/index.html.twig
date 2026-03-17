@@ -1,0 +1,82 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Formation & Parcours Inclusifs — MABB{% endblock %}
+{% block body %}
+<div class="page-header">
+    <div class="container text-center">
+        <h1>Formation & Parcours Inclusifs</h1>
+        <p style="color:rgba(255,255,255,.75)">La MABB, une deuxième chance pour chacun</p>
+    </div>
+</div>
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-8 text-center">
+                <h2 class="section-title">Le club comme levier d'insertion</h2>
+                <p class="section-subtitle">Au-delà du sport, la MABB accompagne des personnes en difficulté vers la qualification, la formation et l'emploi.</p>
+            </div>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card card-mabb overflow-hidden h-100">
+                    <div style="background:linear-gradient(135deg,#063a55,#0b4fa3);padding:32px 24px;text-align:center">
+                        <div style="font-size:2.5rem;margin-bottom:8px">💻</div>
+                        <h3 class="text-white fw-bold mb-1">Clavel</h3>
+                        <p style="color:rgba(255,255,255,.7);font-size:.85rem">Responsable Numérique Bénévole</p>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-muted small">Bénévole responsable numérique, Clavel mène la digitalisation du club dans le cadre de sa formation <strong>CDA</strong>. Site vitrine Symfony, app mobile React Native/Node.js, espace joueur PIRB.</p>
+                        <div class="d-flex flex-wrap gap-1 my-3">
+                            <span class="badge bg-light text-dark">CDA</span>
+                            <span class="badge bg-light text-dark">Symfony</span>
+                            <span class="badge bg-light text-dark">React Native</span>
+                        </div>
+                        <a href="{{ path('vitrine_clavel') }}" class="btn btn-mabb w-100">Voir le parcours →</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-mabb overflow-hidden h-100">
+                    <div style="background:linear-gradient(135deg,#1c88b6,#063a55);padding:32px 24px;text-align:center">
+                        <div style="font-size:2.5rem;margin-bottom:8px">🏀</div>
+                        <h3 class="text-white fw-bold mb-1">Moussa</h3>
+                        <p style="color:rgba(255,255,255,.7);font-size:.85rem">Parcours MABB</p>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-muted small">Passé par la MABB, Moussa illustre comment le club peut être un véritable tremplin vers la qualification et l'insertion professionnelle.</p>
+                        <p class="text-muted small fst-italic">Contenu à compléter avec Moussa.</p>
+                        <span class="badge bg-light text-dark">Insertion</span>
+                        <span class="badge bg-light text-dark ms-1">Formation</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card card-mabb overflow-hidden h-100">
+                    <div style="background:linear-gradient(135deg,var(--mabb-orange),var(--mabb-red));padding:32px 24px;text-align:center">
+                        <div style="font-size:2.5rem;margin-bottom:8px">⭐</div>
+                        <h3 class="text-white fw-bold mb-1">Ugo</h3>
+                        <p style="color:rgba(255,255,255,.8);font-size:.85rem">Parcours MABB</p>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-muted small">Ugo, exemple du parcours inclusif porté par la MABB. Le sport comme vecteur de confiance et d'ouverture vers l'avenir.</p>
+                        <p class="text-muted small fst-italic">Contenu à compléter avec Ugo.</p>
+                        <span class="badge bg-light text-dark">Résilience</span>
+                        <span class="badge bg-light text-dark ms-1">Sport</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<section class="section" style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));color:#fff">
+    <div class="container text-center">
+        <h2 class="fw-bold mb-2" style="color:#fff">Et bien d'autres...</h2>
+        <p style="color:rgba(255,255,255,.75)" class="mb-5">La MABB a accompagné de nombreuses personnes vers la qualification et l'emploi.</p>
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            {% for prenom in ['Sarah', 'Kylian', 'Amina', 'Lucas', 'Fatou', 'Théo', 'Inès'] %}
+                <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 20px">{{ prenom }}</span>
+            {% endfor %}
+            <span style="background:rgba(255,140,0,.2);border:1px solid rgba(255,140,0,.4);color:#ffb347;border-radius:20px;padding:8px 20px;font-weight:600">+ d'autres à venir</span>
+        </div>
+    </div>
+</section>
+{% endblock %}
