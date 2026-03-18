@@ -1,0 +1,81 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Rôles — {{ utilisateur.prenom }} {{ utilisateur.nom }}{% endblock %}
+{% block body %}
+<div class="page-header">
+    <div class="container text-center">
+        <h1>Modifier les rôles</h1>
+        <p style="color:rgba(255,255,255,.75)">{{ utilisateur.prenom }} {{ utilisateur.nom }}</p>
+    </div>
+</div>
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-5">
+                <div class="card card-mabb p-4">
+
+                    {# Infos utilisateur — lecture seule, pas de bio/photo #}
+                    <div class="mb-4 p-3 rounded-3" style="background:#f8f9fa">
+                        <div class="fw-bold" style="color:#063a55">{{ utilisateur.prenom }} {{ utilisateur.nom }}</div>
+                        <div class="text-muted small">{{ utilisateur.email }}</div>
+                        <div class="mt-1">
+                            <span class="badge {{ utilisateur.isPublic ? 'bg-success' : 'bg-secondary' }}">
+                                Profil {{ utilisateur.isPublic ? 'public' : 'privé' }}
+                            </span>
+                            <span class="badge {{ utilisateur.isActive ? 'bg-success' : 'bg-danger' }} ms-1">
+                                Compte {{ utilisateur.isActive ? 'actif' : 'désactivé' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('admin_roles_' ~ utilisateur.id) }}">
+
+                        <h2 style="font-size:1.1rem;font-weight:700;color:#063a55" class="mb-3">
+                            <i class="bi bi-shield-check me-2 text-mabb-blue"></i>Rôles vitrine
+                        </h2>
+
+                        {# Bénévole — toujours actif, non modifiable #}
+                        <div class="form-check mb-3 p-3 rounded-3" style="background:#e9ecef">
+                            <input class="form-check-input" type="checkbox" checked disabled>
+                            <label class="form-check-label text-muted fw-semibold">
+                                Bénévole
+                                <span class="badge bg-secondary ms-1" style="font-size:.7rem">non modifiable</span>
+                            </label>
+                        </div>
+
+                        {% set labelsRoles = {
+                            'coach': 'Coach',
+                            'staff': 'Staff technique',
+                            'dirigeant': 'Dirigeant',
+                            'service-civique': 'Service Civique',
+                            'joueur': 'Joueuse',
+                            'parent': 'Parent'
+                        } %}
+
+                        {% for role in rolesValides %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox"
+                                   name="rolesMembre[]" value="{{ role }}"
+                                   id="arole_{{ role }}"
+                                   {{ utilisateur.hasRoleMembre(role) ? 'checked' }}>
+                            <label class="form-check-label fw-semibold" for="arole_{{ role }}">
+                                {{ labelsRoles[role] ?? role }}
+                            </label>
+                        </div>
+                        {% endfor %}
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-mabb flex-grow-1">
+                                <i class="bi bi-check-lg me-1"></i>Enregistrer
+                            </button>
+                            <a href="{{ path('admin_utilisateurs') }}" class="btn btn-outline-secondary rounded-pill">
+                                Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

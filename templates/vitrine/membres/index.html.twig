@@ -31,7 +31,13 @@
 								<div class="p-4">
 									<h5 class="fw-bold mb-1" style="color:#063a55">{{ membre.prenom }}
 										{{ membre.nom }}</h5>
-									<p class="text-mabb-orange fw-semibold small mb-2">{{ membre.roleMembre|capitalize }}</p>
+									<div class="d-flex flex-wrap gap-1 justify-content-center mb-2">
+										{% for role in membre.rolesMembre %}
+											<span style="background:{% if role == 'benevole' %}#6c757d{% else %}var(--mabb-orange){% endif %};color:#fff;border-radius:20px;padding:2px 10px;font-size:.75rem;font-weight:600">
+												{{ role|capitalize }}
+											</span>
+										{% endfor %}
+									</div>
 									{% if membre.bio %}
 										<p class="text-muted small" style="line-height:1.4">{{ membre.bio|slice(0,100) }}
 											{% if membre.bio|length > 100 %}...

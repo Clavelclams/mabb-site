@@ -13,11 +13,13 @@
         </div>
         <h1 class="text-white fw-bold mb-1">{{ app.user.prenom }} {{ app.user.nom }}</h1>
         <p style="color:rgba(255,255,255,.65)">{{ app.user.email }}</p>
-        {% if app.user.roleMembre %}
-            <span style="background:rgba(255,140,0,.25);border:1px solid rgba(255,140,0,.5);color:#ffb347;border-radius:20px;padding:4px 16px;font-size:.85rem;font-weight:600">
-                {{ app.user.roleMembre|capitalize }}
-            </span>
-        {% endif %}
+        <div class="d-flex flex-wrap gap-1 justify-content-center mt-2">
+            {% for role in app.user.rolesMembre %}
+                <span style="background:rgba(255,140,0,.25);border:1px solid rgba(255,140,0,.5);color:#ffb347;border-radius:20px;padding:3px 12px;font-size:.8rem;font-weight:600">
+                    {{ role|capitalize }}
+                </span>
+            {% endfor %}
+        </div>
     </div>
 </div>
 <section class="section section-gray">
@@ -43,15 +45,33 @@
                             <textarea name="bio" class="form-control" rows="3" maxlength="200" placeholder="Présente-toi en quelques mots...">{{ app.user.bio }}</textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small">Rôle affiché</label>
-                            <select name="roleMembre" class="form-select">
-                                <option value="benevole" {{ app.user.roleMembre == 'benevole' ? 'selected' }}>Bénévole</option>
-                                <option value="coach" {{ app.user.roleMembre == 'coach' ? 'selected' }}>Coach</option>
-                                <option value="staff" {{ app.user.roleMembre == 'staff' ? 'selected' }}>Staff technique</option>
-                                <option value="dirigeant" {{ app.user.roleMembre == 'dirigeant' ? 'selected' }}>Dirigeant</option>
-                                <option value="service-civique" {{ app.user.roleMembre == 'service-civique' ? 'selected' }}>Service Civique</option>
-                                <option value="joueur" {{ app.user.roleMembre == 'joueur' ? 'selected' }}>Joueuse</option>
-                            </select>
+                            <label class="form-label fw-semibold small">Rôles <span class="text-muted">(plusieurs possibles)</span></label>
+                            <div class="p-3 rounded-3" style="background:#f8f9fa;border:1px solid #dee2e6">
+                                {# Bénévole toujours présent — non modifiable #}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" checked disabled style="opacity:.5">
+                                    <label class="form-check-label text-muted">
+                                        Bénévole <span class="badge bg-secondary ms-1" style="font-size:.7rem">par défaut</span>
+                                    </label>
+                                </div>
+                                {% for role, label in {
+                                    'coach': 'Coach',
+                                    'staff': 'Staff technique',
+                                    'dirigeant': 'Dirigeant',
+                                    'service-civique': 'Service Civique',
+                                    'joueur': 'Joueuse',
+                                    'parent': 'Parent'
+                                } %}
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="rolesMembre[]" value="{{ role }}"
+                                           id="role_{{ role }}"
+                                           {{ app.user.hasRoleMembre(role) ? 'checked' }}>
+                                    <label class="form-check-label" for="role_{{ role }}">{{ label }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="form-text">Bénévole est toujours actif. Tes rôles supplémentaires apparaissent sur ta card.</div>
                         </div>
                         <div class="mb-4">
                             <div class="form-check form-switch">

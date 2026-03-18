@@ -47,20 +47,29 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
 
     /**
      * Retourne les membres dont le profil est public, filtrables par rôle.
+     * rolesMembre est un champ JSON → on utilise JSON_CONTAINS pour MySQL.
      */
     public function findPublicMembers(?string $role = null): array
     {
-        $qb = $this->createQueryBuilder('u')
-            ->where('u.isPublic = :public')
-            ->setParameter('public', true)
-            ->orderBy('u.roleMembre', 'ASC')
-            ->addOrderBy('u.prenom', 'ASC');
-
         if ($role) {
-            $qb->andWhere('u.roleMembre = :role')
-               ->setParameter('role', $role);
+            // JSON_CONTAINS(roles_membre, '"coach"') → true si le tableau contient la valeur
+            return $this->getEntityManager()
+                ->createQuery(
+                    'SELECT u FROM App\Entity\Core\User u
+                     WHERE u.isPublic = :public
+                     AND JSON_CONTAINS(u.rolesMembre, :role) = 1
+                     ORDER BY u.prenom ASC'
+                )
+                ->setParameter('public', true)
+                ->setParameter('role', json_encode($role))
+                ->getResult();
         }
 
-        return $qb->getQuery()->getResult();
+        return $this->createQueryBuilder('u')
+            ->where('u.isPublic = :public')
+            ->setParameter('public', true)
+            ->orderBy('u.prenom', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 }

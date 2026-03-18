@@ -80,8 +80,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'boolean', options: ['default' => false])]
     private bool $isPublic = false;
 
-    #[ORM\Column(type: 'string', length: 50, nullable: true)]
-    private ?string $roleMembre = 'benevole';
+    /** Rôles vitrine (multi-valeurs). 'benevole' toujours présent, non supprimable. */
+    #[ORM\Column(type: 'json')]
+    private array $rolesMembre = ['benevole'];
 
     /** Relation vers les clubs/rôles métier de cet utilisateur */
     #[ORM\OneToMany(targetEntity: UserClubRole::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
@@ -296,6 +297,42 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function isPublic(): bool { return $this->isPublic; }
     public function setIsPublic(bool $isPublic): static { $this->isPublic = $isPublic; return $this; }
 
-    public function getRoleMembre(): ?string { return $this->roleMembre; }
-    public function setRoleMembre(?string $roleMembre): static { $this->roleMembre = $roleMembre; return $this; }
+    public function getRolesMembre(): array { return $this->rolesMembre; }
+
+    /**
+     * Définit les rôles vitrine — force toujours 'benevole' dans le tableau.
+     */
+    public function setRolesMembre(array $roles): static
+    {
+        if (!in_array('benevole', $roles)) {
+            array_unshift($roles, 'benevole');
+        }
+        $this->rolesMembre = array_values(array_unique($roles));
+        return $this;
+    }
+
+    /** Vérifie si l'utilisateur possède un rôle vitrine donné. */
+    public function hasRoleMembre(string $role): bool
+    {
+        return in_array($role, $this->rolesMembre);
+    }
+
+    /** Ajoute un rôle vitrine sans écraser les autres. */
+    public function addRoleMembre(string $role): static
+    {
+        if (!in_array($role, $this->rolesMembre)) {
+            $this->rolesMembre[] = $role;
+        }
+        return $this;
+    }
+
+    /** Retire un rôle vitrine — 'benevole' est protégé et ne peut pas être retiré. */
+    public function removeRoleMembre(string $role): static
+    {
+        if ($role === 'benevole') {
+            return $this;
+        }
+        $this->rolesMembre = array_values(array_filter($this->rolesMembre, fn($r) => $r !== $role));
+        return $this;
+    }
 }

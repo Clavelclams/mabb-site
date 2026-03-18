@@ -149,11 +149,11 @@ final class CompteController extends AbstractController
         $bio = $request->request->get('bio');
         $user->setBio($bio ? substr(strip_tags($bio), 0, 200) : null);
 
-        $rolesValides = ['benevole', 'coach', 'staff', 'dirigeant', 'service-civique', 'joueur'];
-        $roleMembre = $request->request->get('roleMembre');
-        if (in_array($roleMembre, $rolesValides)) {
-            $user->setRoleMembre($roleMembre);
-        }
+        // Rôles vitrine multi-sélection — benevole toujours forcé par setRolesMembre()
+        $rolesValides = ['coach', 'staff', 'dirigeant', 'service-civique', 'joueur', 'parent'];
+        $rolesCoches = $request->request->all('rolesMembre') ?? [];
+        $rolesCoches = array_filter($rolesCoches, fn($r) => in_array($r, $rolesValides));
+        $user->setRolesMembre(array_values($rolesCoches)); // benevole sera auto-injecté
 
         $user->setIsPublic($request->request->has('isPublic'));
 

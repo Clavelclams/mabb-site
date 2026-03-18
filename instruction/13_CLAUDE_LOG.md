@@ -397,6 +397,47 @@
 - Décisions : aucune ADR nécessaire
 - Points de vigilance :
   - ✅ Tous les templates manquants (sessions 16/17) sont maintenant créés
-  - `btn-filtre-mabb` dans membres/index.html.twig est une classe CSS custom — à ajouter dans base.html.twig si elle n'existe pas encore (sinon les filtres n'ont pas de style)
+  - ✅ `btn-filtre-mabb` ajouté dans base.html.twig (résolu dans la session)
   - La migration Doctrine (session 17) doit être jouée avant de tester `/compte/mon-compte` et `/membres`
   - `/membres` retournera une liste vide tant qu'aucun user n'a `isPublic = true`
+
+---
+
+### 2026-03-18 (session 19) — Multi-rôles vitrine : rolesMembre JSON + admin roles
+- Objectif : remplacer `roleMembre: string` par `rolesMembre: json` (multi-valeurs), créer l'interface admin de gestion des rôles
+- Décision architecture : Option B (JSON sur User) plutôt qu'Option A (UserClubRole) pour la vitrine — UserClubRole reste intact pour le Manager multi-club
+- Actions réalisées :
+  1. **`src/Entity/Core/User.php`** :
+     - `roleMembre: string` → `rolesMembre: json` (default `['benevole']`)
+     - `getRoleMembre/setRoleMembre` → `getRolesMembre/setRolesMembre/hasRoleMembre/addRoleMembre/removeRoleMembre`
+     - `setRolesMembre()` force toujours `benevole` en tête — indestructible
+  2. **`src/Controller/Vitrine/CompteController.php`** — `updateProfil` :
+     - `$request->request->all('rolesMembre')` → multi-checkboxes
+     - `benevole` auto-injecté par `setRolesMembre()`, l'utilisateur ne peut pas le retirer
+  3. **`templates/vitrine/compte/mon_compte.html.twig`** :
+     - `<select>` single → checkboxes multi-sélection avec `benevole` grisé/disabled
+     - En-tête page : badges multi-rôles au lieu d'un seul span
+  4. **`src/Controller/Admin/AdminRolesController.php`** (nouveau) :
+     - `GET /admin/utilisateurs` → `admin_utilisateurs` : liste tous les users (SUPER_ADMIN)
+     - `GET|POST /admin/utilisateur/{id}/roles` → `admin_utilisateur_roles` : modifier les rôles d'un user
+     - Périmètre volontairement réduit : prénom/nom/email/rôles uniquement — pas de bio/photo
+  5. **`templates/admin/roles/liste.html.twig`** + **`templates/admin/roles/editer.html.twig`** (nouveaux)
+  6. **`templates/vitrine/membres/index.html.twig`** : `roleMembre|capitalize` → badges multi-rôles en boucle
+  7. **`src/Repository/Core/UserRepository.php`** : `findPublicMembers` adapté JSON avec `JSON_CONTAINS` MySQL
+  - ⚠️ Migration obligatoire : `doctrine:migrations:diff` + `migrate` (renomme `role_membre VARCHAR` → `roles_membre JSON`)
+- Fichiers créés/modifiés :
+  - src/Entity/Core/User.php
+  - src/Controller/Vitrine/CompteController.php
+  - src/Controller/Admin/AdminRolesController.php (nouveau)
+  - src/Repository/Core/UserRepository.php
+  - templates/vitrine/compte/mon_compte.html.twig
+  - templates/vitrine/membres/index.html.twig
+  - templates/admin/roles/liste.html.twig (nouveau)
+  - templates/admin/roles/editer.html.twig (nouveau)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : ADR pas nécessaire (décision technique mineure, scope vitrine uniquement)
+- Points de vigilance :
+  - `JSON_CONTAINS` dans `findPublicMembers` nécessite MySQL 5.7+ (ok sur ton env)
+  - Les routes `/admin/*` n'ont pas de host constraint — vérifier qu'elles ne sont pas exposées sur le domaine manager ou pirb en prod
+  - Les fixtures existantes ont `roleMembre = 'benevole'` (string) → la migration doit convertir en `["benevole"]` (JSON). Vérifier que Doctrine génère un `ALTER TABLE` propre
+  - Tester que la page `/admin/utilisateurs` retourne bien 403 pour un `ROLE_USER` simple
