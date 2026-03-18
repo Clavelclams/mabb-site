@@ -19,9 +19,6 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         parent::__construct($registry, User::class);
     }
 
-    /**
-     * Mise à jour automatique du hash de mot de passe (rehash si algo change).
-     */
     public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void
     {
         if (!$user instanceof User) {
@@ -32,9 +29,6 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
         $this->getEntityManager()->flush();
     }
 
-    /**
-     * Trouve un user actif par email.
-     */
     public function findActiveByEmail(string $email): ?User
     {
         return $this->createQueryBuilder('u')
@@ -46,30 +40,24 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     }
 
     /**
-     * Retourne les membres dont le profil est public, filtrables par rôle.
-     * rolesMembre est un champ JSON → on utilise JSON_CONTAINS pour MySQL.
+     * Retourne les membres dont le profil est public.
+     * Le filtrage par rôle se fait en PHP (pas JSON_CONTAINS — compatibilité MariaDB).
      */
     public function findPublicMembers(?string $role = null): array
     {
-        if ($role) {
-            // JSON_CONTAINS(roles_membre, '"coach"') → true si le tableau contient la valeur
-            return $this->getEntityManager()
-                ->createQuery(
-                    'SELECT u FROM App\Entity\Core\User u
-                     WHERE u.isPublic = :public
-                     AND JSON_CONTAINS(u.rolesMembre, :role) = 1
-                     ORDER BY u.prenom ASC'
-                )
-                ->setParameter('public', true)
-                ->setParameter('role', json_encode($role))
-                ->getResult();
-        }
-
-        return $this->createQueryBuilder('u')
+        // On récupère tous les membres publics depuis la BDD
+        $membres = $this->createQueryBuilder('u')
             ->where('u.isPublic = :public')
             ->setParameter('public', true)
             ->orderBy('u.prenom', 'ASC')
             ->getQuery()
             ->getResult();
+
+        // Filtrage PHP par rôle si demandé
+        if ($role) {
+            $membres = array_filter($membres, fn(User $u) => $u->hasRoleMembre($role));
+        }
+
+        return array_values($membres);
     }
 }
