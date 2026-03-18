@@ -65,6 +65,23 @@
                 </div>
             </div>
             {% endfor %}
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card card-mabb h-100">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div style="width:50px;height:50px;border-radius:12px;background:#1c88b615;display:flex;align-items:center;justify-content:center">
+                                <i class="bi bi-people-fill" style="font-size:1.5rem;color:#1c88b6"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold">Basket Loisir Mixte</h5>
+                                <small class="text-muted">Tout âge — Mixte</small>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-0">Pratique conviviale et non-compétitive ouverte à tous. Ambiance détendue pour jouer au basket en loisir sur Amiens Métropole.</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         {# Lien Scorenco #}
@@ -84,21 +101,53 @@
             <h2 class="section-title">Encadrement <span>technique</span></h2>
             <p class="section-subtitle">Des éducateurs formés et passionnés</p>
         </div>
-        {# TODO: Compléter avec les noms des coachs fournis par Clavel #}
+        <div class="row g-4 mt-3">
+            {% set coachs = [
+                {nom: 'Coach Prénom Nom', titre: 'Responsable sportif', diplome: 'Diplôme d\'État JEPS', emoji: '🏀'},
+                {nom: 'À compléter', titre: 'Éducateur Mini-Basket', diplome: 'CQP ABC', emoji: '⭐'},
+                {nom: 'À compléter', titre: 'Éducatrice U11/U13', diplome: 'BPJEPS', emoji: '🎯'},
+                {nom: 'À compléter', titre: 'Coach Senior', diplome: 'DES JEPS', emoji: '🏆'},
+            ] %}
+            {% for coach in coachs %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card card-mabb text-center p-4 h-100">
+                    <div style="font-size:2rem;margin-bottom:8px">{{ coach.emoji }}</div>
+                    <h5 class="fw-bold mb-1">{{ coach.nom }}</h5>
+                    <p class="text-mabb-orange fw-semibold small mb-1">{{ coach.titre }}</p>
+                    <span class="badge bg-light text-muted small">{{ coach.diplome }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# SERVICE CIVIQUE #}
+<section class="section" style="background:linear-gradient(135deg,#063a55,#0b4fa3)">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold" style="color:#fff">Service <span style="color:var(--mabb-orange)">Civique</span></h2>
+            <p style="color:rgba(255,255,255,.75)">Nos volontaires en mission d'intérêt général</p>
+        </div>
         <div class="row g-4 justify-content-center">
-            <div class="col-md-8">
-                <div class="card card-mabb p-4">
-                    <div class="card-body text-center">
-                        <i class="bi bi-people text-mabb-blue" style="font-size:3rem"></i>
-                        <h5 class="fw-bold mt-3">Staff technique à compléter</h5>
-                        <p class="text-muted">
-                            Rajouter les noms et rôles des coachs pour mettre à jour cette section.
-                            Tu pourras aussi les modifier depuis le CMS une fois en place.
-                        </p>
-                    </div>
+            <div class="col-md-4">
+                <div class="card border-0 text-center p-4 h-100" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)!important">
+                    <div style="font-size:2.5rem;margin-bottom:12px">🤝</div>
+                    <h5 class="text-white fw-bold">Volontaire 1</h5>
+                    <p style="color:rgba(255,255,255,.7)" class="small">Mission : Animation sportive et soutien éducatif</p>
+                    <span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-radius:20px;padding:3px 12px;font-size:.75rem">À compléter</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-0 text-center p-4 h-100" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)!important">
+                    <div style="font-size:2.5rem;margin-bottom:12px">🤝</div>
+                    <h5 class="text-white fw-bold">Volontaire 2</h5>
+                    <p style="color:rgba(255,255,255,.7)" class="small">Mission : Accompagnement scolaire et numérique</p>
+                    <span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-radius:20px;padding:3px 12px;font-size:.75rem">À compléter</span>
                 </div>
             </div>
         </div>
+        <p class="text-center mt-4 small" style="color:rgba(255,255,255,.4)">Section à compléter — contenu à venir</p>
     </div>
 </section>
 

@@ -441,3 +441,21 @@
   - Les routes `/admin/*` n'ont pas de host constraint — vérifier qu'elles ne sont pas exposées sur le domaine manager ou pirb en prod
   - Les fixtures existantes ont `roleMembre = 'benevole'` (string) → la migration doit convertir en `["benevole"]` (JSON). Vérifier que Doctrine génère un `ALTER TABLE` propre
   - Tester que la page `/admin/utilisateurs` retourne bien 403 pour un `ROLE_USER` simple
+
+---
+
+### 2026-03-19 (session 20) — Équipes : Basket Loisir Mixte + coachs + Service Civique
+- Objectif : 3 modifications sur `templates/vitrine/accueil/equipes.html.twig`
+- Actions réalisées :
+  1. **Modification 1 — Card "Basket Loisir Mixte"** : ajoutée après `{% endfor %}` de la grille des équipes (inline HTML, pas dans le tableau Twig — structure légèrement différente sans badges niveau/lieu)
+  2. **Modification 2 — Section Encadrement technique** : remplacement du placeholder "Staff technique à compléter" par une `{% set coachs = [...] %}` Twig avec 4 cards (Responsable sportif 🏀, Éducateur Mini-Basket ⭐, Éducatrice U11/U13 🎯, Coach Senior 🏆) — tous marqués "À compléter" sauf le premier
+  3. **Modification 3 — Section Service Civique** : nouvelle `<section>` avec gradient bleu (`#063a55 → #0b4fa3`) ajoutée après la section encadrement, 2 cards volontaires (Volontaire 1 / Volontaire 2) marquées "À compléter"
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+- Fichiers modifiés :
+  - templates/vitrine/accueil/equipes.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - La card Basket Loisir Mixte n'a pas de badges niveau/lieu (structure différente des autres cards — volontaire, la pratique loisir n'a pas de niveau compétitif)
+  - Les noms de coachs et volontaires sont "À compléter" — à remplacer par les vraies données via un futur prompt ciblé
+  - La section Service Civique utilise `border:1px solid rgba(255,255,255,.15)!important` pour override Bootstrap — cohérent avec le pattern déjà utilisé sur d'autres templates
