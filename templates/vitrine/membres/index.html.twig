@@ -1,61 +1,68 @@
 {% extends 'vitrine/base.html.twig' %}
-{% block title %}Membres — MABB{% endblock %}
+{% block title %}Membres — MABB
+{% endblock %}
 {% block body %}
-<div class="page-header">
-    <div class="container text-center">
-        <h1>L'équipe MABB</h1>
-        <p style="color:rgba(255,255,255,.75)">Coachs, staff, bénévoles — ceux qui font vivre le club</p>
-    </div>
-</div>
-<section class="section">
-    <div class="container">
-        <div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
-            <a href="{{ path('vitrine_membres') }}" class="btn-filtre-mabb {{ roleActif is null ? 'active' }}">Tous</a>
-            {% for role, label in {'dirigeant':'Dirigeants','coach':'Coachs','staff':'Staff','benevole':'Bénévoles','service-civique':'Service Civique','joueur':'Joueuses'} %}
-                <a href="{{ path('vitrine_membres', {role: role}) }}" class="btn-filtre-mabb {{ roleActif == role ? 'active' }}">{{ label }}</a>
-            {% endfor %}
-        </div>
-        {% if membres|length > 0 %}
-            <div class="row g-4">
-                {% for membre in membres %}
-                <div class="col-md-6 col-lg-3">
-                    <div class="card card-mabb text-center overflow-hidden h-100">
-                        <div style="background:linear-gradient(135deg,#063a55,#0b4fa3);padding:28px 20px">
-                            {% if membre.photoPath %}
-                                <img src="{{ asset('uploads/avatars/' ~ membre.photoPath) }}" alt="{{ membre.prenom }}"
-                                     style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);display:block;margin:0 auto">
-                            {% else %}
-                                <div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto">👤</div>
-                            {% endif %}
-                        </div>
-                        <div class="p-4">
-                            <h5 class="fw-bold mb-1" style="color:#063a55">{{ membre.prenom }} {{ membre.nom }}</h5>
-                            <p class="text-mabb-orange fw-semibold small mb-2">{{ membre.roleMembre|capitalize }}</p>
-                            {% if membre.bio %}
-                                <p class="text-muted small" style="line-height:1.4">{{ membre.bio|slice(0,100) }}{% if membre.bio|length > 100 %}...{% endif %}</p>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="text-center py-5">
-                <div style="font-size:3rem;margin-bottom:16px">👥</div>
-                <h3 style="color:#063a55">Aucun membre dans cette catégorie</h3>
-                <p class="text-muted">Les membres peuvent activer leur profil public depuis "Mon compte".</p>
-            </div>
-        {% endif %}
-        <div class="text-center mt-5 p-4 rounded-4 bg-light">
-            <p class="text-muted mb-0">
-                💡 <strong>Tu fais partie du club ?</strong>
-                {% if app.user %}
-                    <a href="{{ path('vitrine_compte_mon_compte') }}" class="text-mabb-orange fw-semibold">Active ton profil public dans Mon compte</a> pour apparaître ici.
-                {% else %}
-                    <a href="{{ path('vitrine_compte_s_inscrire') }}" class="text-mabb-orange fw-semibold">Crée ton compte MABB</a> pour apparaître dans cette page.
-                {% endif %}
-            </p>
-        </div>
-    </div>
-</section>
+	<div class="page-header">
+		<div class="container text-center">
+			<h1>L'équipe MABB</h1>
+			<p style="color:rgba(255,255,255,.75)">Coachs, staff, bénévoles — ceux qui font vivre le club</p>
+		</div>
+	</div>
+	<section class="section">
+		<div class="container">
+			<div class="d-flex flex-wrap gap-2 justify-content-center mb-5">
+				<a href="{{ path('vitrine_membres') }}" class="btn-filtre-mabb {{ roleActif is null ? 'active' }}">Tous</a>
+				{% for role, label in {'dirigeant':'Dirigeants','coach':'Coachs','staff':'Staff','benevole':'Bénévoles','service-civique':'Service Civique','joueur':'Joueuses'} %}
+					<a href="{{ path('vitrine_membres', {role: role}) }}" class="btn-filtre-mabb {{ roleActif == role ? 'active' }}">{{ label }}</a>
+				{% endfor %}
+			</div>
+			{% if membres|length > 0 %}
+				<div class="row g-4">
+					{% for membre in membres %}
+						<div class="col-md-6 col-lg-3">
+							<div class="card card-mabb text-center overflow-hidden h-100">
+								<div style="background:linear-gradient(135deg,#063a55,#0b4fa3);padding:28px 20px">
+									{% if membre.photoPath %}
+										<img src="{{ asset('uploads/avatars/' ~ membre.photoPath) }}" alt="{{ membre.prenom }}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);display:block;margin:0 auto">
+									{% else %}
+										<div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto">👤</div>
+									{% endif %}
+								</div>
+								<div class="p-4">
+									<h5 class="fw-bold mb-1" style="color:#063a55">{{ membre.prenom }}
+										{{ membre.nom }}</h5>
+									<p class="text-mabb-orange fw-semibold small mb-2">{{ membre.roleMembre|capitalize }}</p>
+									{% if membre.bio %}
+										<p class="text-muted small" style="line-height:1.4">{{ membre.bio|slice(0,100) }}
+											{% if membre.bio|length > 100 %}...
+											{% endif %}
+										</p>
+									{% endif %}
+								</div>
+							</div>
+						</div>
+					{% endfor %}
+				</div>
+			{% else %}
+				<div class="text-center py-5">
+					<div style="font-size:3rem;margin-bottom:16px">👥</div>
+					<h3 style="color:#063a55">Aucun membre dans cette catégorie</h3>
+					<p class="text-muted">Les membres peuvent activer leur profil public depuis "Mon compte".</p>
+				</div>
+			{% endif %}
+			<div class="text-center mt-5 p-4 rounded-4 bg-light">
+				<p class="text-muted mb-0">
+					💡
+					<strong>Tu fais partie du club ?</strong>
+					{% if app.user %}
+						<a href="{{ path('vitrine_compte_mon_compte') }}" class="text-mabb-orange fw-semibold">Active ton profil public dans Mon compte</a>
+						pour apparaître ici.
+					{% else %}
+						<a href="{{ path('vitrine_compte_s_inscrire') }}" class="text-mabb-orange fw-semibold">Crée ton compte MABB</a>
+						pour apparaître dans cette page.
+					{% endif %}
+				</p>
+			</div>
+		</div>
+	</section>
 {% endblock %}

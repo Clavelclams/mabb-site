@@ -1,27 +1,38 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Nos Équipes — MABB Amiens{% endblock %}
-{% block meta_description %}Les équipes de la MABB : U11, U13, U15, U18, Seniors et 3x3. Résultats, catégories et encadrement.{% endblock %}
+{% block title %}Nos Équipes — MABB Amiens
+{% endblock %}
+{% block meta_description %}Les équipes de la MABB : U11, U13, U15, U18, Seniors et 3x3. Résultats, catégories et encadrement.
+{% endblock %}
 
 {% block body %}
 
 <div class="page-header">
-    <div class="container">
-        <h1>Nos Équipes</h1>
-        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li><li class="breadcrumb-item active">Équipes</li></ol></nav>
-    </div>
+	<div class="container">
+		<h1>Nos Équipes</h1>
+		<nav aria-label="breadcrumb">
+			<ol class="breadcrumb">
+				<li class="breadcrumb-item">
+					<a href="{{ path('vitrine_accueil') }}">Accueil</a>
+				</li>
+				<li class="breadcrumb-item active">Équipes</li>
+			</ol>
+		</nav>
+	</div>
 </div>
 
 <section class="section">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="section-title">Saison <span>2025-2026</span></h2>
-            <p class="section-subtitle text-white-force ">Du Mini Basket aux Seniors, la MABB forme à tous les niveaux</p>
-        </div>
+	<div class="container">
+		<div class="text-center mb-5">
+			<h2 class="section-title text-white">Saison
+				<span>2025-2026</span>
+			</h2>
+			<p class="section-subtitle text-white-force ">Du Mini Basket aux Seniors, la MABB forme à tous les niveaux</p>
+		</div>
 
-        {# TODO: Quand les entités Team seront créées, cette liste sera dynamique #}
-        <div class="row g-4">
-            {% set equipes = [
+		{# TODO: Quand les entités Team seront créées, cette liste sera dynamique #}
+		<div class="row g-4">
+			{% set equipes = [
                 {cat: 'Micro Basket', ages: '3-5 ans', niveau: 'Éveil', lieu: 'Étouvie', color: '#e74c3c', icon: 'bi-balloon', desc: 'Découverte ludique, éveil psychomoteur. Matériel adapté.'},
                 {cat: 'U7 / U9', ages: '5-8 ans', niveau: 'Mini Basket', lieu: '3 sites', color: '#f39c12', icon: 'bi-stars', desc: 'Apprentissage des fondamentaux. Étouvie, Nord, Est.'},
                 {cat: 'U11 Féminine', ages: '9-10 ans', niveau: 'Départemental', lieu: 'Étouvie', color: '#e67e22', icon: 'bi-dribbble', desc: 'Championnes départementales invaincues. 2 équipes engagées.'},
