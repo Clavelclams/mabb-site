@@ -459,3 +459,22 @@
   - La card Basket Loisir Mixte n'a pas de badges niveau/lieu (structure différente des autres cards — volontaire, la pratique loisir n'a pas de niveau compétitif)
   - Les noms de coachs et volontaires sont "À compléter" — à remplacer par les vraies données via un futur prompt ciblé
   - La section Service Civique utilise `border:1px solid rgba(255,255,255,.15)!important` pour override Bootstrap — cohérent avec le pattern déjà utilisé sur d'autres templates
+
+---
+
+### 2026-03-19 (session 20 suite) — Club : bouton Aide au devoir + card Cité Éducative
+- Objectif : 2 modifications sur `templates/vitrine/accueil/club.html.twig`
+- Actions réalisées :
+  1. **Modification 1 — Card Éducation** :
+     - `id="aide-au-devoir"` ajouté sur le `div.card` via `{% if v.title == 'Éducation' %}` dans la boucle Twig (pas besoin de sortir la card du loop)
+     - Bouton `<a class="btn btn-mabb btn-sm mt-3 w-100">Aide au devoir</a>` ajouté après le `<p>` de la card Éducation, conditionnel au même `{% if %}`
+     - URL : `https://www.amiens.fr/Vivre-a-Amiens/Education-Jeunesse/Aide-aux-devoirs`
+  2. **Modification 2 — Card Cité Éducative** : ajoutée après `{% endfor %}` dans la `div.row.g-4`, bordure orange `2px solid var(--mabb-orange)`, lien vers `vitrine_cite_educative`, hover inline JS
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+- Fichiers modifiés :
+  - templates/vitrine/accueil/club.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : pattern `{% if v.title == 'X' %}` dans la boucle valeurs plutôt que de dupliquer les cards en HTML — plus maintenable si les valeurs changent
+- Points de vigilance :
+  - Le `mb-0` sur `<p class="text-muted small mb-0">` a été retiré pour laisser de l'espace avant le bouton sur la card Éducation — les 3 autres cards ont aussi perdu `mb-0` (pas de bouton → pas d'impact visuel notable)
+  - La card Cité Éducative utilise `onmouseover`/`onmouseout` inline JS pour le hover — cohérent avec le pattern demandé dans le prompt, mais `.card-mabb:hover` CSS aurait suffi si la card était dans le loop
