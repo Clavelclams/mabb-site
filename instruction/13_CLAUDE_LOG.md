@@ -774,3 +774,44 @@
   - Si `doctrine:fixtures:load --append` plante : vérifier que la table `page_contenu` existe en DB (la migration a bien tourné).
   - La page `numerique` n'a pas de route dédiée dans le projet pour l'instant — la fixture est présente, à brancher quand la page sera créée.
   - `league/commonmark` doit être dans `vendor/` — vérifier avec `composer show league/commonmark`.
+  - `twig/markdown-extra` est également requis pour le filtre `|markdown_to_html` — sans lui, `SyntaxError` au rendu des pages Formation/Projet. Commande : `composer require twig/markdown-extra`.
+
+---
+
+### 2026-03-19 (session 26) — Back-office upload médias + galerie dynamique
+- Objectif : créer le back-office d'upload photos + rendre la galerie publique dynamique avec lightbox
+- Actions réalisées :
+  1. **`src/Controller/Admin/AdminMediasController.php`** (nouveau) : `#[Route('/admin/medias')]`, 3 méthodes :
+     - `index()` `GET` → liste tous les médias triés `createdAt DESC`
+     - `upload()` `POST` → CSRF `media_upload`, multi-upload `photos[]`, filtre extensions (jpg/jpeg/png/webp/gif), slug + uniqid pour nom fichier, move vers `public/uploads/galerie/`, persist entité `Media` par fichier, flash `N photo(s) uploadée(s)`
+     - `delete()` `POST` → CSRF `delete_media_{id}`, suppression fichier physique via `unlink()`, `$em->remove()`, flash success
+     - `denyAccessUnlessGranted('ROLE_SUPER_ADMIN')` sur les 3 méthodes
+  2. **`templates/admin/medias/index.html.twig`** (nouveau) : formulaire upload multi-fichiers + grille photos 4 colonnes avec thumbnail, légende tronquée, bouton suppression CSRF par photo
+  3. **`src/Controller/Vitrine/AccueilController.php`** : ajout `use MediaRepository` + réécriture `galerie()` — passe `medias` (48 images max via `findImages(48)`) au template
+  4. **`templates/vitrine/accueil/galerie.html.twig`** : remplacement du bloc statique (1 photo réelle + 11 placeholders + card "Photos à venir") par contenu dynamique :
+     - `{% if medias|length > 0 %}` → grille 4 colonnes + lightbox par photo (div fixe `z-index:9999`, `onclick` toggle display)
+     - `{% else %}` → card "Photos à venir" avec liens Instagram/Facebook (comportement identique à l'ancien placeholder)
+  5. **`templates/vitrine/base.html.twig`** : ajout bouton "Galerie" (`admin_medias_list`) dans la navbar admin entre Pages et Rôles
+  6. **`public/uploads/galerie/.gitkeep`** (nouveau) : dossier créé + tracé Git
+- Fichiers créés/modifiés :
+  - src/Controller/Admin/AdminMediasController.php (nouveau)
+  - templates/admin/medias/index.html.twig (nouveau)
+  - src/Controller/Vitrine/AccueilController.php (use + galerie() modifiés)
+  - templates/vitrine/accueil/galerie.html.twig (bloc dynamique + lightbox)
+  - templates/vitrine/base.html.twig (bouton Galerie)
+  - public/uploads/galerie/.gitkeep (nouveau)
+- Commande à lancer :
+  ```
+  php bin/console cache:clear
+  php bin/console debug:router | findstr admin_medias
+  ```
+- Décisions :
+  - Lightbox sans librairie externe : `onclick` inline + `position:fixed` + `z-index:9999` — suffisant pour un usage asso, évite d'ajouter une dépendance JS
+  - Upload multi-fichiers : `name="photos[]"` → normalisé en tableau dans le controller (un ou plusieurs fichiers)
+  - Légende partagée pour tout un upload batch — acceptable pour un back-office simple
+  - `$fichier->getSize()` est appelé AVANT `move()` — après le move le fichier n'est plus accessible
+- Points de vigilance :
+  - `public/uploads/galerie/` doit être accessible en écriture par le serveur (Laragon/PHP)
+  - En prod, ce dossier doit être exclu du déploiement git (`.gitignore`) sauf le `.gitkeep`
+  - `findImages(48)` est définie dans `MediaRepository` — vérifier qu'elle filtre bien `type = 'image'`
+  - La navbar admin est maintenant à 4 boutons (Articles / Pages / Galerie / Rôles) — sur mobile petit écran, peut dépasser. À surveiller visuellement.

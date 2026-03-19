@@ -3,6 +3,7 @@
 namespace App\Controller\Vitrine;
 
 use App\Repository\Vitrine\ArticleRepository;
+use App\Repository\Vitrine\MediaRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -51,10 +52,10 @@ final class AccueilController extends AbstractController
     }
 
     #[Route('/galerie', name: 'vitrine_galerie')]
-    public function galerie(): Response
+    public function galerie(MediaRepository $mediaRepo): Response
     {
         return $this->render('vitrine/accueil/galerie.html.twig', [
-            'controller_name' => 'AccueilController',
+            'medias' => $mediaRepo->findImages(48),
         ]);
     }
 

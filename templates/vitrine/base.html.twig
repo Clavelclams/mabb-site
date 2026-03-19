@@ -235,17 +235,17 @@
 			border-radius: 50px;
 			font-size: 0.85rem;
 			font-weight: 600;
-			border: 1px solid #dee2e6;
-			color: #6c757d;
+			border: 2px solid var(--mabb-orange);
+			color: var(--mabb-orange);
 			text-decoration: none;
 			transition: all 0.2s;
 			background: #fff;
 		}
 		.btn-filtre-mabb:hover,
 		.btn-filtre-mabb.active {
-			background: var(--mabb-orange);
+			background: var(--mabb-blue);
 			color: #fff;
-			border-color: var(--mabb-orange);
+			border-color: var(--mabb-blue);
 		}
 		@media(max-width:768px) {
 			.page-header {
@@ -341,6 +341,10 @@
 						<a href="{{ path('admin_pages_list') }}"
 						   class="btn btn-sm btn-outline-warning rounded-pill me-1">
 							<i class="bi bi-file-text me-1"></i>Pages
+						</a>
+						<a href="{{ path('admin_medias_list') }}"
+						   class="btn btn-sm btn-outline-warning rounded-pill me-1">
+							<i class="bi bi-images me-1"></i>Galerie
 						</a>
 						<a href="{{ path('admin_users_list') }}"
 						   class="btn btn-sm btn-outline-warning rounded-pill me-2">
