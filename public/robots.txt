@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Sitemap: https://mabb.fr/sitemap.xml
+
+# Bloquer les espaces privés
+Disallow: /admin/
+Disallow: /compte/
+Disallow: /api/

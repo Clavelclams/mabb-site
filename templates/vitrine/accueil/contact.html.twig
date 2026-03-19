@@ -31,8 +31,30 @@
 					<h2 class="section-title mb-4 text-white">Écrivez-<span>nous</span>
 					</h2>
 
-					{# TODO: Connecter à un vrai form Symfony avec envoi d'email quand le mailer sera configuré #}
+					{% if success %}
+						<div class="alert alert-success rounded-3 d-flex align-items-center gap-3 mb-4">
+							<i class="bi bi-check-circle-fill fs-4"></i>
+							<div>
+								<strong>Message envoyé ✅</strong><br>
+								Nous vous répondrons dans les plus brefs délais.
+							</div>
+						</div>
+					{% endif %}
+					{% if errors is defined and errors|length > 0 %}
+						<div class="alert alert-danger rounded-3 mb-4">
+							<div class="d-flex align-items-center gap-2 mb-1">
+								<i class="bi bi-exclamation-circle-fill"></i>
+								<strong>Veuillez corriger les erreurs suivantes :</strong>
+							</div>
+							<ul class="mb-0 mt-1 ps-3">
+								{% for error in errors %}
+									<li>{{ error }}</li>
+								{% endfor %}
+							</ul>
+						</div>
+					{% endif %}
 					<form method="post" action="{{ path('vitrine_contact') }}">
+						<input type="hidden" name="_csrf_token" value="{{ csrf_token('contact_form') }}">
 						<div class="row g-3">
 							<div class="col-md-6">
 								<label for="nom" class="form-label fw-semibold ">Nom

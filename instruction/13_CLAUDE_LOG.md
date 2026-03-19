@@ -586,3 +586,46 @@
 - Points de vigilance :
   - Les anciens templates orphelins `admin/roles/liste.html.twig` et `admin/roles/editer.html.twig` (session 20 suite 4) n'ont pas été supprimés — à nettoyer si souhaité
   - Migration Doctrine `roles_membre → roles_membre JSON` (session 19) toujours en attente d'exécution manuelle
+
+---
+
+### 2026-03-19 (session 22) — SEO : sitemap.xml + robots.txt + formulaire contact branché Symfony Mailer
+- Objectif : créer les fichiers SEO statiques et connecter le formulaire contact à Symfony Mailer
+- Actions réalisées :
+  1. **`public/sitemap.xml`** (nouveau) : sitemap statique avec 11 URLs, priorités et changefreq adaptées (1.0 accueil → 0.5 contact/clavel). Accessible directement via `/sitemap.xml`.
+  2. **`public/robots.txt`** (nouveau) : `Allow: /`, `Sitemap: https://mabb.fr/sitemap.xml`, `Disallow` sur `/admin/`, `/compte/`, `/api/`.
+  3. **`.env`** : ajout `MAILER_FROM=noreply@mabb.fr` dans le bloc `###> symfony/mailer ###` (MAILER_DSN=null://null était déjà présent).
+  4. **`src/Controller/Vitrine/AccueilController.php`** :
+     - Ajout de 3 `use` : `Request`, `MailerInterface`, `Email`
+     - Remplacement de la méthode `contact()` vide par une méthode complète `GET|POST` :
+       - Vérification CSRF token (`contact_form`)
+       - Nettoyage inputs (`strip_tags`, `trim`)
+       - Validation : nom/prénom obligatoires, email valide (`filter_var`), sujet non vide, message ≥ 10 chars
+       - Construction email HTML avec tableau récapitulatif (de, email, téléphone, sujet, message)
+       - Envoi vers `contact@mabb.fr` + `reseauxmabb@gmail.com` (double destinataire)
+       - `replyTo($email)` → répondre directement à l'expéditeur depuis le client mail
+       - Subject formatté : `[MABB Contact] Inscription — Prénom Nom`
+       - Catch `\Exception` → message d'erreur utilisateur en cas d'échec
+       - Variables `success` + `errors` passées au template
+  5. **`templates/vitrine/accueil/contact.html.twig`** :
+     - Suppression du commentaire `TODO`
+     - Ajout bloc alertes Bootstrap avant le `<form>` : `alert-success` si succès, `alert-danger` avec liste des erreurs sinon
+     - Ajout `<input type="hidden" name="_csrf_token" value="{{ csrf_token('contact_form') }}">` dans le formulaire
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+  - ⚠️ En dev, `MAILER_DSN=null://null` → emails absorbés (aucun envoi réel). Pour tester : installer Mailpit et mettre `MAILER_DSN=smtp://localhost:1025` dans `.env.local`
+  - ⚠️ En prod : mettre le vrai DSN SMTP dans `.env.local` (jamais dans `.env`)
+- Fichiers créés/modifiés :
+  - public/sitemap.xml (nouveau)
+  - public/robots.txt (nouveau)
+  - .env (MAILER_FROM ajouté)
+  - src/Controller/Vitrine/AccueilController.php (contact() réécrite, 3 use ajoutés)
+  - templates/vitrine/accueil/contact.html.twig (alertes + CSRF)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions :
+  - Sitemap statique plutôt que controller dynamique — les URLs vitrine sont stables, pas de contenu DB à indexer pour l'instant
+  - Double destinataire `contact@mabb.fr` + `reseauxmabb@gmail.com` — boîte officielle pour archives + Gmail pour notifications mobiles Clavel
+  - Adresses hardcodées dans le controller, pas de `MAILER_TO` dans `.env` — plus simple, moins de config à maintenir pour une asso
+- Points de vigilance :
+  - Le `sitemap.xml` est statique — à mettre à jour manuellement si de nouvelles pages sont ajoutées
+  - `/news` et `/galerie` sont dans le sitemap mais leurs templates peuvent être encore vides — vérifier que ces pages retournent du contenu avant la mise en prod
+  - Migration Doctrine (session 19) toujours en attente
