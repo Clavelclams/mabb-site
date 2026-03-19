@@ -155,29 +155,34 @@
 			</div>
 			<div
 				class="row g-4">
-				{# TODO: Boucle dynamique sur les articles quand le CMS sera en place #}
-				{% set actus = [
-                {title: 'Saison 2025-2026 : objectif Pré-Nationale', date: 'Juillet 2025', excerpt: 'La MABB vise la Pré-Nationale pour les U13, U15 et U18. Les Seniors se stabilisent en régional.'},
-                {title: '4 titres en Coupe de la Somme', date: 'Mai 2025', excerpt: 'U11, U13, U15 et U18 remportent la Coupe de la Somme. Un quadruplé historique pour le club.'},
-                {title: 'Christina Kpadan sélectionnée en Équipe de France U15', date: 'Mars 2025', excerpt: 'Notre joueuse U15 est retenue pour le projet de performance fédéral de la FFBB.'},
-            ] %}
-				{% for actu in actus %}
+				{% if dernieres_actus|length > 0 %}
+					{% for actu in dernieres_actus %}
 					<div class="col-md-4">
 						<div class="card card-mabb h-100">
+							{% if actu.imagePath %}
+								<img src="{{ asset('uploads/articles/' ~ actu.imagePath) }}"
+								     alt="{{ actu.titre }}"
+								     style="height:180px;object-fit:cover;width:100%">
+							{% endif %}
 							<div class="card-body p-4">
 								<small class="text-muted">
 									<i class="bi bi-calendar3 me-1"></i>
-									{{ actu.date }}</small>
-								<h5 class="fw-bold mt-2 mb-2">{{ actu.title }}</h5>
-								<p class="text-muted">{{ actu.excerpt }}</p>
+									{{ actu.publishedAt ? actu.publishedAt|date('d/m/Y') : '' }}
+								</small>
+								<h5 class="fw-bold mt-2 mb-2">{{ actu.titre }}</h5>
+								<p class="text-muted">{{ actu.contenu|striptags|slice(0, 120) }}...</p>
 								<a href="{{ path('vitrine_news') }}" class="text-mabb-orange fw-semibold text-decoration-none">
-									Lire la suite
-									<i class="bi bi-arrow-right"></i>
+									Lire la suite <i class="bi bi-arrow-right"></i>
 								</a>
 							</div>
 						</div>
 					</div>
-				{% endfor %}
+					{% endfor %}
+				{% else %}
+					<div class="col-12 text-center py-4">
+						<p class="text-muted">Aucune actualité pour le moment.</p>
+					</div>
+				{% endif %}
 			</div>
 		</div>
 	</section>

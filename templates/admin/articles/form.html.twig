@@ -1,0 +1,85 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}{{ article ? 'Modifier' : 'Nouvel' }} article — Admin MABB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container">
+        <h1>{{ article ? 'Modifier l\'article' : 'Nouvel article' }}</h1>
+    </div>
+</div>
+
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card card-mabb p-4">
+
+                    {% if errors is defined and errors|length > 0 %}
+                        <div class="alert alert-danger rounded-3 mb-4">
+                            {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post"
+                          action="{{ article ? path('admin_articles_edit', {id: article.id}) : path('admin_articles_new') }}"
+                          enctype="multipart/form-data">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('article_form') }}">
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Titre <span class="text-danger">*</span></label>
+                            <input type="text" name="titre" class="form-control form-control-lg"
+                                   value="{{ article ? article.titre : '' }}" required
+                                   placeholder="Titre de l'article">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Contenu <span class="text-danger">*</span></label>
+                            <textarea name="contenu" class="form-control" rows="12"
+                                      placeholder="Contenu de l'article (HTML accepté)">{{ article ? article.contenu : '' }}</textarea>
+                            <div class="form-text">Le HTML basique est accepté : &lt;p&gt;, &lt;strong&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;a&gt;</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Image principale</label>
+                            {% if article and article.imagePath %}
+                                <div class="mb-2">
+                                    <img src="{{ asset('uploads/articles/' ~ article.imagePath) }}"
+                                         style="max-height:120px;border-radius:8px" alt="Image actuelle">
+                                    <div class="form-text">Image actuelle — uploader une nouvelle image pour la remplacer</div>
+                                </div>
+                            {% endif %}
+                            <input type="file" name="image" accept="image/*" class="form-control">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Statut</label>
+                            <select name="statut" class="form-select">
+                                <option value="brouillon" {{ (article and article.statut == 'brouillon') or not article ? 'selected' : '' }}>
+                                    📝 Brouillon
+                                </option>
+                                <option value="publie" {{ article and article.statut == 'publie' ? 'selected' : '' }}>
+                                    ✅ Publié
+                                </option>
+                                <option value="archive" {{ article and article.statut == 'archive' ? 'selected' : '' }}>
+                                    📦 Archivé
+                                </option>
+                            </select>
+                            <div class="form-text">Passer en "Publié" rend l'article visible sur le site.</div>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-mabb px-4">
+                                <i class="bi bi-check-lg me-1"></i>
+                                {{ article ? 'Enregistrer' : 'Créer l\'article' }}
+                            </button>
+                            <a href="{{ path('admin_articles_list') }}"
+                               class="btn btn-outline-secondary rounded-pill">Annuler</a>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

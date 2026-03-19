@@ -2,6 +2,7 @@
 
 namespace App\Controller\Vitrine;
 
+use App\Repository\Vitrine\ArticleRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,18 +13,24 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AccueilController extends AbstractController
 {
     #[Route('/', name: 'vitrine_accueil')]
-    public function index(): Response
+    public function index(ArticleRepository $articleRepo): Response
     {
         return $this->render('vitrine/accueil/index.html.twig', [
-            'controller_name' => 'AccueilController',
+            'dernieres_actus' => $articleRepo->findDerniersPublies(3),
         ]);
     }
 
     #[Route('/news', name: 'vitrine_news')]
-    public function news(): Response
+    public function news(Request $request, ArticleRepository $articleRepo): Response
     {
+        $page     = max(1, $request->query->getInt('page', 1));
+        $articles = $articleRepo->findPubliesPagines($page, 9);
+        $total    = $articleRepo->countPublies();
+
         return $this->render('vitrine/accueil/news.html.twig', [
-            'controller_name' => 'AccueilController',
+            'articles'   => $articles,
+            'page'       => $page,
+            'totalPages' => (int) ceil($total / 9),
         ]);
     }
 

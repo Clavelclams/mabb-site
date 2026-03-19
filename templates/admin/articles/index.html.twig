@@ -1,0 +1,97 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Articles — Admin MABB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div>
+            <h1>Articles</h1>
+            <p style="color:rgba(255,255,255,.75)">{{ articles|length }} articles au total</p>
+        </div>
+        <a href="{{ path('admin_articles_new') }}" class="btn btn-mabb">
+            <i class="bi bi-plus-lg me-1"></i>Nouvel article
+        </a>
+    </div>
+</div>
+
+<section class="section section-gray">
+    <div class="container">
+
+        {% for label, messages in app.flashes %}
+            {% for msg in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }} rounded-3 mb-3">{{ msg }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        {% if articles|length == 0 %}
+            <div class="text-center py-5">
+                <div style="font-size:3rem">📝</div>
+                <h3 class="mt-3" style="color:#063a55">Aucun article</h3>
+                <a href="{{ path('admin_articles_new') }}" class="btn btn-mabb mt-3">Créer le premier article</a>
+            </div>
+        {% else %}
+        <div class="card card-mabb overflow-hidden">
+            <table class="table table-hover mb-0">
+                <thead style="background:#063a55;color:#fff">
+                    <tr>
+                        <th class="py-3 px-4">Titre</th>
+                        <th class="py-3">Statut</th>
+                        <th class="py-3">Publié le</th>
+                        <th class="py-3">Créé le</th>
+                        <th class="py-3 text-end px-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in articles %}
+                    <tr>
+                        <td class="py-3 px-4 fw-semibold">{{ article.titre }}</td>
+                        <td class="py-3">
+                            {% if article.statut == 'publie' %}
+                                <span class="badge bg-success">Publié</span>
+                            {% elseif article.statut == 'brouillon' %}
+                                <span class="badge bg-warning text-dark">Brouillon</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Archivé</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 text-muted small">
+                            {{ article.publishedAt ? article.publishedAt|date('d/m/Y') : '—' }}
+                        </td>
+                        <td class="py-3 text-muted small">
+                            {{ article.createdAt ? article.createdAt|date('d/m/Y') : '—' }}
+                        </td>
+                        <td class="py-3 text-end px-4">
+                            <a href="{{ path('admin_articles_edit', {id: article.id}) }}"
+                               class="btn btn-sm btn-outline-primary rounded-pill me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post"
+                                  action="{{ path('admin_articles_delete', {id: article.id}) }}"
+                                  class="d-inline"
+                                  onsubmit="return confirm('Supprimer cet article ?')">
+                                <input type="hidden" name="_csrf_token"
+                                       value="{{ csrf_token('delete_article_' ~ article.id) }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 mt-4">
+            <a href="{{ path('admin_users_list') }}" class="btn btn-outline-secondary rounded-pill">
+                <i class="bi bi-people me-1"></i>Gérer les rôles
+            </a>
+            <a href="{{ path('vitrine_accueil') }}" class="btn btn-outline-secondary rounded-pill">
+                <i class="bi bi-arrow-left me-1"></i>Retour au site
+            </a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

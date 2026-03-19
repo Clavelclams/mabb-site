@@ -1,55 +1,68 @@
 {% extends 'vitrine/base.html.twig' %}
-
 {% block title %}Actualités — MABB Amiens{% endblock %}
 {% block meta_description %}Toutes les actualités de la MABB : résultats, événements, tournois et vie du club.{% endblock %}
 
 {% block body %}
 
 <div class="page-header">
-    <div class="container">
+    <div class="container text-center">
         <h1>Actualités</h1>
-        <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}">Accueil</a></li><li class="breadcrumb-item active">Actualités</li></ol></nav>
+        <p style="color:rgba(255,255,255,.75)">Toute l'actualité du club MABB</p>
     </div>
 </div>
 
-<section class="section">
+<section class="section section-gray">
     <div class="container">
-        {# TODO: Boucle dynamique sur les entités Article quand le CMS sera en place #}
-        {# Pour l'instant, contenu statique basé sur les vrais faits du club #}
 
+        {% if articles|length == 0 %}
+            <div class="text-center py-5">
+                <div style="font-size:3rem">📰</div>
+                <h3 class="mt-3" style="color:#063a55">Aucune actualité publiée</h3>
+                <p class="text-muted">Revenez bientôt !</p>
+            </div>
+        {% else %}
         <div class="row g-4">
-            {% set articles = [
-                {title: 'Bilan saison 2024-2025 : une année exceptionnelle', date: '11 juillet 2025', excerpt: 'La MABB dresse le bilan d\'une saison marquée par de nombreux titres, la sélection de Christina Kpadan en équipe de France U15 et le renouvellement des trois labels FFBB 3 étoiles.', tag: 'Bilan'},
-                {title: 'Quadruplé historique en Coupe de la Somme', date: '28 mai 2025', excerpt: 'U11, U13, U15 et U18 remportent toutes la Coupe de la Somme à Flixecourt. Un signal fort pour le basket féminin samarien.', tag: 'Compétition'},
-                {title: 'Cap sur la Pré-Nationale 2025-2026', date: 'Juillet 2025', excerpt: 'Objectif ambitieux : viser la Pré-Nationale pour les U13, U15 et U18 et stabiliser les Seniors en régional.', tag: 'Saison'},
-                {title: 'Louise Étienne et Maëline Thiam au Pôle Espoirs', date: 'Mai 2025', excerpt: 'Deux joueuses formées au club intègrent le Pôle Espoirs des Hauts-de-France. Une fierté pour la formation MABB.', tag: 'Formation'},
-                {title: 'Centre Génération Basket : 150 jeunes par jour', date: 'Novembre 2024', excerpt: 'Pendant les vacances d\'automne, le programme gratuit au gymnase Émile Moiroud a accueilli près de 150 jeunes quotidiennement.', tag: 'Événement'},
-                {title: 'MABB Ligue 3x3 : saison 4 lancée', date: 'Octobre 2024', excerpt: 'La ligue officielle FFBB 3x3 de la MABB démarre sa 4e saison avec 10 tournois classés prévus.', tag: '3x3'},
-            ] %}
-
             {% for article in articles %}
             <div class="col-md-6 col-lg-4">
                 <div class="card card-mabb h-100">
-                    {# TODO: Image article — placeholder pour l'instant #}
-                    <div style="height:180px;background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));display:flex;align-items:center;justify-content:center">
-                        <i class="bi bi-newspaper" style="font-size:3rem;color:rgba(255,255,255,.3)"></i>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted"><i class="bi bi-calendar3 me-1"></i>{{ article.date }}</small>
-                            <span class="badge bg-primary bg-opacity-10 text-primary">{{ article.tag }}</span>
+                    {% if article.imagePath %}
+                        <img src="{{ asset('uploads/articles/' ~ article.imagePath) }}"
+                             alt="{{ article.titre }}"
+                             style="height:180px;object-fit:cover;width:100%">
+                    {% else %}
+                        <div style="height:120px;background:linear-gradient(135deg,#063a55,#0b4fa3);display:flex;align-items:center;justify-content:center">
+                            <i class="bi bi-newspaper text-white" style="font-size:2.5rem;opacity:.4"></i>
                         </div>
-                        <h5 class="fw-bold mb-2">{{ article.title }}</h5>
-                        <p class="text-muted small">{{ article.excerpt }}</p>
+                    {% endif %}
+                    <div class="card-body p-4 d-flex flex-column">
+                        <small class="text-muted mb-2">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            {{ article.publishedAt ? article.publishedAt|date('d/m/Y') : '' }}
+                        </small>
+                        <h5 class="fw-bold mb-2">{{ article.titre }}</h5>
+                        <p class="text-muted flex-grow-1">{{ article.contenu|striptags|slice(0, 140) }}...</p>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <div class="text-center mt-5">
-            <p class="text-muted text-white-force">Plus d'actualités à venir — le CMS sera bientôt en place pour publier facilement.</p>
+        {# Pagination #}
+        {% if totalPages > 1 %}
+        <div class="d-flex justify-content-center gap-2 mt-5">
+            {% if page > 1 %}
+                <a href="{{ path('vitrine_news', {page: page - 1}) }}"
+                   class="btn btn-outline-secondary rounded-pill px-4">← Précédent</a>
+            {% endif %}
+            <span class="btn btn-mabb rounded-pill px-4 disabled">{{ page }} / {{ totalPages }}</span>
+            {% if page < totalPages %}
+                <a href="{{ path('vitrine_news', {page: page + 1}) }}"
+                   class="btn btn-outline-secondary rounded-pill px-4">Suivant →</a>
+            {% endif %}
         </div>
+        {% endif %}
+        {% endif %}
+
     </div>
 </section>
 

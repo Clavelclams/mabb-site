@@ -627,5 +627,63 @@
   - Adresses hardcodées dans le controller, pas de `MAILER_TO` dans `.env` — plus simple, moins de config à maintenir pour une asso
 - Points de vigilance :
   - Le `sitemap.xml` est statique — à mettre à jour manuellement si de nouvelles pages sont ajoutées
-  - `/news` et `/galerie` sont dans le sitemap mais leurs templates peuvent être encore vides — vérifier que ces pages retournent du contenu avant la mise en prod
+  - `/news` et `/galerie` sont dans le sitemap — `/news` est maintenant dynamique (session 23), `/galerie` reste statique pour l'instant
   - Migration Doctrine (session 19) toujours en attente
+
+---
+
+### 2026-03-19 (session 23) — CMS vitrine complet : entités Article + Media, back-office admin, pages dynamiques
+- Objectif : implémenter le CMS vitrine — entités, repositories, back-office admin CRUD, pages news/accueil dynamiques
+- Actions réalisées :
+  1. **`src/Entity/Vitrine/Article.php`** (nouveau) : entité Article avec `titre`, `slug` (auto-généré via `onPrePersist`), `contenu` (text), `imagePath`, `statut` (brouillon/publie/archive), `publishedAt`, `createdAt`, `updatedAt`, `auteur (ManyToOne User nullable SET NULL)`. Constantes `STATUT_BROUILLON/PUBLIE/ARCHIVE`. Méthode `isPublie()`. Slug généré avec translittération + `uniqid(-6)` pour garantir l'unicité.
+  2. **`src/Entity/Vitrine/Media.php`** (nouveau) : entité Media avec `nom`, `path`, `type` (image/video), `taille`, `legende`, `createdAt`.
+  3. **`src/Repository/Vitrine/ArticleRepository.php`** (nouveau) : `findDerniersPublies(limit)` (3 derniers pour accueil), `findPubliesPagines(page, perPage)` (pagination /news), `countPublies()` (pour calculer totalPages).
+  4. **`src/Repository/Vitrine/MediaRepository.php`** (nouveau) : `findImages(limit)`.
+  5. **`src/DataFixtures/ArticleFixtures.php`** (nouveau) : 5 articles (4 publiés + 1 brouillon) avec données réelles MABB.
+  6. **`src/Controller/Admin/AdminArticlesController.php`** (nouveau) : CRUD complet sous `/admin/articles` :
+     - `GET /admin/articles` → `admin_articles_list` : liste tous les articles triés par `createdAt DESC`
+     - `GET|POST /admin/articles/nouveau` → `admin_articles_new` : création + upload image
+     - `GET|POST /admin/articles/{id}/modifier` → `admin_articles_edit` : modification + upload image
+     - `POST /admin/articles/{id}/supprimer` → `admin_articles_delete` : suppression CSRF
+     - `denyAccessUnlessGranted('ROLE_SUPER_ADMIN')` sur toutes les routes
+     - Upload image dans `public/uploads/articles/` via `SluggerInterface`
+     - `publishedAt` auto-assigné au passage en statut `publie`
+  7. **`templates/admin/articles/index.html.twig`** (nouveau) : tableau articles avec badges statut (vert/orange/gris), boutons modifier/supprimer (CSRF), liens vers `admin_users_list` et retour site
+  8. **`templates/admin/articles/form.html.twig`** (nouveau) : formulaire création/édition — titre, textarea contenu (HTML accepté), upload image avec prévisualisation si existante, select statut, CSRF
+  9. **`src/Controller/Vitrine/AccueilController.php`** : 3 modifications :
+     - `use App\Repository\Vitrine\ArticleRepository` ajouté
+     - `index()` : injecte `ArticleRepository`, passe `dernieres_actus` (3 derniers publiés) au template
+     - `news()` : injecte `ArticleRepository`, passe `articles` (paginés), `page`, `totalPages`
+  10. **`templates/vitrine/accueil/index.html.twig`** : bloc actus statiques `{% set actus = [...] %}` remplacé par boucle dynamique sur `dernieres_actus` — image optionnelle, titre/date/extrait `striptags|slice(120)`
+  11. **`templates/vitrine/accueil/news.html.twig`** : page entièrement réécrite — grille dynamique 3 colonnes, placeholder gradient si pas d'image, pagination Bootstrap si `totalPages > 1`
+  12. **`templates/vitrine/base.html.twig`** : bouton admin unique "Admin" → 2 boutons "Articles" (`admin_articles_list`) + "Rôles" (`admin_users_list`)
+  13. **`public/uploads/articles/.gitkeep`** (nouveau) : dossier créé pour les images uploadées
+  - ⚠️ `php bin/console doctrine:migrations:diff` — Doctrine va détecter les tables `article` et `media` → générer la migration
+  - ⚠️ `php bin/console doctrine:migrations:migrate --no-interaction`
+  - ⚠️ `php bin/console doctrine:fixtures:load --append --no-interaction` — charge les 5 articles de test
+  - ⚠️ `php bin/console cache:clear`
+- Fichiers créés/modifiés :
+  - src/Entity/Vitrine/Article.php (nouveau)
+  - src/Entity/Vitrine/Media.php (nouveau)
+  - src/Repository/Vitrine/ArticleRepository.php (nouveau)
+  - src/Repository/Vitrine/MediaRepository.php (nouveau)
+  - src/DataFixtures/ArticleFixtures.php (nouveau)
+  - src/Controller/Admin/AdminArticlesController.php (nouveau)
+  - src/Controller/Vitrine/AccueilController.php (use + index() + news() modifiés)
+  - templates/admin/articles/index.html.twig (nouveau)
+  - templates/admin/articles/form.html.twig (nouveau)
+  - templates/vitrine/accueil/index.html.twig (actus dynamiques)
+  - templates/vitrine/accueil/news.html.twig (réécrit)
+  - templates/vitrine/base.html.twig (2 boutons admin)
+  - public/uploads/articles/.gitkeep (nouveau)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions :
+  - Slug avec `uniqid(-6)` suffixé → garantit l'unicité sans query de vérification (acceptable pour un site asso, pas un SaaS)
+  - `publishedAt` auto-assigné seulement à la première publication — si on repasse en brouillon puis re-publie, la date originale est conservée (comportement intentionnel)
+  - `denyAccessUnlessGranted` dans chaque méthode plutôt que sur le controller — plus explicite, cohérent avec `AdminRolesController`
+  - `striptags|slice(0,120)` pour les extraits — pas de DOMDocument, accepte les artefacts HTML simples pour un site asso
+- Points de vigilance :
+  - Les entités `Article` et `Media` sont dans `App\Entity\Vitrine\` — Doctrine doit les détecter automatiquement si `doctrine.yaml` mappe `src/Entity/` récursivement (standard Symfony)
+  - `public/uploads/articles/` doit être accessible en écriture par le serveur web (permissions `www-data` ou `laragon`)
+  - Migration double : session 19 (`roles_membre JSON`) + session 23 (`article`, `media`) — faire `migrations:diff` une seule fois couvrira les deux si pas encore migrées
+  - Page `/galerie` reste statique — à brancher sur `Media` dans une session ultérieure
