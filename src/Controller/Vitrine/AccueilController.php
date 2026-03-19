@@ -74,6 +74,20 @@ final class AccueilController extends AbstractController
         ]);
     }
 
+    #[Route('/news/{slug}', name: 'vitrine_news_article')]
+    public function article(string $slug, ArticleRepository $articleRepo): Response
+    {
+        $article = $articleRepo->findOneBy(['slug' => $slug, 'statut' => 'publie']);
+
+        if (!$article) {
+            throw $this->createNotFoundException('Article non trouvé.');
+        }
+
+        return $this->render('vitrine/accueil/article.html.twig', [
+            'article' => $article,
+        ]);
+    }
+
     #[Route('/contact', name: 'vitrine_contact', methods: ['GET', 'POST'])]
     public function contact(Request $request, MailerInterface $mailer): Response
     {

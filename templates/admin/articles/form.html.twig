@@ -34,9 +34,13 @@
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Contenu <span class="text-danger">*</span></label>
-                            <textarea name="contenu" class="form-control" rows="12"
-                                      placeholder="Contenu de l'article (HTML accepté)">{{ article ? article.contenu : '' }}</textarea>
-                            <div class="form-text">Le HTML basique est accepté : &lt;p&gt;, &lt;strong&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;a&gt;</div>
+                            <textarea name="contenu" id="contenu" class="form-control" rows="12"
+                                      placeholder="Rédigez votre article ici...">{{ article ? article.contenu : '' }}</textarea>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Éditeur visuel — utilisez les boutons de la barre pour mettre en forme.
+                                Les liens, images et listes sont supportés.
+                            </div>
                         </div>
 
                         <div class="mb-4">
@@ -82,4 +86,29 @@
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script>
+    const easyMDE = new EasyMDE({
+        element: document.getElementById('contenu'),
+        spellChecker: false,
+        placeholder: 'Rédigez votre article ici...\n\nAstuce : sélectionnez du texte pour voir les options de mise en forme.',
+        toolbar: [
+            'bold', 'italic', 'heading', '|',
+            'quote', 'unordered-list', 'ordered-list', '|',
+            'link', 'image', '|',
+            'preview', 'side-by-side', '|',
+            'guide'
+        ],
+        status: false,
+        autosave: {
+            enabled: true,
+            uniqueId: 'article-editor',
+            delay: 3000,
+        },
+    });
+</script>
 {% endblock %}

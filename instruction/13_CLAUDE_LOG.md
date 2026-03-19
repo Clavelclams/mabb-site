@@ -687,3 +687,90 @@
   - `public/uploads/articles/` doit être accessible en écriture par le serveur web (permissions `www-data` ou `laragon`)
   - Migration double : session 19 (`roles_membre JSON`) + session 23 (`article`, `media`) — faire `migrations:diff` une seule fois couvrira les deux si pas encore migrées
   - Page `/galerie` reste statique — à brancher sur `Media` dans une session ultérieure
+
+---
+
+### 2026-03-19 (session 24) — EasyMDE éditeur visuel + page article détaillée + markdown_to_html
+- Objectif : remplacer le textarea brut par un éditeur Markdown visuel (EasyMDE), créer la page article détaillée avec rendu Markdown → HTML
+- Actions réalisées :
+  1. **`importmap.php`** : ajout de 2 entrées EasyMDE :
+     - `'easymde'` → `https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js`
+     - `'easymde/css'` → `https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css` (type: css)
+  2. **`templates/admin/articles/form.html.twig`** :
+     - `<textarea>` : `id="contenu"` ajouté
+     - Placeholder mis à jour
+     - `div.form-text` remplacé par le message "Éditeur visuel — boutons de la barre"
+     - Bloc `{% block extra_js %}` ajouté en fin de template avec CDN EasyMDE + instanciation JS : barre d'outils (bold, italic, heading, quote, list, link, image, preview, side-by-side, guide), spellChecker désactivé, autosave 3s
+  3. **`src/Controller/Vitrine/AccueilController.php`** : ajout méthode `article()` :
+     - `GET /news/{slug}` → `vitrine_news_article`
+     - `findOneBy(['slug' => $slug, 'statut' => 'publie'])` → 404 si non trouvé
+     - Render `vitrine/accueil/article.html.twig`
+  4. **`templates/vitrine/accueil/article.html.twig`** (nouveau) : page détaillée — header avec titre/date/auteur, image optionnelle, `{{ article.contenu|markdown_to_html }}`, bouton retour, bouton "Modifier" si ROLE_SUPER_ADMIN
+  5. **`assets/styles/vitrine.css`** : ajout section `.article-content` — font-size, line-height, couleurs h1/h2/h3, paragraphes, liens (bleu → orange hover), listes, blockquote (bordure orange), images (border-radius)
+  6. **`templates/vitrine/accueil/news.html.twig`** : titre article → `<a>` vers `vitrine_news_article`, bouton "Lire l'article" ajouté en bas de chaque card
+  7. **`templates/vitrine/accueil/index.html.twig`** : lien "Lire la suite" → `vitrine_news_article` au lieu de `vitrine_news`
+  - ⚠️ **Commande obligatoire avant test** : `composer require league/commonmark` (requis pour le filtre Twig `|markdown_to_html`)
+  - ⚠️ `php bin/console cache:clear` après
+- Fichiers créés/modifiés :
+  - importmap.php (EasyMDE ajouté)
+  - templates/admin/articles/form.html.twig (EasyMDE intégré)
+  - src/Controller/Vitrine/AccueilController.php (méthode article() ajoutée)
+  - templates/vitrine/accueil/article.html.twig (nouveau)
+  - assets/styles/vitrine.css (CSS article-content)
+  - templates/vitrine/accueil/news.html.twig (liens article détaillé)
+  - templates/vitrine/accueil/index.html.twig (liens article détaillé)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions :
+  - EasyMDE chargé via CDN dans `{% block extra_js %}` uniquement sur le form admin — pas sur toutes les pages (inutile ailleurs)
+  - Le contenu est stocké en Markdown dans la DB — c'est un choix volontaire pour simplifier l'édition par Willy. L'existant (HTML brut des fixtures) fonctionnera aussi car CommonMark passe le HTML brut tel quel
+  - `|markdown_to_html` est le filtre natif Twig fourni par `twig/markdown-extra` (inclus dans `twig/extra-bundle`) + `league/commonmark` comme parser
+- Points de vigilance :
+  - **`composer require league/commonmark`** est obligatoire — sans ça, `|markdown_to_html` lève une exception Twig à l'affichage de l'article
+  - Les 4 articles en DB contiennent du HTML brut (`<p>...</p>`) — CommonMark le passe tel quel, pas de régression
+  - La route `/news/{slug}` est déclarée APRÈS `/news` — Symfony résout en ordre, pas de conflit
+  - EasyMDE autosave stocke dans `localStorage` avec clé `article-editor` — deux onglets ouverts en même temps peuvent se conflitter (acceptable pour un usage mono-admin)
+
+---
+
+### 2026-03-19 (session 25) — CMS Pages vitrine : entité PageContenu + interface admin
+- Objectif : Permettre au super admin de modifier les textes des pages vitrine sans toucher au code
+- Actions réalisées :
+  1. **CORRECTIF CRITIQUE** : suppression des entrées `easymde` et `easymde/css` de `importmap.php` — clé `'url'` invalide pour Symfony Asset Mapper → `RuntimeError` sur toutes les pages. EasyMDE reste chargé via CDN dans `{% block extra_js %}`.
+  2. **`src/Entity/Vitrine/PageContenu.php`** (nouveau) : entité `page_contenu` — champs `pageSlug` (unique), `pageNom`, `contenu` (text, nullable), `sousTitre` (nullable), `updatedAt`. Lifecycle callbacks `onUpdate()` sur `PrePersist` + `PreUpdate`.
+  3. **`src/Repository/Vitrine/PageContenuRepository.php`** (nouveau) : méthode `findBySlug(string $slug)`.
+  4. **`src/DataFixtures/PageContenuFixtures.php`** (nouveau) : 3 pages (projet-sport-etude, formation, numerique). Guard anti-doublon : `findOneBy(['pageSlug' => ...])` avant persist.
+  5. **`src/Controller/Admin/AdminPagesController.php`** (nouveau) : `#[Route('/admin/pages')]`, 2 méthodes (`index`, `edit` GET/POST), CSRF sur edit, `denyAccessUnlessGranted('ROLE_SUPER_ADMIN')`.
+  6. **`templates/admin/pages/index.html.twig`** (nouveau) : liste des pages CMS en cards, bouton "Modifier", message si table vide.
+  7. **`templates/admin/pages/edit.html.twig`** (nouveau) : formulaire avec EasyMDE (CDN), champs `sousTitre` + `contenu`, CSRF.
+  8. **`src/Controller/Vitrine/NumeriquePagesController.php`** : ajout `use PageContenuRepository`, injection dans `formation()` et `projetSportEtude()` → passage de `pageContenu` au template.
+  9. **`templates/vitrine/club/projet_sport_etude.html.twig`** : sous-titre `page-header` dynamique (`pageContenu.sousTitre` ou fallback statique), bloc `{% if pageContenu.contenu %}` + `.article-content|markdown_to_html` inséré avant le CTA.
+  10. **`templates/vitrine/formation/index.html.twig`** : même logique — sous-titre dynamique + bloc CMS avant section `.formation-cta`.
+  11. **`templates/vitrine/base.html.twig`** : ajout bouton "Pages" (`admin_pages_list`) dans la navbar admin entre Articles et Rôles.
+- Fichiers créés/modifiés :
+  - importmap.php (entries EasyMDE invalides supprimées)
+  - src/Entity/Vitrine/PageContenu.php (nouveau)
+  - src/Repository/Vitrine/PageContenuRepository.php (nouveau)
+  - src/DataFixtures/PageContenuFixtures.php (nouveau)
+  - src/Controller/Admin/AdminPagesController.php (nouveau)
+  - templates/admin/pages/index.html.twig (nouveau)
+  - templates/admin/pages/edit.html.twig (nouveau)
+  - src/Controller/Vitrine/NumeriquePagesController.php (modifié)
+  - templates/vitrine/club/projet_sport_etude.html.twig (modifié)
+  - templates/vitrine/formation/index.html.twig (modifié)
+  - templates/vitrine/base.html.twig (modifié)
+- Commandes à lancer localement :
+  ```
+  php bin/console cache:clear
+  php bin/console doctrine:migrations:diff
+  php bin/console doctrine:migrations:migrate --no-interaction
+  php bin/console doctrine:fixtures:load --append --no-interaction
+  ```
+- Décisions :
+  - Le contenu CMS est **additif** : il s'affiche en section dédiée sur la page, sous le contenu statique existant. Le contenu statique Twig n'est pas supprimé — approche sûre et non destructive.
+  - Pas de route `/numerique` existante → fixture 'numerique' créée pour préparer l'avenir, pas branchée dans un template pour l'instant.
+  - La fixture intègre un guard anti-doublon (`findOneBy` avant persist) pour être safe avec `--append`.
+- Points de vigilance :
+  - La migration `doctrine:migrations:diff` doit détecter la nouvelle table `page_contenu` et générer une migration propre.
+  - Si `doctrine:fixtures:load --append` plante : vérifier que la table `page_contenu` existe en DB (la migration a bien tourné).
+  - La page `numerique` n'a pas de route dédiée dans le projet pour l'instant — la fixture est présente, à brancher quand la page sera créée.
+  - `league/commonmark` doit être dans `vendor/` — vérifier avec `composer show league/commonmark`.

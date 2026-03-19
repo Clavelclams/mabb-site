@@ -1,0 +1,84 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{% block title %}Modifier {{ page.pageNom }} — Admin MABB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container">
+        <h1>Modifier : {{ page.pageNom }}</h1>
+        <p style="color:rgba(255,255,255,.75)">Page : /{{ page.pageSlug }}</p>
+    </div>
+</div>
+
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+
+                {% for label, messages in app.flashes %}
+                    {% for msg in messages %}
+                        <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }} rounded-3 mb-3">{{ msg }}</div>
+                    {% endfor %}
+                {% endfor %}
+
+                <div class="card card-mabb p-4">
+                    <form method="post" action="{{ path('admin_pages_edit', {id: page.id}) }}">
+                        <input type="hidden" name="_csrf_token"
+                               value="{{ csrf_token('page_edit_' ~ page.id) }}">
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Nom de la page</label>
+                            <input type="text" class="form-control" value="{{ page.pageNom }}" disabled>
+                            <div class="form-text text-muted">Le nom de la page n'est pas modifiable ici.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Sous-titre de la page</label>
+                            <input type="text" name="sousTitre" class="form-control"
+                                   value="{{ page.sousTitre }}"
+                                   placeholder="Ex: La MABB et la Cité Scolaire...">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Contenu principal</label>
+                            <textarea name="contenu" id="pageContenu" class="form-control" rows="15">{{ page.contenu }}</textarea>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Éditeur Markdown — utilisez les boutons de la barre pour mettre en forme le texte.
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="btn btn-mabb px-4">
+                                <i class="bi bi-check-lg me-1"></i>Enregistrer
+                            </button>
+                            <a href="{{ path('admin_pages_list') }}"
+                               class="btn btn-outline-secondary rounded-pill">Annuler</a>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css">
+<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script>
+    new EasyMDE({
+        element: document.getElementById('pageContenu'),
+        spellChecker: false,
+        toolbar: [
+            'bold', 'italic', 'heading', '|',
+            'quote', 'unordered-list', 'ordered-list', '|',
+            'link', '|',
+            'preview', '|',
+            'guide'
+        ],
+        status: false,
+    });
+</script>
+{% endblock %}

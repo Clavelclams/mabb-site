@@ -5,7 +5,11 @@
     <div class="container text-center">
         <span class="badge-label mb-3">🎓 Projet en développement</span>
         <h1>Projet Sport-Études</h1>
-        <p style="color:rgba(255,255,255,.75)">La MABB et la Cité Scolaire d'Amiens — construire l'excellence ensemble</p>
+        <p style="color:rgba(255,255,255,.75)">
+            {{ pageContenu and pageContenu.sousTitre
+                ? pageContenu.sousTitre
+                : "La MABB et la Cité Scolaire d'Amiens — construire l'excellence ensemble" }}
+        </p>
     </div>
 </div>
 
@@ -143,6 +147,21 @@
         </div>
     </div>
 </section>
+
+{# Bloc CMS éditable par l'admin #}
+{% if pageContenu and pageContenu.contenu %}
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="article-content">
+                    {{ pageContenu.contenu|markdown_to_html }}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
 
 {# CTA #}
 <section class="section section-gray">

@@ -1,0 +1,60 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{% block title %}Pages CMS — Admin MABB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container">
+        <h1>Pages modifiables</h1>
+        <p style="color:rgba(255,255,255,.75)">Modifier les textes des pages du site sans toucher au code</p>
+    </div>
+</div>
+
+<section class="section section-gray">
+    <div class="container">
+
+        {% for label, messages in app.flashes %}
+            {% for msg in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }} rounded-3 mb-3">{{ msg }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        {% if pages is empty %}
+            <div class="alert alert-info rounded-3">
+                Aucune page CMS enregistrée.
+                Lancez <code>php bin/console doctrine:fixtures:load --append --no-interaction</code> pour initialiser les pages.
+            </div>
+        {% else %}
+            <div class="row g-4">
+                {% for page in pages %}
+                <div class="col-lg-4">
+                    <div class="card card-mabb p-4 h-100">
+                        <h5 class="fw-bold mb-1" style="color:#063a55">{{ page.pageNom }}</h5>
+                        <p class="text-muted small mb-1">
+                            <i class="bi bi-link-45deg me-1"></i>/{{ page.pageSlug }}
+                        </p>
+                        <p class="text-muted small mb-3">
+                            Mis à jour : {{ page.updatedAt ? page.updatedAt|date('d/m/Y H:i') : '—' }}
+                        </p>
+                        <a href="{{ path('admin_pages_edit', {id: page.id}) }}"
+                           class="btn btn-mabb btn-sm w-100">
+                            <i class="bi bi-pencil me-1"></i>Modifier le contenu
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 mt-4">
+            <a href="{{ path('admin_articles_list') }}" class="btn btn-outline-secondary rounded-pill">
+                <i class="bi bi-newspaper me-1"></i>Articles
+            </a>
+            <a href="{{ path('vitrine_accueil') }}" class="btn btn-outline-secondary rounded-pill">
+                <i class="bi bi-arrow-left me-1"></i>Retour au site
+            </a>
+        </div>
+
+    </div>
+</section>
+{% endblock %}

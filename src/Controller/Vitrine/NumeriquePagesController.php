@@ -3,6 +3,7 @@
 namespace App\Controller\Vitrine;
 
 use App\Repository\Core\UserRepository;
+use App\Repository\Vitrine\PageContenuRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,9 +24,11 @@ class NumeriquePagesController extends AbstractController
     }
 
     #[Route('/formation', name: 'vitrine_formation')]
-    public function formation(): Response
+    public function formation(PageContenuRepository $pageRepo): Response
     {
-        return $this->render('vitrine/formation/index.html.twig');
+        return $this->render('vitrine/formation/index.html.twig', [
+            'pageContenu' => $pageRepo->findBySlug('formation'),
+        ]);
     }
 
     #[Route('/cite-educative', name: 'vitrine_cite_educative')]
@@ -41,8 +44,10 @@ class NumeriquePagesController extends AbstractController
     }
 
     #[Route('/projet-sport-etude', name: 'vitrine_projet_sport_etude')]
-    public function projetSportEtude(): Response
+    public function projetSportEtude(PageContenuRepository $pageRepo): Response
     {
-        return $this->render('vitrine/club/projet_sport_etude.html.twig');
+        return $this->render('vitrine/club/projet_sport_etude.html.twig', [
+            'pageContenu' => $pageRepo->findBySlug('projet-sport-etude'),
+        ]);
     }
 }
