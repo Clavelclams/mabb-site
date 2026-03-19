@@ -24,3 +24,14 @@ api_controllers:
         namespace: App\Controller\Api
     type: attribute
     prefix: /api
+# Admin — accessible sur localhost et mabb.fr (SUPER_ADMIN uniquement, sécurisé dans le controller)
+admin_controllers:
+    resource:
+        path: ../src/Controller/Admin/
+        namespace: App\Controller\Admin
+    type: attribute
+    host: '{domain}'
+    defaults:
+        domain: localhost
+    requirements:
+        domain: 'mabb\.fr|localhost|127\.0\.0\.1'
