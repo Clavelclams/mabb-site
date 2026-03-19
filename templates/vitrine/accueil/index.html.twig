@@ -8,19 +8,19 @@
 {% block body %}
 
 	{# ===== HERO ===== #}
-	<section style="background:linear-gradient(135deg,#063a55 0%,#0b4fa3 50%,#1c88b6 100%);color:#fff;padding:140px 0 100px;position:relative;overflow:hidden">
-		<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:url('{{ asset('images/bg.jpg') }}') center/cover;opacity:.08"></div>
+	<section class="hero-accueil">
+		<div class="hero-accueil-bg"></div>
 		<div class="container position-relative">
 			<div class="row align-items-center g-5">
 				<div class="col-lg-6">
 					<span class="badge-label mb-3">
 						<i class="bi bi-star-fill"></i>
 						Triple label FFBB 3 étoiles</span>
-					<h1 class="display-4 fw-bold mb-3" style="line-height:1.1">
+					<h1 class="display-4 fw-bold mb-3 hero-title">
 						Amiens Métropole<br>
 						<span class="text-mabb-orange">Basket Ball</span>
 					</h1>
-					<p class="lead mb-4" style="color:rgba(255,255,255,.9);font-size:1.15rem;line-height:1.7">
+					<p class="lead mb-4 hero-desc">
 						Club de basket-ball exclusivement féminin implanté sur le territoire
 												d'Amiens Métropole. De l'initiation à la performance, nous formons
 												les championnes de demain.
@@ -32,14 +32,14 @@
 						<a href="{{ path('vitrine_club') }}" class="btn btn-outline-light btn-lg rounded-pill">
 							<i class="bi bi-info-circle me-2"></i>Découvrir
 						</a>
-						<a href="https://le-savoir-pour-tous.pass-education.fr/inscription?slug=mabb-amiens-metropole-basket-ball&token=b8db9981-d307-4e79-a539-ac30aafd2041" target="_blank" class="btn btn-lg rounded-pill" style="background:#1c88b6;color:#fff;border:none;font-weight:600">
+						<a href="https://le-savoir-pour-tous.pass-education.fr/inscription?slug=mabb-amiens-metropole-basket-ball&token=b8db9981-d307-4e79-a539-ac30aafd2041" target="_blank" class="btn btn-lg rounded-pill btn-aide-devoir">
 							<i class="bi bi-book-half me-2"></i>Aide au devoir
 						</a>
 					</div>
 				</div>
 				<div class="col-lg-6 text-center">
-					<div class="p-3 bg-white rounded-4 shadow-lg d-inline-block" style="transform:rotate(2deg)">
-						<img src="{{ asset('images/manar.jpg') }}" alt="Joueuse MABB" class="img-fluid rounded-3" style="max-height:450px;object-fit:cover">
+					<div class="p-3 bg-white rounded-4 shadow-lg d-inline-block hero-photo-wrap">
+						<img src="{{ asset('images/manar.jpg') }}" alt="Joueuse MABB" class="img-fluid rounded-3 hero-photo">
 					</div>
 				</div>
 			</div>
@@ -47,7 +47,7 @@
 	</section>
 
 	{# ===== CHIFFRES CLÉS ===== #}
-	<section style="margin-top:-50px;position:relative;z-index:10">
+	<section class="section-chiffres">
 		<div class="container">
 			<div class="row g-3 justify-content-center">
 				{% set chiffres = [
@@ -59,8 +59,8 @@
             {% for c in chiffres %}
             <div class="col-6 col-md-3">
                 <div class="card card-mabb text-center p-4">
-                    <i class="bi {{ c.icon }} text-mabb-orange" style="font-size:2rem"></i>
-                    <div class="display-6 fw-bold mt-2" style="color:var(--mabb-dark)">{{ c.number }}</div>
+                    <i class="bi {{ c.icon }} text-mabb-orange chiffre-icon"></i>
+                    <div class="display-6 fw-bold mt-2 chiffre-number">{{ c.number }}</div>
                     <div class="text-muted small">{{ c.label }}</div>
                 </div>
             </div>
@@ -87,15 +87,15 @@
                     aide aux devoirs, stages gratuits Génération Basket, tournois 3x3.
                 </p>
                 <div class="d-flex flex-wrap gap-2 mt-3">
-                    <span class="badge px-3 py-2 rounded-pill fw-bold" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);text-shadow:0 0 8px rgba(255,255,255,.6)"><i class="bi bi-check-circle me-1"></i> Club Formateur <span style="color:#ffd700">★★★</span></span>
-                    <span class="badge px-3 py-2 rounded-pill fw-bold" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);text-shadow:0 0 8px rgba(255,255,255,.6)"><i class="bi bi-check-circle me-1"></i> Citoyenneté <span style="color:#ffd700">★★★</span></span>
-                    <span class="badge px-3 py-2 rounded-pill fw-bold" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);text-shadow:0 0 8px rgba(255,255,255,.6)"><i class="bi bi-check-circle me-1"></i> Mini Basket <span style="color:#ffd700">★★★</span></span>
+                    <span class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline"><i class="bi bi-check-circle me-1"></i> Club Formateur <span class="badge-star">★★★</span></span>
+                    <span class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline"><i class="bi bi-check-circle me-1"></i> Citoyenneté <span class="badge-star">★★★</span></span>
+                    <span class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline"><i class="bi bi-check-circle me-1"></i> Mini Basket <span class="badge-star">★★★</span></span>
                 </div>
             </div>
             <div class="col-lg-6">
                 {# TODO: Remplacer par une photo d'équipe fournie par Clavel #}
-                <div class="bg-light rounded-4 p-5 text-center" style="min-height:350px;display:flex;flex-direction:column;align-items:center;justify-content:center">
-                    <i class="bi bi-image text-muted" style="font-size:4rem"></i>
+                <div class="bg-light rounded-4 p-5 text-center photo-placeholder">
+                    <i class="bi bi-image text-muted photo-placeholder-icon"></i>
                     <p class="text-muted mt-3">Photo d'équipe à ajouter</p>
                     <small class="text-muted">Envoie une photo de groupe MABB</small>
                 </div>
@@ -183,12 +183,12 @@
 	</section>
 
 	{# ===== CTA INSCRIPTION ===== #}
-	<section style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));padding:80px 0;color:#fff;text-align:center">
+	<section class="section-cta-inscription">
 		<div class="container">
 			<h2 class="display-5 fw-bold mb-3">Rejoins la
 				<span class="text-mabb-orange">MABB</span>
 			</h2>
-			<p class="lead mb-4" style="color:rgba(255,255,255,.85);max-width:600px;margin:0 auto">
+			<p class="lead mb-4 cta-desc">
 				De 3 à 25+ ans, il y a une place pour toi. Inscriptions ouvertes toute l'année.
 			</p>
 			<div class="d-flex flex-wrap gap-3 justify-content-center">

@@ -18,10 +18,10 @@
         <div class="row g-4">
             <div class="col-lg-4">
                 <div class="card card-mabb overflow-hidden h-100">
-                    <div style="background:linear-gradient(135deg,#063a55,#0b4fa3);padding:32px 24px;text-align:center">
-                        <div style="font-size:2.5rem;margin-bottom:8px">💻</div>
+                    <div class="formation-card-header-blue">
+                        <div class="formation-emoji">💻</div>
                         <h3 class="text-white fw-bold mb-1">Clavel</h3>
-                        <p style="color:rgba(255,255,255,.7);font-size:.85rem">Responsable Numérique Bénévole</p>
+                        <p class="formation-subtitle">Responsable Numérique Bénévole</p>
                     </div>
                     <div class="p-4">
                         <p class="text-muted small">Bénévole responsable numérique, Clavel mène la digitalisation du club dans le cadre de sa formation <strong>CDA</strong>. Site vitrine Symfony, app mobile React Native/Node.js, espace joueur PIRB.</p>
@@ -36,10 +36,10 @@
             </div>
             <div class="col-lg-4">
                 <div class="card card-mabb overflow-hidden h-100">
-                    <div style="background:linear-gradient(135deg,#1c88b6,#063a55);padding:32px 24px;text-align:center">
-                        <div style="font-size:2.5rem;margin-bottom:8px">🏀</div>
+                    <div class="formation-card-header-teal">
+                        <div class="formation-emoji">🏀</div>
                         <h3 class="text-white fw-bold mb-1">Moussa</h3>
-                        <p style="color:rgba(255,255,255,.7);font-size:.85rem">Parcours MABB</p>
+                        <p class="formation-subtitle">Parcours MABB</p>
                     </div>
                     <div class="p-4">
                         <p class="text-muted small">
@@ -59,10 +59,10 @@
             </div>
             <div class="col-lg-4">
                 <div class="card card-mabb overflow-hidden h-100">
-                    <div style="background:linear-gradient(135deg,var(--mabb-orange),var(--mabb-red));padding:32px 24px;text-align:center">
-                        <div style="font-size:2.5rem;margin-bottom:8px">⭐</div>
+                    <div class="formation-card-header-orange">
+                        <div class="formation-emoji">⭐</div>
                         <h3 class="text-white fw-bold mb-1">Ugo</h3>
-                        <p style="color:rgba(255,255,255,.8);font-size:.85rem">Parcours MABB</p>
+                        <p class="formation-subtitle">Parcours MABB</p>
                     </div>
                     <div class="p-4">
                         <p class="text-muted small">
@@ -81,10 +81,10 @@
             </div>
             <div class="col-lg-4">
                 <div class="card card-mabb overflow-hidden h-100">
-                    <div style="background:linear-gradient(135deg,#2ecc71,#1a8a4a);padding:32px 24px;text-align:center">
-                        <div style="font-size:2.5rem;margin-bottom:8px">🤝</div>
+                    <div class="formation-card-header-green">
+                        <div class="formation-emoji">🤝</div>
                         <h3 class="text-white fw-bold mb-1">Romy</h3>
-                        <p style="color:rgba(255,255,255,.8);font-size:.85rem">Passerelle social & sportif</p>
+                        <p class="formation-subtitle">Passerelle social & sportif</p>
                     </div>
                     <div class="p-4">
                         <p class="text-muted small">
@@ -104,15 +104,15 @@
         </div>
     </div>
 </section>
-<section class="section" style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));color:#fff">
+<section class="section formation-cta">
     <div class="container text-center">
-        <h2 class="fw-bold mb-2" style="color:#fff">Et bien d'autres...</h2>
-        <p style="color:rgba(255,255,255,.75)" class="mb-5">La MABB a accompagné de nombreuses personnes vers la qualification et l'emploi.</p>
+        <h2 class="fw-bold mb-2">Et bien d'autres...</h2>
+        <p class="mb-5 formation-cta-desc">La MABB a accompagné de nombreuses personnes vers la qualification et l'emploi.</p>
         <div class="d-flex flex-wrap justify-content-center gap-3">
             {% for prenom in ['Sarah', 'Kylian', 'Amina', 'Lucas', 'Fatou', 'Théo', 'Inès'] %}
-                <span style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:20px;padding:8px 20px">{{ prenom }}</span>
+                <span class="formation-tag">{{ prenom }}</span>
             {% endfor %}
-            <span style="background:rgba(255,140,0,.2);border:1px solid rgba(255,140,0,.4);color:#ffb347;border-radius:20px;padding:8px 20px;font-weight:600">+ d'autres à venir</span>
+            <span class="formation-tag-orange">+ d'autres à venir</span>
         </div>
     </div>
 </section>

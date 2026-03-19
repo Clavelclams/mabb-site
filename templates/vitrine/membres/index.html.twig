@@ -21,15 +21,15 @@
 					{% for membre in membres %}
 						<div class="col-md-6 col-lg-3">
 							<div class="card card-mabb text-center overflow-hidden h-100">
-								<div style="background:linear-gradient(135deg,#063a55,#0b4fa3);padding:28px 20px">
+								<div class="membre-card-header">
 									{% if membre.photoPath %}
-										<img src="{{ asset('uploads/avatars/' ~ membre.photoPath) }}" alt="{{ membre.prenom }}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);display:block;margin:0 auto">
+										<img src="{{ asset('uploads/avatars/' ~ membre.photoPath) }}" alt="{{ membre.prenom }}" class="membre-avatar">
 									{% else %}
-										<div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto">👤</div>
+										<div class="membre-avatar-placeholder">👤</div>
 									{% endif %}
 								</div>
 								<div class="p-4">
-									<h5 class="fw-bold mb-1" style="color:#063a55">{{ membre.prenom }}
+									<h5 class="fw-bold mb-1 membre-nom">{{ membre.prenom }}
 										{{ membre.nom }}</h5>
 									<div class="d-flex flex-wrap gap-1 justify-content-center mb-2">
 										{% for role in membre.rolesMembre %}
@@ -39,7 +39,7 @@
 										{% endfor %}
 									</div>
 									{% if membre.bio %}
-										<p class="text-muted small" style="line-height:1.4">{{ membre.bio|slice(0,100) }}
+										<p class="text-muted small membre-bio">{{ membre.bio|slice(0,100) }}
 											{% if membre.bio|length > 100 %}...
 											{% endif %}
 										</p>

@@ -1,0 +1,230 @@
+/* =============================================================
+   vitrine.css — Classes extraites des style="" inline
+   Projet MABB — généré session 21
+   ============================================================= */
+
+/* ===== HERO ACCUEIL ===== */
+.hero-accueil {
+    background: linear-gradient(135deg, #063a55 0%, #0b4fa3 50%, #1c88b6 100%);
+    color: #fff;
+    padding: 140px 0 100px;
+    position: relative;
+    overflow: hidden;
+}
+.hero-accueil-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: url('/images/bg.jpg') center / cover;
+    opacity: .08;
+}
+.hero-title {
+    line-height: 1.1;
+}
+.hero-desc {
+    color: rgba(255, 255, 255, .9);
+    font-size: 1.15rem;
+    line-height: 1.7;
+}
+.btn-aide-devoir {
+    background: #1c88b6;
+    color: #fff !important;
+    border: none;
+    font-weight: 600;
+}
+.btn-aide-devoir:hover {
+    background: #1577a0;
+    color: #fff !important;
+}
+.hero-photo-wrap {
+    transform: rotate(2deg);
+}
+.hero-photo {
+    max-height: 450px;
+    object-fit: cover;
+}
+
+/* ===== CHIFFRES CLÉS ===== */
+.section-chiffres {
+    margin-top: -50px;
+    position: relative;
+    z-index: 10;
+}
+.chiffre-icon {
+    font-size: 2rem;
+}
+.chiffre-number {
+    color: var(--mabb-dark);
+}
+
+/* ===== BADGES LABEL OUTLINE (section "Qui sommes-nous") ===== */
+.badge-label-outline {
+    background: rgba(255, 255, 255, .15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, .4);
+    text-shadow: 0 0 8px rgba(255, 255, 255, .6);
+}
+.badge-star {
+    color: #ffd700;
+}
+
+/* ===== PHOTO PLACEHOLDER ===== */
+.photo-placeholder {
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.photo-placeholder-icon {
+    font-size: 4rem;
+}
+
+/* ===== CTA INSCRIPTION ===== */
+.section-cta-inscription {
+    background: linear-gradient(135deg, var(--mabb-dark), var(--mabb-blue));
+    padding: 80px 0;
+    color: #fff;
+    text-align: center;
+}
+.cta-desc {
+    color: rgba(255, 255, 255, .85);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* ===== MEMBRES ===== */
+.membre-card-header {
+    background: linear-gradient(135deg, #063a55, #0b4fa3);
+    padding: 28px 20px;
+}
+.membre-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, .4);
+    display: block;
+    margin: 0 auto;
+}
+.membre-avatar-placeholder {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin: 0 auto;
+}
+.membre-nom {
+    color: #063a55;
+}
+.membre-bio {
+    line-height: 1.4;
+}
+
+/* ===== MON COMPTE ===== */
+.compte-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, .4);
+}
+.compte-avatar-placeholder {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    margin: 0 auto;
+    border: 3px solid rgba(255, 255, 255, .3);
+}
+.compte-email {
+    color: rgba(255, 255, 255, .65);
+}
+.badge-role-membre {
+    background: rgba(255, 140, 0, .25);
+    border: 1px solid rgba(255, 140, 0, .5);
+    color: #ffb347;
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+/* ===== FORMATION ===== */
+.formation-card-header-blue {
+    background: linear-gradient(135deg, #063a55, #0b4fa3);
+    padding: 32px 24px;
+    text-align: center;
+}
+.formation-card-header-teal {
+    background: linear-gradient(135deg, #1c88b6, #063a55);
+    padding: 32px 24px;
+    text-align: center;
+}
+.formation-card-header-orange {
+    background: linear-gradient(135deg, var(--mabb-orange), var(--mabb-red));
+    padding: 32px 24px;
+    text-align: center;
+}
+.formation-card-header-green {
+    background: linear-gradient(135deg, #2ecc71, #1a8a4a);
+    padding: 32px 24px;
+    text-align: center;
+}
+.formation-emoji {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+}
+.formation-subtitle {
+    color: rgba(255, 255, 255, .75);
+    font-size: .85rem;
+}
+.formation-cta {
+    background: linear-gradient(135deg, var(--mabb-dark), var(--mabb-blue));
+    color: #fff;
+}
+.formation-cta h2 {
+    color: #fff;
+}
+.formation-cta-desc {
+    color: rgba(255, 255, 255, .75);
+}
+.formation-tag {
+    background: rgba(255, 255, 255, .1);
+    border: 1px solid rgba(255, 255, 255, .2);
+    color: #fff;
+    border-radius: 20px;
+    padding: 8px 20px;
+    display: inline-block;
+}
+.formation-tag-orange {
+    background: rgba(255, 140, 0, .2);
+    border: 1px solid rgba(255, 140, 0, .4);
+    color: #ffb347;
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* ===== BANDEAU CONSTRUCTION ===== */
+.bandeau-construction {
+    background: rgba(255, 140, 0, .15);
+    border: 1px solid rgba(255, 140, 0, .4);
+    color: #ffb347;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: .75rem;
+    font-weight: 600;
+}
+.bandeau-construction:hover {
+    color: #ffb347;
+    background: rgba(255, 140, 0, .25);
+}

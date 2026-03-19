@@ -545,3 +545,44 @@
   - `User $user` dans `editRoles` utilise le ParamConverter Doctrine — Symfony résout automatiquement l'entité depuis `{id}`. Si l'id n'existe pas → 404 automatique (plus propre que le `find()` manuel)
   - Le bouton Admin est visible seulement si `ROLE_SUPER_ADMIN` — aucun user normal ne le voit
   - `admin/roles/liste.html.twig` et `admin/roles/editer.html.twig` sont désormais orphelins
+
+---
+
+### 2026-03-19 (session 21) — Extraction CSS inline → vitrine.css + fix double-class badge
+- Objectif : supprimer tous les `style=""` inline des templates vitrine en les remplaçant par des classes CSS nommées dans `assets/styles/vitrine.css`
+- Actions réalisées :
+  1. **`assets/styles/vitrine.css`** (nouveau fichier) : toutes les classes extraites regroupées par section :
+     - Hero : `.hero-accueil`, `.hero-accueil-bg`, `.hero-title`, `.hero-desc`, `.btn-aide-devoir`, `.btn-aide-devoir:hover`, `.hero-photo-wrap`, `.hero-photo`
+     - Chiffres clés : `.section-chiffres`, `.chiffre-icon`, `.chiffre-number`
+     - Badges label outline : `.badge-label-outline`, `.badge-star`
+     - Photo placeholder : `.photo-placeholder`, `.photo-placeholder-icon`
+     - CTA inscription : `.section-cta-inscription`, `.cta-desc`
+     - Membres : `.membre-card-header`, `.membre-avatar`, `.membre-avatar-placeholder`, `.membre-nom`, `.membre-bio`
+     - Mon compte : `.compte-avatar`, `.compte-avatar-placeholder`, `.compte-email`, `.badge-role-membre`
+     - Formation : `.formation-card-header-blue/teal/orange/green`, `.formation-emoji`, `.formation-subtitle`, `.formation-cta`, `.formation-cta-desc`, `.formation-tag`, `.formation-tag-orange`
+     - Bandeau construction : `.bandeau-construction`, `.bandeau-construction:hover`
+  2. **`assets/app.js`** : ajout `import './styles/vitrine.css';` après `import './styles/app.css';`
+  3. **`templates/vitrine/accueil/index.html.twig`** : 16 remplacements `style=""` → classes CSS (`hero-accueil`, `hero-accueil-bg`, `section-chiffres`, `chiffre-icon`, `chiffre-number`, `badge-label-outline`, `badge-star`, `photo-placeholder`, `photo-placeholder-icon`, `section-cta-inscription`, `cta-desc`, `btn-aide-devoir`)
+  4. **`templates/vitrine/membres/index.html.twig`** : 5 remplacements (`membre-card-header`, `membre-avatar`, `membre-avatar-placeholder`, `membre-nom`, `membre-bio`)
+  5. **`templates/vitrine/compte/mon_compte.html.twig`** : 4 remplacements (`compte-avatar`, `compte-avatar-placeholder`, `compte-email`, `badge-role-membre`)
+  6. **`templates/vitrine/formation/index.html.twig`** : 12 remplacements (`formation-card-header-*`, `formation-emoji`, `formation-subtitle`, `formation-cta`, `formation-cta-desc`, `formation-tag`, `formation-tag-orange`)
+  7. **`templates/vitrine/base.html.twig`** : bandeau construction style→class (`bandeau-construction`)
+  8. **Fix double-class `badge-label-outline`** : le script de remplacement avait ajouté un second `class=""` sur les 3 spans déjà pourvus d'un `class=`. Corrigé en fusionnant les deux attributs en un seul : `class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline"`
+  - ⚠️ `php bin/console asset-map:compile` ou `asset-map:warm-cache` si Asset Mapper est en mode warm
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+- Fichiers créés/modifiés :
+  - assets/styles/vitrine.css (nouveau)
+  - assets/app.js (import ajouté)
+  - templates/vitrine/accueil/index.html.twig (16 remplacements + fix double-class)
+  - templates/vitrine/membres/index.html.twig
+  - templates/vitrine/compte/mon_compte.html.twig
+  - templates/vitrine/formation/index.html.twig
+  - templates/vitrine/base.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions :
+  - Les `style=""` dynamiques Twig (ex. `style="color:{{ s.color }}"`) conservés inline — impossible à extraire en CSS statique
+  - `hero-accueil-bg` utilise `/images/bg.jpg` en chemin direct (pas `asset()`) — acceptable pour Asset Mapper, le fichier est dans `public/images/`
+  - Compromis `.formation-subtitle` : la variation d'opacité (`.7` vs `.8` selon les cards) uniformisée à `.75` dans la classe CSS partagée
+- Points de vigilance :
+  - Les anciens templates orphelins `admin/roles/liste.html.twig` et `admin/roles/editer.html.twig` (session 20 suite 4) n'ont pas été supprimés — à nettoyer si souhaité
+  - Migration Doctrine `roles_membre → roles_membre JSON` (session 19) toujours en attente d'exécution manuelle
