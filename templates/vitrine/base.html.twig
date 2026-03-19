@@ -286,6 +286,12 @@
 				<span class="navbar-toggler-icon"></span>
 			</button>
 			<div class="collapse navbar-collapse" id="navbarMain">
+				{# Bandeau construction — mobile uniquement (desktop géré par le badge hors collapse) #}
+				<div class="d-lg-none py-2 border-bottom border-warning border-opacity-25">
+					<a href="{{ path('vitrine_clavel') }}" class="d-inline-flex align-items-center gap-1 text-decoration-none" style="background:rgba(255,140,0,.15);border:1px solid rgba(255,140,0,.4);color:#ffb347;border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:600">
+						🚧 Site en construction
+					</a>
+				</div>
 				<ul class="navbar-nav ms-auto me-3 align-items-lg-center">
 					<li class="nav-item">
 						<a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_accueil' %}active{% endif %}" href="{{ path('vitrine_accueil') }}">Accueil</a>
