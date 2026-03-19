@@ -39,4 +39,10 @@ class NumeriquePagesController extends AbstractController
     {
         return $this->render('vitrine/clavel/index.html.twig');
     }
+
+    #[Route('/projet-sport-etude', name: 'vitrine_projet_sport_etude')]
+    public function projetSportEtude(): Response
+    {
+        return $this->render('vitrine/club/projet_sport_etude.html.twig');
+    }
 }

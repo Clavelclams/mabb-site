@@ -478,3 +478,44 @@
 - Points de vigilance :
   - Le `mb-0` sur `<p class="text-muted small mb-0">` a été retiré pour laisser de l'espace avant le bouton sur la card Éducation — les 3 autres cards ont aussi perdu `mb-0` (pas de bouton → pas d'impact visuel notable)
   - La card Cité Éducative utilise `onmouseover`/`onmouseout` inline JS pour le hover — cohérent avec le pattern demandé dans le prompt, mais `.card-mabb:hover` CSS aurait suffi si la card était dans le loop
+
+---
+
+### 2026-03-19 (session 20 suite 2) — Formation : Moussa + Ugo mis à jour + card Romy ajoutée
+- Objectif : 3 modifications sur `templates/vitrine/formation/index.html.twig`
+- Actions réalisées :
+  1. **Card Moussa** : contenu placeholder remplacé — BP APT + BPJEPS Sport Co + DEJEPS en cours + badge Direction
+  2. **Card Ugo** : contenu placeholder remplacé — BPJEPS Sport Co + badges Encadrement / Formation
+  3. **Card Romy** (nouvelle) : gradient vert (`#2ecc71 → #1a8a4a`), rôle "Passerelle social & sportif", badges Travail social / Sport & inclusion / Lien social — ajoutée après Ugo dans le même `div.row.g-4`
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+- Fichiers modifiés :
+  - templates/vitrine/formation/index.html.twig
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : aucune ADR nécessaire
+- Points de vigilance :
+  - La grille est maintenant 4 cards en `col-lg-4` → sur desktop ça fait 3 + 1 (dernière ligne centrée Bootstrap) — acceptable visuellement, peut être ajusté en `col-lg-3` si on veut 4 en ligne plus tard
+  - Les "Contenu à compléter" ont été supprimés sur Moussa et Ugo — données réelles intégrées
+
+---
+
+### 2026-03-19 (session 20 suite 3) — Nouveau page Projet Sport-Études + mise à jour Cité Éducative
+- Objectif : créer la page `/projet-sport-etude` et brancher le bouton Lycée dans `cite_educative`
+- Actions réalisées :
+  1. **`src/Controller/Vitrine/NumeriquePagesController.php`** : ajout méthode `projetSportEtude()` — `GET /projet-sport-etude` → `vitrine_projet_sport_etude` → render `vitrine/club/projet_sport_etude.html.twig`
+  2. **`templates/vitrine/club/projet_sport_etude.html.twig`** (nouveau) : 5 sections —
+     - Intro (section-gray) : accroche projet sport-études Cité Scolaire
+     - Pourquoi ce projet : texte + card gradient bleu avec 6 items du dispositif (Twig loop)
+     - Modèle existant (section-gray) : 3 cards (Section sportive scolaire / Résultats / Ancrage territorial)
+     - État d'avancement : gradient bleu, 4 étapes (Twig loop), étape 01 "En cours" en orange, les autres grisées
+     - CTA (section-gray) : boutons Nous contacter + Retour Cité Éducative
+  3. **`templates/vitrine/club/cite_educative.html.twig`** : bouton card Lycée — `vitrine_formation` → `vitrine_projet_sport_etude`, texte "Projet Sport-Études →" + icône `bi-mortarboard`
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+- Fichiers créés/modifiés :
+  - src/Controller/Vitrine/NumeriquePagesController.php (1 méthode ajoutée)
+  - templates/vitrine/club/projet_sport_etude.html.twig (nouveau)
+  - templates/vitrine/club/cite_educative.html.twig (bouton Lycée)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : route dans `NumeriquePagesController` plutôt qu'un controller dédié — cohérent avec les autres routes vitrine statiques du même controller
+- Points de vigilance :
+  - La route `/projet-sport-etude` n'a pas de host constraint — vérifier qu'elle est bien importée par le fichier `config/routes/vitrine.yaml` (même problème que les autres routes sans contrainte, cf. session 12)
+  - La couleur de fond des cercles étapes est gérée via `{% if etape.status == 'En cours' %}` inline dans le style — si le statut change, mettre à jour les données du tableau Twig directement

@@ -1,0 +1,165 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Projet Sport-Études — MABB{% endblock %}
+{% block body %}
+<div class="page-header">
+    <div class="container text-center">
+        <span class="badge-label mb-3">🎓 Projet en développement</span>
+        <h1>Projet Sport-Études</h1>
+        <p style="color:rgba(255,255,255,.75)">La MABB et la Cité Scolaire d'Amiens — construire l'excellence ensemble</p>
+    </div>
+</div>
+
+{# Intro #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <h2 class="section-title">Un projet ambitieux pour le basket féminin amiénois</h2>
+                <p class="section-subtitle">
+                    La MABB ambitionne de créer une <strong>section sport-études</strong> en partenariat avec
+                    la Cité Scolaire d'Amiens. L'objectif : permettre aux jeunes joueuses de mener de front
+                    excellence sportive et réussite scolaire.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Pourquoi ce projet #}
+<section class="section">
+    <div class="container">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-6">
+                <h2 class="section-title">Pourquoi ce projet ?</h2>
+                <p class="text-muted mb-3">
+                    Aujourd'hui, les joueuses talentueuses de la MABB font face à un choix difficile :
+                    progresser sportivement ou se concentrer sur leurs études. Ce projet vise à
+                    supprimer ce dilemme en proposant un cadre adapté.
+                </p>
+                <p class="text-muted mb-3">
+                    La MABB, <strong>premier club 100% féminin de la région Hauts-de-France</strong>
+                    et triple label FFBB 3 étoiles, a la légitimité et l'expertise pour porter ce projet
+                    avec la Cité Scolaire d'Amiens.
+                </p>
+                <p class="text-muted">
+                    Ce dispositif s'inscrit pleinement dans la démarche <strong>Cité Éducative</strong>
+                    et dans les objectifs de la MABB : former, éduquer, et rayonner sur le territoire amiénois.
+                </p>
+            </div>
+            <div class="col-lg-6">
+                <div class="card card-mabb p-4" style="background:linear-gradient(135deg,#063a55,#0b4fa3)">
+                    <h3 class="text-white fw-bold mb-4">Ce que le projet prévoit</h3>
+                    {% for item in [
+                        {icon:'📅', text:'Aménagement des emplois du temps scolaires'},
+                        {icon:'🏀', text:'Entraînements renforcés (4 à 5 séances/semaine)'},
+                        {icon:'📚', text:'Soutien scolaire intégré au programme'},
+                        {icon:'🏆', text:'Suivi de performance individuel et collectif'},
+                        {icon:'🤝', text:'Partenariat Cité Scolaire d\'Amiens — MABB'},
+                        {icon:'🎓', text:'Double projet scolaire et sportif valorisé'},
+                    ] %}
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span style="font-size:1.4rem;min-width:30px">{{ item.icon }}</span>
+                        <span style="color:rgba(255,255,255,.85);font-size:.9rem">{{ item.text }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Modèle existant #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Un modèle qui a fait ses preuves</h2>
+            <p class="section-subtitle">La MABB s'inspire des meilleures pratiques nationales</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100 text-center">
+                    <div style="font-size:2rem;margin-bottom:12px">🏫</div>
+                    <h5 class="fw-bold mb-2">Section sportive scolaire</h5>
+                    <p class="text-muted small">
+                        La MABB gère déjà la section sportive du collège César Franck d'Amiens.
+                        4 entraînements par semaine, horaires aménagés, résultats probants.
+                        Ce nouveau projet prolonge cette logique au niveau lycée.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100 text-center">
+                    <div style="font-size:2rem;margin-bottom:12px">📈</div>
+                    <h5 class="fw-bold mb-2">Résultats sportifs</h5>
+                    <p class="text-muted small">
+                        Équipes U13, U15 et U18 en Pré-Nationale ou championnat régional.
+                        Une base solide de joueuses formées localement, prêtes pour
+                        un dispositif sport-études de haut niveau.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100 text-center">
+                    <div style="font-size:2rem;margin-bottom:12px">🌍</div>
+                    <h5 class="fw-bold mb-2">Ancrage territorial</h5>
+                    <p class="text-muted small">
+                        7 quartiers couverts, 400+ licenciées, partenariats Cité Éducative.
+                        La MABB est déjà un acteur incontournable de l'éducation
+                        par le sport sur le territoire amiénois.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# Calendrier et état d'avancement #}
+<section class="section" style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue))">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold text-white">État d'avancement</h2>
+            <p style="color:rgba(255,255,255,.75)">Le projet est en cours de construction — les informations seront mises à jour au fur et à mesure</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            {% for etape in [
+                {num:'01', titre:'Cadrage du projet', desc:'Définition des objectifs, rencontre avec la Cité Scolaire, identification des partenaires.', status:'En cours'},
+                {num:'02', titre:'Constitution du dossier', desc:'Montage du dossier pédagogique et sportif, budget prévisionnel, conventionnement.', status:'À venir'},
+                {num:'03', titre:'Validation institutionnelle', desc:'Accord Rectorat, FFBB, Ville d\'Amiens. Officialisation du partenariat.', status:'À venir'},
+                {num:'04', titre:'Ouverture', desc:'Première promotion de joueuses bénéficiant du dispositif sport-études.', status:'À venir'},
+            ] %}
+            <div class="col-md-6 col-lg-3">
+                <div class="text-center p-3">
+                    <div style="width:60px;height:60px;border-radius:50%;background:{% if etape.status == 'En cours' %}#ff8c00{% else %}rgba(255,255,255,.3){% endif %};display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;margin:0 auto 12px">
+                        {{ etape.num }}
+                    </div>
+                    <h5 class="text-white fw-bold mb-2">{{ etape.titre }}</h5>
+                    <p style="color:rgba(255,255,255,.65);font-size:.85rem">{{ etape.desc }}</p>
+                    <span style="background:rgba(255,255,255,.1);color:{% if etape.status == 'En cours' %}#ffb347{% else %}rgba(255,255,255,.5){% endif %};border-radius:20px;padding:3px 12px;font-size:.75rem;font-weight:600">
+                        {{ etape.status }}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# CTA #}
+<section class="section section-gray">
+    <div class="container text-center">
+        <h2 class="section-title">Vous souhaitez en savoir plus ?</h2>
+        <p class="section-subtitle">Ce projet est en cours de construction. Contactez-nous pour toute question ou partenariat.</p>
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a href="{{ path('vitrine_contact') }}" class="btn btn-mabb btn-lg">
+                <i class="bi bi-envelope me-2"></i>Nous contacter
+            </a>
+            <a href="{{ path('vitrine_cite_educative') }}" class="btn btn-outline-mabb btn-lg">
+                <i class="bi bi-arrow-left me-2"></i>Retour Cité Éducative
+            </a>
+        </div>
+        <p class="text-muted small mt-4 fst-italic">
+            Le dossier complet sera publié ici dès sa finalisation.
+        </p>
+    </div>
+</section>
+{% endblock %}
