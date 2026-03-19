@@ -22,8 +22,8 @@
 					</h1>
 					<p class="lead mb-4 hero-desc">
 						Club de basket-ball exclusivement féminin implanté sur le territoire
-												d'Amiens Métropole. De l'initiation à la performance, nous formons
-												les championnes de demain.
+																		d'Amiens Métropole. De l'initiation à la performance, nous formons
+																		les championnes de demain.
 					</p>
 					<div class="d-flex flex-wrap gap-3">
 						<a href="{{ path('vitrine_contact') }}" class="btn btn-mabb btn-lg">
@@ -153,30 +153,28 @@
 					<i class="bi bi-arrow-right ms-1"></i>
 				</a>
 			</div>
-			<div
-				class="row g-4">
+			<div class="row g-4">
 				{% if dernieres_actus|length > 0 %}
 					{% for actu in dernieres_actus %}
-					<div class="col-md-4">
-						<div class="card card-mabb h-100">
-							{% if actu.imagePath %}
-								<img src="{{ asset('uploads/articles/' ~ actu.imagePath) }}"
-								     alt="{{ actu.titre }}"
-								     style="height:180px;object-fit:cover;width:100%">
-							{% endif %}
-							<div class="card-body p-4">
-								<small class="text-muted">
-									<i class="bi bi-calendar3 me-1"></i>
-									{{ actu.publishedAt ? actu.publishedAt|date('d/m/Y') : '' }}
-								</small>
-								<h5 class="fw-bold mt-2 mb-2">{{ actu.titre }}</h5>
-								<p class="text-muted">{{ actu.contenu|striptags|slice(0, 120) }}...</p>
-								<a href="{{ path('vitrine_news_article', {slug: actu.slug}) }}" class="text-mabb-orange fw-semibold text-decoration-none">
-									Lire la suite <i class="bi bi-arrow-right"></i>
-								</a>
+						<div class="col-md-4">
+							<div class="card card-mabb h-100">
+								{% if actu.imagePath %}
+									<img src="{{ asset('uploads/articles/' ~ actu.imagePath) }}" alt="{{ actu.titre }}" style="height:180px;object-fit:cover;width:100%">
+								{% endif %}
+								<div class="card-body p-4">
+									<small class="text-muted">
+										<i class="bi bi-calendar3 me-1"></i>
+										{{ actu.publishedAt ? actu.publishedAt|date('d/m/Y') : '' }}
+									</small>
+									<h5 class="fw-bold mt-2 mb-2">{{ actu.titre }}</h5>
+									<p class="text-muted">{{ actu.contenu|striptags|slice(0, 120) }}...</p>
+									<a href="{{ path('vitrine_news_article', {slug: actu.slug}) }}" class="text-mabb-orange fw-semibold text-decoration-none">
+										Lire la suite
+										<i class="bi bi-arrow-right"></i>
+									</a>
+								</div>
 							</div>
 						</div>
-					</div>
 					{% endfor %}
 				{% else %}
 					<div class="col-12 text-center py-4">
@@ -187,7 +185,7 @@
 		</div>
 	</section>
 
-	{# ===== CTA INSCRIPTION ===== #}
+	{# ===== CTA INSCRIPTION : ===== #}
 	<section class="section-cta-inscription">
 		<div class="container">
 			<h2 class="display-5 fw-bold mb-3">Rejoins la
