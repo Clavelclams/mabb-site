@@ -1,0 +1,5 @@
+INSERT INTO article (titre, slug, contenu, statut, published_at, created_at) VALUES
+('Saison 2025-2026 : objectif Pré-Nationale', 'saison-pre-nationale-aa1b2c', '<p>La MABB vise la Pré-Nationale pour les U13, U15 et U18.</p>', 'publie', '2025-07-15 00:00:00', NOW()),
+('4 titres en Coupe de la Somme', '4-titres-coupe-somme-bb3c4d', '<p>U11, U13, U15 et U18 remportent la Coupe de la Somme. Un quadruplé historique.</p>', 'publie', '2025-05-20 00:00:00', NOW()),
+('Christina Kpadan sélectionnée en Équipe de France U15', 'christina-kpadan-france-cc5d6e', '<p>Notre joueuse U15 Christina Kpadan est retenue pour le projet de performance fédéral de la FFBB.</p>', 'publie', '2025-03-10 00:00:00', NOW()),
+('Ouverture des inscriptions 2025-2026', 'ouverture-inscriptions-dd7e8f', '<p>Les inscriptions pour la saison 2025-2026 sont ouvertes.</p>', 'publie', '2025-06-01 00:00:00', NOW());
