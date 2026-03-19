@@ -519,3 +519,29 @@
 - Points de vigilance :
   - La route `/projet-sport-etude` n'a pas de host constraint — vérifier qu'elle est bien importée par le fichier `config/routes/vitrine.yaml` (même problème que les autres routes sans contrainte, cf. session 12)
   - La couleur de fond des cercles étapes est gérée via `{% if etape.status == 'En cours' %}` inline dans le style — si le statut change, mettre à jour les données du tableau Twig directement
+
+---
+
+### 2026-03-19 (session 20 suite 4) — Refonte AdminRolesController + nouveau template admin + lien navbar
+- Objectif : remplacer l'ancien controller admin (2 routes GET+POST séparées) par un nouveau pattern (liste + formulaire inline), créer le template `admin/roles/index.html.twig`, brancher le bouton Admin dans la navbar
+- Actions réalisées :
+  1. **`src/Controller/Admin/AdminRolesController.php`** — réécriture complète :
+     - Anciens noms : `admin_utilisateurs` / `admin_utilisateur_roles` (GET+POST)
+     - Nouveaux noms : `admin_users_list` (GET) / `admin_user_roles_edit` (POST uniquement)
+     - `index()` : `GET /admin/utilisateurs` → liste tous les users triés par prénom
+     - `editRoles()` : `POST /admin/utilisateur/{id}/roles` → CSRF `edit_roles_{id}`, filtre rôles valides, `setRolesMembre()`, flash success, redirect vers liste
+     - Injection directe `User $user` (ParamConverter) au lieu de `UserRepository::find($id)` manuel
+  2. **`templates/admin/roles/index.html.twig`** (nouveau) : liste all users en cards 2 colonnes — avatar/emoji fallback, email, badges rôles actuels, formulaire checkboxes inline (benevole disabled/checked, 6 rôles cochables), bouton submit par card, CSRF par user
+  3. **`templates/vitrine/base.html.twig`** : bouton `<i class="bi bi-shield-lock">Admin</i>` (warning, rounded-pill) ajouté après "Mon compte", visible uniquement si `is_granted('ROLE_SUPER_ADMIN')`
+  - ⚠️ `php bin/console cache:clear` à lancer manuellement
+  - Les anciens templates `liste.html.twig` et `editer.html.twig` sont maintenant orphelins (les routes qui les référençaient n'existent plus) — peuvent être supprimés proprement
+- Fichiers créés/modifiés :
+  - src/Controller/Admin/AdminRolesController.php (réécrit)
+  - templates/admin/roles/index.html.twig (nouveau)
+  - templates/vitrine/base.html.twig (bouton Admin)
+  - instruction/13_CLAUDE_LOG.md (cette entrée)
+- Décisions : POST-only sur `editRoles` — plus propre que GET+POST mixte, réduit la surface d'attaque (pas de modification via GET possible)
+- Points de vigilance :
+  - `User $user` dans `editRoles` utilise le ParamConverter Doctrine — Symfony résout automatiquement l'entité depuis `{id}`. Si l'id n'existe pas → 404 automatique (plus propre que le `find()` manuel)
+  - Le bouton Admin est visible seulement si `ROLE_SUPER_ADMIN` — aucun user normal ne le voit
+  - `admin/roles/liste.html.twig` et `admin/roles/editer.html.twig` sont désormais orphelins

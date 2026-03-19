@@ -1,0 +1,104 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Gestion des rôles — Admin MABB{% endblock %}
+{% block body %}
+<div class="page-header">
+    <div class="container text-center">
+        <h1>Gestion des rôles</h1>
+        <p style="color:rgba(255,255,255,.75)">
+            Super admin — {{ users|length }} utilisateurs enregistrés
+        </p>
+    </div>
+</div>
+<section class="section section-gray">
+    <div class="container">
+        {% for label, messages in app.flashes %}
+            {% for msg in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }} rounded-3 mb-4">{{ msg }}</div>
+            {% endfor %}
+        {% endfor %}
+        <div class="row g-4">
+            {% for user in users %}
+            <div class="col-lg-6">
+                <div class="card card-mabb p-4">
+                    {# Infos utilisateur — lecture seule, pas de bio/photo modifiable #}
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        {% if user.photoPath %}
+                            <img src="{{ asset('uploads/avatars/' ~ user.photoPath) }}"
+                                 style="width:48px;height:48px;border-radius:50%;object-fit:cover">
+                        {% else %}
+                            <div style="width:48px;height:48px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:1.2rem">👤</div>
+                        {% endif %}
+                        <div>
+                            <div class="fw-bold">{{ user.prenom }} {{ user.nom }}</div>
+                            <div class="text-muted small">{{ user.email }}</div>
+                        </div>
+                        <div class="ms-auto d-flex flex-wrap gap-1">
+                            {% for role in user.rolesMembre %}
+                                <span class="badge" style="background:{% if role == 'benevole' %}#6c757d{% else %}#0b4fa3{% endif %}">
+                                    {{ role }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {# Formulaire rôles — uniquement les rôles, pas le profil #}
+                    <form method="post"
+                          action="{{ path('admin_user_roles_edit', {id: user.id}) }}">
+                        <input type="hidden" name="_csrf_token"
+                               value="{{ csrf_token('edit_roles_' ~ user.id) }}">
+                        <div class="p-3 rounded-3 mb-3"
+                             style="background:#f8f9fa;border:1px solid #dee2e6">
+                            <div class="row g-2">
+                                {# Benevole toujours présent — non modifiable #}
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               checked disabled style="opacity:.5">
+                                        <label class="form-check-label text-muted small">
+                                            Bénévole
+                                            <span class="badge bg-secondary ms-1"
+                                                  style="font-size:.65rem">défaut</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% for role, label in {
+                                    'coach': 'Coach',
+                                    'staff': 'Staff',
+                                    'dirigeant': 'Dirigeant',
+                                    'service-civique': 'Service Civique',
+                                    'joueur': 'Joueuse',
+                                    'parent': 'Parent'
+                                } %}
+                                <div class="col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               name="rolesMembre[]"
+                                               value="{{ role }}"
+                                               id="admin_role_{{ user.id }}_{{ role }}"
+                                               {{ user.hasRoleMembre(role) ? 'checked' }}>
+                                        <label class="form-check-label small"
+                                               for="admin_role_{{ user.id }}_{{ role }}">
+                                            {{ label }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-mabb btn-sm w-100">
+                            <i class="bi bi-check-lg me-1"></i>Mettre à jour les rôles
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-center mt-4">
+            <a href="{{ path('vitrine_accueil') }}"
+               class="btn btn-outline-secondary rounded-pill">
+                <i class="bi bi-arrow-left me-1"></i>Retour au site
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
