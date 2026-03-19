@@ -41,11 +41,12 @@
                         </small>
                         <a href="{{ path('vitrine_news_article', {slug: article.slug}) }}"
                            class="text-decoration-none">
-                            <h5 class="fw-bold mb-2" style="color:#063a55">{{ article.titre }}</h5>
+                            <h5 class="fw-bold mb-2" style="color:#fff">{{ article.titre }}</h5>
                         </a>
                         <p class="text-muted flex-grow-1">{{ article.contenu|striptags|slice(0, 140) }}...</p>
                         <a href="{{ path('vitrine_news_article', {slug: article.slug}) }}"
-                           class="btn btn-sm btn-outline-mabb rounded-pill mt-2">
+                           class="btn btn-sm rounded-pill mt-2 fw-semibold"
+                           style="background:#0b4fa3;color:#fff;border:none">
                             Lire l'article <i class="bi bi-arrow-right ms-1"></i>
                         </a>
                     </div>

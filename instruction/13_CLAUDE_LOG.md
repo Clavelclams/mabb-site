@@ -815,3 +815,36 @@
   - En prod, ce dossier doit être exclu du déploiement git (`.gitignore`) sauf le `.gitkeep`
   - `findImages(48)` est définie dans `MediaRepository` — vérifier qu'elle filtre bien `type = 'image'`
   - La navbar admin est maintenant à 4 boutons (Articles / Pages / Galerie / Rôles) — sur mobile petit écran, peut dépasser. À surveiller visuellement.
+
+---
+
+### 2026-03-19 (session 27) — Corrections couleurs : filtres membres + boutons news/article/accueil
+- Objectif : 6 modifications ciblées sur les couleurs de 3 éléments UI
+- Actions réalisées :
+  1. **`.btn-filtre-mabb` migré** de `base.html.twig` (inline `<style>`) vers `assets/styles/vitrine.css` — nouvelles valeurs :
+     - Inactif : `color: #ff8c00`, `border: 1.5px solid rgba(255,255,255,.5)`, `background: transparent`
+     - Hover : `border-color: #ff8c00`, fond `rgba(255,140,0,.08)` (léger)
+     - Actif : `background: #0b4fa3`, `border-color: #0b4fa3`, `color: #fff`, `box-shadow` bleu
+  2. **`templates/vitrine/accueil/news.html.twig`** :
+     - Titre article : `style="color:#063a55"` → classe `text-mabb-blue`
+     - Bouton "Lire l'article" : `btn-outline-mabb` → `style="background:#ff8c00;color:#fff;border:none"`
+  3. **`templates/vitrine/accueil/article.html.twig`** :
+     - Bouton "Modifier cet article" : `btn-outline-warning` → `style="background:#0b4fa3;color:#fff;border:none"`
+  4. **`templates/vitrine/accueil/index.html.twig`** :
+     - Bouton "Voir tout" : `btn-outline-mabb text-white-force` → `style="background:#ff8c00;color:#fff;border:none"`
+  5. Modification 5 (page-header article) : RAS — texte déjà blanc sur fond bleu, aucun changement
+- Fichiers modifiés :
+  - assets/styles/vitrine.css (`.btn-filtre-mabb` ajouté en fin de fichier)
+  - templates/vitrine/base.html.twig (bloc `.btn-filtre-mabb` supprimé du `<style>` inline)
+  - templates/vitrine/accueil/news.html.twig (titre + bouton Lire l'article)
+  - templates/vitrine/accueil/article.html.twig (bouton Modifier)
+  - templates/vitrine/accueil/index.html.twig (bouton Voir tout)
+- Commandes à lancer :
+  ```
+  php bin/console cache:clear
+  ```
+- Décisions :
+  - `.btn-filtre-mabb` déplacé dans `vitrine.css` (fichier compilé par Asset Mapper) plutôt que `base.html.twig` — plus propre, cohérent avec la session 21 d'extraction CSS
+  - Boutons oranges/bleus avec `style=""` inline conservés comme demandé — pas de nouvelle classe CSS pour 3 boutons ponctuels
+- Points de vigilance :
+  - `text-mabb-blue` sur le titre article doit être défini (soit dans vitrine.css soit dans base.html.twig) — si la classe n'existe pas, le titre sera noir. Vérifier à l'affichage.

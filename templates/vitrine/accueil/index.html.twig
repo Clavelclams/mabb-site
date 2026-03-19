@@ -26,7 +26,7 @@
 																		les championnes de demain.
 					</p>
 					<div class="d-flex flex-wrap gap-3">
-						<a href="{{ path('vitrine_contact') }}" class="btn btn-mabb btn-lg">
+						<a href="{{ path('vitrine_compte_se_connecter') }}" class="btn btn-mabb btn-lg">
 							<i class="bi bi-person-plus me-2"></i>Rejoindre le club
 						</a>
 						<a href="{{ path('vitrine_club') }}" class="btn btn-outline-light btn-lg rounded-pill">
@@ -149,7 +149,9 @@
 				<h2 class="section-title mb-0">Dernières
 					<span>actualités</span>
 				</h2>
-				<a href="{{ path('vitrine_news') }}" class="btn btn-outline-mabb text-white-force">Voir tout
+				<a href="{{ path('vitrine_news') }}"
+				   class="btn rounded-pill fw-semibold"
+				   style="background:#ff8c00;color:#fff;border:none">Voir tout
 					<i class="bi bi-arrow-right ms-1"></i>
 				</a>
 			</div>
@@ -168,7 +170,7 @@
 									</small>
 									<h5 class="fw-bold mt-2 mb-2">{{ actu.titre }}</h5>
 									<p class="text-muted">{{ actu.contenu|striptags|slice(0, 120) }}...</p>
-									<a href="{{ path('vitrine_news_article', {slug: actu.slug}) }}" class="text-mabb-orange fw-semibold text-decoration-none">
+									<a href="{{ path('vitrine_news_article', {slug: actu.slug}) }}" class="btn btn-sm rounded-pill mt-2 fw-semibold" style="background:#0b4fa3;color:#fff;border:none">
 										Lire la suite
 										<i class="bi bi-arrow-right"></i>
 									</a>
