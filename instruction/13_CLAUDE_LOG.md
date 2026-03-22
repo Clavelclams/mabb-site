@@ -1003,3 +1003,15 @@
   - `templates/vitrine/base.html.twig`
   - `templates/vitrine/accueil/equipes.html.twig`
 - Décisions : aucune
+
+---
+
+### 2026-03-22 (session 35) — Quill pages amélioration + Roadmap CMS V2
+- Objectif : Améliorer le bloc Quill dans pages/edit.html.twig (variable quillPage, background, 320px), documenter la vision CMS V2 dans la roadmap
+- Actions réalisées :
+  - `templates/admin/pages/edit.html.twig` : variable `quill` → `quillPage`, hauteur 300→320px, ajout option `background` avec 5 couleurs MABB, CSS selector simplifié
+  - `instruction/04_ROADMAP_V2.md` : ajout section "CMS Vitrine V2 — Super Admin Total" avec 4 niveaux (textes/sections/nav/médias), entités cibles, priorités
+- Fichiers modifiés :
+  - `templates/admin/pages/edit.html.twig`
+  - `instruction/04_ROADMAP_V2.md`
+- Décisions : architecture V2 retenue = blocs JSON dans PageContenu (évite une nouvelle entité en V2 early), migration vers SectionPage en V2 mature

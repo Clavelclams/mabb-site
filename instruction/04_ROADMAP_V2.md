@@ -70,3 +70,63 @@ V2 ne doit pas casser les fondations V1 (multi-tenant, rôles, sécurité, stats
 - V2.3 ENT documents + statuts
 - V2.4 Planning avancé + exports
 - V2.5 PIRB gamification soft + confidentialité
+
+---
+
+## CMS Vitrine V2 — Super Admin Total
+
+**Objectif : le super admin peut modifier TOUT le site sans toucher au code.**
+
+### Principe
+
+Actuellement (V1) : seulement texte + image + couleur par page via PageContenu.
+En V2 : chaque section de chaque page est éditable — titre, sous-titre,
+textes, boutons, images, ordre des cards, couleurs de fond.
+
+### Ce qu'il faut construire
+
+#### Niveau 1 — Textes & images (déjà en V1, à étendre)
+- [x] Éditeur Quill sur toutes les pages CMS
+- [x] Image principale par page
+- [x] Couleur de texte palette MABB
+- [x] Sous-titre de page éditable
+- [ ] Meta description éditable par page (SEO)
+
+#### Niveau 2 — Sections éditables (V2 cible)
+
+Chaque page aura des **blocs de section** en BDD :
+- Nouveau champ `sections: json` dans PageContenu
+  Structure :
+  ```json
+  [
+    {"type": "hero",   "titre": "...", "sous_titre": "...", "image": "..."},
+    {"type": "texte",  "contenu": "...", "couleur_fond": "..."},
+    {"type": "cards",  "items": [...]}
+  ]
+  ```
+- Le super admin réorganise les blocs par drag & drop
+- Chaque bloc a ses propres champs éditables
+- Le template Twig lit les blocs JSON et les affiche dynamiquement
+
+#### Niveau 3 — Navigation & structure (V2 avancé)
+- Ajouter/supprimer des pages depuis l'admin (sans PHP)
+- Modifier les libellés de la navbar
+- Gérer l'ordre des items navbar
+- Activer/désactiver des pages (visible/caché)
+
+#### Niveau 4 — Médias centralisés
+- Médiathèque globale (`/admin/medias`) déjà faite
+- Associer des médias à des sections de pages
+- Redimensionnement automatique des images uploadées (Intervention Image)
+
+### Entités à créer en V2
+- `SectionPage` : id, page_contenu_id, type, position, data (json), visible
+- `NavigationItem` : id, label, url, position, visible, parent_id
+
+### Priorité V2
+1. Sections JSON dans PageContenu (quick win, pas de nouvelle entité)
+2. Interface admin drag & drop sections
+3. Navigation éditable
+4. Meta SEO par page
+
+*Mise à jour : 2026-03-22*
