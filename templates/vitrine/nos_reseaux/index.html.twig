@@ -1,0 +1,98 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Nos Réseaux — MABB Amiens{% endblock %}
+{% block body %}
+<section style="min-height:100vh;background:#0b4fa3 url('{{ asset('images/bg.jpg') }}') center/cover;background-blend-mode:multiply;display:flex;align-items:center;padding:100px 0 60px">
+    <div class="container">
+        <div class="row align-items-center g-5 justify-content-center">
+            {# Colonne gauche — Photo + présentation #}
+            <div class="col-lg-5 text-center">
+                <div class="mb-4 d-inline-block p-3 bg-white rounded-4 shadow-lg" style="transform:rotate(1deg)">
+                    <img src="{{ asset('images/manar.jpg') }}" alt="MABB"
+                         class="img-fluid rounded-3" style="max-height:380px;object-fit:cover">
+                </div>
+                <h2 class="text-white fw-bold display-6 mt-3">Amiens Métropole<br>
+                    <span style="color:#ff8c00">Basket Ball</span>
+                </h2>
+                <p style="color:rgba(255,255,255,.75);font-size:.95rem;max-width:340px;margin:12px auto 0">
+                    Club de basketball exclusivement féminin — Triple label FFBB 3 étoiles.
+                    Suivez-nous pour toute l'actu du club.
+                </p>
+            </div>
+            {# Colonne droite — Boutons réseaux style carrd #}
+            <div class="col-lg-4">
+                <div class="d-flex flex-column gap-3">
+                    <a href="https://www.facebook.com/mabb.fr/" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>Facebook</span>
+                        <i class="bi bi-facebook fs-5"></i>
+                    </a>
+                    <a href="https://www.instagram.com/_m_a_b_b_/" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>Instagram</span>
+                        <i class="bi bi-instagram fs-5"></i>
+                    </a>
+                    <a href="https://www.tiktok.com/@m_a_b_b_" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>TikTok</span>
+                        <i class="bi bi-tiktok fs-5"></i>
+                    </a>
+                    <a href="https://x.com/_M_A_B_B_" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>Twitter / X</span>
+                        <i class="bi bi-twitter-x fs-5"></i>
+                    </a>
+                    <a href="https://www.youtube.com/@mabbamiens/videos" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>YouTube</span>
+                        <i class="bi bi-youtube fs-5"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/in/m-a-b-b-amiens-501279297/" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>LinkedIn</span>
+                        <i class="bi bi-linkedin fs-5"></i>
+                    </a>
+                    <a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>Scorenco — Résultats</span>
+                        <i class="bi bi-bar-chart-fill fs-5"></i>
+                    </a>
+                    <a href="https://le-savoir-pour-tous.pass-education.fr/inscription?slug=mabb-amiens-metropole-basket-ball&token=b8db9981-d307-4e79-a539-ac30aafd2041" target="_blank" rel="noopener"
+                       class="d-flex align-items-center justify-content-between px-4 py-3 rounded-pill text-decoration-none fw-bold"
+                       style="background:#ff8c00;color:#fff;font-size:1rem;transition:transform .2s,box-shadow .2s"
+                       onmouseover="this.style.transform='scale(1.02)';this.style.boxShadow='0 8px 25px rgba(255,140,0,.4)'"
+                       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                        <span>Aide au devoir</span>
+                        <i class="bi bi-book-half fs-5"></i>
+                    </a>
+                </div>
+                <div class="text-center mt-4">
+                    <small style="color:rgba(255,255,255,.45);font-size:.75rem">
+                        MABB — HDF080036 — SIRET 49077890900021
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

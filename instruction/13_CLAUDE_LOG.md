@@ -848,3 +848,60 @@
   - Boutons oranges/bleus avec `style=""` inline conservés comme demandé — pas de nouvelle classe CSS pour 3 boutons ponctuels
 - Points de vigilance :
   - `text-mabb-blue` sur le titre article doit être défini (soit dans vitrine.css soit dans base.html.twig) — si la classe n'existe pas, le titre sera noir. Vérifier à l'affichage.
+
+---
+
+### 2026-03-22 (session 29) — Nos Réseaux + Partenaires + Team 3x3 + CSS
+- Objectif : Nouvelle page /nos-reseaux style carrd, bande logos partenaires, Team 3x3 MABB, bandeau sport-études U18, CSS backgrounds orange
+- Actions réalisées :
+  - TÂCHE 1 : Route `vitrine_nos_reseaux` ajoutée dans `NumeriquePagesController.php`
+  - TÂCHE 2 : `templates/vitrine/nos_reseaux/index.html.twig` créé (style carrd, 8 boutons réseaux)
+  - TÂCHE 3 : Bouton "Nos réseaux" ajouté dans le hero accueil (glassmorphism)
+  - TÂCHE 4 : Bande logos partenaires ajoutée dans `base.html.twig` avant le footer (10 logos)
+  - TÂCHE 5A : Card "Team 3x3 MABB" ajoutée après le `{% endfor %}` dans equipes.html.twig (Ugo + Clavel + placeholder)
+  - TÂCHE 5B : Bandeau sport-études U18 ajouté via `{% if eq.cat == 'U18 Féminine' %}` dans la boucle
+  - TÂCHE 6 : Classes `.bg-orange-1`, `.bg-orange-2`, `.bg-2` ajoutées à `app.css` (extensions .png)
+  - TÂCHE 7 : Dossier `public/images/partenaires/` créé + lien "Réseaux" navbar
+  - FIX : `.btn-filtre-mabb` en double supprimé de `app.css` (conflit avec vitrine.css)
+  - FIX : Images renommées — 20→bg-orange1.png, 21→bg-orange2.png, 22→bg2.png, 1-19→logo1-19.png
+- Fichiers modifiés :
+  - `src/Controller/Vitrine/NumeriquePagesController.php`
+  - `templates/vitrine/nos_reseaux/index.html.twig` (nouveau)
+  - `templates/vitrine/accueil/index.html.twig`
+  - `templates/vitrine/base.html.twig`
+  - `templates/vitrine/accueil/equipes.html.twig`
+  - `assets/styles/app.css`
+  - `public/images/` (renommages)
+  - `public/images/partenaires/` (dossier créé)
+- Points de vigilance :
+  - Logos partenaires à déposer dans `public/images/partenaires/` (noms exacts requis)
+  - Les images bg sont en `.png` pas `.jpg` (les fichiers uploadés étaient des PNG)
+  - `php bin/console cache:clear` requis
+
+---
+
+### 2026-03-22 (session 30) — Page 3x3 + restructuration équipes + logos partenaires
+- Objectif : Nouvelle page /equipes/3x3, dropdown navbar Équipes, restructuration equipes.html.twig, logos partenaires identifiés et copiés
+- Actions réalisées :
+  - LOGOS : Identification visuelle des 19 PNG — 10 copiés dans partenaires/ avec noms exacts
+    logo9→republique-francaise, logo15→service-civique, logo1→club-formateur, logo2→ecole-francaise-basket,
+    logo3→ffbb-citoyen, logo4→micro-basket, logo5→quartiers2030, logo6→cites-educatives,
+    logo8→clubs-sportifs-engages, logo19→amiens-metropole
+    Logos supplémentaires non utilisés : Gouvernement, Ministère Éducation, Préfet HDF, Préfet Somme ANCT, Académie Amiens, ANS, Région HDF, Conseil Départemental Somme, Quartiers d'été
+  - TÂCHE 1 : Route `vitrine_equipes_3x3` ajoutée dans AccueilController.php
+  - TÂCHE 2 : `templates/vitrine/accueil/equipes_3x3.html.twig` créé (Ugo, Clavel, placeholder, 5 catégories)
+  - TÂCHE 3 : Navbar Équipes → dropdown "Toutes les équipes" + "Équipe 3x3"
+  - TÂCHE 4A : Card "Team 3x3 MABB" supprimée de equipes.html.twig
+  - TÂCHE 4B : Bouton "Voir l'équipe 3x3 →" ajouté dans la card Basket 3x3 (conditionnel if)
+  - TÂCHE 4C : Bandeau U18 sport-études remplacé par lien cliquable vers /projet-sport-etude
+  - TÂCHE 5 : Bouton "Projet Sport-Études →" supprimé de cite_educative.html.twig card Lycée
+- Fichiers modifiés :
+  - `src/Controller/Vitrine/AccueilController.php`
+  - `templates/vitrine/accueil/equipes_3x3.html.twig` (nouveau)
+  - `templates/vitrine/base.html.twig`
+  - `templates/vitrine/accueil/equipes.html.twig`
+  - `templates/vitrine/club/cite_educative.html.twig`
+  - `public/images/partenaires/` (10 logos copiés)
+- Points de vigilance :
+  - `php bin/console cache:clear` requis
+  - 9 logos supplémentaires restent dans public/images/ sans correspondance dans la bande partenaires

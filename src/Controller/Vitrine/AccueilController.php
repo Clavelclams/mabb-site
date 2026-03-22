@@ -183,4 +183,10 @@ final class AccueilController extends AbstractController
             'errors'  => $errors,
         ]);
     }
+
+    #[Route('/equipes/3x3', name: 'vitrine_equipes_3x3')]
+    public function equipes3x3(): Response
+    {
+        return $this->render('vitrine/accueil/equipes_3x3.html.twig');
+    }
 }

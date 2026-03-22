@@ -50,4 +50,10 @@ class NumeriquePagesController extends AbstractController
             'pageContenu' => $pageRepo->findBySlug('projet-sport-etude'),
         ]);
     }
+
+    #[Route('/nos-reseaux', name: 'vitrine_nos_reseaux')]
+    public function nosReseaux(): Response
+    {
+        return $this->render('vitrine/nos_reseaux/index.html.twig');
+    }
 }

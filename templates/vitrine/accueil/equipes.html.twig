@@ -58,14 +58,31 @@
                             </div>
                         </div>
                         <p class="text-muted mb-3">{{ eq.desc }}</p>
+                        {% if eq.cat == 'U18 Féminine' %}
+                        <a href="{{ path('vitrine_projet_sport_etude') }}"
+                           class="d-flex align-items-center gap-2 p-2 rounded-3 text-decoration-none mt-3"
+                           style="background:rgba(11,79,163,.06);border:1px solid rgba(11,79,163,.2)">
+                            <i class="bi bi-mortarboard-fill" style="color:#0b4fa3"></i>
+                            <small style="color:#0b4fa3;font-weight:600">
+                                Projet Sport-Études — Cité Scolaire d'Amiens →
+                            </small>
+                        </a>
+                        {% endif %}
                         <div class="d-flex justify-content-between">
                             <span class="badge bg-light text-dark"><i class="bi bi-bar-chart me-1"></i>{{ eq.niveau }}</span>
                             <span class="badge bg-light text-dark"><i class="bi bi-geo-alt me-1"></i>{{ eq.lieu }}</span>
                         </div>
+                        {% if eq.cat == 'Basket 3x3' %}
+                        <a href="{{ path('vitrine_equipes_3x3') }}"
+                           class="btn btn-sm btn-mabb rounded-pill mt-2 w-100">
+                            <i class="bi bi-trophy-fill me-1"></i>Voir l'équipe 3x3 →
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
             {% endfor %}
+            
         </div>
 
         {# Lien Scorenco #}

@@ -277,8 +277,24 @@
 					<li class="nav-item">
 						<a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_membres' %}active{% endif %}" href="{{ path('vitrine_membres') }}">Membres</a>
 					</li>
-					<li class="nav-item">
-						<a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_equipes' %}active{% endif %}" href="{{ path('vitrine_equipes') }}">Équipes</a>
+					<li class="nav-item dropdown">
+						<a class="nav-link dropdown-toggle {% if app.request.attributes.get('_route') starts with 'vitrine_equipes' %}active{% endif %}"
+						   href="#" data-bs-toggle="dropdown" aria-expanded="false">
+							Équipes
+						</a>
+						<ul class="dropdown-menu">
+							<li>
+								<a class="dropdown-item" href="{{ path('vitrine_equipes') }}">
+									<i class="bi bi-people-fill me-2 text-mabb-blue"></i>Toutes les équipes
+								</a>
+							</li>
+							<li><hr class="dropdown-divider"></li>
+							<li>
+								<a class="dropdown-item" href="{{ path('vitrine_equipes_3x3') }}">
+									<i class="bi bi-trophy-fill me-2" style="color:#f39c12"></i>Équipe 3x3
+								</a>
+							</li>
+						</ul>
 					</li>
 					<li class="nav-item dropdown">
 						<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Actualités</a>
@@ -306,6 +322,11 @@
 					</li>
 					<li class="nav-item">
 						<a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_contact' %}active{% endif %}" href="{{ path('vitrine_contact') }}">Contact</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_nos_reseaux' %}active{% endif %}" href="{{ path('vitrine_nos_reseaux') }}">
+							<i class="bi bi-share me-1"></i>Réseaux
+						</a>
 					</li>
 				</ul>
 				<div class="d-flex align-items-center gap-2">
@@ -352,6 +373,100 @@
 		{% block body %}{% endblock %}
 	</main>
 
+	{# Bande partenaires — scroll infini #}
+	<section style="background:#fff;padding:18px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;overflow:hidden">
+		<p class="text-center text-muted mb-3" style="font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600">
+			Partenaires & Labels
+		</p>
+		<style>
+			.logos-track {
+				display: flex;
+				align-items: center;
+				gap: 48px;
+				animation: scroll-logos 35s linear infinite;
+				width: max-content;
+				padding: 16px 0 24px;
+			}
+			.logos-track:hover { animation-play-state: paused; }
+
+			.logo-card {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 10px 14px;
+				background: transparent;
+				border-radius: 12px;
+				border: 1px solid transparent;
+				cursor: default;
+				transition:
+					transform .28s cubic-bezier(.34,1.56,.64,1),
+					box-shadow .28s ease,
+					background .2s ease,
+					border-color .2s ease;
+			}
+			.logo-card:hover {
+				transform: translateY(-12px) scale(1.30) rotate(-1deg);
+				background: #fff;
+				border-color: #e2e8f0;
+				box-shadow:
+					0 18px 40px rgba(0,0,0,.18),
+					0 6px 12px rgba(11,79,163,.12);
+				position: relative;
+				z-index: 10;
+			}
+			.logo-card img {
+				height: 50px;
+				max-width: 130px;
+				object-fit: contain;
+				opacity: .85;
+				filter: grayscale(15%);
+				transition: opacity .2s, filter .2s;
+				display: block;
+			}
+			.logo-card:hover img {
+				opacity: 1;
+				filter: none;
+			}
+			@keyframes scroll-logos {
+				0%   { transform: translateX(0); }
+				100% { transform: translateX(-50%); }
+			}
+		</style>
+		<div style="overflow:hidden">
+			<div class="logos-track">
+				{# --- liste × 2 pour boucle sans saut --- #}
+				{% set logos = [
+					{f:'logo-republique-francaise.png',       a:'Republique Francaise'},
+					{f:'logo-gouvernement.png',               a:'Gouvernement'},
+					{f:'logo-service-civique.png',            a:'Service Civique'},
+					{f:'logo-agence-nationale-sport.png',     a:'Agence Nationale du Sport'},
+					{f:'logo-region-hdf.png',                 a:'Region Hauts-de-France'},
+					{f:'logo-prefet-hdf.png',                 a:'Prefet Hauts-de-France'},
+					{f:'logo-prefet-somme.png',               a:'Prefet de la Somme'},
+					{f:'logo-conseil-departemental-somme.png',a:'Conseil Departemental Somme'},
+					{f:'logo-academie-amiens.png',            a:'Academie Amiens'},
+					{f:'logo-ministere-education.png',        a:'Ministere Education Nationale'},
+					{f:'logo-amiens-metropole.png',           a:'Amiens Metropole'},
+					{f:'logo-cites-educatives.png',           a:'Cites Educatives Amiens'},
+					{f:'logo-quartiers2030.png',              a:'Quartiers 2030'},
+					{f:'logo-quartiers-ete.png',              a:'Quartiers Ete'},
+					{f:'logo-club-formateur.png',             a:'Club Formateur Feminin'},
+					{f:'logo-ecole-francaise-basket.png',     a:'Ecole Francaise de Basket'},
+					{f:'logo-ffbb-citoyen.png',               a:'FFBB Citoyen'},
+					{f:'logo-micro-basket.png',               a:'Micro Basket'},
+					{f:'logo-clubs-sportifs-engages.png',     a:'Les Clubs Sportifs Engages'},
+				] %}
+				{# Passage × 2 pour boucle seamless #}
+				{% for _ in 1..2 %}
+					{% for logo in logos %}
+						<div class="logo-card">
+							<img src="{{ asset('images/partenaires/' ~ logo.f) }}" alt="{{ logo.a }}">
+						</div>
+					{% endfor %}
+				{% endfor %}
+			</div>
+		</div>
+	</section>
 	{# FOOTER #}
 	<footer class="footer-mabb">
 		<div class="container">

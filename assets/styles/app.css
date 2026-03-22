@@ -141,26 +141,7 @@ body {
     transform: translateY(-1px);
 }
 
-/* Bouton filtre page Membres */
-.btn-filtre-mabb {
-    background: transparent;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 8px 20px;
-    font-weight: 600;
-    font-size: .88rem;
-    color: #475569;
-    transition: all .2s;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-}
-.btn-filtre-mabb:hover,
-.btn-filtre-mabb.active {
-    background: #063a55;
-    border-color: #063a55;
-    color: #fff;
-}
+/* Bouton filtre page Membres — défini dans vitrine.css (blanc + border orange) */
 
 /* Bouton inscription (navbar) */
 .btn-inscription {
@@ -185,4 +166,21 @@ body {
 .navbar-mabb {
     background: linear-gradient(135deg, #063a55, #0b4fa3) !important;
     box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+
+/* Backgrounds orange — réservés pages joueuses (Phase V2) */
+.bg-orange-1 {
+    background-image: url('/images/bg-orange1.png');
+    background-size: cover;
+    background-position: center;
+}
+.bg-orange-2 {
+    background-image: url('/images/bg-orange2.png');
+    background-size: cover;
+    background-position: center;
+}
+.bg-2 {
+    background-image: url('/images/bg2.png');
+    background-size: cover;
+    background-position: center;
 }
