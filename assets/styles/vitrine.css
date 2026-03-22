@@ -233,12 +233,12 @@
 .article-content {
     font-size: 1.05rem;
     line-height: 1.8;
-    color: #343a40;
+    color: #ffffff;
 }
 .article-content h1,
 .article-content h2,
 .article-content h3 {
-    color: #063a55;
+    color: #ffffff;
     margin-top: 2rem;
     margin-bottom: 1rem;
     font-family: 'Montserrat', sans-serif;

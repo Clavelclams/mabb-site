@@ -109,7 +109,7 @@
 				<h2 class="section-title">3x3 dans les
 					<span>catégories</span>
 				</h2>
-				<p class="section-subtitle">Le 3x3 est proposé dans toutes nos catégories compétitives</p>
+				<p class="section-subtitle" style="color:#fff">Le 3x3 est proposé dans toutes nos catégories compétitives</p>
 			</div>
 			<div class="row g-4">
 				{% for cat in [
@@ -120,10 +120,13 @@
                 {cat: 'Team Coachs', desc: 'Nos coachs MABB en compétition — exclusif MABB', icon: '🎯'},
             ] %}
 					<div class="col-md-6 col-lg-4">
-						<div class="card card-mabb text-center p-4 h-100">
+						<div class="card card-mabb text-center p-4 h-100 d-flex flex-column">
 							<div style="font-size:2rem;margin-bottom:8px">{{ cat.icon }}</div>
 							<h5 class="fw-bold mb-2" style="color:#063a55">{{ cat.cat }}</h5>
-							<p class="text-muted small mb-0">{{ cat.desc }}</p>
+							<p class="text-muted small mb-3">{{ cat.desc }}</p>
+							<div class="mt-auto">
+								<span style="font-size:.75rem;color:#ff8c00;font-weight:600;letter-spacing:.5px;text-transform:uppercase">⏳ À suivre prochainement</span>
+							</div>
 						</div>
 					</div>
 				{% endfor %}
