@@ -277,24 +277,9 @@
 					<li class="nav-item">
 						<a class="nav-link {% if app.request.attributes.get('_route') == 'vitrine_membres' %}active{% endif %}" href="{{ path('vitrine_membres') }}">Membres</a>
 					</li>
-					<li class="nav-item dropdown">
-						<a class="nav-link dropdown-toggle {% if app.request.attributes.get('_route') starts with 'vitrine_equipes' %}active{% endif %}"
-						   href="#" data-bs-toggle="dropdown" aria-expanded="false">
-							Équipes
-						</a>
-						<ul class="dropdown-menu">
-							<li>
-								<a class="dropdown-item" href="{{ path('vitrine_equipes') }}">
-									<i class="bi bi-people-fill me-2 text-mabb-blue"></i>Toutes les équipes
-								</a>
-							</li>
-							<li><hr class="dropdown-divider"></li>
-							<li>
-								<a class="dropdown-item" href="{{ path('vitrine_equipes_3x3') }}">
-									<i class="bi bi-trophy-fill me-2" style="color:#f39c12"></i>Équipe 3x3
-								</a>
-							</li>
-						</ul>
+					<li class="nav-item">
+						<a class="nav-link {% if app.request.attributes.get('_route') starts with 'vitrine_equipes' %}active{% endif %}"
+						   href="{{ path('vitrine_equipes') }}">Équipes</a>
 					</li>
 					<li class="nav-item dropdown">
 						<a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Actualités</a>

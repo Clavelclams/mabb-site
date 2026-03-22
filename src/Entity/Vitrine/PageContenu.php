@@ -31,6 +31,14 @@ class PageContenu
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $sousTitre = null;
 
+    // Chemin de l'image de couverture — ex: 'pages/formation.jpg'
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $imagePath = null;
+
+    // Couleur du texte du header — ex: '#ffffff', '#063a55'
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $couleurTexte = null;
+
     #[ORM\Column]
     private ?\DateTimeImmutable $updatedAt = null;
 
@@ -54,6 +62,12 @@ class PageContenu
 
     public function getSousTitre(): ?string { return $this->sousTitre; }
     public function setSousTitre(?string $s): static { $this->sousTitre = $s; return $this; }
+
+    public function getImagePath(): ?string { return $this->imagePath; }
+    public function setImagePath(?string $p): static { $this->imagePath = $p; return $this; }
+
+    public function getCouleurTexte(): ?string { return $this->couleurTexte; }
+    public function setCouleurTexte(?string $c): static { $this->couleurTexte = $c; return $this; }
 
     public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
 }

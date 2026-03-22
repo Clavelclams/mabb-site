@@ -32,9 +32,11 @@ class NumeriquePagesController extends AbstractController
     }
 
     #[Route('/cite-educative', name: 'vitrine_cite_educative')]
-    public function citeEducative(): Response
+    public function citeEducative(PageContenuRepository $pageRepo): Response
     {
-        return $this->render('vitrine/club/cite_educative.html.twig');
+        return $this->render('vitrine/club/cite_educative.html.twig', [
+            'pageContenu' => $pageRepo->findBySlug('cite-educative'),
+        ]);
     }
 
     #[Route('/clavel', name: 'vitrine_clavel')]

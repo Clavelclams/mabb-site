@@ -4,6 +4,7 @@ namespace App\Controller\Vitrine;
 
 use App\Repository\Vitrine\ArticleRepository;
 use App\Repository\Vitrine\MediaRepository;
+use App\Repository\Vitrine\PageContenuRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,10 +15,11 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AccueilController extends AbstractController
 {
     #[Route('/', name: 'vitrine_accueil')]
-    public function index(ArticleRepository $articleRepo): Response
+    public function index(ArticleRepository $articleRepo, PageContenuRepository $pageRepo): Response
     {
         return $this->render('vitrine/accueil/index.html.twig', [
             'dernieres_actus' => $articleRepo->findDerniersPublies(3),
+            'pageContenu'     => $pageRepo->findOneBy(['pageSlug' => 'accueil']),
         ]);
     }
 
@@ -36,42 +38,43 @@ final class AccueilController extends AbstractController
     }
 
     #[Route('/club', name: 'vitrine_club')]
-    public function club(): Response
+    public function club(PageContenuRepository $pageRepo): Response
     {
         return $this->render('vitrine/accueil/club.html.twig', [
-            'controller_name' => 'AccueilController',
+            'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'club']),
         ]);
     }
 
     #[Route('/equipes', name: 'vitrine_equipes')]
-    public function equipes(): Response
+    public function equipes(PageContenuRepository $pageRepo): Response
     {
         return $this->render('vitrine/accueil/equipes.html.twig', [
-            'controller_name' => 'AccueilController',
+            'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'equipes']),
         ]);
     }
 
     #[Route('/galerie', name: 'vitrine_galerie')]
-    public function galerie(MediaRepository $mediaRepo): Response
+    public function galerie(MediaRepository $mediaRepo, PageContenuRepository $pageRepo): Response
     {
         return $this->render('vitrine/accueil/galerie.html.twig', [
-            'medias' => $mediaRepo->findImages(48),
+            'medias'      => $mediaRepo->findImages(48),
+            'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'galerie']),
         ]);
     }
 
     #[Route('/calendrier', name: 'vitrine_calendrier')]
-    public function calendrier(): Response
+    public function calendrier(PageContenuRepository $pageRepo): Response
     {
         return $this->render('vitrine/accueil/calendrier.html.twig', [
-            'controller_name' => 'AccueilController',
+            'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'calendrier']),
         ]);
     }
 
     #[Route('/numerique', name: 'vitrine_numerique')]
-    public function numerique(): Response
+    public function numerique(PageContenuRepository $pageRepo): Response
     {
         return $this->render('vitrine/accueil/numerique.html.twig', [
-            'controller_name' => 'AccueilController',
+            'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'numerique']),
         ]);
     }
 
@@ -90,7 +93,7 @@ final class AccueilController extends AbstractController
     }
 
     #[Route('/contact', name: 'vitrine_contact', methods: ['GET', 'POST'])]
-    public function contact(Request $request, MailerInterface $mailer): Response
+    public function contact(Request $request, MailerInterface $mailer, PageContenuRepository $pageRepo): Response
     {
         $success = false;
         $errors  = [];
@@ -179,14 +182,17 @@ final class AccueilController extends AbstractController
         }
 
         return $this->render('vitrine/accueil/contact.html.twig', [
-            'success' => $success,
-            'errors'  => $errors,
+            'success'     => $success,
+            'errors'      => $errors,
+            'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'contact']),
         ]);
     }
 
     #[Route('/equipes/3x3', name: 'vitrine_equipes_3x3')]
-    public function equipes3x3(): Response
+    public function equipes3x3(PageContenuRepository $pageRepo): Response
     {
-        return $this->render('vitrine/accueil/equipes_3x3.html.twig');
+        return $this->render('vitrine/accueil/equipes_3x3.html.twig', [
+            'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'equipes-3x3']),
+        ]);
     }
 }

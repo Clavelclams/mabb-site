@@ -45,4 +45,20 @@
         </div>
     </div>
 </section>
+
+{# Bloc CMS éditable par l'admin #}
+{% if pageContenu is defined and pageContenu and pageContenu.contenu %}
+<section class="section section-gray">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="article-content">
+                    {{ pageContenu.contenu|raw }}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
 {% endblock %}

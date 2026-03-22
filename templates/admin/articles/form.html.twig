@@ -34,12 +34,11 @@
 
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Contenu <span class="text-danger">*</span></label>
-                            <textarea name="contenu" id="contenu" class="form-control" rows="12"
-                                      placeholder="Rédigez votre article ici...">{{ article ? article.contenu : '' }}</textarea>
+                            <div id="quill-editor">{{ article ? article.contenu|raw : '' }}</div>
+                            <textarea name="contenu" id="contenu" style="display:none">{{ article ? article.contenu : '' }}</textarea>
                             <div class="form-text">
                                 <i class="bi bi-info-circle me-1"></i>
-                                Éditeur visuel — utilisez les boutons de la barre pour mettre en forme.
-                                Les liens, images et listes sont supportés.
+                                Éditeur Quill — mise en forme, couleurs, liens et images.
                             </div>
                         </div>
 
@@ -89,26 +88,37 @@
 {% endblock %}
 
 {% block extra_js %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css">
-<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+<style>
+    #quill-editor { height: 350px; background: #fff; font-size: 15px; }
+    .ql-toolbar.ql-snow { border-radius: 6px 6px 0 0; background: #f8f9fa; }
+    .ql-container.ql-snow { border-radius: 0 0 6px 6px; }
+    .ql-color-picker .ql-picker-options { width: 132px; }
+</style>
 <script>
-    const easyMDE = new EasyMDE({
-        element: document.getElementById('contenu'),
-        spellChecker: false,
-        placeholder: 'Rédigez votre article ici...\n\nAstuce : sélectionnez du texte pour voir les options de mise en forme.',
+var quill = new Quill('#quill-editor', {
+    theme: 'snow',
+    modules: {
         toolbar: [
-            'bold', 'italic', 'heading', '|',
-            'quote', 'unordered-list', 'ordered-list', '|',
-            'link', 'image', '|',
-            'preview', 'side-by-side', '|',
-            'guide'
-        ],
-        status: false,
-        autosave: {
-            enabled: true,
-            uniqueId: 'article-editor',
-            delay: 3000,
-        },
-    });
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ 'color': ['#ffffff','#063a55','#ff8c00','#6c757d','#1a1a2e','#0b4fa3','#343a40'] }],
+            [{ 'background': [] }],
+            [{ 'align': [] }],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            ['link', 'image'],
+            ['clean']
+        ]
+    },
+    placeholder: 'Rédigez votre article ici...'
+});
+var existing = document.getElementById('contenu').value;
+if (existing) {
+    quill.root.innerHTML = existing;
+}
+document.querySelector('form').addEventListener('submit', function() {
+    document.getElementById('contenu').value = quill.root.innerHTML;
+});
 </script>
 {% endblock %}

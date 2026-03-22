@@ -12,22 +12,82 @@ class PageContenuFixtures extends Fixture
     {
         $pages = [
             [
-                'slug'      => 'projet-sport-etude',
-                'nom'       => 'Projet Sport-Études',
-                'sousTitre' => 'La MABB et la Cité Scolaire d\'Amiens — construire l\'excellence ensemble',
-                'contenu'   => "## Un projet ambitieux\n\nLa MABB ambitionne de créer une **section sport-études** en partenariat avec la Cité Scolaire d'Amiens.\n\nL'objectif : permettre aux jeunes joueuses de mener de front excellence sportive et réussite scolaire.",
+                'slug'      => 'accueil',
+                'nom'       => 'Accueil',
+                'sousTitre' => 'Bienvenue à la MABB — Amiens Métropole Basket Ball',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'club',
+                'nom'       => 'Le Club',
+                'sousTitre' => 'MABB — Un club de basket ancré dans les quartiers d\'Amiens',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'equipes',
+                'nom'       => 'Nos Équipes',
+                'sousTitre' => 'Du Mini Basket aux Seniors, la MABB forme à tous les niveaux',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'equipes-3x3',
+                'nom'       => 'Équipe 3x3',
+                'sousTitre' => 'Nos coachs sur le terrain — format exclusif, 100% MABB',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'membres',
+                'nom'       => 'Membres',
+                'sousTitre' => 'Les membres de la MABB — adhérents et licenciés',
+                'contenu'   => '',
             ],
             [
                 'slug'      => 'formation',
                 'nom'       => 'Formation & Parcours Inclusifs',
                 'sousTitre' => 'La MABB, une deuxième chance pour chacun',
-                'contenu'   => "## Le club comme levier d'insertion\n\nAu-delà du sport, la MABB accompagne des personnes en difficulté vers la qualification, la formation et l'emploi.",
+                'contenu'   => '<h2>Le club comme levier d\'insertion</h2><p>Au-delà du sport, la MABB accompagne des personnes en difficulté vers la qualification, la formation et l\'emploi.</p>',
+            ],
+            [
+                'slug'      => 'cite-educative',
+                'nom'       => 'Cité Éducative',
+                'sousTitre' => 'MABB partenaire des établissements scolaires d\'Amiens Métropole',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'projet-sport-etude',
+                'nom'       => 'Projet Sport-Études',
+                'sousTitre' => 'La MABB et la Cité Scolaire d\'Amiens — construire l\'excellence ensemble',
+                'contenu'   => '<h2>Un projet ambitieux</h2><p>La MABB ambitionne de créer une <strong>section sport-études</strong> en partenariat avec la Cité Scolaire d\'Amiens.</p><p>L\'objectif : permettre aux jeunes joueuses de mener de front excellence sportive et réussite scolaire.</p>',
             ],
             [
                 'slug'      => 'numerique',
                 'nom'       => 'Espace Numérique',
                 'sousTitre' => 'La transformation digitale du club',
-                'contenu'   => "## MABB Manager & PIRB\n\nLa MABB développe ses propres outils numériques pour gérer le club et accompagner les joueuses dans leur progression.",
+                'contenu'   => '<h2>MABB Manager &amp; PIRB</h2><p>La MABB développe ses propres outils numériques pour gérer le club et accompagner les joueuses dans leur progression.</p>',
+            ],
+            [
+                'slug'      => 'calendrier',
+                'nom'       => 'Calendrier',
+                'sousTitre' => 'Matchs, entraînements et événements MABB',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'galerie',
+                'nom'       => 'Galerie',
+                'sousTitre' => 'Les photos et vidéos du club',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'nos-reseaux',
+                'nom'       => 'Nos Réseaux',
+                'sousTitre' => 'Suivez la MABB sur les réseaux sociaux',
+                'contenu'   => '',
+            ],
+            [
+                'slug'      => 'contact',
+                'nom'       => 'Contact',
+                'sousTitre' => 'Contactez la MABB — Amiens Métropole Basket Ball',
+                'contenu'   => '',
             ],
         ];
 

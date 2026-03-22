@@ -29,9 +29,9 @@
                          style="max-height:400px;object-fit:cover">
                 {% endif %}
 
-                {# Contenu Markdown converti en HTML #}
+                {# Contenu HTML (Quill) #}
                 <div class="article-content">
-                    {{ article.contenu|markdown_to_html }}
+                    {{ article.contenu|raw }}
                 </div>
 
                 <hr class="my-5">

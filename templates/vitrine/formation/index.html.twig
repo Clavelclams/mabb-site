@@ -115,7 +115,7 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="article-content">
-                    {{ pageContenu.contenu|markdown_to_html }}
+                    {{ pageContenu.contenu|raw }}
                 </div>
             </div>
         </div>
@@ -128,7 +128,7 @@
         <h2 class="fw-bold mb-2">Et bien d'autres...</h2>
         <p class="mb-5 formation-cta-desc">La MABB a accompagné de nombreuses personnes vers la qualification et l'emploi.</p>
         <div class="d-flex flex-wrap justify-content-center gap-3">
-            {% for prenom in ['Sarah', 'Kylian', 'Amina', 'Lucas', 'Fatou', 'Théo', 'Inès'] %}
+            {% for prenom in ['Sofyan', 'Celyan', 'Inès', 'Laryssa', 'Leny', 'Maxence', 'Tony'] %}
                 <span class="formation-tag">{{ prenom }}</span>
             {% endfor %}
             <span class="formation-tag-orange">+ d'autres à venir</span>

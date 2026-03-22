@@ -905,3 +905,101 @@
 - Points de vigilance :
   - `php bin/console cache:clear` requis
   - 9 logos supplémentaires restent dans public/images/ sans correspondance dans la bande partenaires
+
+---
+
+### 2026-03-22 (session 31) — TinyMCE + CMS Pages enrichi + AdminUploadController
+- Objectif : Remplacer EasyMDE par TinyMCE WYSIWYG, enrichir le CMS Pages (image couverture + palette couleurs), créer le endpoint upload image TinyMCE, étendre les fixtures à 13 pages, injecter pageContenu dans tous les contrôleurs vitrine
+- Actions réalisées :
+  - ÉTAPE 1 : `PageContenu` entity — ajout champs `imagePath` (length:255, nullable) + `couleurTexte` (length:20, nullable) + getters/setters
+  - ÉTAPE 2 : `PageContenuFixtures.php` — 3 pages → 13 pages (accueil, club, equipes, equipes-3x3, membres, formation, cite-educative, projet-sport-etude, numerique, calendrier, galerie, nos-reseaux, contact). Anti-doublon `findOneBy` conservé.
+  - ÉTAPE 3 : `AccueilController.php` — `PageContenuRepository` injecté dans index(), club(), equipes(), equipes3x3(), galerie(), calendrier(), numerique(), contact(). Variable `pageContenu` passée dans toutes les vues.
+  - ÉTAPE 4 : `AdminPagesController.php` — `SluggerInterface` injecté, upload image vers `public/uploads/pages/`, `setCouleurTexte()` ajouté, `enctype="multipart/form-data"` géré côté contrôleur.
+  - ÉTAPE 5A : `templates/admin/articles/form.html.twig` — EasyMDE → TinyMCE 7 CDN, `images_upload_handler` custom (appel `/admin/upload-image`), `images_upload_url` configuré.
+  - ÉTAPE 5B+6 : `templates/admin/pages/edit.html.twig` — EasyMDE → TinyMCE 7 CDN, champ `imagePage` (file upload), palette 6 couleurs MABB interactive (radio pill buttons avec JS), form `enctype="multipart/form-data"`.
+  - ÉTAPE 7 : `src/Controller/Admin/AdminUploadController.php` créé — route POST `/admin/upload-image` (ROLE_ADMIN), validation MIME, SluggerInterface, déplace vers `public/uploads/tinymce/`, retourne `{"location": "..."}`.
+  - ÉTAPE 8 : 4 templates vitrine — `|markdown_to_html` → `|raw` dans projet_sport_etude.html.twig et formation/index.html.twig. Bloc CMS `{{ pageContenu.contenu|raw }}` ajouté dans numerique.html.twig et cite_educative.html.twig. `NumeriquePagesController::citeEducative()` mis à jour pour injecter pageContenu.
+  - ÉTAPE 9 : Dossiers créés : `public/uploads/pages/` + `public/uploads/tinymce/` (avec `.gitkeep`).
+- Fichiers modifiés :
+  - `src/Entity/Vitrine/PageContenu.php`
+  - `src/DataFixtures/PageContenuFixtures.php`
+  - `src/Controller/Vitrine/AccueilController.php`
+  - `src/Controller/Vitrine/NumeriquePagesController.php`
+  - `src/Controller/Admin/AdminPagesController.php`
+  - `src/Controller/Admin/AdminUploadController.php` (nouveau)
+  - `templates/admin/articles/form.html.twig`
+  - `templates/admin/pages/edit.html.twig`
+  - `templates/vitrine/club/projet_sport_etude.html.twig`
+  - `templates/vitrine/formation/index.html.twig`
+  - `templates/vitrine/accueil/numerique.html.twig`
+  - `templates/vitrine/club/cite_educative.html.twig`
+  - `public/uploads/pages/.gitkeep` (nouveau)
+  - `public/uploads/tinymce/.gitkeep` (nouveau)
+- Décisions :
+  - TinyMCE 7 CDN sans API key (dev : OK illimité, prod : 1000 loads/mois plan gratuit — à surveiller)
+  - `|raw` au lieu de `|markdown_to_html` car TinyMCE génère du HTML pur (pas du Markdown)
+  - Palette couleurs : radio buttons cachés + pills cliquables JS (pas de dépendance externe)
+  - `findBySlug()` utilisé dans NumeriquePagesController (méthode custom déjà dans le repo)
+- Commandes à exécuter sur le projet (dans PowerShell) :
+  ```
+  php bin/console doctrine:migrations:diff
+  php bin/console doctrine:migrations:migrate
+  php bin/console doctrine:fixtures:load --append
+  php bin/console cache:clear
+  ```
+- Points de vigilance :
+  - TinyMCE affiche un bandeau "no-api-key" en dev — normal, inoffensif
+  - Les images uploadées via TinyMCE (tinymce/) et pages (pages/) ne sont PAS supprimées automatiquement si la page/entité est supprimée — nettoyage manuel à prévoir
+  - `|raw` = XSS possible si un utilisateur non admin peut éditer — ici ROLE_SUPER_ADMIN uniquement → OK
+  - Le champ `couleurTexte` n'est pas encore utilisé dans les templates vitrine (page-header) — à brancher dans une session ultérieure si besoin
+
+---
+
+### 2026-03-22 (session 32) — Mise à jour prénoms "Et bien d'autres..."
+- Objectif : Remplacer les 7 prénoms fictifs dans la section "Et bien d'autres..." de la page /formation
+- Actions réalisées :
+  - `templates/vitrine/formation/index.html.twig` : `['Sarah', 'Kylian', 'Amina', 'Lucas', 'Fatou', 'Théo', 'Inès']` → `['Sofyan', 'Celyan', 'Inès', 'Laryssa', 'Leny', 'Maxence', 'Tony']`
+- Fichiers modifiés :
+  - `templates/vitrine/formation/index.html.twig`
+- Décisions : aucune
+- Commande : `php bin/console cache:clear`
+
+---
+
+### 2026-03-22 (session 33) — Quill.js + corrections CMS
+- Objectif : Remplacer TinyMCE par Quill.js (sans clé API, sans popup), corriger le champ image pages, insérer les 10 pages manquantes en SQL, passer article.html.twig en |raw
+- Actions réalisées :
+  - FIX 1A : `templates/admin/articles/form.html.twig` — TinyMCE → Quill 1.3.6 CDN. Textarea caché (`display:none`), div `#quill-editor` visible, sync via `form submit` event. Palette couleurs MABB dans toolbar.
+  - FIX 1B : `templates/admin/pages/edit.html.twig` — même migration TinyMCE → Quill. Div `#quill-page`, textarea `#pageContenu` caché.
+  - FIX 2 : `templates/vitrine/accueil/article.html.twig` — `|markdown_to_html` → `|raw` (nécessaire car articles désormais en HTML Quill). Les 4 templates CMS pages étaient déjà en `|raw` depuis session 31.
+  - FIX 3 : SQL `INSERT IGNORE` fourni pour 10 pages manquantes — à exécuter via `php bin/console dbal:run-sql "..."` (accueil, club, equipes, equipes-3x3, membres, cite-educative, calendrier, galerie, nos-reseaux, contact).
+  - FIX 4 : `name="imagePage"` → `name="image"` dans `pages/edit.html.twig` ET dans `AdminPagesController.php` (`$request->files->get('image')`).
+- Fichiers modifiés :
+  - `templates/admin/articles/form.html.twig`
+  - `templates/admin/pages/edit.html.twig`
+  - `templates/vitrine/accueil/article.html.twig`
+  - `src/Controller/Admin/AdminPagesController.php`
+- Décisions :
+  - Quill 1.3.6 (stable, sans clé API, open source) préféré à TinyMCE 7 (popup "no-api-key")
+  - `article.html.twig` passé en `|raw` : les anciens articles EasyMDE (Markdown) afficheront du Markdown brut — à re-éditer manuellement si besoin via l'admin
+- Commandes à exécuter :
+  ```
+  # SQL INSERT IGNORE (10 pages manquantes)
+  php bin/console dbal:run-sql "INSERT IGNORE INTO ..."
+  php bin/console cache:clear
+  ```
+- Points de vigilance :
+  - Les articles créés AVANT la migration (EasyMDE/Markdown) devront être réédités et sauvegardés via le nouvel éditeur Quill pour s'afficher correctement
+  - Quill 1.3.6 : upload d'images via bouton image → insère en base64 dans le HTML (pas un vrai upload fichier). Pour les gros articles, préférer uploader l'image séparément et coller l'URL.
+
+---
+
+### 2026-03-22 (session 34) — Navbar Équipes simplifiée + breadcrumb 3x3
+- Objectif : Retirer le dropdown Équipe 3x3 de la navbar, ajouter le lien Équipe 3x3 dans le breadcrumb de /equipes
+- Actions réalisées :
+  - `templates/vitrine/base.html.twig` : dropdown Équipes (2 items) → lien direct `<a>` vers `vitrine_equipes`
+  - `templates/vitrine/accueil/equipes.html.twig` : ajout `<li class="breadcrumb-item">` avec lien orange vers `vitrine_equipes_3x3`
+- Fichiers modifiés :
+  - `templates/vitrine/base.html.twig`
+  - `templates/vitrine/accueil/equipes.html.twig`
+- Décisions : aucune
