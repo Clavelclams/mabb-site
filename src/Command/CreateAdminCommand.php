@@ -116,8 +116,7 @@ class CreateAdminCommand extends Command
             $user->setEmail($email);
             $user->setPrenom($prenom);
             $user->setNom($nom);
-            $user->setRgpdConsent(true); // Admin créé manuellement = consentement implicite
-            $user->setRgpdConsentAt(new \DateTimeImmutable());
+            $user->setRgpdConsent(true); // gère consent + date automatiquement (cf. setter User.php)
         }
 
         // --- Hash du mot de passe ---
