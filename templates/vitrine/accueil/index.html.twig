@@ -148,9 +148,60 @@
                     <span class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline"><i class="bi bi-check-circle me-1"></i> Mini Basket <span class="badge-star">★★★</span></span>
                 </div>
             </div>
-            <div class="col-lg-6 text-center">
-                <div class="p-3 bg-white rounded-4 shadow-lg d-inline-block">
-                    <img src="{{ asset('images/panierGonflable.jpeg') }}" alt="Panier de basket MABB" class="img-fluid rounded-3" style="object-fit:cover;max-height:420px;width:100%">
+            <div class="col-lg-6">
+                <style>
+                .photo-stack {
+                    position: relative;
+                    height: 360px;
+                    width: 100%;
+                    cursor: pointer;
+                }
+                .photo-stack .sp {
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    width: 188px;
+                    height: 268px;
+                    border-radius: 14px;
+                    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+                    object-fit: cover;
+                    transition: transform .45s cubic-bezier(.4,0,.2,1), box-shadow .45s ease;
+                    will-change: transform;
+                    user-select: none;
+                    -webkit-user-drag: none;
+                    pointer-events: none;
+                }
+                /* — Éventail au repos — */
+                .photo-stack .sp:nth-child(1) {
+                    z-index: 1;
+                    transform: translate(-50%,-50%) rotate(-7deg) translate(-24px, 22px);
+                }
+                .photo-stack .sp:nth-child(2) {
+                    z-index: 2;
+                    transform: translate(-50%,-50%) rotate(4deg) translate(4px, 8px);
+                }
+                .photo-stack .sp:nth-child(3) {
+                    z-index: 3;
+                    transform: translate(-50%,-50%) rotate(-2deg) translate(16px, -4px);
+                }
+                /* — Spread au hover — */
+                .photo-stack:hover .sp:nth-child(1) {
+                    transform: translate(calc(-50% - 208px), -50%) rotate(0deg);
+                    box-shadow: 0 12px 32px rgba(0,0,0,.28);
+                }
+                .photo-stack:hover .sp:nth-child(2) {
+                    transform: translate(-50%, -50%) rotate(0deg);
+                    box-shadow: 0 12px 32px rgba(0,0,0,.28);
+                }
+                .photo-stack:hover .sp:nth-child(3) {
+                    transform: translate(calc(-50% + 208px), -50%) rotate(0deg);
+                    box-shadow: 0 12px 32px rgba(0,0,0,.28);
+                }
+                </style>
+                <div class="photo-stack">
+                    <img class="sp" src="{{ asset('images/panierGonflable.jpeg') }}"  alt="MABB basket 1" draggable="false">
+                    <img class="sp" src="{{ asset('images/panierGonflable2.jpeg') }}" alt="MABB basket 2" draggable="false">
+                    <img class="sp" src="{{ asset('images/panierGonflable3.jpeg') }}" alt="MABB basket 3" draggable="false">
                 </div>
             </div>
         </div>
