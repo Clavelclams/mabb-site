@@ -296,3 +296,15 @@
     box-shadow: 0 4px 15px rgba(11, 79, 163, .4);
 }
 
+/* ===== NAVBAR RESPONSIVE 1200–1400px ===== */
+@media (min-width: 1200px) and (max-width: 1400px) {
+    .navbar .nav-link {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.5rem;
+    }
+    .navbar .btn {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.7rem;
+    }
+}
+
