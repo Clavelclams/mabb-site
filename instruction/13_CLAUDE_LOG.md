@@ -1025,6 +1025,18 @@
 
 ---
 
+### 2026-03-26 (session 39) — Revert photo-stack, photo simple panierGonflable
+
+- Objectif : Supprimer le stack animé 3 photos (layout cassé), revenir à une photo unique propre
+- Actions réalisées :
+  1. `index.html.twig` — section "Un club engagé" : remplacement `.photo-stack` par `<img>` unique `panierGonflable.jpeg` avec `border:4px solid #fff`, `border-radius:16px`, `box-shadow:0 8px 24px rgba(0,0,0,.3)`
+  2. `assets/styles/vitrine.css` — suppression du bloc `.photo-stack` (40 lignes)
+- Fichiers modifiés : `templates/vitrine/accueil/index.html.twig`, `assets/styles/vitrine.css`
+- Commit : `2bc6141`
+- Points de vigilance : push depuis terminal local requis
+
+---
+
 ### 2026-03-26 (session 38) — Contenu PDF + animations + nouvelles pages
 
 - Objectif : Intégrer les données des PDFs (Bilan 2025 + PV AG 2026), animer la home, créer la page Nos Victoires, enrichir la Cité Éducative
