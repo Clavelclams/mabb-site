@@ -1,11 +1,6 @@
-# Routes vitrine — mabb.fr (et localhost en dev)
+# Routes vitrine — mabb.fr
 vitrine_controllers:
     resource:
         path: ../../src/Controller/Vitrine/
         namespace: App\Controller\Vitrine
     type: attribute
-    host: '{domain}'
-    defaults:
-        domain: localhost
-    requirements:
-        domain: 'mabb\.fr|localhost|127\.0\.0\.1'
