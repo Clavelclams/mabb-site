@@ -10,6 +10,40 @@
 
 ---
 
+### 2026-03-26 (session 41) — Sprint 1 Sécurité : firewalls + access_control + login controllers
+
+- Objectif : Activer la sécurité Symfony sur les 3 espaces (admin mabb.fr, manager.mabb.fr, pirb.mabb.fr)
+- Actions réalisées :
+  1. **security.yaml** reécrit complet :
+     - Firewall `vitrine_admin` ajouté (pattern `^/admin`, host mabb.fr, session isolée du firewall vitrine)
+     - `role_hierarchy` enrichi : `ROLE_SUPER_ADMIN > ROLE_DIRIGEANT > ROLE_COACH > ROLE_USER`
+     - `access_control` activé : `/admin` → ROLE_SUPER_ADMIN, `manager.*` → ROLE_USER, `pirb.*` → ROLE_USER, `/compte` → ROLE_USER, reste vitrine → public
+     - JWT conservé commenté (Phase 2+)
+  2. **AdminLoginController** créé (`/admin/login` + `/admin/deconnexion`)
+  3. **ManagerLoginController** créé (`/login` + `/` dashboard stub + `/deconnexion`)
+  4. **PirbLoginController** créé (`/login` + `/` dashboard stub + `/deconnexion`)
+  5. **templates** : `admin/login.html.twig`, `manager/login.html.twig`, `manager/dashboard.html.twig` (stub), `pirb/login.html.twig`, `pirb/dashboard.html.twig` (stub)
+  6. **CreateAdminCommand** : `php bin/console app:create-admin --email=x --password=x`
+- Fichiers créés/modifiés :
+  - `config/packages/security.yaml` (modifié)
+  - `src/Controller/Admin/AdminLoginController.php` (nouveau)
+  - `src/Controller/Manager/ManagerLoginController.php` (nouveau)
+  - `src/Controller/Pirb/PirbLoginController.php` (nouveau)
+  - `templates/admin/login.html.twig` (nouveau)
+  - `templates/manager/login.html.twig` (nouveau)
+  - `templates/manager/dashboard.html.twig` (nouveau, stub)
+  - `templates/pirb/login.html.twig` (nouveau)
+  - `templates/pirb/dashboard.html.twig` (nouveau, stub)
+  - `src/Command/CreateAdminCommand.php` (nouveau)
+- Commit : `cd101c6`
+- Points de vigilance :
+  - **IMPORTANT** : Les admin controllers existants utilisent `denyAccessUnlessGranted('ROLE_SUPER_ADMIN')`. L'access_control est une protection supplémentaire (firewall = première barrière, denyAccess = deuxième). Double sécurité intentionnelle.
+  - La commande `app:create-admin` doit être lancée une fois en prod pour bootstrapper le premier admin : `php bin/console app:create-admin --env=prod --email=admin@mabb.fr --password=XXXXX`
+  - Push git + déploiement OVH à faire depuis terminal : `git push origin main` puis SSH `git pull && php bin/console cache:clear --env=prod`
+  - Manager et Pirb : dashboards sont des STUBS, seront développés en Phase 2 (manager) et Phase 4 (pirb)
+
+---
+
 ### 2026-02-12 (session 1)
 - Objectif : Initialiser la gouvernance documentaire
 - Actions réalisées : création des roadmaps + registres + templates
