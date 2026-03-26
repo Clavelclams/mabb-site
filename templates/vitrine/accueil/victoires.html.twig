@@ -1,0 +1,245 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Nos Victoires — MABB Saison 2025{% endblock %}
+{% block meta_description %}Résultats sportifs, titres et sélections de l'Amiens Métropole Basket Ball — Saison 2024/2025.{% endblock %}
+
+{% block body %}
+
+{# ===== PAGE HEADER ===== #}
+<div class="page-header">
+    <div class="container text-center">
+        <h1>Nos Victoires</h1>
+        <p style="color:rgba(255,255,255,.75)">Saison 2024 · 2025 — une saison d'exception</p>
+    </div>
+</div>
+
+{# ===== INTRO CHIFFRES ===== #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="row g-3 justify-content-center mb-2">
+            {% set stats = [
+                {n: '373',  label: 'Licenciées',          icon: 'bi-people-fill'},
+                {n: '12 811', label: 'Heures d\'activités', icon: 'bi-clock-fill'},
+                {n: '31 247', label: 'Participants touchés', icon: 'bi-people'},
+                {n: '45',   label: 'Tournois 3×3',        icon: 'bi-dribbble'},
+            ] %}
+            {% for s in stats %}
+            <div class="col-6 col-md-3">
+                <div class="card border-0 text-center p-4 h-100"
+                     style="background:#fff;border-radius:16px;box-shadow:0 2px 16px rgba(6,58,85,.08)">
+                    <i class="bi {{ s.icon }} mb-2" style="font-size:1.6rem;color:#ff8c00"></i>
+                    <div class="fw-bold" style="font-size:1.6rem;color:#063a55">{{ s.n }}</div>
+                    <div class="text-muted small">{{ s.label }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# ===== RÉSULTATS 5x5 ===== #}
+<section class="section" style="background:#063a55">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title" style="color:#fff">Résultats <span>5×5</span></h2>
+            <p style="color:rgba(255,255,255,.7)">Du Mini Basket aux Séniors — une dynamique confirmée</p>
+        </div>
+
+        {% set categories = [
+            {
+                cat:    'École de Mini Basket',
+                ages:   'U3 → U9 · 147 licenciées',
+                emoji:  '🏀',
+                titres: [
+                    'Fête du Mini Basket — 17 & 18 mai 2025',
+                    '79 enfants présents · Coupe du Nombre',
+                    'Formation des plus jeunes, base du projet club',
+                ]
+            },
+            {
+                cat:    'U11 Poussines',
+                ages:   '65 licenciées',
+                emoji:  '⭐',
+                titres: [
+                    '1ère — 2ème — 3ème du championnat pré régional',
+                    'Championnes de la Somme',
+                ]
+            },
+            {
+                cat:    'U13 Benjamines',
+                ages:   '67 licenciées',
+                emoji:  '🏆',
+                titres: [
+                    '8ème en Pré nationale — Saison 2024/25',
+                    '1ère en Pré nationale Hauts-de-France — Saison 2025/26',
+                    'Vainqueures de la Coupe de la Somme',
+                ]
+            },
+            {
+                cat:    'U15 Minimes',
+                ages:   '43 licenciées',
+                emoji:  '🎯',
+                titres: [
+                    '1ère en pré régional · Coupe de la Somme',
+                    'Qualification Pré nationale — Saison 2025/26',
+                    '1ère de son championnat en début de saison',
+                ]
+            },
+            {
+                cat:    'U18 Cadettes',
+                ages:   '18 licenciées',
+                emoji:  '🌟',
+                titres: [
+                    'Championne de la Somme — Saison 2024/25',
+                    '4ème du championnat régional Hauts-de-France — 2025/26',
+                    'Présence continue en Pré nationale',
+                ]
+            },
+            {
+                cat:    'Séniors Féminines',
+                ages:   '12 licenciées',
+                emoji:  '🔥',
+                titres: [
+                    'Engagement en championnat départemental',
+                    'Objectif montée en R3',
+                    'CTC avec Flixecourt (16-21 ans)',
+                ]
+            },
+        ] %}
+
+        <div class="row g-4">
+            {% for c in categories %}
+            <div class="col-md-6 col-lg-4">
+                <div class="h-100 p-4 rounded-4"
+                     style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <span style="font-size:1.8rem;line-height:1">{{ c.emoji }}</span>
+                        <div>
+                            <div class="fw-bold text-white" style="font-size:1rem">{{ c.cat }}</div>
+                            <div style="color:rgba(255,255,255,.5);font-size:.8rem">{{ c.ages }}</div>
+                        </div>
+                    </div>
+                    <ul class="list-unstyled mb-0">
+                        {% for t in c.titres %}
+                        <li class="d-flex align-items-start gap-2 mb-2">
+                            <i class="bi bi-circle-fill mt-1 flex-shrink-0" style="font-size:.45rem;color:#ff8c00;margin-top:6px"></i>
+                            <span style="color:rgba(255,255,255,.85);font-size:.9rem">{{ t }}</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# ===== BASKET 3x3 ===== #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Basket <span>3×3</span></h2>
+            <p class="section-subtitle">Un levier de développement majeur</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-4">
+                <div class="card card-mabb text-center p-4 h-100">
+                    <i class="bi bi-trophy-fill mb-3" style="font-size:2.2rem;color:#ff8c00"></i>
+                    <div class="fw-bold mb-2" style="color:#063a55;font-size:1.1rem">Open Plus National</div>
+                    <p class="text-muted mb-0">3 équipes Championnes des Open Stars qualifiées à l'Open Plus national</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-mabb text-center p-4 h-100">
+                    <i class="bi bi-calendar-check mb-3" style="font-size:2.2rem;color:#ff8c00"></i>
+                    <div class="fw-bold mb-2" style="color:#063a55;font-size:1.1rem">45 tournois homologués FFBB</div>
+                    <p class="text-muted mb-0">Dont 4 qualificatifs nationaux · MABB Ligue 3×3 · 4 Open Plus Accès dont 2 féminins 100%</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-mabb text-center p-4 h-100">
+                    <i class="bi bi-geo-alt-fill mb-3" style="font-size:2.2rem;color:#ff8c00"></i>
+                    <div class="fw-bold mb-2" style="color:#063a55;font-size:1.1rem">Tournois de quartier</div>
+                    <p class="text-muted mb-0">Grande finale au Parc Saint-Pierre · Organisation de la Super Ligue 3×3 du Comité de la Somme</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ===== SÉLECTIONS ===== #}
+<section class="section" style="background:#063a55">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title" style="color:#fff">Former, détecter, <span>élever</span></h2>
+            <p style="color:rgba(255,255,255,.7)">Nos joueuses reconnues à tous les niveaux</p>
+        </div>
+        <div class="row g-3 justify-content-center">
+            {% set selections = [
+                {niveau: 'Équipe de France U15', nb: '1', detail: 'Convoquée aux sélections nationales', icon: 'bi-flag-fill'},
+                {niveau: 'Pôle Espoirs HDF',     nb: '2', detail: 'Intégrées au Pôle Espoirs Hauts-de-France', icon: 'bi-star-fill'},
+                {niveau: 'Centre de formation',  nb: '1', detail: 'Saint-Amand Hainaut Basket', icon: 'bi-building'},
+                {niveau: 'Sélection régionale',  nb: '3', detail: '7 convoquées · 3 retenues Hauts-de-France', icon: 'bi-map'},
+                {niveau: 'Équipe de la Somme',   nb: '12', detail: '29 convoquées aux sélections départementales', icon: 'bi-pin-map-fill'},
+            ] %}
+            {% for s in selections %}
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="text-center p-3 rounded-4 h-100"
+                     style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13)">
+                    <i class="bi {{ s.icon }} mb-2" style="font-size:1.4rem;color:#ff8c00"></i>
+                    <div class="fw-bold text-white" style="font-size:1.8rem;line-height:1.1">{{ s.nb }}</div>
+                    <div style="color:#ff8c00;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:.4rem 0 .3rem">{{ s.niveau }}</div>
+                    <div style="color:rgba(255,255,255,.55);font-size:.75rem">{{ s.detail }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# ===== UNSS ===== #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Réussites <span>UNSS</span></h2>
+            <p class="section-subtitle">Champions académiques — finalistes interacadémiques à Lille</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            {% set unss = [
+                {etab: 'Collège César Franck', titre: 'Champion académique élite', emoji: '🥇'},
+                {etab: 'Collège Rosa Parks',   titre: 'Champion académique établissement', emoji: '🥈'},
+                {etab: 'Lycée Delambre',       titre: 'Champion académique', emoji: '🥉'},
+            ] %}
+            {% for u in unss %}
+            <div class="col-md-4">
+                <div class="card card-mabb text-center p-4 h-100">
+                    <div style="font-size:2.5rem;margin-bottom:12px">{{ u.emoji }}</div>
+                    <div class="fw-bold mb-1" style="color:#063a55;font-size:1rem">{{ u.etab }}</div>
+                    <div style="color:#ff8c00;font-weight:600;font-size:.9rem">{{ u.titre }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <p class="text-center mt-4 text-muted">
+            <i class="bi bi-geo-alt-fill text-mabb-orange me-1"></i>
+            Les 3 établissements finalistes interacadémiques à Lille
+        </p>
+    </div>
+</section>
+
+{# ===== CTA ===== #}
+<section class="section-cta-inscription">
+    <div class="container text-center">
+        <h2 class="display-5 fw-bold mb-3">Écris ta propre <span class="text-mabb-orange">victoire</span></h2>
+        <p class="lead mb-4 cta-desc">Rejoins un club qui forme des championnes — sur le terrain et dans la vie.</p>
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a href="{{ path('vitrine_compte_s_inscrire') }}" class="btn btn-mabb btn-lg">
+                <i class="bi bi-person-plus me-2"></i>S'inscrire
+            </a>
+            <a href="{{ path('vitrine_equipes') }}" class="btn btn-outline-light btn-lg rounded-pill">
+                <i class="bi bi-people me-2"></i>Voir les équipes
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

@@ -195,4 +195,10 @@ final class AccueilController extends AbstractController
             'pageContenu' => $pageRepo->findOneBy(['pageSlug' => 'equipes-3x3']),
         ]);
     }
+
+    #[Route('/victoires', name: 'vitrine_victoires')]
+    public function victoires(): Response
+    {
+        return $this->render('vitrine/accueil/victoires.html.twig');
+    }
 }
