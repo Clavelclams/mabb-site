@@ -7,6 +7,7 @@
         <p style="color:rgba(255,255,255,.75)">MABB partenaire des établissements scolaires d'Amiens Métropole</p>
     </div>
 </div>
+
 <section class="section section-gray">
     <div class="container">
         <div class="row justify-content-center mb-5">
@@ -15,34 +16,207 @@
                 <p class="section-subtitle">La MABB s'inscrit dans le dispositif Cité Éducative d'Amiens en proposant des actions sportives et éducatives en lien avec les établissements scolaires des quartiers prioritaires.</p>
             </div>
         </div>
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card card-mabb p-4 h-100">
-                    <div style="font-size:2rem;margin-bottom:16px">🏫</div>
-                    <h3 class="fw-bold mb-3" style="color:#063a55">École</h3>
-                    <p class="text-muted">Interventions en milieu scolaire, initiation au basket pour les enfants de 3 à 11 ans. Partenariats avec les écoles primaires des quartiers d'Étouvie, Nord et Est.</p>
-                    <p class="text-muted small fst-italic">Contenu à compléter</p>
+
+        {# Chiffres clés Cité Éducative 2025 #}
+        <div class="row g-3 justify-content-center mb-5">
+            <div class="col-6 col-md-3">
+                <div class="card border-0 text-center p-3 h-100" style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(6,58,85,.08)">
+                    <i class="bi bi-clock-fill mb-2" style="font-size:1.4rem;color:#ff8c00"></i>
+                    <div class="fw-bold" style="font-size:1.5rem;color:#063a55">974</div>
+                    <div class="text-muted small">Heures d'actions</div>
                 </div>
             </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 text-center p-3 h-100" style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(6,58,85,.08)">
+                    <i class="bi bi-people-fill mb-2" style="font-size:1.4rem;color:#ff8c00"></i>
+                    <div class="fw-bold" style="font-size:1.5rem;color:#063a55">1 145</div>
+                    <div class="text-muted small">Participantes & participants</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 text-center p-3 h-100" style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(6,58,85,.08)">
+                    <i class="bi bi-building mb-2" style="font-size:1.4rem;color:#ff8c00"></i>
+                    <div class="fw-bold" style="font-size:1.5rem;color:#063a55">3</div>
+                    <div class="text-muted small">Établissements partenaires</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card border-0 text-center p-3 h-100" style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(6,58,85,.08)">
+                    <i class="bi bi-award-fill mb-2" style="font-size:1.4rem;color:#ff8c00"></i>
+                    <div class="fw-bold" style="font-size:1.5rem;color:#063a55">7</div>
+                    <div class="text-muted small">Éducateurs agréés EN</div>
+                </div>
+            </div>
+        </div>
+
+        {# 3 cards #}
+        <div class="row g-4">
+
+            {# === ÉCOLE === #}
             <div class="col-md-4">
-                <div class="card card-mabb p-4 h-100" style="border-top:4px solid var(--mabb-orange)">
+                <div class="card card-mabb p-4 h-100 d-flex flex-column">
+                    <div style="font-size:2rem;margin-bottom:16px">🏫</div>
+                    <h3 class="fw-bold mb-3" style="color:#063a55">École</h3>
+                    <p class="text-muted flex-grow-1">Interventions en milieu scolaire, initiation au basket pour les enfants de 3 à 11 ans. Partenariats avec les écoles primaires des quartiers d'Étouvie, Nord et Est.</p>
+                    <button class="btn btn-sm rounded-pill mt-3 fw-semibold"
+                            style="background:#063a55;color:#fff;border:none"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#details-ecole"
+                            aria-expanded="false">
+                        <i class="bi bi-plus-circle me-1"></i>En savoir plus
+                    </button>
+                </div>
+            </div>
+
+            {# === COLLÈGE — bouton aide au devoir conservé === #}
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100 d-flex flex-column" style="border-top:4px solid var(--mabb-orange)">
                     <div style="font-size:2rem;margin-bottom:16px">📚</div>
                     <h3 class="fw-bold mb-3" style="color:#063a55">Collège</h3>
-                    <p class="text-muted">Actions de sensibilisation, soutien scolaire via l'aide au devoir, accompagnement des collégiens vers la pratique sportive.</p>
-                    <a href="https://www.amiens.fr/Vivre-a-Amiens/Education-Jeunesse/Aide-aux-devoirs"
+                    <p class="text-muted flex-grow-1">Actions de sensibilisation, soutien scolaire via l'aide au devoir, accompagnement des collégiens vers la pratique sportive.</p>
+                    <a href="https://le-savoir-pour-tous.pass-education.fr/inscription?slug=mabb-amiens-metropole-basket-ball&token=b8db9981-d307-4e79-a539-ac30aafd2041"
                        target="_blank" rel="noopener" class="btn btn-mabb mt-3 w-100">
                         <i class="bi bi-book-half me-1"></i>Aide au devoir
                     </a>
                 </div>
             </div>
+
+            {# === LYCÉE === #}
             <div class="col-md-4">
-                <div class="card card-mabb p-4 h-100">
+                <div class="card card-mabb p-4 h-100 d-flex flex-column">
                     <div style="font-size:2rem;margin-bottom:16px">🎓</div>
                     <h3 class="fw-bold mb-3" style="color:#063a55">Lycée</h3>
-                    <p class="text-muted">Service Civique, formation et projet de vie. La MABB comme tremplin pour les jeunes adultes.</p>
+                    <p class="text-muted flex-grow-1">Service Civique, formation et projet de vie. La MABB comme tremplin pour les jeunes adultes.</p>
+                    <button class="btn btn-sm rounded-pill mt-3 fw-semibold"
+                            style="background:#063a55;color:#fff;border:none"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#details-lycee"
+                            aria-expanded="false">
+                        <i class="bi bi-plus-circle me-1"></i>En savoir plus
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        {# ===== SECTION DÉPLIANTE — ÉCOLE ===== #}
+        <div class="collapse mt-4" id="details-ecole">
+            <div class="rounded-4 p-4 p-md-5" style="background:#fff;border:1px solid rgba(6,58,85,.12);border-top:4px solid #ff8c00">
+                <h4 class="fw-bold mb-4" style="color:#063a55">
+                    <i class="bi bi-house-heart-fill me-2" style="color:#ff8c00"></i>
+                    La MABB dans les écoles primaires
+                </h4>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3" style="color:#063a55">Nos interventions</h6>
+                        <ul class="list-unstyled">
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Initiations basket dans les classes CP → CM2 des quartiers prioritaires (Étouvie, Nord, Est)</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Encadrement par 7 éducateurs agréés Ministère de l'Éducation nationale</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Matériel adapté — ballons taille 3, paniers réglables — pour les 3 à 11 ans</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Fête du Mini Basket — mai 2025 : 79 enfants, familles et éducateurs réunis</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Centres Génération Basket gratuits pendant chaque période de vacances scolaires</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3" style="color:#063a55">Actions citoyennes</h6>
+                        <ul class="list-unstyled">
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Prévention du harcèlement scolaire — ateliers en classe</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Journée dédiée à la santé mentale et au bien-être des élèves</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Actions solidaires en milieu hospitalier</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Lutte contre les violences dans le sport — sensibilisation dès le plus jeune âge</span>
+                            </li>
+                        </ul>
+                        <div class="mt-3 p-3 rounded-3" style="background:rgba(255,140,0,.08);border:1px solid rgba(255,140,0,.25)">
+                            <div class="fw-bold small mb-1" style="color:#063a55">Saison 2025 — Cité Éducative</div>
+                            <div class="text-muted small">974 heures d'actions · 1 145 participants touchés</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        {# ===== SECTION DÉPLIANTE — LYCÉE ===== #}
+        <div class="collapse mt-4" id="details-lycee">
+            <div class="rounded-4 p-4 p-md-5" style="background:#fff;border:1px solid rgba(6,58,85,.12);border-top:4px solid #ff8c00">
+                <h4 class="fw-bold mb-4" style="color:#063a55">
+                    <i class="bi bi-mortarboard-fill me-2" style="color:#ff8c00"></i>
+                    La MABB au lycée — formation et insertion
+                </h4>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3" style="color:#063a55">Résultats UNSS 2025</h6>
+                        <ul class="list-unstyled">
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Lycée Delambre — Champion académique UNSS 2025</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Collège César Franck — Champion académique élite</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">3 établissements finalistes interacadémiques à Lille</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Objectif 2026 : pôle sport-études U18 avec la Cité scolaire Thuillier–Branly–Gand</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold mb-3" style="color:#063a55">Service Civique & insertion pro</h6>
+                        <ul class="list-unstyled">
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">15 volontaires en Service Civique engagés sur la saison 2025</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Missions : animation sportive, coordination événementielle, accompagnement des jeunes</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Accueil d'alternants et de stagiaires — tremplin vers l'emploi dans le sport</span>
+                            </li>
+                            <li class="d-flex gap-2 mb-2">
+                                <i class="bi bi-circle-fill flex-shrink-0" style="font-size:.4rem;color:#ff8c00;margin-top:7px"></i>
+                                <span class="text-muted">Formation des jeunes entraîneurs — objectif structurant pour 2026</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </section>
 

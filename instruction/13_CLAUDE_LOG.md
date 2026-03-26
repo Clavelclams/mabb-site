@@ -1006,6 +1006,49 @@
 
 ---
 
+### 2026-03-26 (session 37) — Fix connexion/www, h2 3x3 blanc, bouton 3x3, diagnostic mailer
+
+- Objectif : Corriger boutons connexion/inscription inactifs sur www.mabb.fr, mettre h2 en blanc sur page 3x3, réintégrer lien 3x3, vérifier envoi email contact
+- Actions réalisées :
+  1. **Fix firewall vitrine** — `config/packages/security.yaml` : regex host ajoutée `www\.mabb\.fr`. Sans ce fix, le firewall Symfony ne s'activait pas sur `www.mabb.fr`, donc `form_login` n'interceptait pas le POST → boutons connexion/inscription inactifs.
+  2. **Fix h2 3x3 blanc** — `templates/vitrine/accueil/equipes_3x3.html.twig` : `style="color:#fff"` sur `<h2 class="section-title">` de la section "3x3 dans les catégories".
+  3. **Réintégration lien 3x3** — `templates/vitrine/accueil/equipes.html.twig` : lien vers `vitrine_equipes_3x3` réintégré comme bouton orange sous le breadcrumb (était dans le breadcrumb en session 34 — mauvaise pratique sémantique, maintenant en bouton distinct).
+  4. **Diagnostic mailer contact** — `.env` a `MAILER_DSN=null://null` → aucun email envoyé. Le formulaire affiche une popup "envoyé" mais c'est du bluff si aucun `.env.local` avec un vrai DSN SMTP n'est présent sur le serveur OVH. À configurer par l'utilisateur (voir point vigilance).
+- Fichiers modifiés :
+  - `config/packages/security.yaml`
+  - `templates/vitrine/accueil/equipes_3x3.html.twig`
+  - `templates/vitrine/accueil/equipes.html.twig`
+- Décisions : aucune ADR (corrections bugs + config)
+- Points de vigilance :
+  - **MAILER À CONFIGURER** : Créer/éditer `~/mabb-site/.env.local` sur le serveur OVH avec le DSN SMTP OVH. Format : `MAILER_DSN=smtp://contact%40mabb.fr:MOT_DE_PASSE@ssl0.ovh.net:465`. Sans ça, zéro email envoyé depuis le formulaire contact.
+  - Push git + déploiement doivent être faits depuis le terminal local (credentials GitHub HTTPS non disponibles en sandbox).
+
+---
+
+### 2026-03-26 (session 36) — Audit visuel mabb.fr + corrections bugs
+
+- Objectif : Analyser le site live, corriger bugs connus (routes localhost, placeholder image) + bugs trouvés lors de l'audit
+- Actions réalisées :
+  1. **Fix routes** — suppression `host`/`defaults`/`requirements` dans `config/routes/vitrine.yaml` et bloc `admin_controllers` de `config/routes.yaml`. Ces contraintes forçaient Symfony à générer des URLs absolues avec `localhost` comme host par défaut sur le serveur OVH.
+  2. **Fix placeholder index** — `templates/vitrine/accueil/index.html.twig` : remplacement du bloc `.photo-placeholder` par `<img src="images/teamsU1.jpg">` dans la section "Un club engagé pour le basket féminin".
+  3. **Fix placeholder club** — `templates/vitrine/accueil/club.html.twig` : même correction, image teamsU1.jpg.
+  4. **Fix breadcrumb equipes** — `templates/vitrine/accueil/equipes.html.twig` : suppression du `<li>` breadcrumb "Équipe 3x3". NOTE : ce lien avait été ajouté intentionnellement en session 34. Sa suppression est justifiée par la sémantique breadcrumb (un breadcrumb représente le chemin VERS la page courante, pas vers ses enfants). Si tu veux le conserver comme raccourci, réintroduis-le comme un bouton ou badge distinct du breadcrumb.
+  5. **Ajout image** — `public/images/teamsU1.jpg` ajouté au repo git.
+  6. **Audit visuel** — pages visitées : accueil, club, membres, équipes, news, contact, galerie, calendrier. Aucun autre bug fonctionnel détecté. La page galerie affiche "Photos à venir" (intentionnel). Articles de test visibles (intentionnel).
+- Fichiers modifiés :
+  - `config/routes/vitrine.yaml`
+  - `config/routes.yaml`
+  - `templates/vitrine/accueil/index.html.twig`
+  - `templates/vitrine/accueil/club.html.twig`
+  - `templates/vitrine/accueil/equipes.html.twig`
+  - `public/images/teamsU1.jpg` (nouveau fichier)
+- Décisions : aucune ADR nécessaire (corrections de bugs, pas d'architecture)
+- Points de vigilance :
+  - Le push git + déploiement SSH doit être fait manuellement depuis le terminal (credentials HTTPS GitHub non disponibles dans la sandbox Cowork). Commandes : `git push` puis SSH OVH `git pull && php bin/console cache:clear --env=prod`
+  - Le breadcrumb 3x3 a été retiré — voir note ci-dessus si souhait de le réintégrer autrement
+
+---
+
 ### 2026-03-22 (session 35) — Quill pages amélioration + Roadmap CMS V2
 - Objectif : Améliorer le bloc Quill dans pages/edit.html.twig (variable quillPage, background, 320px), documenter la vision CMS V2 dans la roadmap
 - Actions réalisées :

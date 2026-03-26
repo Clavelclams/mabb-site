@@ -55,23 +55,42 @@
 	<section class="section-chiffres" id="section-chiffres">
 		<div class="container">
 			<div class="row g-3 justify-content-center">
-				{% set chiffres = [
-                {icon: 'bi-people-fill',   target: 373,   suffix: '', label: 'Licenciées — Saison 2025/26'},
-                {icon: 'bi-clock-fill',    target: 12811, suffix: '', label: 'Heures d\'activités en 2025'},
-                {icon: 'bi-people',        target: 31247, suffix: '', label: 'Participantes & participants'},
-                {icon: 'bi-dribbble',      target: 45,    suffix: '', label: 'Tournois 3×3 organisés'},
-            ] %}
-            {% for c in chiffres %}
-            <div class="col-6 col-md-3">
-                <div class="card card-mabb text-center p-4">
-                    <i class="bi {{ c.icon }} text-mabb-orange chiffre-icon"></i>
-                    <div class="display-6 fw-bold mt-2 chiffre-number counter-anim"
-                         data-target="{{ c.target }}"
-                         data-suffix="{{ c.suffix }}">0</div>
-                    <div class="text-muted small">{{ c.label }}</div>
+
+                {# Licenciées — animé de 0 à 373 #}
+                <div class="col-6 col-md-3">
+                    <div class="card card-mabb text-center p-4">
+                        <i class="bi bi-people-fill text-mabb-orange chiffre-icon"></i>
+                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim"
+                             data-target="373"
+                             data-suffix="">0</div>
+                        <div class="text-muted small">Licenciées — Saison 2025/26</div>
+                    </div>
                 </div>
+
+                {# Statiques — inchangés #}
+                <div class="col-6 col-md-3">
+                    <div class="card card-mabb text-center p-4">
+                        <i class="bi bi-trophy-fill text-mabb-orange chiffre-icon"></i>
+                        <div class="display-6 fw-bold mt-2 chiffre-number">3</div>
+                        <div class="text-muted small">Labels FFBB 3★</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card card-mabb text-center p-4">
+                        <i class="bi bi-building text-mabb-orange chiffre-icon"></i>
+                        <div class="display-6 fw-bold mt-2 chiffre-number">7</div>
+                        <div class="text-muted small">Quartiers</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card card-mabb text-center p-4">
+                        <i class="bi bi-calendar-heart text-mabb-orange chiffre-icon"></i>
+                        <div class="display-6 fw-bold mt-2 chiffre-number">23+</div>
+                        <div class="text-muted small">Ans d'engagement</div>
+                    </div>
+                </div>
+
             </div>
-            {% endfor %}
         </div>
     </div>
 </section>
@@ -79,24 +98,20 @@
 <script>
 (function () {
     function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
-
     function animateCounter(el) {
-        var target   = parseInt(el.dataset.target, 10);
-        var suffix   = el.dataset.suffix || '';
+        var target = parseInt(el.dataset.target, 10);
+        var suffix = el.dataset.suffix || '';
         var duration = 2200;
-        var start    = performance.now();
-
+        var start = performance.now();
         function tick(now) {
-            var elapsed  = now - start;
+            var elapsed = now - start;
             var progress = Math.min(elapsed / duration, 1);
-            var eased    = easeOutCubic(progress);
-            var current  = Math.round(target * eased);
+            var current = Math.round(target * easeOutCubic(progress));
             el.textContent = current.toLocaleString('fr-FR') + suffix;
             if (progress < 1) requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
     }
-
     var counters = document.querySelectorAll('.counter-anim');
     var observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
@@ -106,7 +121,6 @@
             }
         });
     }, { threshold: 0.25 });
-
     counters.forEach(function (el) { observer.observe(el); });
 })();
 </script>
@@ -134,8 +148,10 @@
                     <span class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline"><i class="bi bi-check-circle me-1"></i> Mini Basket <span class="badge-star">★★★</span></span>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <img src="{{ asset('images/teamsU1.jpg') }}" alt="Équipe MABB" class="img-fluid rounded-4 w-100" style="object-fit:cover;max-height:420px;">
+            <div class="col-lg-6 text-center">
+                <div class="p-3 bg-white rounded-4 shadow-lg d-inline-block">
+                    <img src="{{ asset('images/panierGonflable.jpeg') }}" alt="Panier de basket MABB" class="img-fluid rounded-3" style="object-fit:cover;max-height:420px;width:100%">
+                </div>
             </div>
         </div>
     </div>
