@@ -21,9 +21,9 @@ security:
             provider: app_user_provider
             # jwt: ~   # décommenter quand LexikJWT sera installé
 
-        # --- Vitrine (mabb.fr / localhost) — public, login form ---
+        # --- Vitrine (mabb.fr / www.mabb.fr / localhost) — public, login form ---
         vitrine:
-            host: '^(mabb\.fr|localhost|127\.0\.0\.1)(:\d+)?$'
+            host: '^(www\.mabb\.fr|mabb\.fr|localhost|127\.0\.0\.1)(:\d+)?$'
             lazy: true
             provider: app_user_provider
             form_login:
