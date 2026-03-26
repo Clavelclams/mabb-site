@@ -1,27 +1,78 @@
 security:
+    # =========================================================================
+    # HASHERS — algorithme de hashage des mots de passe
+    # 'auto' = Symfony choisit bcrypt/argon2i selon ce qui est dispo (recommandé)
+    # =========================================================================
     password_hashers:
         Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
 
+    # =========================================================================
+    # PROVIDERS — comment Symfony charge un utilisateur depuis la BDD
+    # On utilise le champ "email" comme identifiant unique
+    # =========================================================================
     providers:
         app_user_provider:
             entity:
                 class: App\Entity\Core\User
                 property: email
 
+    # =========================================================================
+    # FIREWALLS — zones de sécurité de l'application
+    # ORDRE IMPORTANT : Symfony lit les firewalls de haut en bas.
+    # La première règle qui correspond à la requête gagne.
+    # → Les firewalls spécifiques (admin, api) doivent être AVANT les généraux.
+    # =========================================================================
     firewalls:
-        # --- Dev tools (toujours accessible) ---
+
+        # -----------------------------------------------------------------
+        # 1. DEV — Profiler Symfony, WebDebugToolbar, assets
+        #    security: false = pas d'auth du tout sur ces URLs
+        #    À ne jamais toucher, sinon le profiler devient inaccessible
+        # -----------------------------------------------------------------
         dev:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
 
-        # --- API (JWT stateless) — à activer en Phase 2+ ---
+        # -----------------------------------------------------------------
+        # 2. API JWT — Phase 2+, NE PAS TOUCHER
+        #    Stateless = pas de session (chaque requête porte son token JWT)
+        #    jwt: ~ sera décommenté quand LexikJWTAuthenticationBundle sera installé
+        # -----------------------------------------------------------------
         api:
             pattern: ^/api
             stateless: true
             provider: app_user_provider
             # jwt: ~   # décommenter quand LexikJWT sera installé
 
-        # --- Vitrine (mabb.fr / www.mabb.fr / localhost) — public, login form ---
+        # -----------------------------------------------------------------
+        # 3. VITRINE ADMIN — /admin sur mabb.fr
+        #    Session ISOLÉE du firewall vitrine (cookie de session différent).
+        #    Un admin doit se connecter séparément sur /admin/login.
+        #    Pourquoi isolé ? Sécurité : un visiteur connecté sur la vitrine
+        #    n'a PAS automatiquement accès à l'admin.
+        # -----------------------------------------------------------------
+        vitrine_admin:
+            pattern: ^/admin
+            host: '^(www\.mabb\.fr|mabb\.fr|localhost|127\.0\.0\.1)(:\d+)?$'
+            provider: app_user_provider
+            form_login:
+                # login_path : URL où Symfony redirige l'utilisateur non connecté (GET)
+                # check_path : URL où Symfony traite le formulaire POST (intercepté par Symfony)
+                login_path: admin_login
+                check_path: admin_login
+                username_parameter: _email
+                password_parameter: _password
+                default_target_path: admin_articles_list
+                always_use_default_target_path: false
+            logout:
+                path: admin_logout
+                target: admin_login
+
+        # -----------------------------------------------------------------
+        # 4. VITRINE — mabb.fr (site public)
+        #    lazy: true = Symfony ne charge le User depuis la BDD que si nécessaire
+        #    (optimisation : évite une requête SQL sur chaque page publique)
+        # -----------------------------------------------------------------
         vitrine:
             host: '^(www\.mabb\.fr|mabb\.fr|localhost|127\.0\.0\.1)(:\d+)?$'
             lazy: true
@@ -38,9 +89,13 @@ security:
                 target: vitrine_accueil
             remember_me:
                 secret: '%kernel.secret%'
-                lifetime: 604800  # 7 jours
+                lifetime: 604800  # 7 jours en secondes (7 × 24 × 3600)
 
-        # --- Manager (manager.mabb.fr) — auth obligatoire ---
+        # -----------------------------------------------------------------
+        # 5. MANAGER — manager.mabb.fr (back-office de gestion du club)
+        #    Tout le sous-domaine est protégé via access_control ci-dessous.
+        #    Seule exception : /login (cf. access_control PUBLIC_ACCESS)
+        # -----------------------------------------------------------------
         manager:
             host: '^manager\.(mabb\.fr|localhost)(:\d+)?$'
             lazy: true
@@ -51,11 +106,16 @@ security:
                 username_parameter: _email
                 password_parameter: _password
                 default_target_path: manager_dashboard
+                always_use_default_target_path: false
             logout:
                 path: manager_logout
                 target: manager_login
 
-        # --- PIRB (pirb.mabb.fr) — auth obligatoire ---
+        # -----------------------------------------------------------------
+        # 6. PIRB — pirb.mabb.fr (espace joueur individuel)
+        #    Tout le sous-domaine est protégé via access_control ci-dessous.
+        #    Seule exception : /login (cf. access_control PUBLIC_ACCESS)
+        # -----------------------------------------------------------------
         pirb:
             host: '^pirb\.(mabb\.fr|localhost)(:\d+)?$'
             lazy: true
@@ -66,29 +126,77 @@ security:
                 username_parameter: _email
                 password_parameter: _password
                 default_target_path: pirb_dashboard
+                always_use_default_target_path: false
             logout:
                 path: pirb_logout
                 target: pirb_login
 
-        # --- Fallback (ne devrait pas être atteint en prod) ---
+        # -----------------------------------------------------------------
+        # 7. MAIN — fallback (ne devrait jamais être atteint en prod)
+        # -----------------------------------------------------------------
         main:
             lazy: true
             provider: app_user_provider
 
-    # Hiérarchie des rôles Symfony (héritage)
-    # NB : les rôles métier (COACH, JOUEUR...) sont dans UserClubRole, PAS ici
+    # =========================================================================
+    # ROLE HIERARCHY — héritage des rôles (du plus fort au plus faible)
+    # ROLE_SUPER_ADMIN → ROLE_DIRIGEANT → ROLE_COACH → ROLE_USER
+    # Concrètement : si une route requiert ROLE_COACH, un ROLE_SUPER_ADMIN
+    # y a accès automatiquement sans avoir ROLE_COACH explicitement.
+    #
+    # NB : Les rôles MÉTIER (JOUEUR, PARENT, BENEVOLE...) sont dans l'entité
+    #      UserClubRole, PAS ici. Ici = rôles PLATEFORME uniquement.
+    # =========================================================================
     role_hierarchy:
-        ROLE_SUPER_ADMIN: [ROLE_USER]
+        ROLE_SUPER_ADMIN: [ROLE_DIRIGEANT]   # Super admin plateforme hérite de tout
+        ROLE_DIRIGEANT:   [ROLE_COACH]        # Dirigeant de club hérite des droits coach
+        ROLE_COACH:       [ROLE_USER]         # Coach hérite des droits user de base
 
+    # =========================================================================
+    # ACCESS CONTROL — règles d'accès par URL
+    # ORDRE IMPORTANT : première règle qui correspond à la requête gagne.
+    # → Les règles les plus SPÉCIFIQUES (URLs précises) doivent être EN PREMIER.
+    # PUBLIC_ACCESS = accessible sans être connecté (Symfony 6+)
+    # =========================================================================
     access_control:
-        # API : auth obligatoire
-        # - { path: ^/api, roles: ROLE_USER }
 
-        # Manager : tout le sous-domaine manager.* nécessite d'être connecté
-        # - { host: '^manager\.', roles: ROLE_USER }
+        # -----------------------------------------------------------------
+        # Admin mabb.fr
+        # -----------------------------------------------------------------
+        # /admin/login DOIT être public — sinon boucle infinie (non connecté
+        # → redirigé vers /admin/login → non connecté → redirigé vers... ∞)
+        - { path: ^/admin/login$, roles: PUBLIC_ACCESS }
+        # Tout /admin/** exige ROLE_SUPER_ADMIN
+        - { path: ^/admin, roles: ROLE_SUPER_ADMIN }
 
-        # PIRB : tout le sous-domaine pirb.* nécessite d'être connecté
-        # - { host: '^pirb\.', roles: ROLE_USER }
+        # -----------------------------------------------------------------
+        # Manager manager.mabb.fr
+        # -----------------------------------------------------------------
+        # Page login manager : publique (même logique anti-boucle)
+        - { path: ^/login$, host: '^manager\.', roles: PUBLIC_ACCESS }
+        # Gestion avancée (ex: multi-clubs, paramètres plateforme) : super admin
+        - { path: ^/admin, host: '^manager\.', roles: ROLE_SUPER_ADMIN }
+        # Gestion du club (ex: équipes, joueurs) : dirigeant minimum
+        - { path: ^/club, host: '^manager\.', roles: ROLE_DIRIGEANT }
+        # Espace coach (ex: saisie présences, convocations) : coach minimum
+        - { path: ^/coach, host: '^manager\.', roles: ROLE_COACH }
+        # Tout le reste du manager : utilisateur authentifié minimum
+        - { path: ^/, host: '^manager\.', roles: ROLE_USER }
 
-        # Vitrine : public par défaut, sauf /compte/profil etc.
-        # - { path: ^/compte/profil, roles: ROLE_USER }
+        # -----------------------------------------------------------------
+        # PIRB pirb.mabb.fr
+        # -----------------------------------------------------------------
+        # Page login PIRB : publique
+        - { path: ^/login$, host: '^pirb\.', roles: PUBLIC_ACCESS }
+        # Tout le PIRB : utilisateur authentifié minimum
+        - { path: ^/, host: '^pirb\.', roles: ROLE_USER }
+
+        # -----------------------------------------------------------------
+        # Vitrine mabb.fr — publique par défaut
+        # -----------------------------------------------------------------
+        # Pages d'auth vitrine : publiques
+        - { path: ^/compte/se-connecter, roles: PUBLIC_ACCESS }
+        - { path: ^/compte/s-inscrire, roles: PUBLIC_ACCESS }
+        # Espace compte personnel : auth requise
+        - { path: ^/compte, roles: ROLE_USER }
+        # Tout le reste de la vitrine = public (absence de règle = pas de restriction)
