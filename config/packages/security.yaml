@@ -64,6 +64,7 @@ security:
                 password_parameter: _password
                 default_target_path: admin_articles_list
                 always_use_default_target_path: false
+                enable_csrf: true  # Protège contre les attaques CSRF sur le formulaire login
             logout:
                 path: admin_logout
                 target: admin_login
@@ -107,6 +108,7 @@ security:
                 password_parameter: _password
                 default_target_path: manager_dashboard
                 always_use_default_target_path: false
+                enable_csrf: true  # Protège contre les attaques CSRF sur le formulaire login
             logout:
                 path: manager_logout
                 target: manager_login
@@ -127,6 +129,7 @@ security:
                 password_parameter: _password
                 default_target_path: pirb_dashboard
                 always_use_default_target_path: false
+                enable_csrf: true  # Protège contre les attaques CSRF sur le formulaire login
             logout:
                 path: pirb_logout
                 target: pirb_login
