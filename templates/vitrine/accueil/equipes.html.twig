@@ -108,9 +108,9 @@
         <div class="row g-4 mt-3">
             {% set coachs = [
                 {nom: 'COULPIED Ugo', titre: 'Responsable sportif', diplome: 'Diplômé d\'État', emoji: '🏀'},
-                {nom: 'À compléter', titre: 'Éducateur(trice)', diplome: 'Diplômé d\'État', emoji: '⭐'},
-                {nom: 'À compléter', titre: 'Éducateur(trice)', diplome: 'Diplômé d\'État', emoji: '🎯'},
-                {nom: 'À compléter', titre: 'Éducateur(trice)', diplome: 'Diplômé d\'État', emoji: '🏆'},
+                {nom: 'DUFOSSE Romy', titre: 'Responsable école du mini basket', diplome: 'Diplômé d\'État', emoji: '⭐'},
+                {nom: 'HARTHATI Ben Moussa', titre: 'Directeur de la structure — Coach U13 région', diplome: 'Diplômé DEJEPS', emoji: '🎯'},
+                {nom: 'NDEMA MOUSSA Clavel', titre: 'Coach Senior & U15 — Cadre technique Somme U13', diplome: 'DETB (en formation)', emoji: '🏆'},
             ] %}
             {% for coach in coachs %}
             <div class="col-md-6 col-lg-3">
@@ -133,25 +133,26 @@
             <h2 class="fw-bold" style="color:#fff">Service <span style="color:var(--mabb-orange)">Civique</span></h2>
             <p style="color:rgba(255,255,255,.75)">Nos volontaires en mission d'intérêt général</p>
         </div>
+        {% set volontaires = [
+            {nom: 'DAOUDI Annah', mission: 'Animation sportive et soutien éducatif'},
+            {nom: 'GUELFAT Asma', mission: 'Animation sportive et soutien éducatif'},
+            {nom: 'YAHIAOUI Ilies', mission: 'Animation sportive et soutien éducatif'},
+            {nom: 'BADIBALOWA KISUMBEL Albert', mission: 'Animation sportive et soutien éducatif'},
+            {nom: 'PARFAIT Solofotiana Emeric', mission: 'Animation sportive et soutien éducatif'},
+            {nom: 'KOUDJIL Abderrahmane', mission: 'Animation sportive et soutien éducatif'},
+            {nom: 'ATSHABO Elissa', mission: 'Photographe — valorisation des événements MABB'},
+        ] %}
         <div class="row g-4 justify-content-center">
-            <div class="col-md-4">
+            {% for v in volontaires %}
+            <div class="col-md-4 col-lg-3">
                 <div class="card border-0 text-center p-4 h-100" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)!important">
                     <div style="font-size:2.5rem;margin-bottom:12px">🤝</div>
-                    <h5 class="text-white fw-bold">Volontaire 1</h5>
-                    <p style="color:rgba(255,255,255,.7)" class="small">Mission : Animation sportive et soutien éducatif</p>
-                    <span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-radius:20px;padding:3px 12px;font-size:.75rem">À compléter</span>
+                    <h5 class="text-white fw-bold" style="font-size:.95rem">{{ v.nom }}</h5>
+                    <p style="color:rgba(255,255,255,.7)" class="small mt-2 mb-0">{{ v.mission }}</p>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card border-0 text-center p-4 h-100" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)!important">
-                    <div style="font-size:2.5rem;margin-bottom:12px">🤝</div>
-                    <h5 class="text-white fw-bold">Volontaire 2</h5>
-                    <p style="color:rgba(255,255,255,.7)" class="small">Mission : Accompagnement scolaire et numérique</p>
-                    <span style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.6);border-radius:20px;padding:3px 12px;font-size:.75rem">À compléter</span>
-                </div>
-            </div>
+            {% endfor %}
         </div>
-        <p class="text-center mt-4 small" style="color:rgba(255,255,255,.4)">Section à compléter — contenu à venir</p>
     </div>
 </section>
 
