@@ -1025,6 +1025,34 @@
 
 ---
 
+### 2026-03-26 (session 38) — Contenu PDF + animations + nouvelles pages
+
+- Objectif : Intégrer les données des PDFs (Bilan 2025 + PV AG 2026), animer la home, créer la page Nos Victoires, enrichir la Cité Éducative
+- Actions réalisées :
+  1. **Encadrement complet** — `equipes.html.twig` : 4 coaches (COULPIED, DUFOSSE, HARTHATI, NDEMA MOUSSA) + 7 services civiques réels (DAOUDI, GUELFAT, YAHIAOUI, BADIBALOWA, PARFAIT, KOUDJIL, ATSHABO photographe)
+  2. **Chiffres home** — animation compteur 0→373 (IntersectionObserver + easeOutCubic), 3 autres chiffres statiques restaurés (Labels FFBB, Quartiers, Ans)
+  3. **Nouvelle page /victoires** — "Nos Victoires" : résultats 5x5 par catégorie, 3x3 (45 tournois), sélections nationales/régionales, UNSS
+  4. **Route Symfony** — `vitrine_victoires` ajoutée dans `AccueilController.php`
+  5. **Navbar** — Équipes | Équipe 3×3 | Nos Victoires (3 li côte à côte)
+  6. **Cité Éducative** — chiffres 2025 (974h, 1 145 participants), "En savoir plus" École (collapse Bootstrap) + "En savoir plus" Lycée (collapse), card Collège inchangée
+  7. **Section home "Qui sommes-nous"** — photo remplacée par stack 3 photos animé (panierGonflable 1/2/3) — éventail au repos, spread au hover, CSS pur
+  8. **"Dernières" en blanc** — `index.html.twig` titre section actualités
+  9. **Breadcrumb équipes** — style identique 3x3 : Accueil > Équipes (actif orange) > Nos Victoires
+- Fichiers modifiés :
+  - `templates/vitrine/accueil/index.html.twig`
+  - `templates/vitrine/accueil/equipes.html.twig`
+  - `templates/vitrine/accueil/victoires.html.twig` (nouveau)
+  - `templates/vitrine/club/cite_educative.html.twig`
+  - `templates/vitrine/navbar.html.twig`
+  - `src/Controller/Vitrine/AccueilController.php`
+- Commits : `07fd0d1`, `039a573`, `fa513f4`, `35c53ee`, `7429861`, `0008f93`
+- Points de vigilance :
+  - **9 commits en attente de push** — faire `git push origin main` depuis le terminal local
+  - Push HTTPS GitHub nécessite credentials (Personal Access Token) — non disponible en sandbox
+  - Déploiement OVH ensuite : `ssh mabbzzyo@ssh.cluster102.hosting.ovh.net "cd ~/mabb-site && git pull && php bin/console cache:clear --env=prod"`
+
+---
+
 ### 2026-03-26 (session 36) — Audit visuel mabb.fr + corrections bugs
 
 - Objectif : Analyser le site live, corriger bugs connus (routes localhost, placeholder image) + bugs trouvés lors de l'audit
