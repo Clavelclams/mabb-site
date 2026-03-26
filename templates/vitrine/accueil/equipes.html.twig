@@ -19,6 +19,11 @@
 					<i class="bi bi-people-fill me-1"></i>Équipes
 				</li>
 				<li class="breadcrumb-item">
+					<a href="{{ path('vitrine_equipes_3x3') }}" style="color:#fff">
+						<i class="bi bi-trophy-fill me-1"></i>Equipe 3x3
+					</a>
+				</li>
+				<li class="breadcrumb-item">
 					<a href="{{ path('vitrine_victoires') }}" style="color:#fff">Nos Victoires</a>
 				</li>
 			</ol>
@@ -73,69 +78,38 @@
                             </small>
                         </a>
                         {% endif %}
-                        <div class="d-flex justify-content-between">
-                            <span class="badge bg-light text-dark"><i class="bi bi-bar-chart me-1"></i>{{ eq.niveau }}</span>
-                            <span class="badge bg-light text-dark"><i class="bi bi-geo-alt me-1"></i>{{ eq.lieu }}</span>
-                        </div>
-                        {% if eq.cat == 'Basket 3x3' %}
-                        <a href="{{ path('vitrine_equipes_3x3') }}"
-                           class="btn btn-sm btn-mabb rounded-pill mt-2 w-100">
-                            <i class="bi bi-trophy-fill me-1"></i>Voir l'équipe 3x3 →
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-            
-        </div>
-
-        {# Lien Scorenco #}
-        <div class="text-center mt-5">
-            <p class="text-muted mb-2 text-white-force">Résultats et classements en temps réel :</p>
-            <a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" class="btn btn-outline-mabb text-white-force" target="_blank">
-                <i class="bi bi-bar-chart-line me-2"></i>Voir sur Scorenco
-            </a>
-        </div>
-    </div>
-</section>
-
-{# ENCADREMENT #}
-<section class="section section-gray">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="section-title">Encadrement <span>technique</span></h2>
-            <p class="section-subtitle">Des éducateurs formés et passionnés</p>
-        </div>
-        <div class="row g-4 mt-3">
-            {% set coachs = [
+			<div class="d-flex justify-content-between">
+				<span class="badge bg-light text-dark">
+					<i class="bi bi-bar-chart me-1"></i>
+					{{ eq.niveau }}</span>
+				<span class="badge bg-light text-dark">
+					<i class="bi bi-geo-alt me-1"></i>
+					{{ eq.lieu }}</span>
+			</div>
+			{% if eq.cat == 'Basket 3x3' %}
+				<a href="{{ path('vitrine_equipes_3x3') }}" class="btn btn-sm btn-mabb rounded-pill mt-2 w-100">
+					<i class="bi bi-trophy-fill me-1"></i>Voir l'équipe 3x3 →
+				</a>
+			{% endif %}
+		</div>
+	</div>
+</div>{% endfor %}</div>{# Lien Scorenco #}<div class="text-center mt-5"><p class="text-muted mb-2 text-white-force">Résultats et classements en temps réel :</p><a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" class="btn btn-outline-mabb text-white-force" target="_blank">
+<i class="bi bi-bar-chart-line me-2"></i>Voir sur Scorenco</a></div></div></section>{# ENCADREMENT #}<section class="section section-gray"><div class="container"><div class="text-center mb-5"><h2 class="section-title">Encadrement
+<span>technique</span></h2><p class="section-subtitle">Des éducateurs formés et passionnés</p></div><div class="row g-4 mt-3">{% set coachs = [
                 {nom: 'COULPIED Ugo', titre: 'Responsable sportif', diplome: 'Diplômé d\'État', emoji: '🏀'},
                 {nom: 'DUFOSSE Romy', titre: 'Responsable école du mini basket', diplome: 'Diplômé d\'État', emoji: '⭐'},
                 {nom: 'HARTHATI Ben Moussa', titre: 'Directeur de la structure — Coach U13 région', diplome: 'Diplômé DEJEPS', emoji: '🎯'},
                 {nom: 'NDEMA MOUSSA Clavel', titre: 'Coach Senior & U15 — Cadre technique Somme U13', diplome: 'DETB (en formation)', emoji: '🏆'},
-            ] %}
-            {% for coach in coachs %}
-            <div class="col-md-6 col-lg-3">
-                <div class="card card-mabb text-center p-4 h-100">
-                    <div style="font-size:2rem;margin-bottom:8px">{{ coach.emoji }}</div>
-                    <h5 class="fw-bold mb-1">{{ coach.nom }}</h5>
-                    <p class="text-mabb-orange fw-semibold small mb-1">{{ coach.titre }}</p>
-                    <span class="badge bg-light text-muted small">{{ coach.diplome }}</span>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</section>
-
-{# SERVICE CIVIQUE #}
-<section class="section" style="background:linear-gradient(135deg,#063a55,#0b4fa3)">
-    <div class="container">
-        <div class="text-center mb-5">
-            <h2 class="fw-bold" style="color:#fff">Service <span style="color:var(--mabb-orange)">Civique</span></h2>
-            <p style="color:rgba(255,255,255,.75)">Nos volontaires en mission d'intérêt général</p>
-        </div>
-        {% set volontaires = [
+            ] %}{% for coach in coachs %}
+<div class="col-md-6 col-lg-3">
+	<div class="card card-mabb text-center p-4 h-100">
+		<div style="font-size:2rem;margin-bottom:8px">{{ coach.emoji }}</div>
+		<h5 class="fw-bold mb-1">{{ coach.nom }}</h5>
+		<p class="text-mabb-orange fw-semibold small mb-1">{{ coach.titre }}</p>
+		<span class="badge bg-light text-muted small">{{ coach.diplome }}</span>
+	</div>
+</div>{% endfor %}</div></div></section>{# SERVICE CIVIQUE #}<section class="section" style="background:linear-gradient(135deg,#063a55,#0b4fa3)"><div class="container"><div class="text-center mb-5"><h2 class="fw-bold" style="color:#fff">Service
+<span style="color:var(--mabb-orange)">Civique</span></h2><p style="color:rgba(255,255,255,.75)">Nos volontaires en mission d'intérêt général</p></div>{% set volontaires = [
             {nom: 'DAOUDI Annah', mission: 'Animation sportive et soutien éducatif'},
             {nom: 'GUELFAT Asma', mission: 'Animation sportive et soutien éducatif'},
             {nom: 'YAHIAOUI Ilies', mission: 'Animation sportive et soutien éducatif'},
@@ -143,19 +117,11 @@
             {nom: 'PARFAIT Solofotiana Emeric', mission: 'Animation sportive et soutien éducatif'},
             {nom: 'KOUDJIL Abderrahmane', mission: 'Animation sportive et soutien éducatif'},
             {nom: 'ATSHABO Elissa', mission: 'Photographe — valorisation des événements MABB'},
-        ] %}
-        <div class="row g-4 justify-content-center">
-            {% for v in volontaires %}
-            <div class="col-md-4 col-lg-3">
-                <div class="card border-0 text-center p-4 h-100" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)!important">
-                    <div style="font-size:2.5rem;margin-bottom:12px">🤝</div>
-                    <h5 class="text-white fw-bold" style="font-size:.95rem">{{ v.nom }}</h5>
-                    <p style="color:rgba(255,255,255,.7)" class="small mt-2 mb-0">{{ v.mission }}</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</section>
-
-{% endblock %}
+        ] %}<div class="row g-4 justify-content-center">{% for v in volontaires %}
+<div class="col-md-4 col-lg-3">
+	<div class="card border-0 text-center p-4 h-100" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)!important">
+		<div style="font-size:2.5rem;margin-bottom:12px">🤝</div>
+		<h5 class="text-white fw-bold" style="font-size:.95rem">{{ v.nom }}</h5>
+		<p style="color:rgba(255,255,255,.7)" class="small mt-2 mb-0">{{ v.mission }}</p>
+	</div>
+</div>{% endfor %}</div></div></section>{% endblock %}
