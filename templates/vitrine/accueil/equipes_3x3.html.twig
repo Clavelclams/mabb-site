@@ -19,7 +19,7 @@
 					<li class="breadcrumb-item">
 						<a href="{{ path('vitrine_equipes') }}" style="color:#fff">Équipes</a>
 					</li>
-					<li class="breadcrumb-item active" style="color:#ff8c00;font-weight:600">
+					<li class="breadcrumb-item active" style="color:#fc702a;font-weight:600">
 						<i class="bi bi-trophy-fill me-1"></i>Équipe 3x3
 					</li>
 					<li class="breadcrumb-item">
@@ -51,16 +51,16 @@
 						en 3x3. MABB uniquement.
 					</p>
 					<div class="d-flex flex-wrap gap-2">
-						<span class="badge px-3 py-2 rounded-pill" style="background:#063a5515;color:#063a55;border:1px solid #063a5530;font-size:.85rem">
+						<span class="badge px-3 py-2 rounded-pill" style="background:rgba(14,42,84,.08);color:var(--mabb-dark);border:1px solid rgba(14,42,84,.18);font-size:.85rem">
 							🏀 Ligue MABB officielle FFBB
 						</span>
-						<span class="badge px-3 py-2 rounded-pill" style="background:#ff8c0015;color:#ff8c00;border:1px solid #ff8c0030;font-size:.85rem">
+						<span class="badge px-3 py-2 rounded-pill" style="background:#fc702a15;color:#fc702a;border:1px solid #fc702a30;font-size:.85rem">
 							🔒 Exclusif MABB
 						</span>
 					</div>
 				</div>
 				<div class="col-lg-6">
-					<div class="card card-mabb p-4" style="background:linear-gradient(135deg,#063a55,#0b4fa3)">
+					<div class="card card-mabb p-4" style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue))">
 						<h3 class="text-white fw-bold mb-4">
 							<i class="bi bi-people-fill me-2"></i>Les joueurs
 						</h3>
@@ -68,7 +68,7 @@
 							class="d-flex flex-column gap-3">
 							{# Ugo #}
 							<div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:rgba(255,255,255,.08)">
-								<div style="width:50px;height:50px;border-radius:50%;background:#ff8c00;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0">U</div>
+								<div style="width:50px;height:50px;border-radius:50%;background:#fc702a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0">U</div>
 								<div>
 									<div class="text-white fw-bold">Ugo</div>
 									<div style="color:rgba(255,255,255,.65);font-size:.85rem">
@@ -79,7 +79,7 @@
 							</div>
 							{# Clavel #}
 							<div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:rgba(255,255,255,.08)">
-								<div style="width:50px;height:50px;border-radius:50%;background:#ff8c00;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0">C</div>
+								<div style="width:50px;height:50px;border-radius:50%;background:#fc702a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0">C</div>
 								<div>
 									<div class="text-white fw-bold">Clavel</div>
 									<div style="color:rgba(255,255,255,.65);font-size:.85rem">
@@ -125,10 +125,10 @@
 					<div class="col-md-6 col-lg-4">
 						<div class="card card-mabb text-center p-4 h-100 d-flex flex-column">
 							<div style="font-size:2rem;margin-bottom:8px">{{ cat.icon }}</div>
-							<h5 class="fw-bold mb-2" style="color:#063a55">{{ cat.cat }}</h5>
+							<h5 class="fw-bold mb-2" style="color:var(--mabb-dark)">{{ cat.cat }}</h5>
 							<p class="text-muted small mb-3">{{ cat.desc }}</p>
 							<div class="mt-auto">
-								<span style="font-size:.75rem;color:#ff8c00;font-weight:600;letter-spacing:.5px;text-transform:uppercase">⏳ À suivre prochainement</span>
+								<span style="font-size:.75rem;color:#fc702a;font-weight:600;letter-spacing:.5px;text-transform:uppercase">⏳ À suivre prochainement</span>
 							</div>
 						</div>
 					</div>
@@ -139,13 +139,14 @@
 
 	{# CTA retour équipes #}
 	<section class="section section-gray">
-		<div class="container text-center">
-			<a href="{{ path('vitrine_equipes') }}" class="btn btn-outline-secondary rounded-pill px-4 me-3">
-				<i class="bi bi-arrow-left me-1"></i>Toutes les équipes
-			</a>
-			<a href="{{ path('vitrine_contact') }}" class="btn btn-mabb rounded-pill px-4">
-				<i class="bi bi-envelope me-1"></i>Nous rejoindre
-			</a>
-		</div>
+		<div class="container">
+			<div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+				<a href="{{ path('vitrine_equipes') }}" class="btn btn-outline-secondary rounded-pill px-4">
+					<i class="bi bi-arrow-left me-1"></i>Toutes les équipes
+				</a>
+				<a href="{{ path('vitrine_contact') }}" class="btn btn-mabb rounded-pill px-4">
+					<i class="bi bi-envelope me-1"></i>Nous rejoindre
+				</a>
+			</div>
 	</section>
 {% endblock %}

@@ -51,7 +51,7 @@
                 </p>
             </div>
             <div class="col-lg-6">
-                <div class="card card-mabb p-4" style="background:linear-gradient(135deg,#063a55,#0b4fa3)">
+                <div class="card card-mabb p-4" style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue))">
                     <h3 class="text-white fw-bold mb-4">Ce que le projet prévoit</h3>
                     {% for item in [
                         {icon:'📅', text:'Aménagement des emplois du temps scolaires'},
@@ -133,7 +133,7 @@
             ] %}
             <div class="col-md-6 col-lg-3">
                 <div class="text-center p-3">
-                    <div style="width:60px;height:60px;border-radius:50%;background:{% if etape.status == 'En cours' %}#ff8c00{% else %}rgba(255,255,255,.3){% endif %};display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;margin:0 auto 12px">
+                    <div style="width:60px;height:60px;border-radius:50%;background:{% if etape.status == 'En cours' %}#fc702a{% else %}rgba(255,255,255,.3){% endif %};display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:#fff;margin:0 auto 12px">
                         {{ etape.num }}
                     </div>
                     <h5 class="text-white fw-bold mb-2">{{ etape.titre }}</h5>

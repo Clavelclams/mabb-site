@@ -71,21 +71,21 @@
                 <div class="col-6 col-md-3">
                     <div class="card card-mabb text-center p-4">
                         <i class="bi bi-trophy-fill text-mabb-orange chiffre-icon"></i>
-                        <div class="display-6 fw-bold mt-2 chiffre-number">3</div>
+                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="3" data-suffix="">0</div>
                         <div class="text-muted small">Labels FFBB 3★</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="card card-mabb text-center p-4">
                         <i class="bi bi-building text-mabb-orange chiffre-icon"></i>
-                        <div class="display-6 fw-bold mt-2 chiffre-number">7</div>
+                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="7" data-suffix="">0</div>
                         <div class="text-muted small">Quartiers</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="card card-mabb text-center p-4">
                         <i class="bi bi-calendar-heart text-mabb-orange chiffre-icon"></i>
-                        <div class="display-6 fw-bold mt-2 chiffre-number">23+</div>
+                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="23" data-suffix="+">0</div>
                         <div class="text-muted small">Ans d'engagement</div>
                     </div>
                 </div>
@@ -169,7 +169,7 @@
             {% set sections = [
                 {icon: 'bi-balloon', title: 'Micro Basket', ages: '3-5 ans', desc: 'Éveil psychomoteur et découverte ludique du basket pour les tout-petits. Matériel adapté en taille et en couleur.', color: '#e74c3c'},
                 {icon: 'bi-stars', title: 'Mini Basket', ages: '6-10 ans', desc: 'Apprentissage en s\'amusant avec ballons adaptés (taille 3 et 5) et paniers ajustables. 3 sites : Étouvie, Nord, Est.', color: '#f39c12'},
-                {icon: 'bi-lightning', title: 'Compétition', ages: 'U11 à Senior', desc: 'Équipes engagées dans tous les championnats : départemental, régional, pré-national. Formation d\'excellence.', color: '#0b4fa3'},
+                {icon: 'bi-lightning', title: 'Compétition', ages: 'U11 à Senior', desc: 'Équipes engagées dans tous les championnats : départemental, régional, pré-national. Formation d\'excellence.', color: 'var(--mabb-blue)'},
                 {icon: 'bi-dribbble', title: 'Basket 3x3', ages: '11-25+ ans', desc: 'Ligue MABB officielle FFBB, tournois homologués dans les quartiers, format libre et créatif.', color: '#2ecc71'},
                 {icon: 'bi-mortarboard', title: 'Section Sportive', ages: 'Collège', desc: 'Academy César Franck 100% féminine. Horaires aménagés, 4 entraînements/semaine, double projet scolaire-sportif.', color: '#9b59b6'},
                 {icon: 'bi-heart', title: 'Actions Citoyennes', ages: 'Toute l\'année', desc: 'Centres Génération Basket gratuits, aide aux devoirs, interventions scolaires, tournois QPV.', color: '#1abc9c'},
@@ -205,7 +205,7 @@
 				</h2>
 				<a href="{{ path('vitrine_news') }}"
 				   class="btn rounded-pill fw-semibold"
-				   style="background:#ff8c00;color:#fff;border:none">Voir tout
+				   style="background:#fc702a;color:#fff;border:none">Voir tout
 					<i class="bi bi-arrow-right ms-1"></i>
 				</a>
 			</div>
@@ -224,7 +224,7 @@
 									</small>
 									<h5 class="fw-bold mt-2 mb-2">{{ actu.titre }}</h5>
 									<p class="text-muted">{{ actu.contenu|striptags|slice(0, 120) }}...</p>
-									<a href="{{ path('vitrine_news_article', {slug: actu.slug}) }}" class="btn btn-sm rounded-pill mt-2 fw-semibold" style="background:#0b4fa3;color:#fff;border:none">
+									<a href="{{ path('vitrine_news_article', {slug: actu.slug}) }}" class="btn btn-sm rounded-pill mt-2 fw-semibold" style="background:var(--mabb-blue);color:#fff;border:none">
 										Lire la suite
 										<i class="bi bi-arrow-right"></i>
 									</a>
@@ -234,7 +234,7 @@
 					{% endfor %}
 				{% else %}
 					<div class="col-12 text-center py-4">
-						<p class="text-muted">Aucune actualité pour le moment.</p>
+						<p class="text-white fw-semibold">Aucune actualité pour le moment.</p>
 					</div>
 				{% endif %}
 			</div>

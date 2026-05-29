@@ -22,10 +22,10 @@
 
 		<style>:root
 		{
-			--mabb-blue: #0b4fa3;
-			--mabb-dark: #063a55;
-			--mabb-light: #1c88b6;
-			--mabb-orange: #ff7a00;
+			--mabb-blue: #0062a8;
+			--mabb-dark: #0e2a54;
+			--mabb-light: #1c7ec4;
+			--mabb-orange: #fc702a;
 			--mabb-red: #ff3b2f;
 			--mabb-gray: #f8f9fa
 		}
@@ -81,7 +81,7 @@
 		}
 
 		.page-header {
-			background: linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue));
+			background: transparent;
 			color: #fff;
 			padding: 100px 0 50px;
 			text-align: center
@@ -163,15 +163,16 @@
 		}
 		.btn-outline-mabb {
 			color: var(--mabb-blue);
-			border: 2px solid var(--mabb-blue);
+			border: 2px solid #fff;
 			border-radius: 50px;
 			padding: 0.65rem 2rem;
 			font-weight: 600;
-			background: transparent;
+			background: #fff;
 			transition: all 0.2s
 		}
 		.btn-outline-mabb:hover {
 			background: var(--mabb-blue);
+			border-color: var(--mabb-blue);
 			color: #fff
 		}
 
@@ -536,11 +537,13 @@
 					{{ "now"|date("Y") }}
 					MABB — Amiens Métropole Basket Ball | Association loi 1901</p>
 				<p class="mb-0">SIRET 49077890900021 — Agrément Jeunesse et Sport D80S1069</p>
-				<p class="mb-0 mt-1" style="font-size:.75rem;opacity:.6">Crée par Clavel by VENA</p>
+				<p class="mb-0 mt-1" style="font-size:.75rem;opacity:.6">Crée par Clavel by <a href="https://velito.fr" target="_blank" rel="noopener" style="color:var(--mabb-orange);text-decoration:none;font-weight:600">VENA</a></p>
 			</div>
 		</div>
 	</footer>
 
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 	{% block extra_js %}{% endblock %}
+	{# Chatbot FAQ scripté (V1 sans IA) — présent sur toutes les pages vitrine #}
+	{% include 'vitrine/_chatbot.html.twig' %}
 </body></html>

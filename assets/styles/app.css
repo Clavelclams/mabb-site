@@ -1,12 +1,13 @@
 /* Background image global de la page */
 body {
-    background-image: url(/images/bg.jpg);
+    background: linear-gradient(rgba(20,95,175,.60), rgba(8,60,120,.76)), url(/images/bg-texture.png) center center / cover fixed;
+    background-color: #0a4f8f;
 }
 
 :root{
-    --mabb-blue-1:#0b4fa3;
-    --mabb-blue-2:#063a55;
-    --mabb-orange:#ff8c00; /* modifié : #ff7a00 → #ff8c00 (plus lumineux, demande Willy) */
+    --mabb-blue-1:#0062a8;
+    --mabb-blue-2:#0e2a54;
+    --mabb-orange:#fc702a; /* orange de marque (pipette 1.png) — anciennement #ff8c00 */
     --mabb-red:#ff3b2f;
 }
 
@@ -16,7 +17,7 @@ body {
     display:flex;
     align-items:center;
     padding: 90px 0 40px; /* laisse de la place si navbar fixe */
-    background: radial-gradient(circle at 20% 20%, #1c88b6 0%, var(--mabb-blue-1) 45%, var(--mabb-blue-2) 100%);
+    background: radial-gradient(circle at 20% 20%, var(--mabb-light) 0%, var(--mabb-blue-1) 45%, var(--mabb-blue-2) 100%);
 }
 
 /* Titre effet "lettres qui ressortent" */
@@ -51,7 +52,7 @@ body {
 
 /* Boutons sociaux : ombre + relief + hover rouge */
 .mabb-btn{
-    background: linear-gradient(90deg, #ff8c00, #ff5500); /* modifié */
+    background: linear-gradient(90deg, #fc702a, #ff5500); /* modifié */
     border: none;
 
     box-shadow:
@@ -123,7 +124,7 @@ body {
 
 /* Bouton "Aide au devoir" bleu */
 .btn-bleu-mabb {
-    background: #1c88b6;
+    background: var(--mabb-light);
     color: #fff;
     border: none;
     border-radius: 20px;
@@ -136,7 +137,7 @@ body {
     gap: 6px;
 }
 .btn-bleu-mabb:hover {
-    background: #0b4fa3;
+    background: var(--mabb-blue);
     color: #fff;
     transform: translateY(-1px);
 }
@@ -145,7 +146,7 @@ body {
 
 /* Bouton inscription (navbar) */
 .btn-inscription {
-    background: linear-gradient(135deg, #ff8c00, #ff5500);
+    background: linear-gradient(135deg, #fc702a, #ff5500);
     color: #fff;
     border: none;
     border-radius: 20px;
@@ -156,7 +157,7 @@ body {
     text-decoration: none;
 }
 .btn-inscription:hover {
-    background: linear-gradient(135deg, #ff5500, #ff8c00);
+    background: linear-gradient(135deg, #ff5500, #fc702a);
     color: #fff;
     transform: translateY(-1px);
     box-shadow: 0 6px 20px rgba(255,140,0,.35);

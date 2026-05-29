@@ -1,0 +1,120 @@
+{# ============================================================
+   Chatbot MABB — V1 SANS IA (réponses pré-écrites / FAQ).
+   Composant autonome inclus dans base.html.twig (toutes les pages vitrine).
+   - Bouton flottant bas-droite (orange de marque).
+   - Ouverture au survol (desktop) ET au clic (mobile/accessibilité).
+   - L'utilisateur clique une question → la réponse pré-écrite s'affiche.
+   - Aucune dépendance externe (juste Bootstrap Icons déjà chargé).
+   V2 prévue : branchement d'une vraie IA. Voir instruction/16 §8.3.
+   ============================================================ #}
+<div id="mabb-chatbot" aria-live="polite">
+    <style>
+        #mabb-chatbot { position: fixed; right: 20px; bottom: 20px; z-index: 1080; font-family: 'Inter', sans-serif; }
+        #mabb-chatbot * { box-sizing: border-box; }
+        #mabb-cb-launcher {
+            width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
+            background: var(--mabb-orange); color: #fff; font-size: 1.6rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,.28); transition: transform .15s, box-shadow .15s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #mabb-cb-launcher:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+        #mabb-cb-panel {
+            position: absolute; right: 0; bottom: 74px; width: 330px; max-width: calc(100vw - 40px);
+            background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.30);
+            opacity: 0; transform: translateY(12px) scale(.97); pointer-events: none;
+            transition: opacity .18s, transform .18s;
+        }
+        #mabb-chatbot.is-open #mabb-cb-panel { opacity: 1; transform: none; pointer-events: auto; }
+        #mabb-cb-head {
+            background: linear-gradient(135deg, var(--mabb-dark), var(--mabb-blue));
+            color: #fff; padding: 16px 18px; display: flex; align-items: center; gap: 10px;
+        }
+        #mabb-cb-head .title { font-weight: 700; font-size: .98rem; line-height: 1.1; }
+        #mabb-cb-head .subtitle { font-size: .72rem; color: rgba(255,255,255,.75); }
+        #mabb-cb-close { margin-left: auto; background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; opacity: .8; }
+        #mabb-cb-close:hover { opacity: 1; }
+        #mabb-cb-body { padding: 14px; max-height: 60vh; overflow-y: auto; }
+        #mabb-cb-intro { font-size: .85rem; color: #475569; margin: 0 0 12px; }
+        .mabb-cb-q {
+            display: block; width: 100%; text-align: left; background: #f4f6fa; border: 1px solid #e4e8ef;
+            color: var(--mabb-dark); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+            font-size: .85rem; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s;
+        }
+        .mabb-cb-q:hover { background: #fff; border-color: var(--mabb-blue); }
+        .mabb-cb-answer { display: none; }
+        #mabb-chatbot.show-answer .mabb-cb-q-list { display: none; }
+        #mabb-chatbot.show-answer .mabb-cb-answer { display: block; }
+        .mabb-cb-answer p { font-size: .86rem; color: #334155; line-height: 1.55; }
+        .mabb-cb-answer a { color: var(--mabb-blue); font-weight: 600; }
+        #mabb-cb-back { background: none; border: none; color: var(--mabb-blue); font-weight: 600; font-size: .8rem; cursor: pointer; padding: 0 0 8px; }
+        #mabb-cb-foot { border-top: 1px solid #eef1f5; padding: 8px 14px; font-size: .68rem; color: #94a3b8; text-align: center; }
+    </style>
+
+    <button id="mabb-cb-launcher" type="button" aria-label="Ouvrir l'assistant MABB" aria-expanded="false">
+        <i class="bi bi-chat-dots-fill"></i>
+    </button>
+
+    <div id="mabb-cb-panel" role="dialog" aria-label="Assistant MABB">
+        <div id="mabb-cb-head">
+            <i class="bi bi-robot" style="font-size:1.3rem"></i>
+            <div>
+                <div class="title">Assistant MABB</div>
+                <div class="subtitle">Questions fréquentes</div>
+            </div>
+            <button id="mabb-cb-close" type="button" aria-label="Fermer">&times;</button>
+        </div>
+        <div id="mabb-cb-body">
+            <p id="mabb-cb-intro">Bonjour&nbsp;! Choisissez une question&nbsp;:</p>
+
+            <div class="mabb-cb-q-list">
+                <button class="mabb-cb-q" data-answer="a1" type="button">Le basket est-il gratuit pour les filles&nbsp;?</button>
+                <button class="mabb-cb-q" data-answer="a2" type="button">Comment inscrire ma fille&nbsp;?</button>
+                <button class="mabb-cb-q" data-answer="a3" type="button">Quels sont les créneaux d'entraînement&nbsp;?</button>
+                <button class="mabb-cb-q" data-answer="a4" type="button">Où s'entraîne-t-on&nbsp;?</button>
+                <button class="mabb-cb-q" data-answer="a5" type="button">Comment vous contacter&nbsp;?</button>
+            </div>
+
+            <div class="mabb-cb-answer">
+                <button id="mabb-cb-back" type="button"><i class="bi bi-arrow-left"></i> Retour aux questions</button>
+                <div data-ans="a1"><p>Oui&nbsp;! Le basket est <strong>gratuit pour les filles</strong> nées en 2015 et après. Contactez-nous pour les modalités&nbsp;: <a href="/contact">page contact</a>.</p></div>
+                <div data-ans="a2"><p>Rien de plus simple&nbsp;: passez par notre <a href="/contact">formulaire de contact</a> ou un de nos <a href="/numerique">réseaux</a>, et le club revient vers vous rapidement.</p></div>
+                <div data-ans="a3"><p>Les créneaux dépendent de la catégorie. Retrouvez le planning complet sur le <a href="/calendrier">calendrier du club</a>.</p></div>
+                <div data-ans="a4"><p>Nous intervenons sur plusieurs quartiers d'Amiens (Étouvie, Amiens Nord, Sud-Est…) au centre sportif Open Gym. Détails sur la page <a href="/club">Le Club</a>.</p></div>
+                <div data-ans="a5"><p>Par le <a href="/contact">formulaire de contact</a>, ou via nos <a href="/numerique">réseaux sociaux</a>. On vous répond vite&nbsp;!</p></div>
+            </div>
+        </div>
+        <div id="mabb-cb-foot">Réponses automatiques · un assistant IA arrivera bientôt</div>
+    </div>
+
+    <script>
+    (function () {
+        var root = document.getElementById('mabb-chatbot');
+        if (!root) return;
+        var launcher = document.getElementById('mabb-cb-launcher');
+        var closeBtn = document.getElementById('mabb-cb-close');
+        var back = document.getElementById('mabb-cb-back');
+        var answers = root.querySelectorAll('.mabb-cb-answer [data-ans]');
+
+        function open()  { root.classList.add('is-open'); launcher.setAttribute('aria-expanded', 'true'); }
+        function close() { root.classList.remove('is-open'); launcher.setAttribute('aria-expanded', 'false'); showList(); }
+        function showList() { root.classList.remove('show-answer'); answers.forEach(function (a){ a.style.display='none'; }); }
+
+        launcher.addEventListener('click', function () { root.classList.contains('is-open') ? close() : open(); });
+        launcher.addEventListener('mouseenter', open);            /* ouverture au survol (desktop) */
+        closeBtn.addEventListener('click', close);
+        back.addEventListener('click', showList);
+
+        root.querySelectorAll('.mabb-cb-q').forEach(function (q) {
+            q.addEventListener('click', function () {
+                var id = q.getAttribute('data-answer');
+                answers.forEach(function (a){ a.style.display = (a.getAttribute('data-ans') === id) ? 'block' : 'none'; });
+                root.classList.add('show-answer');
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (root.classList.contains('is-open') && !root.contains(e.target)) close();
+        });
+    })();
+    </script>
+</div>

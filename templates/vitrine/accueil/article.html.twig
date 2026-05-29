@@ -38,13 +38,13 @@
 
                 <div class="d-flex justify-content-between align-items-center">
                     <a href="{{ path('vitrine_news') }}" class="btn rounded-pill fw-semibold"
-                       style="background:#ff8c00;color:#fff;border:none">
+                       style="background:#fc702a;color:#fff;border:none">
                         <i class="bi bi-arrow-left me-1"></i>Toutes les actualités
                     </a>
                     {% if is_granted('ROLE_SUPER_ADMIN') %}
                         <a href="{{ path('admin_articles_edit', {id: article.id}) }}"
                            class="btn rounded-pill fw-semibold"
-                           style="background:#0b4fa3;color:#fff;border:none">
+                           style="background:var(--mabb-blue);color:#fff;border:none">
                             <i class="bi bi-pencil me-1"></i>Modifier cet article
                         </a>
                     {% endif %}
