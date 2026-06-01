@@ -304,7 +304,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      */
     public function setRolesMembre(array $roles): static
     {
-        if (!in_array('benevole', $roles)) {
+        // Employé et bénévole sont mutuellement exclusifs.
+        // Si 'employe' est présent, on retire 'benevole'.
+        // Sinon, 'benevole' est forcé par défaut (statut neutre).
+        if (in_array('employe', $roles, true)) {
+            $roles = array_filter($roles, fn($r) => $r !== 'benevole');
+        } elseif (!in_array('benevole', $roles, true)) {
             array_unshift($roles, 'benevole');
         }
         $this->rolesMembre = array_values(array_unique($roles));
@@ -326,10 +331,10 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /** Retire un rôle vitrine — 'benevole' est protégé et ne peut pas être retiré. */
+    /** Retire un rôle vitrine — 'benevole' protégé sauf si 'employe' présent. */
     public function removeRoleMembre(string $role): static
     {
-        if ($role === 'benevole') {
+        if ($role === 'benevole' && !in_array('employe', $this->rolesMembre, true)) {
             return $this;
         }
         $this->rolesMembre = array_values(array_filter($this->rolesMembre, fn($r) => $r !== $role));

@@ -48,15 +48,28 @@
                         <div class="p-3 rounded-3 mb-3"
                              style="background:#f8f9fa;border:1px solid #dee2e6">
                             <div class="row g-2">
-                                {# Benevole toujours présent — non modifiable #}
+                                {# Employé : seul l'admin peut cocher. Remplace Bénévole automatiquement. #}
+                                <div class="col-12 mb-2 pb-2" style="border-bottom:1px solid #dee2e6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                               name="rolesMembre[]" value="employe"
+                                               id="admin_role_{{ user.id }}_employe"
+                                               {{ user.hasRoleMembre('employe') ? 'checked' }}>
+                                        <label class="form-check-label small" for="admin_role_{{ user.id }}_employe">
+                                            <strong>Employé</strong>
+                                            <span class="badge ms-1" style="background:var(--mabb-red);font-size:.65rem">charge salariale</span>
+                                            <small class="text-muted ms-1">— remplace Bénévole quand coché</small>
+                                        </label>
+                                    </div>
+                                </div>
+                                {# Bénévole : statut par défaut, géré par la logique serveur (mutex avec Employé) #}
                                 <div class="col-6">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox"
-                                               checked disabled style="opacity:.5">
+                                               {{ user.hasRoleMembre('employe') ? '' : 'checked' }} disabled style="opacity:.5">
                                         <label class="form-check-label text-muted small">
                                             Bénévole
-                                            <span class="badge bg-secondary ms-1"
-                                                  style="font-size:.65rem">défaut</span>
+                                            <span class="badge bg-secondary ms-1" style="font-size:.65rem">défaut auto</span>
                                         </label>
                                     </div>
                                 </div>

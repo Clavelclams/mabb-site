@@ -38,7 +38,8 @@ class AdminRolesController extends AbstractController
             return $this->redirectToRoute('admin_users_list');
         }
 
-        $rolesValides = ['coach', 'staff', 'dirigeant', 'service-civique', 'joueur', 'parent'];
+        // 'employe' uniquement modifiable depuis l'admin (pas depuis /compte) — demande Willy : charge salariale visible
+        $rolesValides = ['employe', 'coach', 'staff', 'dirigeant', 'service-civique', 'joueur', 'parent'];
         $rolesChoisis = $request->request->all('rolesMembre') ?? [];
         $rolesFiltres = array_filter($rolesChoisis, fn($r) => in_array($r, $rolesValides));
         // setRolesMembre force toujours benevole
