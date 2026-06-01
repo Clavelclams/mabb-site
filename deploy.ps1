@@ -69,6 +69,11 @@ Write-Host ""
 Write-Host "[3/4] Connexion SSH OVH (tape ton mot de passe OVH quand demande)..." -ForegroundColor Cyan
 $RemoteCmd = @"
 cd ~/mabb-site && \
+( if [ -f .env ] && ! git ls-files --error-unmatch .env > /dev/null 2>&1 ; then \
+    if [ ! -s .env.local ] ; then cp .env .env.local && echo 'INFO  .env (overrides serveur) sauvegarde en .env.local' ; \
+    else echo 'INFO  .env.local existe deja, on touche pas' ; fi ; \
+    mv .env .env.serveur-backup-`date +%Y%m%d-%H%M%S` && echo 'INFO  .env serveur archive' ; \
+  fi ) && \
 git pull && \
 php bin/console cache:clear --env=prod --no-warmup && \
 php bin/console asset-map:compile && \
