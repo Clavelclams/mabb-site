@@ -53,6 +53,18 @@ class NumeriquePagesController extends AbstractController
         ]);
     }
 
+    #[Route('/manager', name: 'vitrine_manager_construction')]
+    public function managerConstruction(): Response
+    {
+        return $this->render('vitrine/construction/manager.html.twig');
+    }
+
+    #[Route('/pirb', name: 'vitrine_pirb_construction')]
+    public function pirbConstruction(): Response
+    {
+        return $this->render('vitrine/construction/pirb.html.twig');
+    }
+
     #[Route('/nos-reseaux', name: 'vitrine_nos_reseaux')]
     public function nosReseaux(): Response
     {

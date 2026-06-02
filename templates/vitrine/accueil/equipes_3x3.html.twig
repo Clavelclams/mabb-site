@@ -60,46 +60,56 @@
 					</div>
 				</div>
 				<div class="col-lg-6">
-					<div class="card card-mabb p-4" style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue))">
-						<h3 class="text-white fw-bold mb-4">
-							<i class="bi bi-people-fill me-2"></i>Les joueurs
-						</h3>
-						<div
-							class="d-flex flex-column gap-3">
-							{# Ugo #}
-							<div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:rgba(255,255,255,.08)">
-								<div style="width:50px;height:50px;border-radius:50%;background:#fc702a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0">U</div>
-								<div>
-									<div class="text-white fw-bold">Ugo</div>
-									<div style="color:rgba(255,255,255,.65);font-size:.85rem">
-										Coach & joueur 3x3<br>
-										<span style="color:#ffb347">BPJEPS Spécialité Sport Co</span>
-									</div>
-								</div>
-							</div>
-							{# Clavel #}
-							<div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:rgba(255,255,255,.08)">
-								<div style="width:50px;height:50px;border-radius:50%;background:#fc702a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.1rem;flex-shrink:0">C</div>
-								<div>
-									<div class="text-white fw-bold">Clavel</div>
-									<div style="color:rgba(255,255,255,.65);font-size:.85rem">
-										Coach & joueur 3x3<br>
-										<span style="color:#ffb347">Responsable numérique MABB</span>
-									</div>
-								</div>
-							</div>
-							{# Placeholder #}
-							<div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.2)">
-								<div style="width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-weight:800;font-size:1.4rem;flex-shrink:0">?</div>
-								<div>
-									<div style="color:rgba(255,255,255,.5);font-weight:600">3ème joueur</div>
-									<div style="color:rgba(255,255,255,.35);font-size:.85rem">
-										En recrutement — à compléter
-									</div>
-								</div>
-							</div>
+					<div class="card card-mabb p-4" style="background:var(--mabb-blue)" id="team-3x3-card">
+						<div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+							<h3 class="text-white fw-bold mb-0">
+								<i class="bi bi-people-fill me-2"></i><span id="team-3x3-title">U13 — Équipe A</span>
+							</h3>
+							<span class="badge align-self-center" style="background:#fc702a;color:#fff;font-size:.75rem;flex-shrink:0">Saison 25/26</span>
+						</div>
+						<div id="team-3x3-roster" class="d-flex flex-column gap-3"></div>
+						<div class="d-flex justify-content-between align-items-center mt-4 pt-3 gap-2" style="border-top:1px solid rgba(255,255,255,.15)">
+							<button type="button" id="team-3x3-prev" class="btn btn-sm rounded-pill" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3)">
+								<i class="bi bi-arrow-left me-1"></i>Précédente
+							</button>
+							<span id="team-3x3-position" style="color:rgba(255,255,255,.7);font-size:.85rem;font-weight:600">1 / 9</span>
+							<button type="button" id="team-3x3-next" class="btn btn-sm rounded-pill" style="background:#fc702a;color:#fff;border:1px solid #fc702a">
+								Suivante<i class="bi bi-arrow-right ms-1"></i>
+							</button>
 						</div>
 					</div>
+					<script>
+					(function(){
+						var teams = [
+							{cat:"U13",equipe:"A",joueurs:["Laya","Sorena","Soumeya","Wendy"]},
+							{cat:"U13",equipe:"B",joueurs:["Mathilde","Princia","Charlie","Fever"]},
+							{cat:"U15",equipe:"A",joueurs:["Emeline","Léa","Manon","Bernice"]},
+							{cat:"U15",equipe:"B",joueurs:["Lola","Fatou","Mahawa","Marianne"]},
+							{cat:"U18",equipe:"A",joueurs:["Genaba","Oumayma","Cler-Mirice","Chloé"]},
+							{cat:"U18",equipe:"B",joueurs:["Anna","Nola","Yana","Djaya"]},
+							{cat:"Senior F",equipe:"A",joueurs:["Sounkamba","Rec-Prefie","Jody","Laryssa"]},
+							{cat:"Senior H",equipe:"A (Coachs)",joueurs:["Ugo","Leny","Tony","Clavel"]},
+							{cat:"Senior H",equipe:"B",joueurs:["Albert","Berstelien","Emeryc","Alexis"]}
+						];
+						var idx = 0;
+						function render(){
+							var t = teams[idx];
+							document.getElementById("team-3x3-title").textContent = t.cat + " — Équipe " + t.equipe;
+							document.getElementById("team-3x3-position").textContent = (idx+1) + " / " + teams.length;
+							var roster = t.joueurs.map(function(p){
+								var initial = p.charAt(0).toUpperCase();
+								return '<div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background:rgba(255,255,255,.08)">' +
+									'<div style="width:48px;height:48px;border-radius:50%;background:#fc702a;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:1.05rem;flex-shrink:0">' + initial + '</div>' +
+									'<div class="text-white fw-bold">' + p + '</div>' +
+									'</div>';
+							}).join("");
+							document.getElementById("team-3x3-roster").innerHTML = roster;
+						}
+						document.getElementById("team-3x3-prev").addEventListener("click", function(){ idx = (idx - 1 + teams.length) % teams.length; render(); });
+						document.getElementById("team-3x3-next").addEventListener("click", function(){ idx = (idx + 1) % teams.length; render(); });
+						render();
+					})();
+					</script>
 				</div>
 			</div>
 		</div>
@@ -116,11 +126,11 @@
 			</div>
 			<div class="row g-4">
 				{% for cat in [
-                {cat: 'U13', desc: 'Initiation au format 3x3 — tournois départementaux', icon: '🌱'},
-                {cat: 'U15', desc: 'Deux équipes engagées — tournois régionaux', icon: '⚡'},
-                {cat: 'U18', desc: 'Deux équipes — objectif pré-nationale', icon: '🏆'},
-                {cat: 'Senior Féminine', desc: 'Compétition régionale et nationale', icon: '⭐'},
-                {cat: 'Team Coachs', desc: 'Nos coachs MABB en compétition — exclusif MABB', icon: '🎯'},
+                {cat: 'U13', desc: 'Initiation au format 3x3 — tournois départementaux', icon: '🌱', resultat: '🏆 Finaliste 3x3 Oignies 2026', resultat_color: '#fc702a'},
+                {cat: 'U15', desc: 'Deux équipes engagées — tournois régionaux', icon: '⚡', resultat: '🏆 Finaliste 3x3 Oignies 2026', resultat_color: '#fc702a'},
+                {cat: 'U18', desc: 'Deux équipes — objectif pré-nationale', icon: '🏆', resultat: '🥉 Demi-finaliste 3x3 Oignies 2026', resultat_color: '#0062a8'},
+                {cat: 'Senior Féminine', desc: 'Compétition régionale et nationale', icon: '⭐', resultat: '🥉 Demi-finaliste 3x3 Oignies 2026', resultat_color: '#0062a8'},
+                {cat: 'Senior Masculine', desc: 'Coachs MABB en compétition — exclusif MABB', icon: '🎯', resultat: '🏆 Finaliste 3x3 Oignies 2026', resultat_color: '#fc702a'},
             ] %}
 					<div class="col-md-6 col-lg-4">
 						<div class="card card-mabb text-center p-4 h-100 d-flex flex-column">
@@ -128,7 +138,7 @@
 							<h5 class="fw-bold mb-2" style="color:var(--mabb-dark)">{{ cat.cat }}</h5>
 							<p class="text-muted small mb-3">{{ cat.desc }}</p>
 							<div class="mt-auto">
-								<span style="font-size:.75rem;color:#fc702a;font-weight:600;letter-spacing:.5px;text-transform:uppercase">⏳ À suivre prochainement</span>
+								<span style="font-size:.78rem;color:{{ cat.resultat_color }};font-weight:700;letter-spacing:.3px">{{ cat.resultat }}</span>
 							</div>
 						</div>
 					</div>

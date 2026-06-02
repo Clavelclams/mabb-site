@@ -56,6 +56,40 @@
 				</div>
 			</div>
 		</div>
+
+		{# CTA vers MABB Manager et PIRB #}
+		<div class="row g-4 mt-4">
+			<div class="col-md-6">
+				<a href="{{ path('vitrine_manager_construction') }}" class="text-decoration-none d-block">
+					<div class="card card-mabb h-100 p-4" style="border:2px solid var(--mabb-blue);transition:transform .2s" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
+						<div class="d-flex align-items-center gap-3">
+							<div style="width:60px;height:60px;border-radius:12px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+								<i class="bi bi-gear-fill" style="font-size:1.6rem;color:#fff"></i>
+							</div>
+							<div>
+								<h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">MABB Manager <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem">🚧 Bientôt</span></h5>
+								<p class="text-muted small mb-0">Gestion du club — effectifs, matchs, stats, présences.<br><strong style="color:var(--mabb-blue)">manager.mabb.fr</strong></p>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+			<div class="col-md-6">
+				<a href="{{ path('vitrine_pirb_construction') }}" class="text-decoration-none d-block">
+					<div class="card card-mabb h-100 p-4" style="border:2px solid var(--mabb-orange);transition:transform .2s" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
+						<div class="d-flex align-items-center gap-3">
+							<div style="width:60px;height:60px;border-radius:12px;background:var(--mabb-orange);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+								<i class="bi bi-person-badge-fill" style="font-size:1.6rem;color:#fff"></i>
+							</div>
+							<div>
+								<h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">PIRB <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem">🚧 Bientôt</span></h5>
+								<p class="text-muted small mb-0">L'espace perso de chaque joueuse — profil, stats, bilan.<br><strong style="color:var(--mabb-orange)">pirb.mabb.fr</strong></p>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+		</div>
 	</div>
 </section>
 

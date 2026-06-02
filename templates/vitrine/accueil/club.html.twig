@@ -105,26 +105,27 @@
 <section class="section">
 	<div class="container">
 		<div class="text-center mb-5">
-			<h2 class="section-title text-white">Le
-				<span>bureau</span>
-				dirigeant</h2>
+			<h2 class="section-title text-white"><span>Organigramme</span> MABB</h2>
 			<p class="section-subtitle text-white-force">L'équipe qui fait vivre le club au quotidien</p>
 		</div>
 		<div
 			class="row g-4 justify-content-center">
-			{# TODO: Compléter avec les vrais noms et photos fournis par Clavel #}
+			{# Organigramme MABB — mis à jour 2026-06 #}
 			{% set bureau = [
-                {nom: 'Willy Dufossé', role: 'Président', icon: 'bi-person-badge'},
-                {nom: 'À compléter', role: 'Vice-Président(e)', icon: 'bi-person'},
-                {nom: 'À compléter', role: 'Secrétaire Général(e)', icon: 'bi-pencil-square'},
-                {nom: 'À compléter', role: 'Trésorier(ère)', icon: 'bi-wallet2'},
+                {nom: 'Willy', role: 'Président / Directeur Général', emoji: '🏀'},
+                {nom: 'Moussa', role: 'Coordinateur', emoji: '🏀'},
+                {nom: 'Romy', role: 'Responsable Social', emoji: '🤝'},
+                {nom: 'Ugo', role: 'Responsable Sportif', emoji: '🏀'},
+                {nom: 'Clavel', role: 'Communication & Développement Numérique', emoji: '💻'},
+                {nom: 'Larissa', role: 'BPJEPS', emoji: '🏀'},
+                {nom: 'Leny', role: 'BPJEPS', emoji: '🏀'},
+                {nom: 'Tony', role: 'Alternance Communication', emoji: '📱'},
+                {nom: 'Services civiques · Stagiaires · Bénévoles', role: 'Soutien quotidien', emoji: '👥'},
             ] %}
 			{% for m in bureau %}
-				<div class="col-6 col-md-3">
+				<div class="col-6 col-md-4">
 					<div class="card card-mabb text-center p-4 h-100">
-						<div class="mx-auto mb-3" style="width:80px;height:80px;border-radius:50%;background:var(--mabb-gray);display:flex;align-items:center;justify-content:center">
-							<i class="bi {{ m.icon }}" style="font-size:2rem;color:var(--mabb-blue)"></i>
-						</div>
+						<div class="mx-auto mb-3" style="width:80px;height:80px;border-radius:50%;background:var(--mabb-gray);display:flex;align-items:center;justify-content:center;font-size:2rem">{{ m.emoji }}</div>
 						<h6 class="fw-bold mb-1">{{ m.nom }}</h6>
 						<small class="text-mabb-orange fw-semibold">{{ m.role }}</small>
 					</div>
