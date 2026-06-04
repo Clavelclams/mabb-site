@@ -77,7 +77,7 @@ cd ~/mabb-site && \
 git pull && \
 echo '=== COMPOSER INSTALL ===' && \
 ( [ -f composer.phar ] || ( echo 'Telechargement composer.phar...' && curl -sS https://getcomposer.org/installer | php ) ) && \
-php composer.phar install --no-dev --optimize-autoloader --no-interaction && \
+php composer.phar install --no-dev --optimize-autoloader --no-interaction --ignore-platform-req=ext-redis && \
 php bin/console cache:clear --env=prod --no-warmup && \
 echo '=== MIGRATIONS DOCTRINE ===' && \
 php bin/console doctrine:migrations:migrate --no-interaction --env=prod --allow-no-migration && \
