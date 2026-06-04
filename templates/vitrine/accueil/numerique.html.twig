@@ -60,15 +60,15 @@
 		{# CTA vers MABB Manager et PIRB #}
 		<div class="row g-4 mt-4">
 			<div class="col-md-6">
-				<a href="{{ path('vitrine_manager_construction') }}" class="text-decoration-none d-block">
+				<a href="https://manager.mabb.fr" target="_blank" rel="noopener" class="text-decoration-none d-block">
 					<div class="card card-mabb h-100 p-4" style="border:2px solid var(--mabb-blue);transition:transform .2s" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'">
 						<div class="d-flex align-items-center gap-3">
 							<div style="width:60px;height:60px;border-radius:12px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
 								<i class="bi bi-gear-fill" style="font-size:1.6rem;color:#fff"></i>
 							</div>
 							<div>
-								<h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">MABB Manager <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem">🚧 Bientôt</span></h5>
-								<p class="text-muted small mb-0">Gestion du club — effectifs, matchs, stats, présences.<br><strong style="color:var(--mabb-blue)">manager.mabb.fr</strong></p>
+								<h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">MABB Manager <span class="badge bg-success ms-1" style="font-size:.65rem">✅ En ligne</span></h5>
+								<p class="text-muted small mb-0">Gestion du club — effectifs, matchs, stats, présences.<br><strong style="color:var(--mabb-blue)">manager.mabb.fr</strong> <i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i></p>
 							</div>
 						</div>
 					</div>
@@ -136,9 +136,9 @@
         </div>
         <div class="row g-4 justify-content-center">
             {% set phases = [
-                {date: 'Mars 2026', title: 'Site vitrine mabb.fr', status: 'En cours', icon: 'bi-globe', color: '#f39c12'},
-                {date: 'Mai 2026', title: 'Gestion sportive', status: 'Planifié', icon: 'bi-people', color: '#3498db'},
-                {date: 'Juin 2026', title: 'Saisie matchs & stats', status: 'Planifié', icon: 'bi-clipboard-data', color: '#2980b9'},
+                {date: 'Mars 2026', title: 'Site vitrine mabb.fr', status: 'En ligne', icon: 'bi-globe', color: '#f39c12'},
+                {date: 'Mai 2026', title: 'Gestion sportive', status: 'En cours', icon: 'bi-people', color: '#3498db'},
+                {date: 'Juin 2026', title: 'Saisie matchs & stats', status: 'En cours', icon: 'bi-clipboard-data', color: '#2980b9'},
                 {date: 'Juillet 2026', title: 'PIRB joueur', status: 'Planifié', icon: 'bi-person-badge', color: '#27ae60'},
             ] %}
             {% for p in phases %}
@@ -149,7 +149,7 @@
                     </div>
                     <small class="text-mabb-orange fw-bold">{{ p.date }}</small>
                     <h6 class="fw-bold mt-2">{{ p.title }}</h6>
-                    <span class="badge {% if p.status == 'En cours' %}bg-warning text-dark{% else %}bg-light text-muted{% endif %} mt-2">{{ p.status }}</span>
+                    <span class="badge {% if p.status == 'En ligne' %}bg-success{% elseif p.status == 'En cours' %}bg-warning text-dark{% else %}bg-light text-muted{% endif %} mt-2">{{ p.status }}</span>
                 </div>
             </div>
             {% endfor %}

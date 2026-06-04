@@ -91,7 +91,45 @@
             <div class="col-lg-4">
                 <div class="card card-mabb p-4 mb-4">
                     <h2 class="section-title mb-3" style="font-size:1.3rem"><i class="bi bi-grid me-2 text-mabb-blue"></i>Mes espaces</h2>
-                    <p class="text-muted small">L'app Manager MABB et PIRB arrivent bientôt.</p>
+
+                    {# ===== MABB Manager : en ligne, lien externe ===== #}
+                    <a href="https://manager.mabb.fr" target="_blank" rel="noopener"
+                       class="d-flex align-items-center gap-3 p-3 mb-2 text-decoration-none rounded"
+                       style="border:2px solid var(--mabb-blue); background:#eff6ff; transition:transform .15s"
+                       onmouseover="this.style.transform='translateY(-2px)'"
+                       onmouseout="this.style.transform='none'">
+                        <div style="width:42px;height:42px;border-radius:10px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <i class="bi bi-gear-fill" style="color:#fff;font-size:1.1rem"></i>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">
+                                MABB Manager
+                                <span style="background:#dcfce7;color:#166534;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">✅ En ligne</span>
+                            </div>
+                            <div style="font-size:.72rem;color:#64748b">Gestion club — équipes, calendrier, présences</div>
+                        </div>
+                        <i class="bi bi-box-arrow-up-right" style="color:var(--mabb-blue)"></i>
+                    </a>
+
+                    {# ===== PIRB : encore en construction ===== #}
+                    <a href="{{ path('vitrine_pirb_construction') }}"
+                       class="d-flex align-items-center gap-3 p-3 mb-2 text-decoration-none rounded"
+                       style="border:2px solid var(--mabb-orange); background:#fff7ed; transition:transform .15s"
+                       onmouseover="this.style.transform='translateY(-2px)'"
+                       onmouseout="this.style.transform='none'">
+                        <div style="width:42px;height:42px;border-radius:10px;background:var(--mabb-orange);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                            <i class="bi bi-person-badge-fill" style="color:#fff;font-size:1.1rem"></i>
+                        </div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">
+                                PIRB
+                                <span style="background:#fef3c7;color:#92400e;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">🚧 Bientôt</span>
+                            </div>
+                            <div style="font-size:.72rem;color:#64748b">L'espace perso joueuse — profil, stats, bilan</div>
+                        </div>
+                        <i class="bi bi-chevron-right" style="color:var(--mabb-orange)"></i>
+                    </a>
+
                     <div class="d-flex flex-column gap-2 mt-3">
                         <a href="{{ path('vitrine_membres') }}" class="btn btn-sm btn-outline-secondary rounded-pill">
                             <i class="bi bi-people me-1"></i>Voir la page Membres
