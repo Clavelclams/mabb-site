@@ -177,6 +177,8 @@ security:
         # -----------------------------------------------------------------
         # Page login manager : publique (même logique anti-boucle)
         - { path: ^/login$, host: '^manager\.', roles: PUBLIC_ACCESS }
+        # Page inscription manager : publique (signup multi-club)
+        - { path: ^/inscription$, host: '^manager\.', roles: PUBLIC_ACCESS }
         # Gestion avancée (ex: multi-clubs, paramètres plateforme) : super admin
         - { path: ^/admin, host: '^manager\.', roles: ROLE_SUPER_ADMIN }
         # Gestion du club (ex: équipes, joueurs) : dirigeant minimum
