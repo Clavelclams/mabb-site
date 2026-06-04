@@ -89,6 +89,20 @@
                 </div>
             </a>
         </div>
+        {# Card Demandes — visible uniquement aux DIRIGEANT du club actif #}
+        {% if club is defined and club and is_granted('CLUB_ADMIN', club) %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_demandes_index') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer; position:relative;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-hourglass-split" style="font-size:2.5rem; color:#a16207;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Demandes</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Valider les inscriptions en attente.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endif %}
     </div>
 
     {# ========================================================
