@@ -10,5 +10,5 @@ pirb_controllers:
         subdomain: pirb
         domain: '%app.host_domain%'
     requirements:
-        subdomain: '^pirb$'
-        domain: '^mabb\.fr$|^localhost$'
+        subdomain: 'pirb'
+        domain: '(mabb\.fr|localhost)'

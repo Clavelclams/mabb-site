@@ -13,4 +13,4 @@ vitrine_controllers:
     defaults:
         host: '%app.host_domain%'
     requirements:
-        host: '^(www\.)?mabb\.fr$|^localhost$|^127\.0\.0\.1$'
+        host: '(www\.)?mabb\.fr|localhost|127\.0\.0\.1'

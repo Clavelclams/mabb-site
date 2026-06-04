@@ -13,5 +13,5 @@ manager_controllers:
         subdomain: manager
         domain: '%app.host_domain%'
     requirements:
-        subdomain: '^manager$'
-        domain: '^mabb\.fr$|^localhost$'
+        subdomain: 'manager'
+        domain: '(mabb\.fr|localhost)'
