@@ -5,6 +5,7 @@ namespace App\Controller\Manager;
 use App\Entity\Core\Club;
 use App\Entity\Core\User;
 use App\Entity\Core\UserClubRole;
+use App\Service\JoueurMatcherService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -42,6 +43,7 @@ class ManagerInscriptionController extends AbstractController
         Request $request,
         UserPasswordHasherInterface $passwordHasher,
         EntityManagerInterface $em,
+        JoueurMatcherService $joueurMatcher,
     ): Response {
         // Si déjà connecté, redirige vers le dashboard
         if ($this->getUser()) {
@@ -62,6 +64,8 @@ class ManagerInscriptionController extends AbstractController
             $rgpd       = $request->request->getBoolean('rgpd_consent');
             $clubId     = (int) $request->request->get('club_id', 0);
             $roleDemande = (string) $request->request->get('role_demande', UserClubRole::ROLE_BENEVOLE);
+            $licence    = trim((string) $request->request->get('licence', '')) ?: null;
+            $telephone  = trim((string) $request->request->get('telephone', '')) ?: null;
 
             // Sécurité : valider le rôle demandé (sinon fallback BENEVOLE)
             if (!UserClubRole::isValidRole($roleDemande)) {
@@ -117,18 +121,45 @@ class ManagerInscriptionController extends AbstractController
                 $user->setPassword($passwordHasher->hashPassword($user, $password));
                 $user->setRgpdConsent(true);
 
-                // Demande créée en status=PENDING : le user a un compte mais
-                // n'aura accès au manager qu'après validation par un dirigeant.
-                // Le rôle réel reste BENEVOLE tant que pending ; le rôle DEMANDÉ
-                // est mémorisé pour que le dirigeant voit la demande exacte.
+                // ====================================================
+                // MATCH AUTO Joueur ↔ User
+                // ====================================================
+                // Si un Joueur en BDD correspond aux infos saisies (licence, email,
+                // téléphone), on auto-link et on valide directement. Le user
+                // récupère ainsi toute sa gamification accumulée (XP, badges,
+                // missions) dès sa première connexion.
+                $joueurMatche = $joueurMatcher->chercherJoueurCorrespondant(
+                    $club,
+                    $licence,
+                    $email,
+                    $telephone
+                );
+
+                $em->persist($user);
+
                 $userClubRole = new UserClubRole();
                 $userClubRole->setUser($user);
                 $userClubRole->setClub($club);
-                $userClubRole->setRole(UserClubRole::ROLE_BENEVOLE);
                 $userClubRole->setRoleDemande($roleDemande);
-                $userClubRole->setStatus(UserClubRole::STATUS_PENDING);
 
-                $em->persist($user);
+                if ($joueurMatche !== null) {
+                    // ON MATCH ! Auto-validation + lien gamification
+                    $joueurMatcher->lierUserAuJoueur($user, $joueurMatche);
+                    $userClubRole->setRole(UserClubRole::ROLE_JOUEUR);
+                    $userClubRole->setStatus(UserClubRole::STATUS_ACTIVE);
+                    $em->persist($userClubRole);
+                    $em->flush();
+
+                    $this->addFlash('success', sprintf(
+                        '🎯 Bienvenue %s ! Nous avons reconnu ta fiche joueuse — ton compte est validé immédiatement. Tu retrouves toute ta gamification (XP, badges) sur ton profil.',
+                        $user->getPrenom()
+                    ));
+                    return $this->redirectToRoute('manager_login');
+                }
+
+                // Pas de match — workflow pending normal
+                $userClubRole->setRole(UserClubRole::ROLE_BENEVOLE);
+                $userClubRole->setStatus(UserClubRole::STATUS_PENDING);
                 $em->persist($userClubRole);
                 $em->flush();
 

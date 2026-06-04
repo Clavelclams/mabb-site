@@ -5,6 +5,7 @@ namespace App\EventListener;
 use App\Entity\Core\Club;
 use App\Entity\Core\User;
 use App\Entity\Core\UserClubRole;
+use App\Service\JoueurMatcherService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -38,6 +39,7 @@ class AutoLinkBenevoleListener
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly RequestStack $requestStack,
+        private readonly JoueurMatcherService $joueurMatcher,
     ) {}
 
     public function __invoke(InteractiveLoginEvent $event): void
@@ -75,15 +77,32 @@ class AutoLinkBenevoleListener
 
         $club = $clubs[0];
 
-        // Création en status=PENDING : le user devra être validé par un
-        // dirigeant avant d'avoir accès au manager. Empêche les inscriptions
-        // sauvages et les voyeurs qui s'inscriraient dans plusieurs clubs.
+        // Tentative de match auto Joueur ↔ User (par email + téléphone si présent
+        // sur User). Si trouvé → auto-validation + lien gamification immédiat.
+        $joueurMatche = $this->joueurMatcher->chercherJoueurCorrespondant(
+            $club,
+            null,                       // pas de licence dans l'auto-link (User vitrine n'a pas saisi)
+            $user->getEmail(),
+            method_exists($user, 'getTelephone') ? $user->getTelephone() : null
+        );
+
         $userClubRole = new UserClubRole();
         $userClubRole->setUser($user);
         $userClubRole->setClub($club);
-        $userClubRole->setRole(UserClubRole::ROLE_BENEVOLE);   // rôle "vide" en attente
-        $userClubRole->setRoleDemande(UserClubRole::ROLE_BENEVOLE);
-        $userClubRole->setStatus(UserClubRole::STATUS_PENDING);
+
+        if ($joueurMatche !== null) {
+            // Match trouvé : on lie le User au Joueur et on valide direct en JOUEUR.
+            // Le User récupère ses XP/badges/missions sans intervention dirigeant.
+            $this->joueurMatcher->lierUserAuJoueur($user, $joueurMatche);
+            $userClubRole->setRole(UserClubRole::ROLE_JOUEUR);
+            $userClubRole->setRoleDemande(UserClubRole::ROLE_JOUEUR);
+            $userClubRole->setStatus(UserClubRole::STATUS_ACTIVE);
+        } else {
+            // Pas de match : workflow pending normal.
+            $userClubRole->setRole(UserClubRole::ROLE_BENEVOLE);
+            $userClubRole->setRoleDemande(UserClubRole::ROLE_BENEVOLE);
+            $userClubRole->setStatus(UserClubRole::STATUS_PENDING);
+        }
 
         $this->em->persist($userClubRole);
         $this->em->flush();

@@ -70,7 +70,19 @@ class JoueurType extends AbstractType
                 'label'    => 'Numéro de licence FFBB',
                 'required' => false,
                 'attr'     => ['maxlength' => 20, 'placeholder' => 'Ex: VT123456'],
-                'help'     => 'Optionnel — peut être saisi plus tard.',
+                'help'     => 'Optionnel — clé n°1 pour le match auto au signup compte joueur.',
+            ])
+            ->add('email', TextType::class, [
+                'label'    => 'Email',
+                'required' => false,
+                'attr'     => ['maxlength' => 180, 'placeholder' => 'joueuse@exemple.fr'],
+                'help'     => 'Optionnel — clé n°2 pour le match auto. Si la joueuse crée son compte avec ce même email, elle récupère sa gamification.',
+            ])
+            ->add('telephone', TextType::class, [
+                'label'    => 'Téléphone',
+                'required' => false,
+                'attr'     => ['maxlength' => 20, 'placeholder' => '06 12 34 56 78'],
+                'help'     => 'Optionnel — clé n°3 pour le match auto (utile pour les joueuses sans email).',
             ])
 
             // ============================================================

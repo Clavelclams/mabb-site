@@ -63,6 +63,22 @@ class Joueur implements ClubAwareInterface
     private ?string $licence = null;
 
     /**
+     * Email du joueur — clé secondaire de match User ↔ Joueur au signup
+     * (utilisée si pas de licence ou si le user s'inscrit sans renseigner sa licence).
+     */
+    #[ORM\Column(length: 180, nullable: true)]
+    #[Assert\Email(message: 'Email invalide.')]
+    private ?string $email = null;
+
+    /**
+     * Téléphone du joueur — clé tertiaire de match User ↔ Joueur au signup
+     * (utilisée pour les bénévoles/joueurs jeunes sans email).
+     * Format libre, normalisation côté code (strip espaces/points/tirets) avant comparaison.
+     */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $telephone = null;
+
+    /**
      * Notes libres : infos medicales, contact urgence, observations coach.
      * Confidentiel — visible uniquement par le staff (CLUB_STAFF+).
      * Important : ces donnees peuvent contenir des infos sensibles (sante)
@@ -119,6 +135,32 @@ class Joueur implements ClubAwareInterface
     public function setNumeroMaillot(?int $n): static { $this->numeroMaillot = $n; return $this; }
     public function getLicence(): ?string { return $this->licence; }
     public function setLicence(?string $licence): static { $this->licence = $licence; return $this; }
+
+    public function getEmail(): ?string { return $this->email; }
+    public function setEmail(?string $email): static
+    {
+        $this->email = $email ? strtolower(trim($email)) : null;
+        return $this;
+    }
+
+    public function getTelephone(): ?string { return $this->telephone; }
+    public function setTelephone(?string $tel): static { $this->telephone = $tel; return $this; }
+
+    /**
+     * Téléphone normalisé pour comparaison : sans espaces, points, tirets, parenthèses.
+     * "+33 6 12 34 56 78" et "0612345678" donnent la même chose (ou presque).
+     */
+    public function getTelephoneNormalise(): ?string
+    {
+        if ($this->telephone === null) return null;
+        $clean = preg_replace('/[\s\.\-\(\)]/', '', $this->telephone);
+        // Convertit +33X en 0X si format français
+        if (str_starts_with($clean, '+33')) {
+            $clean = '0' . substr($clean, 3);
+        }
+        return $clean;
+    }
+
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $notes): static { $this->notes = $notes; return $this; }
     public function getUser(): ?User { return $this->user; }

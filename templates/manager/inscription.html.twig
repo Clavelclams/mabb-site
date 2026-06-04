@@ -282,6 +282,29 @@
                        value="{{ app.request.request.get('email') }}"
                        placeholder="ton.email@exemple.fr">
             </div>
+
+            {# Champs optionnels mais qui servent au match auto avec une fiche existante #}
+            <div class="row g-2 mb-3">
+                <div class="col-7">
+                    <label class="form-label" for="licence">Numéro de licence FFBB <small style="color:#94a3b8;">(si joueur)</small></label>
+                    <input type="text" id="licence" name="licence" class="form-control"
+                           value="{{ app.request.request.get('licence') }}"
+                           placeholder="Ex: BC123456 ou VT987654" maxlength="20">
+                </div>
+                <div class="col-5">
+                    <label class="form-label" for="telephone">Téléphone <small style="color:#94a3b8;">(optionnel)</small></label>
+                    <input type="tel" id="telephone" name="telephone" class="form-control"
+                           value="{{ app.request.request.get('telephone') }}"
+                           placeholder="06 12 34 56 78" maxlength="20">
+                </div>
+            </div>
+            <div style="background:#eff6ff; border-left:3px solid #1d4ed8; padding:10px 14px; border-radius:6px; margin-bottom:18px; font-size:.78rem; color:#1e3a8a;">
+                <i class="bi bi-magic"></i>
+                <strong>Astuce :</strong> si ton coach a déjà saisi tes infos dans le club
+                (licence FFBB, email ou téléphone), ton compte sera <strong>validé immédiatement</strong>
+                et tu retrouveras toute ta gamification (XP, badges) accumulée.
+                Sinon ta demande sera en attente de validation par un dirigeant.
+            </div>
             <div class="row g-2 mb-3">
                 <div class="col-6">
                     <label class="form-label" for="password">Mot de passe</label>
