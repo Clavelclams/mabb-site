@@ -1,7 +1,7 @@
 {# templates/vitrine/navbar.html.twig #}
 {# MODIFS vs original :
    1. navbar-light bg-light → navbar-dark navbar-mabb fixed-top (fond bleu)
-   2. Ajout bandeau 🚧 après le brand
+   2. Ajout bandeau  après le brand
    3. Ajout <li> Membres (après Club) et Formation (après Actualités)
    4. "Espace numérique" disabled → "Numérique" actif
    5. {% if app.user %} déjà en place — conservé tel quel
@@ -26,8 +26,12 @@
 				<li class="nav-item dropdown">
 					<a class="nav-link dropdown-toggle" href="#" id="navbarClubDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Le Club</a>
 					<ul class="dropdown-menu" aria-labelledby="navbarClubDropdown">
-						<li><a class="dropdown-item" href="/club">Le Club</a></li>
-						<li><a class="dropdown-item" href="/victoires">Nos Victoires</a></li>
+						<li>
+							<a class="dropdown-item" href="/club">Le Club</a>
+						</li>
+						<li>
+							<a class="dropdown-item" href="/victoires">Nos Victoires</a>
+						</li>
 					</ul>
 				</li>
 				{# AJOUT : Membres #}
