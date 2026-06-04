@@ -1,6 +1,7 @@
 {% extends 'vitrine/base.html.twig' %}
 {% block title %}Clavel — Responsable Numérique MABB{% endblock %}
 {% block body %}
+
 <div class="page-header">
     <div class="container text-center">
         <span class="badge-label mb-3">🚧 Site en construction — Projet CDA</span>
@@ -8,124 +9,118 @@
         <p style="color:rgba(255,255,255,.75);font-size:1.05rem">Responsable Numérique — Amiens Métropole Basket Ball</p>
     </div>
 </div>
+
 <section class="section section-gray">
     <div class="container">
         <div class="row g-5 align-items-center">
+
+            {# ===== Colonne gauche : présentation ===== #}
             <div class="col-lg-6">
                 <h2 class="section-title">Mon rôle à la MABB</h2>
                 <p class="text-muted fs-5 mb-3">Responsable numérique bénévole, je mène la <strong>transformation digitale</strong> du club dans le cadre de ma formation CDA, avec l'accord du président <strong>Willy Dufossé</strong>.</p>
                 <p class="text-muted">Ces projets constituent mon portfolio professionnel et démontrent une approche complète : conception, développement et déploiement d'applications réelles.</p>
                 <p class="text-muted"><strong class="text-mabb-orange">VENA</strong> — mon projet entrepreneurial qui accompagne les associations sportives dans leur transformation numérique. La MABB est le premier projet concret.</p>
             </div>
+
+            {# ===== Colonne droite : card slider 2 vues (MABB / Velito) ===== #}
             <div class="col-lg-6">
                 <div class="card card-mabb p-4" style="background:linear-gradient(135deg,var(--mabb-dark),var(--mabb-blue))">
-                    <h3 class="text-white fw-bold mb-4">Les projets MABB</h3>
-                    <div class="row g-3">
-                        {% for projet in [
-                            {icon:'🌐', name:'Site Vitrine', tech:'Symfony 7 · Twig · Bootstrap', url:'https://mabb.fr', external:true, statut:'En ligne'},
-                            {icon:'📱', name:'App Manager', tech:'Symfony 7 · Doctrine · MariaDB', url:'https://manager.mabb.fr', external:true, statut:'En ligne'},
-                            {icon:'🏀', name:'PIRB', tech:'Stats · Gamification · Vidéo', url:path('vitrine_pirb_construction'), external:false, statut:'Bientôt'},
-                        ] %}
-                        <div class="col-12">
-                            <a href="{{ projet.url }}"
-                               {% if projet.external %}target="_blank" rel="noopener"{% endif %}
-                               style="text-decoration:none;display:block">
-                                <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:background .15s;cursor:pointer"
-                                     onmouseover="this.style.background='rgba(255,255,255,.16)'"
-                                     onmouseout="this.style.background='rgba(255,255,255,.08)'">
-                                    <span style="font-size:1.6rem">{{ projet.icon }}</span>
-                                    <div style="flex:1;min-width:0">
-                                        <div style="color:#fff;font-weight:600">
-                                            {{ projet.name }}
-                                            <span style="background:{% if projet.statut == 'En ligne' %}#16a34a{% else %}#f59e0b{% endif %};color:#fff;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">
-                                                {% if projet.statut == 'En ligne' %}✅{% else %}🚧{% endif %} {{ projet.statut }}
-                                            </span>
-                                        </div>
-                                        <div style="color:rgba(255,255,255,.5);font-size:.8rem">{{ projet.tech }}</div>
-                                    </div>
-                                    <i class="bi bi-{% if projet.external %}box-arrow-up-right{% else %}chevron-right{% endif %}" style="color:rgba(255,255,255,.6)"></i>
-                                </div>
-                            </a>
-                        </div>
-                        {% endfor %}
+                    {# Titre dynamique selon la vue active #}
+                    <h3 class="text-white fw-bold mb-4" id="projet-titre">Les projets MABB</h3>
+
+                    {# Zone de contenu — la liste des 3 projets de la vue active #}
+                    <div class="row g-3" id="projet-liste"></div>
+
+                    {# Footer navigation slider — même pattern que la card 3x3 #}
+                    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 gap-2" style="border-top:1px solid rgba(255,255,255,.15)">
+                        <button type="button" id="projet-prev" class="btn btn-sm rounded-pill" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.3)">
+                            <i class="bi bi-arrow-left me-1"></i>Précédent
+                        </button>
+                        <span id="projet-position" style="color:rgba(255,255,255,.7);font-size:.85rem;font-weight:600">1 / 2</span>
+                        <button type="button" id="projet-next" class="btn btn-sm rounded-pill" style="background:#fc702a;color:#fff;border:1px solid #fc702a">
+                            Suivant<i class="bi bi-arrow-right ms-1"></i>
+                        </button>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        {# ===== SECTION PROJETS PERSO — écosystème Velito ===== #}
-        <div class="mt-5">
-            <h3 class="section-title text-white mb-4 text-center">
-                Mes <span class="text-mabb-orange">autres projets</span> — écosystème Velito
-            </h3>
-            <p class="text-center text-muted mb-4">
-                MABB est le projet d'alternance CDA, mais l'écosystème Velito que je construis
-                accompagne d'autres associations et porte ma vision entrepreneuriale.
-            </p>
+                <script>
+                (function(){
+                    // 2 vues : 0 = projets MABB, 1 = projets Velito
+                    var vues = [
+                        {
+                            titre: "Les projets MABB",
+                            projets: [
+                                {icon:'🌐', name:'Site Vitrine', tech:'Symfony 7 · Twig · Bootstrap', url:'https://mabb.fr', external:true, statut:'En ligne'},
+                                {icon:'📱', name:'App Manager', tech:'Symfony 7 · Doctrine · MariaDB', url:'https://manager.mabb.fr', external:true, statut:'En ligne'},
+                                {icon:'🏀', name:'PIRB', tech:'Stats · Gamification · Vidéo', url:'{{ path('vitrine_pirb_construction') }}', external:false, statut:'Bientôt'}
+                            ]
+                        },
+                        {
+                            titre: "Mes autres projets — écosystème Velito",
+                            projets: [
+                                {logo:'{{ asset('images/projets/vea-logo.svg') }}', name:'VEA', tech:'Velito Esport Amiens — Asso loi 1901, inclusion par l\'esport', url:'https://vea.velito.fr', external:true, statut:'En ligne'},
+                                {logo:'{{ asset('images/projets/vena-logo.svg') }}', name:'VENA', tech:'SASU — Sites & apps métier pour associations', url:'https://velito.fr', external:true, statut:'En ligne'},
+                                {logo:'{{ asset('images/projets/interactive-logo.svg') }}', name:'Interactive', tech:'Jeu interactif web — motion, 3D, R&D front-end', url:'https://interactive.velito.fr', external:true, statut:'En ligne'}
+                            ]
+                        }
+                    ];
+                    var idx = 0;
 
-            <div class="row g-4 justify-content-center">
-                {# VEA — Velito Esport Amiens — logo lion officiel rouge #}
-                <div class="col-md-6 col-lg-4">
-                    <a href="https://vea.velito.fr" target="_blank" rel="noopener" style="text-decoration:none">
-                        <div class="card card-mabb h-100 p-4" style="border:2px solid #dc2626; transition:transform .2s, box-shadow .2s"
-                             onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(220,38,38,.25)'"
-                             onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-                            <div style="height:64px; display:flex; align-items:center; margin-bottom:12px">
-                                <img src="{{ asset('images/projets/vea-logo.svg') }}" alt="VEA — Velito Esport Amiens" style="height:60px; width:auto; object-fit:contain">
-                            </div>
-                            <h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">VEA</h5>
-                            <div style="font-size:.78rem;color:#dc2626;font-weight:700;margin-bottom:8px">vea.velito.fr</div>
-                            <p class="text-muted small mb-2">
-                                <strong>Velito Esport Amiens</strong> — Association loi 1901
-                                d'inclusion par l'esport, basée en Hauts-de-France.
-                                Tournois, animations dans les quartiers, accompagnement numérique des jeunes.
-                            </p>
-                            <span class="badge bg-success">✅ En ligne</span>
-                        </div>
-                    </a>
-                </div>
+                    function render(){
+                        var vue = vues[idx];
+                        document.getElementById("projet-titre").textContent = vue.titre;
+                        document.getElementById("projet-position").textContent = (idx+1) + " / " + vues.length;
 
-                {# VENA — Velito Expertise Numérique Amiens — logo kaki officiel #}
-                <div class="col-md-6 col-lg-4">
-                    <a href="https://velito.fr" target="_blank" rel="noopener" style="text-decoration:none">
-                        <div class="card card-mabb h-100 p-4" style="border:2px solid #6b7553; transition:transform .2s, box-shadow .2s"
-                             onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(107,117,83,.25)'"
-                             onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-                            <div style="height:64px; display:flex; align-items:center; margin-bottom:12px">
-                                <img src="{{ asset('images/projets/vena-logo.png') }}" alt="VENA — Velito Expertise Numérique Amiens" style="height:60px; width:auto; object-fit:contain" loading="lazy">
-                            </div>
-                            <h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">VENA</h5>
-                            <div style="font-size:.78rem;color:#6b7553;font-weight:700;margin-bottom:8px">velito.fr</div>
-                            <p class="text-muted small mb-2">
-                                <strong>Velito Expertise Numérique Amiens</strong> — SASU au capital de 500€.
-                                Sites web, apps métier et accompagnement digital pour les associations
-                                et structures locales. MABB est le premier client concret.
-                            </p>
-                            <span class="badge bg-success">✅ En ligne</span>
-                        </div>
-                    </a>
-                </div>
+                        var html = vue.projets.map(function(p){
+                            // Visuel de gauche : soit emoji (MABB), soit logo image (Velito)
+                            var visuel = p.logo
+                                ? '<img src="' + p.logo + '" alt="' + p.name + '" style="height:32px;width:32px;object-fit:contain;flex-shrink:0">'
+                                : '<span style="font-size:1.6rem;flex-shrink:0">' + p.icon + '</span>';
 
-                {# Interactive — projet créatif R&D motion/3D — couleur violet #}
-                <div class="col-md-6 col-lg-4">
-                    <a href="https://interactive.velito.fr" target="_blank" rel="noopener" style="text-decoration:none">
-                        <div class="card card-mabb h-100 p-4" style="border:2px solid #8b5cf6; transition:transform .2s, box-shadow .2s"
-                             onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 24px rgba(139,92,246,.25)'"
-                             onmouseout="this.style.transform='none';this.style.boxShadow='none'">
-                            <div style="height:64px; display:flex; align-items:center; margin-bottom:12px">
-                                <img src="{{ asset('images/projets/interactive-logo.png') }}" alt="Interactive — Jeu interactif Velito" style="height:60px; width:auto; object-fit:contain; border-radius:8px" loading="lazy">
-                            </div>
-                            <h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">Interactive</h5>
-                            <div style="font-size:.78rem;color:#8b5cf6;font-weight:700;margin-bottom:8px">interactive.velito.fr</div>
-                            <p class="text-muted small mb-2">
-                                <strong>Jeu interactif web</strong> — Projet créatif d'exploration des
-                                technologies front-end (animations, motion, 3D). Bac à sable de R&D
-                                pour mes compétences en interaction et UX immersive.
-                            </p>
-                            <span class="badge bg-success">✅ En ligne</span>
-                        </div>
-                    </a>
-                </div>
+                            var badgeStatut = p.statut === 'En ligne'
+                                ? '<span style="background:#16a34a;color:#fff;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">✅ ' + p.statut + '</span>'
+                                : '<span style="background:#f59e0b;color:#fff;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">🚧 ' + p.statut + '</span>';
+
+                            var iconRight = p.external
+                                ? '<i class="bi bi-box-arrow-up-right" style="color:rgba(255,255,255,.6)"></i>'
+                                : '<i class="bi bi-chevron-right" style="color:rgba(255,255,255,.6)"></i>';
+
+                            var openInBlank = p.external ? ' target="_blank" rel="noopener"' : '';
+
+                            return '<div class="col-12">' +
+                                '<a href="' + p.url + '"' + openInBlank + ' style="text-decoration:none;display:block">' +
+                                    '<div class="projet-row" style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px;transition:background .15s;cursor:pointer">' +
+                                        visuel +
+                                        '<div style="flex:1;min-width:0">' +
+                                            '<div style="color:#fff;font-weight:600">' + p.name + badgeStatut + '</div>' +
+                                            '<div style="color:rgba(255,255,255,.5);font-size:.8rem">' + p.tech + '</div>' +
+                                        '</div>' +
+                                        iconRight +
+                                    '</div>' +
+                                '</a>' +
+                            '</div>';
+                        }).join('');
+
+                        document.getElementById("projet-liste").innerHTML = html;
+
+                        // Hover effect sur chaque ligne (vanilla, comme l'ancien onmouseover)
+                        document.querySelectorAll('#projet-liste .projet-row').forEach(function(row){
+                            row.addEventListener('mouseenter', function(){ this.style.background = 'rgba(255,255,255,.16)'; });
+                            row.addEventListener('mouseleave', function(){ this.style.background = 'rgba(255,255,255,.08)'; });
+                        });
+                    }
+
+                    document.getElementById("projet-prev").addEventListener("click", function(){
+                        idx = (idx - 1 + vues.length) % vues.length;
+                        render();
+                    });
+                    document.getElementById("projet-next").addEventListener("click", function(){
+                        idx = (idx + 1) % vues.length;
+                        render();
+                    });
+                    render();
+                })();
+                </script>
             </div>
         </div>
     </div>
