@@ -72,6 +72,16 @@ class RencontreType extends AbstractType
                 'attr'     => ['min' => 0, 'max' => 300],
                 'help'     => 'À remplir après le match.',
             ])
+            ->add('arbitreExterneDesigne', CheckboxType::class, [
+                'label'    => 'Arbitre officiel FFBB désigné',
+                'required' => false,
+                'help'     => 'Cocher si la FFBB a désigné un arbitre officiel. Sinon, un bénévole du club pourra s\'inscrire pour arbitrer.',
+            ])
+            ->add('arbitreExterneNom', TextType::class, [
+                'label'    => 'Nom de l\'arbitre FFBB (si désigné)',
+                'required' => false,
+                'attr'     => ['maxlength' => 120, 'placeholder' => 'Optionnel — info de convocation FFBB'],
+            ])
             ->add('notes', TextareaType::class, [
                 'label'    => 'Notes',
                 'required' => false,

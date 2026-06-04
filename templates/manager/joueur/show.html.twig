@@ -217,6 +217,12 @@
                             <div style="font-size:1.5rem; font-weight:700; color:#92400e;">{{ gamification.details.streak_actuel }}</div>
                             <div style="font-size:.72rem; color:var(--mabb-muted);">Série en cours</div>
                         </div>
+                        {% if gamification.details.nb_missions is defined and gamification.details.nb_missions > 0 %}
+                            <div style="background:#dcfce7; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.5rem; font-weight:700; color:#16a34a;">{{ gamification.details.nb_missions }}</div>
+                                <div style="font-size:.72rem; color:var(--mabb-muted);">Missions bénévolat (+{{ gamification.details.xp_missions }} XP)</div>
+                            </div>
+                        {% endif %}
                         {% if gamification.details.nb_seances_absent_excuse > 0 %}
                             <div style="background:#f8fafc; padding:12px; border-radius:8px; text-align:center;">
                                 <div style="font-size:1.5rem; font-weight:700; color:#64748b;">{{ gamification.details.nb_seances_absent_excuse }}</div>

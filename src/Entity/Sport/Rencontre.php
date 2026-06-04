@@ -76,6 +76,33 @@ class Rencontre implements ClubAwareInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    /**
+     * Indique si la FFBB a désigné un arbitre officiel pour ce match.
+     * Si oui, aucune inscription bénévole interne n'est possible (le bouton
+     * est désactivé dans l'UI). Si non, un membre du club peut s'inscrire
+     * comme arbitre bénévole — pratique pour les catégories jeunes (U13, U15)
+     * où l'arbitrage est souvent assuré par les clubs.
+     */
+    #[ORM\Column]
+    private bool $arbitreExterneDesigne = false;
+
+    /**
+     * Nom de l'arbitre officiel FFBB (si désigné). Champ informatif libre,
+     * récupéré depuis la convocation FFBB. Affiché sur la fiche rencontre.
+     */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $arbitreExterneNom = null;
+
+    /**
+     * Rôles bénévoles internes (arbitres, marqueur, chrono, e-marque, stats…).
+     * Voir entité RencontreRole pour le détail. Chaque rôle peut être pris
+     * par un User différent ; la table fait office de planning officiel.
+     *
+     * @var Collection<int, RencontreRole>
+     */
+    #[ORM\OneToMany(targetEntity: RencontreRole::class, mappedBy: 'rencontre', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $roles;
+
     /** @var Collection<int, Convocation> */
     #[ORM\OneToMany(targetEntity: Convocation::class, mappedBy: 'rencontre', cascade: ['remove'])]
     private Collection $convocations;
@@ -88,6 +115,7 @@ class Rencontre implements ClubAwareInterface
     {
         $this->convocations = new ArrayCollection();
         $this->presences = new ArrayCollection();
+        $this->roles = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -124,4 +152,35 @@ class Rencontre implements ClubAwareInterface
     public function getUpdatedAt(): ?\DateTimeImmutable { return $this->updatedAt; }
     public function getConvocations(): Collection { return $this->convocations; }
     public function getPresences(): Collection { return $this->presences; }
+
+    // ====== Arbitrage FFBB ======
+    public function isArbitreExterneDesigne(): bool { return $this->arbitreExterneDesigne; }
+    public function setArbitreExterneDesigne(bool $v): static { $this->arbitreExterneDesigne = $v; return $this; }
+
+    public function getArbitreExterneNom(): ?string { return $this->arbitreExterneNom; }
+    public function setArbitreExterneNom(?string $nom): static { $this->arbitreExterneNom = $nom; return $this; }
+
+    /** @return Collection<int, RencontreRole> */
+    public function getRoles(): Collection { return $this->roles; }
+
+    /**
+     * Récupère le RencontreRole pour un rôle donné (ARBITRE_1, MARQUEUR, etc.),
+     * ou null si personne n'est inscrit sur ce rôle.
+     */
+    public function getRoleParCode(string $codeRole): ?RencontreRole
+    {
+        foreach ($this->roles as $r) {
+            if ($r->getRole() === $codeRole) return $r;
+        }
+        return null;
+    }
+
+    /**
+     * True si les rôles d'arbitrage interne peuvent être pris par des bénévoles.
+     * Faux si la FFBB a désigné un arbitre officiel (case "arbitre externe" cochée).
+     */
+    public function peutRecevoirArbitreBenevole(): bool
+    {
+        return !$this->arbitreExterneDesigne;
+    }
 }

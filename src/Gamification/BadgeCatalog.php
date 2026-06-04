@@ -24,6 +24,17 @@ class BadgeCatalog
     public const AXE_TRANSVERSE = 'transverse';
 
     /**
+     * Codes badges Axe C (bénévolat / vie de club). Activés en V1.1.
+     * Déclenchés par les Missions (créées manuellement ou auto via Evenement).
+     */
+    public const C_FIRST_MISSION  = 'C_FIRST_MISSION';
+    public const C_BENEVOLE_5     = 'C_BENEVOLE_5';
+    public const C_BENEVOLE_10    = 'C_BENEVOLE_10';
+    public const C_POLYVALENT     = 'C_POLYVALENT';
+    public const C_TABLE_5        = 'C_TABLE_5';
+    public const C_AG_PRESENT     = 'C_AG_PRESENT';
+
+    /**
      * Codes badges Axe A (régularité). Tous activés en V1.0.
      */
     public const A_FIRST_TRAINING = 'A_FIRST_TRAINING';
@@ -124,6 +135,50 @@ class BadgeCatalog
                 'description' => '90% de présence ou plus sur toute la saison.',
                 'icone' => 'bi-crown',
                 'axe' => self::AXE_REGULARITE,
+                'par_saison' => true,
+            ],
+
+            // ============ AXE C — BÉNÉVOLAT / VIE DE CLUB ============
+            self::C_FIRST_MISSION => [
+                'nom' => 'Premier engagement',
+                'description' => 'Première mission bénévole accomplie pour le club.',
+                'icone' => 'bi-hand-thumbs-up',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => false,
+            ],
+            self::C_BENEVOLE_5 => [
+                'nom' => 'Bénévole',
+                'description' => '5 missions bénévoles dans la saison.',
+                'icone' => 'bi-heart-fill',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => true,
+            ],
+            self::C_BENEVOLE_10 => [
+                'nom' => 'Pilier du club',
+                'description' => '10 missions bénévoles dans la saison. Le club tient grâce à toi.',
+                'icone' => 'bi-building',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => true,
+            ],
+            self::C_POLYVALENT => [
+                'nom' => 'Polyvalent',
+                'description' => '3 types de missions différents dans la saison.',
+                'icone' => 'bi-diagram-3',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => true,
+            ],
+            self::C_TABLE_5 => [
+                'nom' => 'Officiel de table',
+                'description' => '5 tenues de table de marque ou chrono.',
+                'icone' => 'bi-clipboard-check',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => true,
+            ],
+            self::C_AG_PRESENT => [
+                'nom' => 'Engagé',
+                'description' => 'Présent(e) à l\'Assemblée Générale du club.',
+                'icone' => 'bi-megaphone',
+                'axe' => self::AXE_BENEVOLAT,
                 'par_saison' => true,
             ],
         ];

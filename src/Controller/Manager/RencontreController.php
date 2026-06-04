@@ -2,10 +2,16 @@
 
 namespace App\Controller\Manager;
 
+use App\Entity\Core\User;
+use App\Entity\Sport\Joueur;
+use App\Entity\Sport\Mission;
 use App\Entity\Sport\Rencontre;
+use App\Entity\Sport\RencontreRole;
 use App\Form\Manager\RencontreType;
+use App\Gamification\BadgeChecker;
 use App\Repository\Sport\EquipeRepository;
 use App\Repository\Sport\RencontreRepository;
+use App\Repository\Sport\RencontreRoleRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -34,6 +40,8 @@ class RencontreController extends AbstractController
         private readonly RencontreRepository $rencontreRepository,
         private readonly EquipeRepository $equipeRepository,
         private readonly EntityManagerInterface $em,
+        private readonly BadgeChecker $badgeChecker,
+        private readonly RencontreRoleRepository $rencontreRoleRepository,
     ) {}
 
     /**
@@ -262,5 +270,171 @@ class RencontreController extends AbstractController
 
         $this->addFlash('success', 'Rencontre supprimée.');
         return $this->redirectToRoute('manager_rencontre_index');
+    }
+
+    // ════════════════════════════════════════════════════════════════════
+    // RÔLES OFFICIELS d'une rencontre (arbitres, marqueur, chrono, e-marque,
+    // resp salle, stats live). Inscription par les User, validation par
+    // le staff après match → déclenche Mission gamification axe C.
+    // ════════════════════════════════════════════════════════════════════
+
+    /**
+     * Inscription d'un user à un rôle officiel.
+     * URL : POST /rencontres/{id}/role/{role}/sinscrire
+     */
+    #[Route('/rencontres/{id}/role/{role}/sinscrire', name: 'manager_rencontre_role_sinscrire', methods: ['POST'])]
+    public function sInscrireRole(Request $request, Rencontre $rencontre, string $role): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $rencontre);
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+        if (!in_array($role, RencontreRole::ROLES, true)) {
+            $this->addFlash('error', 'Rôle invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('role_' . $rencontre->getId() . '_' . $role, $token)) {
+            $this->addFlash('error', 'Jeton invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        // Blocage des rôles ARBITRE_x si la FFBB a désigné un officiel
+        $estArbitre = in_array($role, [RencontreRole::ROLE_ARBITRE_1, RencontreRole::ROLE_ARBITRE_2], true);
+        if ($estArbitre && !$rencontre->peutRecevoirArbitreBenevole()) {
+            $this->addFlash('warning', 'Arbitre FFBB déjà désigné, inscription bénévole impossible sur ce rôle.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        // Refus si déjà un user inscrit sur ce rôle
+        if ($rencontre->getRoleParCode($role) !== null) {
+            $this->addFlash('info', sprintf('Le rôle "%s" est déjà pris.', RencontreRole::ROLE_LIBELLES[$role]));
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $rr = new RencontreRole();
+        $rr->setRencontre($rencontre);
+        $rr->setUser($user);
+        $rr->setRole($role);
+        $this->em->persist($rr);
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf(
+            'Tu es inscrit comme "%s" pour ce match. Merci !',
+            RencontreRole::ROLE_LIBELLES[$role]
+        ));
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
+
+    /**
+     * Désinscription d'un user de son rôle. Le user lui-même ou un staff.
+     */
+    #[Route('/rencontres/{id}/role/{role}/desinscrire', name: 'manager_rencontre_role_desinscrire', methods: ['POST'])]
+    public function seDesinscrireRole(Request $request, Rencontre $rencontre, string $role): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $rencontre);
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+        if (!in_array($role, RencontreRole::ROLES, true)) {
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('desinscrire_role_' . $rencontre->getId() . '_' . $role, $token)) {
+            $this->addFlash('error', 'Jeton invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $rr = $rencontre->getRoleParCode($role);
+        if (!$rr) {
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $estStaff = $this->isGranted(ClubVoter::CLUB_STAFF, $rencontre);
+        $estLeUser = $rr->getUser() && $rr->getUser()->getId() === $user->getId();
+        if (!$estStaff && !$estLeUser) {
+            $this->addFlash('error', 'Action non autorisée.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $this->em->remove($rr);
+        $this->em->flush();
+        $this->addFlash('success', 'Désinscription effectuée.');
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
+
+    /**
+     * Staff valide que le user a bien tenu son rôle pendant le match.
+     * Crée une Mission de gamification (axe C) selon le mapping RencontreRole::MAPPING_MISSION.
+     */
+    #[Route('/rencontres/{id}/role/{role}/valider', name: 'manager_rencontre_role_valider', methods: ['POST'])]
+    public function validerRole(Request $request, Rencontre $rencontre, string $role): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+        if (!in_array($role, RencontreRole::ROLES, true)) {
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('valider_role_' . $rencontre->getId() . '_' . $role, $token)) {
+            $this->addFlash('error', 'Jeton invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $rr = $rencontre->getRoleParCode($role);
+        if (!$rr) {
+            $this->addFlash('error', 'Aucun inscrit sur ce rôle.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+        if ($rr->isPresent()) {
+            $this->addFlash('info', 'Présence déjà validée.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $rr->setPresent(true);
+
+        // Création de la Mission gamification si le User a un Joueur lié au club
+        $missionCree = false;
+        $joueur = $this->em->getRepository(Joueur::class)->findOneBy([
+            'user' => $rr->getUser(),
+            'club' => $rencontre->getClub(),
+        ]);
+        if ($joueur !== null) {
+            $missionType = RencontreRole::MAPPING_MISSION[$role] ?? Mission::TYPE_AUTRE;
+            $mission = new Mission();
+            $mission->setClub($rencontre->getClub());
+            $mission->setJoueur($joueur);
+            $mission->setType($missionType);
+            $mission->setDate(\DateTimeImmutable::createFromInterface($rencontre->getDate()));
+            $mission->setDescription(sprintf(
+                '%s — match %s vs %s',
+                RencontreRole::ROLE_LIBELLES[$role],
+                $rencontre->getEquipe()->getNom(),
+                $rencontre->getAdversaire()
+            ));
+            $mission->setValidePar($this->getUser() instanceof User ? $this->getUser() : null);
+            $this->em->persist($mission);
+            $missionCree = true;
+        }
+
+        $this->em->flush();
+
+        $nbBadges = 0;
+        if ($missionCree && $joueur !== null) {
+            $nouveaux = $this->badgeChecker->syncBadges($joueur);
+            $nbBadges = count($nouveaux);
+        }
+
+        $this->addFlash('success', sprintf(
+            '%s validé(e).%s%s',
+            RencontreRole::ROLE_LIBELLES[$role],
+            $missionCree ? ' 🎯 Mission créée.' : '',
+            $nbBadges > 0 ? sprintf(' 🏆 %d badge(s) débloqué(s) !', $nbBadges) : ''
+        ));
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
     }
 }

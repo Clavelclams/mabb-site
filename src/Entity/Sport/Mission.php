@@ -35,6 +35,7 @@ class Mission implements ClubAwareInterface
     public const TYPE_ENCADREMENT     = 'encadrement';      // U17 qui aide les U11
     public const TYPE_EVENEMENT       = 'evenement';        // tournoi, soirée
     public const TYPE_AG              = 'ag';               // assemblée générale
+    public const TYPE_FORMATION       = 'formation';        // formation arbitre, coach, e-marque, etc.
     public const TYPE_COMMUNICATION   = 'communication';    // post insta, parrainage
     public const TYPE_DON             = 'don';              // soutien financier, goodies
     public const TYPE_AUTRE           = 'autre';
@@ -46,6 +47,7 @@ class Mission implements ClubAwareInterface
         self::TYPE_ENCADREMENT,
         self::TYPE_EVENEMENT,
         self::TYPE_AG,
+        self::TYPE_FORMATION,
         self::TYPE_COMMUNICATION,
         self::TYPE_DON,
         self::TYPE_AUTRE,
@@ -58,6 +60,7 @@ class Mission implements ClubAwareInterface
         self::TYPE_ENCADREMENT   => 'Encadrement équipe jeune',
         self::TYPE_EVENEMENT     => 'Événement club',
         self::TYPE_AG            => 'Présence AG',
+        self::TYPE_FORMATION     => 'Formation suivie',
         self::TYPE_COMMUNICATION => 'Communication / parrainage',
         self::TYPE_DON           => 'Don / soutien',
         self::TYPE_AUTRE         => 'Autre',

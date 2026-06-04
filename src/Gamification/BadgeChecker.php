@@ -4,8 +4,10 @@ namespace App\Gamification;
 
 use App\Entity\Sport\Joueur;
 use App\Entity\Sport\JoueurBadge;
+use App\Entity\Sport\Mission;
 use App\Entity\Sport\Presence;
 use App\Repository\Sport\JoueurBadgeRepository;
+use App\Repository\Sport\MissionRepository;
 use App\Repository\Sport\PresenceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -28,6 +30,7 @@ class BadgeChecker
     public function __construct(
         private readonly PresenceRepository $presenceRepository,
         private readonly JoueurBadgeRepository $badgeRepository,
+        private readonly MissionRepository $missionRepository,
         private readonly EntityManagerInterface $em,
     ) {}
 
@@ -43,9 +46,10 @@ class BadgeChecker
         $codesDejaDebloque = $this->badgeRepository->codesBadgesPourJoueur($joueur, $saison);
         $nouveaux = [];
 
-        // Cache : on charge UNE fois les présences pour ne pas refaire des
-        // queries dans chaque test de badge. Critique pour la perf.
+        // Cache : on charge UNE fois les présences ET les missions pour ne
+        // pas refaire des queries dans chaque test de badge. Critique pour la perf.
         $presences = $this->presenceRepository->pourJoueur($joueur);
+        $missions  = $this->missionRepository->pourJoueurDansPeriode($joueur, null, null);
 
         foreach (BadgeCatalog::all() as $code => $def) {
             // Skip si déjà débloqué (pour cette saison ou hors-saison)
@@ -53,9 +57,9 @@ class BadgeChecker
                 continue;
             }
 
-            if ($this->estEligible($code, $joueur, $presences, $saison)) {
+            if ($this->estEligible($code, $joueur, $presences, $missions, $saison)) {
                 $saisonBadge = $def['par_saison'] ? $saison : null;
-                $badge = new JoueurBadge($joueur, $code, $saisonBadge);
+                $badge = JoueurBadge::creer($joueur, $code, $saisonBadge);
                 $this->em->persist($badge);
                 $nouveaux[] = $badge;
             }
@@ -73,14 +77,17 @@ class BadgeChecker
      * Switch sur le code, chaque case appelle un helper privé typé.
      *
      * @param Presence[] $presences présences déjà chargées (cache)
+     * @param Mission[]  $missions  missions déjà chargées (cache)
      */
     private function estEligible(
         string $code,
         Joueur $joueur,
         array $presences,
+        array $missions,
         string $saisonCourante,
     ): bool {
         return match ($code) {
+            // ===== AXE A : régularité =====
             BadgeCatalog::A_FIRST_TRAINING => $this->aDejaUneSeancePresente($presences),
             BadgeCatalog::A_FIRST_MATCH    => $this->aDejaUneRencontrePresente($presences),
             BadgeCatalog::A_STREAK_5       => $this->streakSeancesMax($presences, $saisonCourante) >= 5,
@@ -92,8 +99,63 @@ class BadgeChecker
             BadgeCatalog::A_MATCH_10       => $this->nbRencontresPresentes($presences, $saisonCourante) >= 10,
             BadgeCatalog::A_VETERAN_50     => $this->nbSeancesPresentes($presences, null) >= 50,
             BadgeCatalog::A_SEASON_90      => $this->tauxPresenceSaison($presences, $saisonCourante) >= 0.90,
+
+            // ===== AXE C : bénévolat / vie de club =====
+            BadgeCatalog::C_FIRST_MISSION => count($missions) >= 1,
+            BadgeCatalog::C_BENEVOLE_5    => $this->nbMissionsDansSaison($missions, $saisonCourante) >= 5,
+            BadgeCatalog::C_BENEVOLE_10   => $this->nbMissionsDansSaison($missions, $saisonCourante) >= 10,
+            BadgeCatalog::C_POLYVALENT    => $this->nbTypesMissionsDistincts($missions, $saisonCourante) >= 3,
+            BadgeCatalog::C_TABLE_5       => $this->nbMissionsType($missions, Mission::TYPE_TENUE_TABLE, $saisonCourante) >= 5,
+            BadgeCatalog::C_AG_PRESENT    => $this->aFaitMissionType($missions, Mission::TYPE_AG, $saisonCourante),
+
             default => false,
         };
+    }
+
+    // ============ Helpers axe C ============
+
+    /** @param Mission[] $missions */
+    private function nbMissionsDansSaison(array $missions, string $saison): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $n = 0;
+        foreach ($missions as $m) {
+            $d = $m->getDate();
+            if ($d && $d >= $debut && $d <= $fin) $n++;
+        }
+        return $n;
+    }
+
+    /** @param Mission[] $missions */
+    private function nbTypesMissionsDistincts(array $missions, string $saison): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $types = [];
+        foreach ($missions as $m) {
+            $d = $m->getDate();
+            if ($d && $d >= $debut && $d <= $fin) {
+                $types[$m->getType()] = true;
+            }
+        }
+        return count($types);
+    }
+
+    /** @param Mission[] $missions */
+    private function nbMissionsType(array $missions, string $type, string $saison): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $n = 0;
+        foreach ($missions as $m) {
+            $d = $m->getDate();
+            if ($m->getType() === $type && $d && $d >= $debut && $d <= $fin) $n++;
+        }
+        return $n;
+    }
+
+    /** @param Mission[] $missions */
+    private function aFaitMissionType(array $missions, string $type, string $saison): bool
+    {
+        return $this->nbMissionsType($missions, $type, $saison) >= 1;
     }
 
     // ====================================================================

@@ -54,12 +54,27 @@ class JoueurBadge implements ClubAwareInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $debloqueAt = null;
 
-    public function __construct(Joueur $joueur, string $codeBadge, ?string $saison = null)
+    /**
+     * Constructeur sans arguments obligatoires : Doctrine doit pouvoir
+     * hydrater l'entité depuis la base sans rien lui passer. Pour créer
+     * un badge en code applicatif, utiliser la factory ::creer().
+     */
+    public function __construct()
     {
-        $this->joueur = $joueur;
-        $this->codeBadge = $codeBadge;
-        $this->saison = $saison;
         $this->debloqueAt = new \DateTimeImmutable();
+    }
+
+    /**
+     * Factory de création d'un badge tout prêt à persister.
+     * Plus lisible côté code applicatif qu'un new + 3 setters.
+     */
+    public static function creer(Joueur $joueur, string $codeBadge, ?string $saison = null): self
+    {
+        $b = new self();
+        $b->joueur = $joueur;
+        $b->codeBadge = $codeBadge;
+        $b->saison = $saison;
+        return $b;
     }
 
     public function getId(): ?int { return $this->id; }

@@ -204,8 +204,117 @@
                 </div>
             </div>
 
+            {# ===== Officiels du match (arbitres, marqueur, chrono, etc.) ===== #}
+            <div class="card-mabb" style="margin-top:16px;">
+                <div class="card-header">
+                    <i class="bi bi-people-fill"></i> Officiels du match
+                </div>
+                <div class="card-body" style="padding:8px 16px 16px;">
+                    {% if rencontre.arbitreExterneDesigne %}
+                        <div style="background:#eff6ff; border-left:4px solid var(--mabb-blue); padding:10px 14px; border-radius:6px; margin-bottom:14px;">
+                            <strong><i class="bi bi-info-circle"></i> Arbitre FFBB désigné</strong>
+                            {% if rencontre.arbitreExterneNom %}
+                                : <strong>{{ rencontre.arbitreExterneNom }}</strong>
+                            {% endif %}
+                            <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:4px;">
+                                Les rôles Arbitre 1/2 sont gérés par la FFBB pour ce match.
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% set roles_codes = ['arbitre_1', 'arbitre_2', 'resp_salle', 'marqueur', 'chrono', 'emarque', 'stats'] %}
+                    {% set roles_libelles = {
+                        'arbitre_1':  'Arbitre 1',
+                        'arbitre_2':  'Arbitre 2',
+                        'resp_salle': 'Responsable de salle',
+                        'marqueur':   'Marqueur',
+                        'chrono':     'Chronométreur',
+                        'emarque':    'Opérateur e-marque',
+                        'stats':      'Stats live MABB',
+                    } %}
+                    {% set roles_icones = {
+                        'arbitre_1':  'bi-whistle',
+                        'arbitre_2':  'bi-whistle',
+                        'resp_salle': 'bi-shield-check',
+                        'marqueur':   'bi-pencil-square',
+                        'chrono':     'bi-stopwatch',
+                        'emarque':    'bi-display',
+                        'stats':      'bi-graph-up',
+                    } %}
+
+                    {% for code in roles_codes %}
+                        {% set rr = rencontre.getRoleParCode(code) %}
+                        {% set est_arbitre = code in ['arbitre_1', 'arbitre_2'] %}
+                        {% set bloque_ffbb = est_arbitre and rencontre.arbitreExterneDesigne %}
+
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 6px; border-bottom:1px solid var(--mabb-border);">
+                            <div style="width:32px; text-align:center; color:var(--mabb-blue);">
+                                <i class="bi {{ roles_icones[code] }}" style="font-size:1.2rem;"></i>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:600; font-size:.9rem;">{{ roles_libelles[code] }}</div>
+                                {% if rr %}
+                                    <div style="font-size:.78rem; color:var(--mabb-muted);">
+                                        <i class="bi bi-person-check"></i> {{ rr.user.prenom }} {{ rr.user.nom }}
+                                        {% if rr.present %}
+                                            <span style="color:#16a34a; font-weight:600; margin-left:6px;">
+                                                <i class="bi bi-check-circle-fill"></i> Validé présent
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                {% elseif bloque_ffbb %}
+                                    <div style="font-size:.72rem; color:var(--mabb-muted); font-style:italic;">
+                                        Géré par la FFBB
+                                    </div>
+                                {% else %}
+                                    <div style="font-size:.72rem; color:var(--mabb-muted); font-style:italic;">
+                                        Personne d'inscrit
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if rr %}
+                                    {# Inscrit : afficher actions désinscrire (user lui-même ou staff) et valider (staff) #}
+                                    <div style="display:flex; gap:4px;">
+                                        {% if is_granted('CLUB_STAFF', rencontre) and not rr.present %}
+                                            <form method="post" action="{{ path('manager_rencontre_role_valider', {id: rencontre.id, role: code}) }}" style="display:inline;">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('valider_role_' ~ rencontre.id ~ '_' ~ code) }}">
+                                                <button type="submit" class="btn-mabb-primary btn-sm" title="Valider sa présence (déclenche la mission gamification)">
+                                                    <i class="bi bi-check-lg"></i> Valider
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                        {% if not rr.present %}
+                                            <form method="post" action="{{ path('manager_rencontre_role_desinscrire', {id: rencontre.id, role: code}) }}" style="display:inline;"
+                                                  onsubmit="return confirm('Désinscrire {{ rr.user.prenom }} de ce rôle ?');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('desinscrire_role_' ~ rencontre.id ~ '_' ~ code) }}">
+                                                <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);" title="Retirer du rôle">
+                                                    <i class="bi bi-x-lg"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                {% elseif bloque_ffbb %}
+                                    <span style="background:#f1f5f9; color:var(--mabb-muted); padding:5px 10px; border-radius:6px; font-size:.75rem; font-weight:600;">
+                                        <i class="bi bi-lock"></i> Verrouillé FFBB
+                                    </span>
+                                {% else %}
+                                    {# Libre : bouton "Je m'inscris" #}
+                                    <form method="post" action="{{ path('manager_rencontre_role_sinscrire', {id: rencontre.id, role: code}) }}" style="display:inline;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('role_' ~ rencontre.id ~ '_' ~ code) }}">
+                                        <button type="submit" class="btn-mabb-orange btn-sm">
+                                            <i class="bi bi-hand-thumbs-up"></i> Je m'inscris
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="card-mabb" style="margin-top:16px; opacity:.55;">
-                <div class="card-header"><i class="bi bi-people-fill"></i> Convocations (à venir)</div>
+                <div class="card-header"><i class="bi bi-people-fill"></i> Convocations joueuses (à venir)</div>
                 <div class="empty-state" style="padding:30px 20px;">
                     <i class="bi bi-clock-history"></i>
                     <p style="margin:0; font-size:.9rem;">Module convocations dans une prochaine itération.</p>

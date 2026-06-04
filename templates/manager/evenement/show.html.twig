@@ -1,0 +1,178 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ evenement.titre }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>
+                <i class="bi bi-calendar-event"></i> {{ evenement.titre }}
+                {% if evenement.statut == 'brouillon' %}
+                    <span style="background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:10px; font-size:.7rem; font-weight:700; vertical-align:middle;">
+                        <i class="bi bi-eye-slash"></i> BROUILLON
+                    </span>
+                {% elseif evenement.statut == 'annule' %}
+                    <span style="background:#fee2e2; color:#b91c1c; padding:4px 10px; border-radius:10px; font-size:.7rem; font-weight:700; vertical-align:middle;">
+                        <i class="bi bi-x-circle"></i> ANNULÉ
+                    </span>
+                {% endif %}
+            </h1>
+            <p class="subtitle">
+                <span style="background:var(--mabb-blue); color:#fff; padding:2px 10px; border-radius:8px; font-size:.7rem; font-weight:700;">
+                    {{ evenement.typeLibelle|upper }}
+                </span>
+                · {{ evenement.date|date('l d/m/Y \\à H:i') }}
+                {% if evenement.dateFin %} → {{ evenement.dateFin|date('d/m H:i') }}{% endif %}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ path('manager_evenement_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
+            {% if is_staff %}
+                <a href="{{ path('manager_evenement_edit', {id: evenement.id}) }}" class="btn-mabb-ghost">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            {# Détails événement #}
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-info-circle"></i> Détails</div>
+                <div class="card-body">
+                    {% if evenement.description %}
+                        <p style="margin-bottom:16px; white-space:pre-line;">{{ evenement.description }}</p>
+                    {% endif %}
+                    <dl style="display:grid; grid-template-columns: auto 1fr; gap:8px 16px; margin:0;">
+                        {% if evenement.lieu %}
+                            <dt style="font-weight:700;"><i class="bi bi-geo-alt"></i> Lieu</dt>
+                            <dd style="margin:0;">{{ evenement.lieu }}</dd>
+                        {% endif %}
+                        <dt style="font-weight:700;"><i class="bi bi-people"></i> Ouvert à</dt>
+                        <dd style="margin:0;">{{ evenement.ouvertALibelle }}</dd>
+                        {% if evenement.inscriptionsMax %}
+                            <dt style="font-weight:700;"><i class="bi bi-person-add"></i> Places</dt>
+                            <dd style="margin:0;">{{ evenement.participations|length }} / {{ evenement.inscriptionsMax }}</dd>
+                        {% endif %}
+                        {% if evenement.createur %}
+                            <dt style="font-weight:700;"><i class="bi bi-pencil"></i> Créé par</dt>
+                            <dd style="margin:0;">{{ evenement.createur.prenom }} {{ evenement.createur.nom }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            {# Actions staff (publier / annuler) #}
+            {% if is_staff %}
+                <div class="card-mabb" style="margin-top:16px;">
+                    <div class="card-header"><i class="bi bi-tools"></i> Actions staff</div>
+                    <div class="card-body" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        {% if evenement.statut == 'brouillon' %}
+                            <form method="post" action="{{ path('manager_evenement_publier', {id: evenement.id}) }}" style="display:inline;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('publier_' ~ evenement.id) }}">
+                                <button type="submit" class="btn-mabb-primary">
+                                    <i class="bi bi-check-circle"></i> Publier
+                                </button>
+                            </form>
+                        {% endif %}
+                        {% if evenement.statut != 'annule' %}
+                            <form method="post" action="{{ path('manager_evenement_annuler', {id: evenement.id}) }}" style="display:inline;"
+                                  onsubmit="return confirm('Annuler définitivement cet événement ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('annuler_' ~ evenement.id) }}">
+                                <button type="submit" class="btn-mabb-ghost" style="color:var(--mabb-red); border-color:var(--mabb-red);">
+                                    <i class="bi bi-x-circle"></i> Annuler l'événement
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-5">
+            {# Bouton participer / désinscrire (côté user) #}
+            {% if evenement.statut == 'publie' and not evenement.passe %}
+                <div class="card-mabb" style="margin-bottom:16px;">
+                    <div class="card-body" style="text-align:center;">
+                        {% if ma_participation %}
+                            <p style="margin-bottom:12px;">
+                                ✅ Tu participes à cet événement.
+                                <br><small style="color:var(--mabb-muted);">Statut : <strong>{{ ma_participation.statut }}</strong></small>
+                            </p>
+                            <form method="post" action="{{ path('manager_evenement_desinscrire', {id: evenement.id}) }}"
+                                  onsubmit="return confirm('Te désinscrire de cet événement ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('desinscrire_' ~ evenement.id) }}">
+                                <button type="submit" class="btn-mabb-ghost btn-sm">
+                                    <i class="bi bi-x-circle"></i> Me désinscrire
+                                </button>
+                            </form>
+                        {% else %}
+                            {% if evenement.complet %}
+                                <p style="color:var(--mabb-orange); margin:0;">
+                                    <i class="bi bi-exclamation-triangle"></i> Événement complet
+                                </p>
+                            {% else %}
+                                <p style="margin-bottom:12px;">Tu veux participer ?</p>
+                                <form method="post" action="{{ path('manager_evenement_participer', {id: evenement.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('participer_' ~ evenement.id) }}">
+                                    <button type="submit" class="btn-mabb-orange">
+                                        <i class="bi bi-hand-thumbs-up-fill"></i> Je participe
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Liste participants #}
+            <div class="card-mabb">
+                <div class="card-header">
+                    <i class="bi bi-people-fill"></i> Participants ({{ participations|length }})
+                </div>
+                <div class="card-body">
+                    {% if participations|length == 0 %}
+                        <p style="color:var(--mabb-muted); font-style:italic; margin:0;">Aucun participant pour l'instant.</p>
+                    {% else %}
+                        {% for p in participations %}
+                            <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--mabb-border);">
+                                <div style="width:32px; height:32px; border-radius:50%; background:var(--mabb-blue); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700;">
+                                    {{ p.user.prenom|first|upper }}{{ p.user.nom|first|upper }}
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:600; font-size:.9rem;">{{ p.user.prenom }} {{ p.user.nom }}</div>
+                                    <div style="font-size:.72rem; color:var(--mabb-muted);">
+                                        {% if p.statut == 'inscrit' %}
+                                            <i class="bi bi-clock"></i> Inscrit
+                                        {% elseif p.statut == 'present' %}
+                                            <span style="color:#16a34a;"><i class="bi bi-check-circle-fill"></i> Présent</span>
+                                        {% elseif p.statut == 'absent' %}
+                                            <span style="color:var(--mabb-red);"><i class="bi bi-x-circle"></i> Absent</span>
+                                        {% elseif p.statut == 'excuse' %}
+                                            <span style="color:#a16207;"><i class="bi bi-info-circle"></i> Excusé</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if is_staff and evenement.passe %}
+                                    {# Form rapide pour marquer présent / absent / excuse #}
+                                    <form method="post" action="{{ path('manager_evenement_marquer_present', {id: evenement.id, userId: p.user.id}) }}" style="display:flex; gap:4px;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('presence_evenement_' ~ evenement.id) }}">
+                                        <select name="statut" class="form-select" style="font-size:.75rem; padding:2px 6px; height:auto;" onchange="this.form.submit()">
+                                            <option value="inscrit" {{ p.statut == 'inscrit' ? 'selected' : '' }}>Inscrit</option>
+                                            <option value="present" {{ p.statut == 'present' ? 'selected' : '' }}>Présent</option>
+                                            <option value="absent"  {{ p.statut == 'absent' ? 'selected' : '' }}>Absent</option>
+                                            <option value="excuse"  {{ p.statut == 'excuse' ? 'selected' : '' }}>Excusé</option>
+                                        </select>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

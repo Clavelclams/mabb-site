@@ -1,5 +1,9 @@
 # Routes vitrine — mabb.fr (prod), www.mabb.fr (alias prod), ou localhost (dev)
 # Restreintes au host RACINE pour ne pas capturer les routes manager.* / pirb.*
+#
+# IMPORTANT : ancres ^...$ explicites pour éviter que la regex ne capture
+# partiellement les sous-domaines (sinon manager.mabb.fr matcherait la
+# regex .mabb.fr et la vitrine prendrait la requête à tort).
 vitrine_controllers:
     resource:
         path: ../../src/Controller/Vitrine/
@@ -9,4 +13,4 @@ vitrine_controllers:
     defaults:
         host: '%app.host_domain%'
     requirements:
-        host: '(www\.)?mabb\.fr|localhost'
+        host: '^(www\.)?mabb\.fr$|^localhost$|^127\.0\.0\.1$'

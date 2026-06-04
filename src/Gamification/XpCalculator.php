@@ -3,7 +3,9 @@
 namespace App\Gamification;
 
 use App\Entity\Sport\Joueur;
+use App\Entity\Sport\Mission;
 use App\Entity\Sport\Presence;
+use App\Repository\Sport\MissionRepository;
 use App\Repository\Sport\PresenceRepository;
 
 /**
@@ -33,8 +35,26 @@ class XpCalculator
     public const XP_BONUS_STREAK_5       = 20;
     public const XP_BONUS_STREAK_10      = 50;
 
+    /**
+     * Barème XP par type de Mission (axe C bénévolat).
+     * Calé sur l'engagement requis : "vrai service" > "engagement" > "soutien".
+     */
+    private const XP_PAR_TYPE_MISSION = [
+        Mission::TYPE_TENUE_TABLE     => 25,
+        Mission::TYPE_ARBITRAGE       => 25,
+        Mission::TYPE_BUVETTE         => 25,
+        Mission::TYPE_ENCADREMENT     => 25,
+        Mission::TYPE_AG              => 15,
+        Mission::TYPE_FORMATION       => 15,
+        Mission::TYPE_COMMUNICATION   => 15,
+        Mission::TYPE_EVENEMENT       => 10,
+        Mission::TYPE_DON             => 10,
+        Mission::TYPE_AUTRE           => 10,
+    ];
+
     public function __construct(
         private readonly PresenceRepository $presenceRepository,
+        private readonly MissionRepository $missionRepository,
     ) {}
 
     /**
@@ -141,6 +161,16 @@ class XpCalculator
         // Le streak "actuel" = série en cours à la dernière séance
         $stats['streak_actuel'] = $serieEnCours;
 
+        // ======== XP des Missions (axe C bénévolat) ========
+        $missions = $this->missionRepository->pourJoueurDansPeriode($joueur, $debut, $fin);
+        $stats['nb_missions'] = count($missions);
+        $stats['xp_missions'] = 0;
+        foreach ($missions as $m) {
+            $xp = self::XP_PAR_TYPE_MISSION[$m->getType()] ?? 10;
+            $stats['xp_missions'] += $xp;
+            $stats['xp_total']    += $xp;
+        }
+
         // XP ne peut jamais être négatif (sinon affichage moche)
         $stats['xp_total'] = max(0, $stats['xp_total']);
 
@@ -226,6 +256,13 @@ class XpCalculator
                 }
             }
         }
+
+        // Ajout XP missions (axe C bénévolat)
+        $missions = $this->missionRepository->pourJoueurDansPeriode($joueur, $debut, $fin);
+        foreach ($missions as $m) {
+            $xp += self::XP_PAR_TYPE_MISSION[$m->getType()] ?? 10;
+        }
+
         return max(0, $xp);
     }
 }

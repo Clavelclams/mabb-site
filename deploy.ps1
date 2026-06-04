@@ -76,6 +76,8 @@ cd ~/mabb-site && \
   fi ) && \
 git pull && \
 php bin/console cache:clear --env=prod --no-warmup && \
+echo '=== MIGRATIONS DOCTRINE ===' && \
+php bin/console doctrine:migrations:migrate --no-interaction --env=prod --allow-no-migration && \
 php bin/console asset-map:compile && \
 echo 'OK deploiement OVH termine'
 "@

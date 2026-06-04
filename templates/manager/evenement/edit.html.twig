@@ -1,0 +1,110 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ mode == 'nouveau' ? 'Créer un événement' : 'Modifier événement' }}{% endblock %}
+
+{% block body %}
+    {% set csrf_id = mode == 'nouveau' ? 'new_evenement' : 'edit_evenement_' ~ evenement.id %}
+    {% set action_url = mode == 'nouveau' ? path('manager_evenement_new') : path('manager_evenement_edit', {id: evenement.id}) %}
+
+    <div class="page-header">
+        <div>
+            <h1>
+                <i class="bi bi-{{ mode == 'nouveau' ? 'plus-circle' : 'pencil' }}"></i>
+                {{ mode == 'nouveau' ? 'Créer un événement' : 'Modifier l\'événement' }}
+            </h1>
+        </div>
+        <a href="{{ mode == 'nouveau' ? path('manager_evenement_index') : path('manager_evenement_show', {id: evenement.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <form method="post" action="{{ action_url }}" style="max-width:850px; margin:0 auto;">
+        <input type="hidden" name="_token" value="{{ csrf_token(csrf_id) }}">
+
+        <div class="card-mabb">
+            <div class="card-body">
+                <div class="form-section-title"><i class="bi bi-info-circle"></i> Informations principales</div>
+
+                <div style="margin-bottom:16px;">
+                    <label class="form-label" for="titre">Titre <span style="color:var(--mabb-red);">*</span></label>
+                    <input type="text" name="titre" id="titre" class="form-control" required
+                           placeholder="Ex: AG annuelle 2026, Tournoi U13 interne, Sortie bowling"
+                           value="{{ evenement.titre }}">
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div>
+                        <label class="form-label" for="type">Type <span style="color:var(--mabb-red);">*</span></label>
+                        <select name="type" id="type" class="form-select" required>
+                            {% for code, libelle in constant('App\\Entity\\Sport\\Evenement::TYPE_LIBELLES') %}
+                                <option value="{{ code }}" {{ evenement.type == code ? 'selected' : '' }}>{{ libelle }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="statut">Statut <span style="color:var(--mabb-red);">*</span></label>
+                        <select name="statut" id="statut" class="form-select" required>
+                            <option value="brouillon" {{ evenement.statut == 'brouillon' ? 'selected' : '' }}>📝 Brouillon (non visible)</option>
+                            <option value="publie"    {{ evenement.statut == 'publie' ? 'selected' : '' }}>✅ Publié (visible des membres)</option>
+                            <option value="annule"    {{ evenement.statut == 'annule' ? 'selected' : '' }}>❌ Annulé</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label class="form-label" for="description">Description</label>
+                    <textarea name="description" id="description" class="form-control" rows="4"
+                              placeholder="Détails, programme, ce qu'il faut apporter, etc.">{{ evenement.description }}</textarea>
+                </div>
+
+                <div class="form-section-title"><i class="bi bi-calendar"></i> Date et lieu</div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                    <div>
+                        <label class="form-label" for="date">Date et heure de début <span style="color:var(--mabb-red);">*</span></label>
+                        <input type="datetime-local" name="date" id="date" class="form-control" required
+                               value="{{ evenement.date ? evenement.date|date('Y-m-d\\TH:i') : '' }}">
+                    </div>
+                    <div>
+                        <label class="form-label" for="date_fin">Date et heure de fin (optionnel)</label>
+                        <input type="datetime-local" name="date_fin" id="date_fin" class="form-control"
+                               value="{{ evenement.dateFin ? evenement.dateFin|date('Y-m-d\\TH:i') : '' }}">
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label class="form-label" for="lieu">Lieu</label>
+                    <input type="text" name="lieu" id="lieu" class="form-control"
+                           placeholder="Ex: Gymnase Léo Lagrange, Salle de réunion mairie"
+                           value="{{ evenement.lieu }}">
+                </div>
+
+                <div class="form-section-title"><i class="bi bi-people"></i> Participation</div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px;">
+                    <div>
+                        <label class="form-label" for="ouvert_a">Ouvert à</label>
+                        <select name="ouvert_a" id="ouvert_a" class="form-select">
+                            {% for code, libelle in constant('App\\Entity\\Sport\\Evenement::OUVERT_LIBELLES') %}
+                                <option value="{{ code }}" {{ evenement.ouvertA == code ? 'selected' : '' }}>{{ libelle }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="inscriptions_max">Inscriptions max (optionnel)</label>
+                        <input type="number" name="inscriptions_max" id="inscriptions_max" class="form-control" min="1" max="999"
+                               placeholder="Illimité si vide"
+                               value="{{ evenement.inscriptionsMax }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+            <a href="{{ mode == 'nouveau' ? path('manager_evenement_index') : path('manager_evenement_show', {id: evenement.id}) }}" class="btn-mabb-ghost">Annuler</a>
+            <button type="submit" class="btn-mabb-primary">
+                <i class="bi bi-check-lg"></i> {{ mode == 'nouveau' ? 'Créer' : 'Enregistrer' }}
+            </button>
+        </div>
+    </form>
+{% endblock %}

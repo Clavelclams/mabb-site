@@ -1,0 +1,123 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Événements{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-calendar-event-fill"></i> Événements</h1>
+            <p class="subtitle">Vie du club : matchs, AG, tournois, sorties, formations et plus.</p>
+        </div>
+        {% if is_staff %}
+            <a href="{{ path('manager_evenement_new') }}" class="btn-mabb-orange">
+                <i class="bi bi-plus-lg"></i> Créer un événement
+            </a>
+        {% endif %}
+    </div>
+
+    {# ==== À VENIR ==== #}
+    <div class="card-mabb" style="margin-bottom:24px;">
+        <div class="card-header"><i class="bi bi-clock-history"></i> À venir</div>
+        <div class="card-body">
+            {% set total_futurs = evenements_futurs|length + rencontres_futurs|length %}
+            {% if total_futurs == 0 %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    <h3>Aucun événement à venir</h3>
+                    <p>Crée un événement pour animer la vie du club.</p>
+                </div>
+            {% else %}
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    {# Rencontres à venir (matchs FFBB) #}
+                    {% for r in rencontres_futurs %}
+                        <a href="{{ path('manager_rencontre_show', {id: r.id}) }}"
+                           style="display:flex; align-items:center; gap:14px; padding:12px 16px; border:1px solid var(--mabb-border); border-radius:10px; text-decoration:none; color:inherit; transition:background .15s;"
+                           onmouseover="this.style.background='#f8fafc'"
+                           onmouseout="this.style.background='transparent'">
+                            <div style="background:#fff7ed; color:var(--mabb-orange); border-radius:8px; padding:10px 14px; text-align:center; min-width:64px;">
+                                <div style="font-size:.68rem; font-weight:700;">{{ r.date|date('M')|upper }}</div>
+                                <div style="font-size:1.3rem; font-weight:800;">{{ r.date|date('d') }}</div>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                                    <span style="background:var(--mabb-orange); color:#fff; padding:2px 8px; border-radius:8px; font-size:.68rem; font-weight:700;">
+                                        <i class="bi bi-trophy"></i> RENCONTRE
+                                    </span>
+                                    <span style="background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:8px; font-size:.68rem; font-weight:700;">{{ r.equipe.nom }}</span>
+                                </div>
+                                <div style="font-weight:700; color:var(--mabb-dark);">{{ r.equipe.nom }} vs {{ r.adversaire }}</div>
+                                <div style="font-size:.82rem; color:var(--mabb-muted);">
+                                    {{ r.date|date('H:i') }} · {{ r.domicile ? 'Domicile' : 'Extérieur' }}{% if r.lieu %} · {{ r.lieu }}{% endif %}
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-right" style="color:var(--mabb-muted);"></i>
+                        </a>
+                    {% endfor %}
+
+                    {# Événements à venir (réunions, AG, tournois, etc.) #}
+                    {% for e in evenements_futurs %}
+                        <a href="{{ path('manager_evenement_show', {id: e.id}) }}"
+                           style="display:flex; align-items:center; gap:14px; padding:12px 16px; border:1px solid var(--mabb-border); border-radius:10px; text-decoration:none; color:inherit; transition:background .15s; {% if e.statut == 'brouillon' %}background:#fef9c3;{% elseif e.statut == 'annule' %}background:#fee2e2; text-decoration:line-through;{% endif %}"
+                           onmouseover="this.style.background='#f8fafc'"
+                           onmouseout="this.style.background='{% if e.statut == 'brouillon' %}#fef9c3{% elseif e.statut == 'annule' %}#fee2e2{% else %}transparent{% endif %}'">
+                            <div style="background:#eff6ff; color:var(--mabb-blue); border-radius:8px; padding:10px 14px; text-align:center; min-width:64px;">
+                                <div style="font-size:.68rem; font-weight:700;">{{ e.date|date('M')|upper }}</div>
+                                <div style="font-size:1.3rem; font-weight:800;">{{ e.date|date('d') }}</div>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px; flex-wrap:wrap;">
+                                    <span style="background:var(--mabb-blue); color:#fff; padding:2px 8px; border-radius:8px; font-size:.68rem; font-weight:700;">
+                                        {{ e.typeLibelle|upper }}
+                                    </span>
+                                    {% if e.statut == 'brouillon' %}
+                                        <span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:8px; font-size:.68rem; font-weight:700;">
+                                            <i class="bi bi-eye-slash"></i> BROUILLON
+                                        </span>
+                                    {% elseif e.statut == 'annule' %}
+                                        <span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:8px; font-size:.68rem; font-weight:700;">
+                                            <i class="bi bi-x-circle"></i> ANNULÉ
+                                        </span>
+                                    {% endif %}
+                                    <span style="font-size:.7rem; color:var(--mabb-muted);">
+                                        <i class="bi bi-people"></i> {{ e.participations|length }} participant(s)
+                                    </span>
+                                </div>
+                                <div style="font-weight:700; color:var(--mabb-dark);">{{ e.titre }}</div>
+                                <div style="font-size:.82rem; color:var(--mabb-muted);">
+                                    {{ e.date|date('H:i') }}{% if e.lieu %} · {{ e.lieu }}{% endif %}
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-right" style="color:var(--mabb-muted);"></i>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ==== PASSÉS (événements uniquement) ==== #}
+    {% if evenements_passes is not empty %}
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-archive"></i> Événements passés</div>
+            <div class="card-body">
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    {% for e in evenements_passes %}
+                        <a href="{{ path('manager_evenement_show', {id: e.id}) }}"
+                           style="display:flex; align-items:center; gap:14px; padding:10px 14px; border:1px solid var(--mabb-border); border-radius:8px; text-decoration:none; color:inherit; opacity:.85;">
+                            <div style="color:var(--mabb-muted); min-width:80px; font-size:.85rem;">
+                                {{ e.date|date('d/m/Y') }}
+                            </div>
+                            <span style="background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:8px; font-size:.68rem; font-weight:700;">
+                                {{ e.typeLibelle }}
+                            </span>
+                            <div style="flex:1;">{{ e.titre }}</div>
+                            <span style="font-size:.7rem; color:var(--mabb-muted);">
+                                <i class="bi bi-people"></i> {{ e.participations|length }}
+                            </span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}
