@@ -79,7 +79,9 @@ class TenantResolver
     }
 
     /**
-     * Retourne tous les clubs actifs de l'utilisateur.
+     * Retourne tous les clubs actifs de l'utilisateur (UserClubRole status=active).
+     * Les UserClubRole pending (en attente de validation par dirigeant) sont
+     * exclus — un user pending ne "possède" pas encore son club.
      *
      * @return Club[]
      */
@@ -87,7 +89,7 @@ class TenantResolver
     {
         $clubs = [];
         foreach ($user->getUserClubRoles() as $ucr) {
-            if ($ucr->isActive() && $ucr->getClub()?->isActive()) {
+            if ($ucr->isActive() && $ucr->isStatusActive() && $ucr->getClub()?->isActive()) {
                 $club = $ucr->getClub();
                 // Dédoublonnage par ID
                 $clubs[$club->getId()] = $club;
@@ -97,12 +99,17 @@ class TenantResolver
     }
 
     /**
-     * Vérifie si l'user a au moins un rôle actif dans ce club.
+     * Vérifie si l'user a au moins un UserClubRole actif ET validé dans ce club.
+     * Un UserClubRole pending ne compte PAS.
      */
     public function userBelongsToClub(User $user, Club $club): bool
     {
         foreach ($user->getUserClubRoles() as $ucr) {
-            if ($ucr->getClub()?->getId() === $club->getId() && $ucr->isActive()) {
+            if (
+                $ucr->getClub()?->getId() === $club->getId()
+                && $ucr->isActive()
+                && $ucr->isStatusActive()
+            ) {
                 return true;
             }
         }
@@ -110,7 +117,21 @@ class TenantResolver
     }
 
     /**
-     * Retourne les rôles métier de l'user dans le club actif.
+     * Indique si l'user a au moins une demande UserClubRole en attente
+     * de validation. Utile pour rediriger vers /en-attente.
+     */
+    public function hasPendingMembership(User $user): bool
+    {
+        foreach ($user->getUserClubRoles() as $ucr) {
+            if ($ucr->isPending()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Retourne les rôles métier de l'user dans le club actif (validés).
      *
      * @return string[]  Ex: ['COACH', 'BENEVOLE']
      */
@@ -125,7 +146,11 @@ class TenantResolver
 
         $roles = [];
         foreach ($user->getUserClubRoles() as $ucr) {
-            if ($ucr->getClub()?->getId() === $club->getId() && $ucr->isActive()) {
+            if (
+                $ucr->getClub()?->getId() === $club->getId()
+                && $ucr->isActive()
+                && $ucr->isStatusActive()
+            ) {
                 $roles[] = $ucr->getRole();
             }
         }

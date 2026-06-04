@@ -643,6 +643,12 @@
         <li><a href="{{ path('manager_classement') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_classement' ? 'active' : '' }}">
             <i class="bi bi-trophy-fill"></i> Classement
         </a></li>
+        {# Lien Demandes — visible UNIQUEMENT aux dirigeants du club actif #}
+        {% if club is defined and club and is_granted('CLUB_ADMIN', club) %}
+            <li><a href="{{ path('manager_demandes_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_demandes' ? 'active' : '' }}">
+                <i class="bi bi-hourglass-split"></i> Demandes
+            </a></li>
+        {% endif %}
     </ul>
 
     <div class="user-zone">

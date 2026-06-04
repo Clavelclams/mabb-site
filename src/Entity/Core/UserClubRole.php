@@ -37,6 +37,22 @@ class UserClubRole
         self::ROLE_BENEVOLE,
     ];
 
+    /**
+     * Workflow de validation des inscriptions.
+     * Un user qui s'inscrit ne devient pas immédiatement membre actif du club —
+     * un dirigeant doit valider sa demande. Empêche les inscriptions sauvages
+     * et les "voyeurs" qui s'inscriraient dans plusieurs clubs sans légitimité.
+     */
+    public const STATUS_PENDING  = 'pending';   // demande à valider par dirigeant
+    public const STATUS_ACTIVE   = 'active';    // validé, accès normal selon role
+    public const STATUS_REJECTED = 'rejected';  // refusé (gardé en BDD pour audit)
+
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_ACTIVE,
+        self::STATUS_REJECTED,
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -60,6 +76,34 @@ class UserClubRole
     /** Le dirigeant peut activer/désactiver un rôle sans le supprimer */
     #[ORM\Column]
     private bool $isActive = true;
+
+    /**
+     * Statut de validation : pending → active → (éventuellement) rejected.
+     * Défaut "pending" : aucune permission tant que pas validé par un dirigeant.
+     * Pour les rows EXISTANTES en BDD avant l'ajout de cette colonne, la
+     * migration doit faire un UPDATE pour les passer à 'active' (sinon tous
+     * les anciens membres seraient bloqués) — cf. instruction migration.
+     */
+    #[ORM\Column(length: 20, options: ['default' => 'pending'])]
+    private string $status = self::STATUS_PENDING;
+
+    /**
+     * Rôle SOUHAITÉ à l'inscription (ex: le user a demandé "JOUEUR" mais
+     * tant que la demande est pending, son `role` actuel reste BENEVOLE).
+     * Quand le dirigeant valide, on bascule `role = roleDemande`.
+     * Null si pas de rôle spécifique demandé (= demande "Bénévole" générique).
+     */
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $roleDemande = null;
+
+    /** User dirigeant qui a validé/rejeté la demande (audit). */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $valideParUser = null;
+
+    /** Date de validation/rejet (null tant que pending). */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $valideAt = null;
 
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
@@ -142,5 +186,66 @@ class UserClubRole
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    // ====== Workflow de validation ======
+
+    public function getStatus(): string { return $this->status; }
+
+    public function setStatus(string $status): static
+    {
+        if (!in_array($status, self::STATUSES, true)) {
+            throw new \InvalidArgumentException("Statut invalide : $status");
+        }
+        $this->status = $status;
+        return $this;
+    }
+
+    public function isPending(): bool  { return $this->status === self::STATUS_PENDING; }
+    public function isStatusActive(): bool { return $this->status === self::STATUS_ACTIVE; }
+    public function isRejected(): bool { return $this->status === self::STATUS_REJECTED; }
+
+    public function getRoleDemande(): ?string { return $this->roleDemande; }
+    public function setRoleDemande(?string $r): static
+    {
+        if ($r !== null && !self::isValidRole($r)) {
+            throw new \InvalidArgumentException("Rôle demandé invalide : $r");
+        }
+        $this->roleDemande = $r;
+        return $this;
+    }
+
+    public function getValideParUser(): ?User { return $this->valideParUser; }
+    public function setValideParUser(?User $u): static { $this->valideParUser = $u; return $this; }
+
+    public function getValideAt(): ?\DateTimeImmutable { return $this->valideAt; }
+    public function setValideAt(?\DateTimeImmutable $d): static { $this->valideAt = $d; return $this; }
+
+    /**
+     * Action métier : un dirigeant valide la demande.
+     * Bascule status=active, applique le roleDemande si présent, trace l'auditeur.
+     */
+    public function valider(User $par, ?string $roleFinal = null): static
+    {
+        $this->status = self::STATUS_ACTIVE;
+        $this->valideParUser = $par;
+        $this->valideAt = new \DateTimeImmutable();
+        if ($roleFinal !== null && self::isValidRole($roleFinal)) {
+            $this->role = $roleFinal;
+        } elseif ($this->roleDemande !== null) {
+            $this->role = $this->roleDemande;
+        }
+        return $this;
+    }
+
+    /**
+     * Action métier : un dirigeant rejette la demande.
+     */
+    public function rejeter(User $par): static
+    {
+        $this->status = self::STATUS_REJECTED;
+        $this->valideParUser = $par;
+        $this->valideAt = new \DateTimeImmutable();
+        return $this;
     }
 }

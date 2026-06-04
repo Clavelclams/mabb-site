@@ -1,0 +1,139 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Demandes d'inscription{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-hourglass-split"></i> Demandes d'inscription</h1>
+            <p class="subtitle">
+                <strong>{{ demandes|length }}</strong> demande(s) en attente de validation pour {{ club.nom }}
+            </p>
+        </div>
+    </div>
+
+    {# ==== DEMANDES EN ATTENTE ==== #}
+    <div class="card-mabb" style="margin-bottom:24px;">
+        <div class="card-header"><i class="bi bi-clock"></i> En attente</div>
+        <div class="card-body">
+            {% if demandes is empty %}
+                <div class="empty-state">
+                    <i class="bi bi-check-all"></i>
+                    <h3>Aucune demande en attente</h3>
+                    <p>Toutes les inscriptions ont été traitées. Bravo !</p>
+                </div>
+            {% else %}
+                <table class="table-mabb">
+                    <thead>
+                        <tr>
+                            <th>Personne</th>
+                            <th>Email</th>
+                            <th>Rôle demandé</th>
+                            <th>Date demande</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in demandes %}
+                            <tr>
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div style="width:36px; height:36px; border-radius:50%; background:var(--mabb-blue); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700;">
+                                            {{ d.user.prenom|first|upper }}{{ d.user.nom|first|upper }}
+                                        </div>
+                                        <div>
+                                            <div style="font-weight:700;">{{ d.user.prenom }} {{ d.user.nom }}</div>
+                                            {% if d.user.telephone %}
+                                                <div style="font-size:.75rem; color:var(--mabb-muted);">
+                                                    <i class="bi bi-telephone"></i> {{ d.user.telephone }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="font-size:.85rem;">{{ d.user.email }}</td>
+                                <td>
+                                    <span style="background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:10px; font-size:.78rem; font-weight:700;">
+                                        {{ d.roleDemande ?: d.role }}
+                                    </span>
+                                </td>
+                                <td style="font-size:.85rem;">
+                                    {{ d.createdAt|date('d/m/Y') }}
+                                    <div style="font-size:.7rem; color:var(--mabb-muted);">
+                                        {{ d.createdAt|date('H:i') }}
+                                    </div>
+                                </td>
+                                <td style="text-align:right;">
+                                    <div style="display:inline-flex; gap:6px;">
+                                        <form method="post" action="{{ path('manager_demandes_valider', {id: d.id}) }}" style="display:inline;"
+                                              onsubmit="return confirm('Valider {{ d.user.prenom }} {{ d.user.nom }} comme {{ d.roleDemande ?: d.role }} ?');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('valider_demande_' ~ d.id) }}">
+                                            <button type="submit" class="btn-mabb-primary btn-sm" title="Accepter">
+                                                <i class="bi bi-check-lg"></i> Valider
+                                            </button>
+                                        </form>
+                                        <form method="post" action="{{ path('manager_demandes_rejeter', {id: d.id}) }}" style="display:inline;"
+                                              onsubmit="return confirm('Rejeter la demande de {{ d.user.prenom }} {{ d.user.nom }} ?');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('rejeter_demande_' ~ d.id) }}">
+                                            <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);" title="Refuser">
+                                                <i class="bi bi-x-lg"></i> Rejeter
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ==== HISTORIQUE ==== #}
+    {% if historique is not empty %}
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-archive"></i> Historique récent</div>
+            <div class="card-body">
+                <table class="table-mabb">
+                    <thead>
+                        <tr>
+                            <th>Personne</th>
+                            <th>Rôle</th>
+                            <th>Décision</th>
+                            <th>Date</th>
+                            <th>Par</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historique %}
+                            <tr>
+                                <td>
+                                    <strong>{{ h.user.prenom }} {{ h.user.nom }}</strong>
+                                    <div style="font-size:.72rem; color:var(--mabb-muted);">{{ h.user.email }}</div>
+                                </td>
+                                <td>{{ h.role }}</td>
+                                <td>
+                                    {% if h.statusActive %}
+                                        <span style="background:#dcfce7; color:#166534; padding:3px 10px; border-radius:10px; font-size:.72rem; font-weight:700;">
+                                            <i class="bi bi-check-circle"></i> Validée
+                                        </span>
+                                    {% elseif h.rejected %}
+                                        <span style="background:#fee2e2; color:#b91c1c; padding:3px 10px; border-radius:10px; font-size:.72rem; font-weight:700;">
+                                            <i class="bi bi-x-circle"></i> Rejetée
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size:.85rem;">{{ h.valideAt ? h.valideAt|date('d/m/Y H:i') : '—' }}</td>
+                                <td style="font-size:.85rem;">
+                                    {% if h.valideParUser %}
+                                        {{ h.valideParUser.prenom }} {{ h.valideParUser.nom }}
+                                    {% else %}—{% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -101,6 +101,12 @@ class ClubVoter extends Voter
                 $ucr->getClub()?->getId() === $club->getId()
                 && $ucr->getRole() === $metaRole
                 && $ucr->isActive()
+                // Le workflow de validation impose que le statut soit "active" :
+                // un UserClubRole pending (en attente de validation par un
+                // dirigeant) ne donne AUCUNE permission métier. Empêche les
+                // "voyeurs" qui s'inscriraient dans plusieurs clubs sans
+                // intention sérieuse.
+                && $ucr->isStatusActive()
             ) {
                 return true;
             }

@@ -59,8 +59,14 @@ class ManagerInscriptionController extends AbstractController
             $email    = trim((string) $request->request->get('email', ''));
             $password = (string) $request->request->get('password', '');
             $confirm  = (string) $request->request->get('password_confirm', '');
-            $rgpd     = $request->request->getBoolean('rgpd_consent');
-            $clubId   = (int) $request->request->get('club_id', 0);
+            $rgpd       = $request->request->getBoolean('rgpd_consent');
+            $clubId     = (int) $request->request->get('club_id', 0);
+            $roleDemande = (string) $request->request->get('role_demande', UserClubRole::ROLE_BENEVOLE);
+
+            // Sécurité : valider le rôle demandé (sinon fallback BENEVOLE)
+            if (!UserClubRole::isValidRole($roleDemande)) {
+                $roleDemande = UserClubRole::ROLE_BENEVOLE;
+            }
 
             // --- Validation ---
             if (empty($prenom)) {
@@ -111,21 +117,25 @@ class ManagerInscriptionController extends AbstractController
                 $user->setPassword($passwordHasher->hashPassword($user, $password));
                 $user->setRgpdConsent(true);
 
-                // Rôle BENEVOLE par défaut : accès au club sans privilèges
-                // d'écriture. Le dirigeant pourra ensuite le promouvoir
-                // COACH ou STAFF si nécessaire (via une page admin future).
+                // Demande créée en status=PENDING : le user a un compte mais
+                // n'aura accès au manager qu'après validation par un dirigeant.
+                // Le rôle réel reste BENEVOLE tant que pending ; le rôle DEMANDÉ
+                // est mémorisé pour que le dirigeant voit la demande exacte.
                 $userClubRole = new UserClubRole();
                 $userClubRole->setUser($user);
                 $userClubRole->setClub($club);
                 $userClubRole->setRole(UserClubRole::ROLE_BENEVOLE);
+                $userClubRole->setRoleDemande($roleDemande);
+                $userClubRole->setStatus(UserClubRole::STATUS_PENDING);
 
                 $em->persist($user);
                 $em->persist($userClubRole);
                 $em->flush();
 
                 $this->addFlash('success', sprintf(
-                    'Compte créé pour le club %s. Tu peux maintenant te connecter.',
-                    $club->getNom()
+                    'Compte créé pour %s — ta demande d\'inscription en tant que %s est en cours de validation par un dirigeant. Tu seras notifié.',
+                    $club->getNom(),
+                    strtolower($roleDemande)
                 ));
                 return $this->redirectToRoute('manager_login');
             }

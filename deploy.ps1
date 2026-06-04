@@ -75,6 +75,8 @@ cd ~/mabb-site && \
     mv .env .env.serveur-backup-`date +%Y%m%d-%H%M%S` && echo 'INFO  .env serveur archive' ; \
   fi ) && \
 git pull && \
+echo '=== COMPOSER INSTALL ===' && \
+composer install --no-dev --optimize-autoloader --no-interaction && \
 php bin/console cache:clear --env=prod --no-warmup && \
 echo '=== MIGRATIONS DOCTRINE ===' && \
 php bin/console doctrine:migrations:migrate --no-interaction --env=prod --allow-no-migration && \
