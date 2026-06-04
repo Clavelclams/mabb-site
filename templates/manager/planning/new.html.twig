@@ -1,0 +1,71 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Nouveau créneau récurrent — {{ equipe.nom }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-calendar-week"></i> Nouveau créneau récurrent</h1>
+            <p class="subtitle">Pour l'équipe <strong>{{ equipe.nom }}</strong> ({{ equipe.categorie }})</p>
+        </div>
+        <a href="{{ path('manager_equipe_show', {id: equipe.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour à l'équipe
+        </a>
+    </div>
+
+    <div class="card-mabb">
+        <div class="card-body form-mabb" style="max-width: 850px; margin: 0 auto;">
+            {{ form_start(form, {attr: {novalidate: 'novalidate'}}) }}
+                <div class="form-required-info">
+                    Les champs marqués <strong>*</strong> sont obligatoires.
+                </div>
+                {% if not form.vars.valid %}
+                    <div class="flash flash-error" style="margin-bottom: 20px;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>Le formulaire contient des erreurs :</strong>
+                        <ul style="margin:6px 0 0; padding-left:24px;">
+                            {% for child in form.children %}
+                                {% for error in child.vars.errors %}
+                                    <li><strong>{{ child.vars.label ?: child.vars.name }}</strong> : {{ error.message }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+
+                <p style="color:var(--mabb-muted); font-size:.88rem; margin-bottom:24px; padding: 10px 14px; background:#eff6ff; border-left:3px solid var(--mabb-blue); border-radius:4px;">
+                    <i class="bi bi-info-circle"></i> Définis un créneau d'entraînement qui se répète chaque semaine. Une fois sauvegardé, va sur la fiche équipe pour générer toutes les séances de la saison.
+                </p>
+
+                <div class="form-section">
+                    <h4 class="form-section-title"><i class="bi bi-calendar3"></i> Quand</h4>
+                    <div class="row row-form g-3">
+                        <div class="col-md-4">{{ form_row(form.jourSemaine) }}</div>
+                        <div class="col-md-4">{{ form_row(form.heureDebut) }}</div>
+                        <div class="col-md-4">{{ form_row(form.dureeMinutes) }}</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="form-section-title"><i class="bi bi-geo-alt"></i> Où & type</h4>
+                    <div class="row row-form g-3">
+                        <div class="col-md-8">{{ form_row(form.lieu) }}</div>
+                        <div class="col-md-4">{{ form_row(form.type) }}</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h4 class="form-section-title"><i class="bi bi-card-text"></i> Notes (optionnel)</h4>
+                    {{ form_row(form.notes) }}
+                </div>
+
+                <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--mabb-border); display:flex; gap:12px; justify-content:flex-end;">
+                    <a href="{{ path('manager_equipe_show', {id: equipe.id}) }}" class="btn-mabb-ghost">Annuler</a>
+                    <button type="submit" class="btn-mabb-primary">
+                        <i class="bi bi-check-lg"></i> Ajouter ce créneau
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

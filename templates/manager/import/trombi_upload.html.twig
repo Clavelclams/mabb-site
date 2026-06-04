@@ -1,0 +1,51 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Importer un trombinoscope FFBB{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-file-earmark-arrow-up"></i> Importer un trombinoscope FFBB</h1>
+            <p class="subtitle">Upload du PDF officiel généré par la FFBB pour créer les joueuses automatiquement.</p>
+        </div>
+        <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-mabb" style="max-width:780px; margin:0 auto;">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Comment ça marche ?</div>
+        <div class="card-body">
+            <ol style="font-size:.92rem; line-height:1.7; color:var(--mabb-text); padding-left:20px;">
+                <li>Récupère le PDF trombinoscope depuis ton espace FFBB (rubrique « FBI »).</li>
+                <li>Upload-le ci-dessous.</li>
+                <li>Le système analyse le fichier et te montre les joueuses détectées.</li>
+                <li>Tu coches celles à importer + tu choisis l'équipe d'affectation.</li>
+                <li>Click final → toutes les joueuses sont créées en BDD avec licence + DDN.</li>
+            </ol>
+            <div style="background:#fef3e2; border-left:4px solid var(--mabb-orange); padding:12px 16px; border-radius:6px; margin-top:14px;">
+                <strong style="color:var(--mabb-orange);"><i class="bi bi-shield-lock"></i> Confidentialité :</strong>
+                <span style="font-size:.88rem;"> le fichier est analysé en temps réel puis supprimé une fois l'import validé. Les photos ne sont pas extraites pour le moment.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-mabb" style="max-width:780px; margin:20px auto 0;">
+        <div class="card-body form-mabb">
+            <form method="post" enctype="multipart/form-data">
+                <input type="hidden" name="_token" value="{{ csrf_token('upload_trombi') }}">
+                <div class="form-section">
+                    <h4 class="form-section-title"><i class="bi bi-file-earmark-pdf"></i> Fichier PDF</h4>
+                    <input type="file" name="pdf" accept="application/pdf" required class="form-control" style="padding:10px;">
+                    <small class="form-text">Format accepté : PDF (max 20 Mo). Le fichier doit être un trombinoscope FFBB officiel.</small>
+                </div>
+                <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--mabb-border); display:flex; gap:12px; justify-content:flex-end;">
+                    <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost">Annuler</a>
+                    <button type="submit" class="btn-mabb-primary">
+                        <i class="bi bi-search"></i> Analyser le fichier
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}

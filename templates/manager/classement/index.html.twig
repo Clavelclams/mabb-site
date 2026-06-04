@@ -1,0 +1,123 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Classement{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-trophy-fill"></i> Classement {{ portee == 'saison' ? saison : '(toutes saisons)' }}</h1>
+            <p class="subtitle">
+                {{ classement|length }} joueuse(s) — basé sur l'assiduité aux séances et rencontres
+            </p>
+        </div>
+    </div>
+
+    {# Filtres #}
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="padding:14px 20px;">
+            <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0;">
+                <label style="font-weight:600; margin:0;">Équipe :</label>
+                <select name="equipe_id" class="form-select" style="max-width:240px;" onchange="this.form.submit()">
+                    <option value="">— Toutes les équipes —</option>
+                    {% for e in equipes %}
+                        <option value="{{ e.id }}" {{ e.id == equipe_id ? 'selected' : '' }}>
+                            {{ e.nom }} ({{ e.categorie }})
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <label style="font-weight:600; margin:0;">Portée :</label>
+                <select name="portee" class="form-select" style="max-width:180px;" onchange="this.form.submit()">
+                    <option value="saison" {{ portee == 'saison' ? 'selected' : '' }}>Saison {{ saison }}</option>
+                    <option value="tout"   {{ portee == 'tout' ? 'selected' : '' }}>Toutes saisons</option>
+                </select>
+
+                {% if equipe_id or portee == 'tout' %}
+                    <a href="{{ path('manager_classement') }}" class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-x-lg"></i> Réinitialiser
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    {% if classement is empty %}
+        <div class="card-mabb">
+            <div class="empty-state">
+                <i class="bi bi-trophy"></i>
+                <h3>Pas encore de données</h3>
+                <p>Une fois les premiers pointages effectués, le classement apparaîtra ici.</p>
+            </div>
+        </div>
+    {% else %}
+        <div class="card-mabb">
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th style="width:60px; text-align:center;">Rang</th>
+                        <th>Joueuse</th>
+                        <th>Équipe</th>
+                        <th>Niveau</th>
+                        <th style="width:240px;">Progression</th>
+                        <th style="text-align:right;">XP</th>
+                        <th style="text-align:center;">Badges</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in classement %}
+                        {% set rang = loop.index %}
+                        <tr>
+                            <td style="text-align:center; font-weight:700;">
+                                {% if rang == 1 %}<span style="color:#facc15; font-size:1.4rem;">🥇</span>
+                                {% elseif rang == 2 %}<span style="color:#94a3b8; font-size:1.4rem;">🥈</span>
+                                {% elseif rang == 3 %}<span style="color:#a16207; font-size:1.4rem;">🥉</span>
+                                {% else %}<span style="color:var(--mabb-muted);">{{ rang }}</span>{% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ path('manager_joueur_show', {id: c.joueur.id}) }}" style="font-weight:700; color:var(--mabb-dark); text-decoration:none;">
+                                    {{ c.joueur.prenom }} {{ c.joueur.nom }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if c.joueur.equipe %}
+                                    <span class="badge-categorie">{{ c.joueur.equipe.nom }}</span>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.85rem;">Non affectée</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span style="display:inline-flex; align-items:center; gap:6px; background:{{ c.niveau.couleur }}22; color:{{ c.niveau.couleur }}; padding:4px 12px; border-radius:14px; font-weight:700; font-size:.82rem;">
+                                    <i class="bi {{ c.niveau.icone }}"></i> N°{{ c.niveau.niveau }} · {{ c.niveau.nom }}
+                                </span>
+                            </td>
+                            <td>
+                                <div style="background:#f1f5f9; height:8px; border-radius:4px; overflow:hidden;">
+                                    <div style="width:{{ c.niveau.progres_pct }}%; height:100%; background:{{ c.niveau.couleur }};"></div>
+                                </div>
+                                <div style="font-size:.7rem; color:var(--mabb-muted); margin-top:2px;">
+                                    {% if c.niveau.xp_palier_suivant %}
+                                        {{ c.niveau.xp_palier_suivant - c.xp }} XP jusqu'au niveau {{ c.niveau.niveau + 1 }}
+                                    {% else %}
+                                        Niveau max atteint
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td style="text-align:right; font-weight:700; color:var(--mabb-blue); font-size:1.1rem;">
+                                {{ c.xp }}
+                            </td>
+                            <td style="text-align:center;">
+                                {% if c.nb_badges > 0 %}
+                                    <span style="background:#fef3c7; color:#92400e; padding:3px 10px; border-radius:12px; font-weight:700; font-size:.8rem;">
+                                        <i class="bi bi-award-fill"></i> {{ c.nb_badges }}
+                                    </span>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted);">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

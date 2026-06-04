@@ -1,0 +1,288 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ joueur.nomComplet }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div style="display:flex; align-items:center; gap: 20px;">
+            {# Avatar avec initiales (fallback en attendant les photos — V1 trombinoscope) #}
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color: white; display:flex; align-items:center; justify-content:center; font-size: 1.8rem; font-weight: 800;">
+                {{ joueur.prenom|first|upper }}{{ joueur.nom|first|upper }}
+            </div>
+            <div>
+                <h1 style="margin:0;">{{ joueur.prenom }} {{ joueur.nom }}</h1>
+                <p class="subtitle" style="margin-top: 6px;">
+                    {% if joueur.equipe %}
+                        <span class="badge-categorie">{{ joueur.equipe.nom }}</span>
+                    {% else %}
+                        <span style="color: var(--mabb-muted);">Non affectée à une équipe</span>
+                    {% endif %}
+                    {% if joueur.poste %}
+                        <span style="color: var(--mabb-muted); margin-left: 8px;">{{ joueur.poste }}</span>
+                    {% endif %}
+                    {% if joueur.numeroMaillot is not null %}
+                        <span style="background: var(--mabb-blue); color:white; padding: 2px 10px; border-radius: 10px; font-weight: 700; margin-left: 8px;">N° {{ joueur.numeroMaillot }}</span>
+                    {% endif %}
+                    {% if not joueur.isActive %}
+                        <span class="badge-inactive" style="margin-left: 8px;"><i class="bi bi-archive"></i> Archivée</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Toutes les joueuses
+            </a>
+            {% if is_granted('CLUB_STAFF', joueur) %}
+                <a href="{{ path('manager_joueur_edit', {id: joueur.id}) }}" class="btn-mabb-primary">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {# ========================================================
+           Colonne gauche : état civil + équipe
+           ======================================================== #}
+        <div class="col-md-6">
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-person-vcard"></i> État civil & licence</div>
+                <div class="card-body">
+                    <table class="table-mabb" style="margin: -20px;">
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 600; color: var(--mabb-muted); width: 40%;">Prénom</td>
+                                <td>{{ joueur.prenom }}</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600; color: var(--mabb-muted);">Nom</td>
+                                <td>{{ joueur.nom }}</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600; color: var(--mabb-muted);">Date de naissance</td>
+                                <td>
+                                    {% if joueur.dateNaissance %}
+                                        {{ joueur.dateNaissance|date('d/m/Y') }}
+                                        {% if age %}<span style="color: var(--mabb-muted);">({{ age }} ans)</span>{% endif %}
+                                    {% else %}<span style="color: var(--mabb-muted);">—</span>{% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600; color: var(--mabb-muted);">Licence FFBB</td>
+                                <td>
+                                    {% if joueur.licence %}
+                                        <code style="background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">{{ joueur.licence }}</code>
+                                    {% else %}
+                                        <span style="color: var(--mabb-muted);">Non renseignée</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600; color: var(--mabb-muted);">Compte utilisateur</td>
+                                <td>
+                                    {% if joueur.user %}
+                                        <i class="bi bi-check-circle-fill" style="color:#22c55e;"></i> {{ joueur.user.email }}
+                                    {% else %}
+                                        <span style="color: var(--mabb-muted);"><i class="bi bi-dash-circle"></i> Pas de compte</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# ========================================================
+           Colonne droite : stats (placeholders en attendant les modules)
+           ======================================================== #}
+        <div class="col-md-6">
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-bar-chart-line"></i> Statistiques de présence</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6" style="text-align: center; padding: 12px;">
+                            <div style="font-size: 1.6rem; font-weight: 800; color: {{ nb_seances_present > 0 ? '#22c55e' : 'var(--mabb-muted)' }};">
+                                {{ nb_seances_present }}<span style="font-size:1rem; color:var(--mabb-muted);">/{{ nb_seances_total }}</span>
+                            </div>
+                            <div style="color: var(--mabb-muted); font-size: .8rem;">Séances présentes</div>
+                        </div>
+                        <div class="col-6" style="text-align: center; padding: 12px;">
+                            <div style="font-size: 1.6rem; font-weight: 800; color: {{ nb_matchs_present > 0 ? 'var(--mabb-orange)' : 'var(--mabb-muted)' }};">
+                                {{ nb_matchs_present }}
+                            </div>
+                            <div style="color: var(--mabb-muted); font-size: .8rem;">Matchs joués</div>
+                        </div>
+                        <div class="col-6" style="text-align: center; padding: 12px;">
+                            <div style="font-size: 1.6rem; font-weight: 800; color: var(--mabb-muted);">—</div>
+                            <div style="color: var(--mabb-muted); font-size: .8rem;">Moy. points (à venir)</div>
+                        </div>
+                        <div class="col-6" style="text-align: center; padding: 12px;">
+                            {% if taux_presence is not null %}
+                                <div style="font-size: 1.6rem; font-weight: 800; color: {{ taux_presence >= 75 ? '#22c55e' : (taux_presence >= 50 ? '#f59e0b' : 'var(--mabb-red)') }};">
+                                    {{ taux_presence }}%
+                                </div>
+                            {% else %}
+                                <div style="font-size: 1.6rem; font-weight: 800; color: var(--mabb-muted);">—</div>
+                            {% endif %}
+                            <div style="color: var(--mabb-muted); font-size: .8rem;">Taux présence</div>
+                        </div>
+                    </div>
+                    {% if nb_seances_total == 0 %}
+                        <p style="text-align: center; color: var(--mabb-muted); font-size: .82rem; margin: 12px 0 0;">
+                            <i class="bi bi-info-circle"></i> Les stats apparaîtront dès que des présences seront pointées.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# ========================================================
+           Card NOTES confidentielles — visible uniquement par le staff
+           ======================================================== #}
+        {% if is_granted('CLUB_STAFF', joueur) %}
+            <div class="col-12">
+                <div class="card-mabb" style="border-left: 4px solid var(--mabb-orange);">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span><i class="bi bi-shield-lock"></i> Notes confidentielles (staff uniquement)</span>
+                        <small style="color:var(--mabb-muted); font-size:.75rem;">Visible : coachs, staff, dirigeants</small>
+                    </div>
+                    <div class="card-body">
+                        {% if joueur.notes %}
+                            <div style="background:#fef9e7; padding:14px 18px; border-radius:8px; white-space:pre-wrap; font-size:.92rem; line-height:1.6; color:var(--mabb-text);">
+                                {{ joueur.notes }}
+                            </div>
+                        {% else %}
+                            <p style="color:var(--mabb-muted); margin:0; font-style:italic;">
+                                Aucune note. <a href="{{ path('manager_joueur_edit', {id: joueur.id}) }}">Ajouter des notes</a>
+                                (allergies, contact urgence, observations coach...).
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# ========================================================
+           Gamification — XP, niveau, badges (saison courante)
+           ======================================================== #}
+        <div class="col-12">
+            <div class="card-mabb">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="bi bi-trophy-fill" style="color:var(--mabb-orange);"></i> Gamification — Saison {{ gamification.saison }}</span>
+                    <span style="display:inline-flex; align-items:center; gap:6px; background:{{ gamification.niveau.couleur }}22; color:{{ gamification.niveau.couleur }}; padding:5px 14px; border-radius:14px; font-weight:700;">
+                        <i class="bi {{ gamification.niveau.icone }}"></i>
+                        Niveau {{ gamification.niveau.niveau }} · {{ gamification.niveau.nom }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    {# Bandeau XP + progression #}
+                    <div style="display:grid; grid-template-columns: 1fr 2fr; gap:24px; margin-bottom:24px; align-items:center;">
+                        <div style="text-align:center;">
+                            <div style="font-size:3rem; font-weight:800; color:{{ gamification.niveau.couleur }}; line-height:1;">
+                                {{ gamification.xp_saison }}
+                            </div>
+                            <div style="font-size:.85rem; color:var(--mabb-muted); margin-top:4px;">XP cumulés cette saison</div>
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-size:.85rem;">
+                                <span style="color:var(--mabb-muted);">Progression vers le niveau suivant</span>
+                                <span style="font-weight:700; color:{{ gamification.niveau.couleur }};">{{ gamification.niveau.progres_pct }}%</span>
+                            </div>
+                            <div style="background:#f1f5f9; height:14px; border-radius:7px; overflow:hidden;">
+                                <div style="width:{{ gamification.niveau.progres_pct }}%; height:100%; background:linear-gradient(90deg, {{ gamification.niveau.couleur }}66, {{ gamification.niveau.couleur }}); transition: width .4s;"></div>
+                            </div>
+                            <div style="font-size:.75rem; color:var(--mabb-muted); margin-top:4px;">
+                                {% if gamification.niveau.xp_palier_suivant %}
+                                    Encore <strong>{{ gamification.niveau.xp_palier_suivant - gamification.xp_saison }} XP</strong> pour atteindre le niveau {{ gamification.niveau.niveau + 1 }}
+                                {% else %}
+                                    🏆 Niveau maximum atteint — Légende du club
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Breakdown XP #}
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; margin-bottom:24px;">
+                        <div style="background:#f0f9ff; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:1.5rem; font-weight:700; color:#0369a1;">{{ gamification.details.nb_seances_presentes }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted);">Séances présentes</div>
+                        </div>
+                        <div style="background:#fff7ed; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:1.5rem; font-weight:700; color:var(--mabb-orange);">{{ gamification.details.nb_rencontres_presentes }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted);">Rencontres jouées</div>
+                        </div>
+                        <div style="background:#fef3c7; padding:12px; border-radius:8px; text-align:center;">
+                            <div style="font-size:1.5rem; font-weight:700; color:#92400e;">{{ gamification.details.streak_actuel }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted);">Série en cours</div>
+                        </div>
+                        {% if gamification.details.nb_seances_absent_excuse > 0 %}
+                            <div style="background:#f8fafc; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.5rem; font-weight:700; color:#64748b;">{{ gamification.details.nb_seances_absent_excuse }}</div>
+                                <div style="font-size:.72rem; color:var(--mabb-muted);">Absences excusées</div>
+                            </div>
+                        {% endif %}
+                        {% if gamification.details.nb_seances_absent_non_excuse > 0 %}
+                            <div style="background:#fee2e2; padding:12px; border-radius:8px; text-align:center;">
+                                <div style="font-size:1.5rem; font-weight:700; color:#b91c1c;">{{ gamification.details.nb_seances_absent_non_excuse }}</div>
+                                <div style="font-size:.72rem; color:var(--mabb-muted);">Absences non excusées</div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# Badges débloqués #}
+                    <h4 style="margin:0 0 12px; color:var(--mabb-dark);">
+                        <i class="bi bi-award"></i> Badges débloqués
+                        {% if gamification.badges|length > 0 %}
+                            <span style="color:var(--mabb-muted); font-weight:500; font-size:.85rem;">({{ gamification.badges|length }})</span>
+                        {% endif %}
+                    </h4>
+                    {% if gamification.badges is empty %}
+                        <p style="color:var(--mabb-muted); font-style:italic; margin:0;">
+                            Aucun badge encore débloqué cette saison. Le premier vient avec la première séance présente.
+                        </p>
+                    {% else %}
+                        <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:12px;">
+                            {% for b in gamification.badges %}
+                                {% set def = gamification.catalog[b.codeBadge] ?? null %}
+                                {% if def %}
+                                    <div title="{{ def.description }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:#fffbeb; border:1px solid #fcd34d; border-radius:8px;">
+                                        <div style="font-size:1.8rem; color:var(--mabb-orange);"><i class="bi {{ def.icone }}"></i></div>
+                                        <div style="min-width:0;">
+                                            <div style="font-weight:700; color:#92400e; font-size:.85rem;">{{ def.nom }}</div>
+                                            <div style="font-size:.7rem; color:var(--mabb-muted);">{{ b.debloqueAt|date('d/m/Y') }}</div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# ========================================================
+           Bandeau actions futures
+           ======================================================== #}
+        <div class="col-12">
+            <div class="card-mabb" style="opacity: .55;">
+                <div class="card-header"><i class="bi bi-clipboard-data"></i> Bilan saison & profil public</div>
+                <div class="card-body" style="display:flex; gap:12px; flex-wrap: wrap;">
+                    <button class="btn-mabb-ghost" disabled>
+                        <i class="bi bi-journal-text"></i> Voir le bilan saison
+                    </button>
+                    <button class="btn-mabb-ghost" disabled>
+                        <i class="bi bi-person-bounding-box"></i> Voir le profil PIRB
+                    </button>
+                    <button class="btn-mabb-ghost" disabled>
+                        <i class="bi bi-camera"></i> Ajouter une photo
+                    </button>
+                    <span style="color: var(--mabb-muted); font-size: .85rem; align-self: center;">
+                        Modules à venir
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

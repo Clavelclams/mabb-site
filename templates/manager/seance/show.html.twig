@@ -1,0 +1,125 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Séance du {{ seance.date|date('d/m/Y') }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-calendar-event"></i> Séance d'entraînement</h1>
+            <p class="subtitle">
+                <strong>{{ seance.date|date('l d F Y, H:i', 'Europe/Paris')|capitalize }}</strong>
+                — <span class="badge-categorie">{{ seance.equipe.nom }}</span>
+                — {{ seance.type }}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ path('manager_seance_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Toutes les séances
+            </a>
+            {% if is_granted('CLUB_STAFF', seance) %}
+                <a href="{{ path('manager_seance_edit', {id: seance.id}) }}" class="btn-mabb-primary">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-info-circle"></i> Informations</div>
+                <div class="card-body">
+                    <table class="table-mabb" style="margin:-20px;">
+                        <tbody>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted); width:35%;">Équipe</td><td>{{ seance.equipe.nom }} ({{ seance.equipe.categorie }})</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Date & heure</td><td>{{ seance.date|date('d/m/Y H:i') }}</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Lieu</td><td>{{ seance.lieu }}</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Durée</td><td>{% if seance.dureeMinutes %}{{ seance.dureeMinutes }} minutes{% else %}—{% endif %}</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Type</td><td>{{ seance.type }}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if seance.notes %}
+                <div class="card-mabb" style="margin-top:16px;">
+                    <div class="card-header"><i class="bi bi-card-text"></i> Notes du coach</div>
+                    <div class="card-body">
+                        <p style="margin:0; white-space:pre-wrap;">{{ seance.notes }}</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-5">
+            {# Card Présences — récap + bouton pointage #}
+            <div class="card-mabb">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="bi bi-clipboard-check"></i> Présences</span>
+                    {% if is_granted('CLUB_STAFF', seance) %}
+                        <a href="{{ path('manager_presence_seance', {id: seance.id}) }}" class="btn-mabb-orange btn-sm">
+                            <i class="bi bi-pencil-square"></i> Faire le pointage
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% set presences = seance.presences %}
+                    {% if presences|length == 0 %}
+                        <p style="color:var(--mabb-muted); margin:0; font-size:.9rem; text-align:center; padding:14px 0;">
+                            <i class="bi bi-hourglass"></i> Aucun pointage saisi pour cette séance.
+                        </p>
+                    {% else %}
+                        {% set nb_present = 0 %}
+                        {% set nb_absent = 0 %}
+                        {% for p in presences %}
+                            {% if p.isPresent %}{% set nb_present = nb_present + 1 %}
+                            {% else %}{% set nb_absent = nb_absent + 1 %}{% endif %}
+                        {% endfor %}
+                        {% set total = nb_present + nb_absent %}
+                        {% set taux = total > 0 ? (nb_present / total * 100)|round : 0 %}
+                        <div style="display:flex; gap:18px; justify-content:center; padding:8px 0; margin-bottom:12px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:1.4rem; font-weight:800; color:#22c55e;">{{ nb_present }}</div>
+                                <div style="font-size:.7rem; color:var(--mabb-muted); text-transform:uppercase;">Présentes</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:1.4rem; font-weight:800; color:var(--mabb-red);">{{ nb_absent }}</div>
+                                <div style="font-size:.7rem; color:var(--mabb-muted); text-transform:uppercase;">Absentes</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:1.4rem; font-weight:800; color:var(--mabb-blue);">{{ taux }}%</div>
+                                <div style="font-size:.7rem; color:var(--mabb-muted); text-transform:uppercase;">Taux</div>
+                            </div>
+                        </div>
+                        <div style="max-height:220px; overflow-y:auto; font-size:.85rem;">
+                            {% for p in presences %}
+                                <div style="padding:5px 2px; border-bottom:1px dashed #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>{{ p.joueur.prenom }} {{ p.joueur.nom }}{% if p.motifAbsence %} <small style="color:var(--mabb-muted);">({{ p.motifAbsence }})</small>{% endif %}</span>
+                                    {% if p.isPresent %}
+                                        <span style="color:#22c55e;"><i class="bi bi-check-circle-fill"></i></span>
+                                    {% else %}
+                                        <span style="color:var(--mabb-red);"><i class="bi bi-x-circle-fill"></i></span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if is_granted('CLUB_ADMIN', seance) %}
+                <div class="card-mabb" style="margin-top:16px; border-left:4px solid var(--mabb-red);">
+                    <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Zone dangereuse</div>
+                    <div class="card-body">
+                        <form method="post" action="{{ path('manager_seance_delete', {id: seance.id}) }}" onsubmit="return confirm('Supprimer définitivement cette séance ?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete_seance_' ~ seance.id) }}">
+                            <button type="submit" class="btn-mabb-ghost" style="color:var(--mabb-red); border-color:var(--mabb-red);">
+                                <i class="bi bi-trash"></i> Supprimer la séance
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

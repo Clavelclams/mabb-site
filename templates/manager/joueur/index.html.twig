@@ -1,0 +1,174 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Joueuses{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>Joueuses</h1>
+            <p class="subtitle">
+                {{ joueurs|length }} joueuse(s){% if equipe_filtre %} dans {{ equipe_filtre.nom }}{% endif %}
+            </p>
+        </div>
+        {% if is_granted('CLUB_STAFF', club) %}
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="{{ path('manager_import_trombi_upload') }}" class="btn-mabb-ghost">
+                    <i class="bi bi-file-earmark-arrow-up"></i> Importer trombinoscope FFBB
+                </a>
+                <a href="{{ path('manager_joueur_new') }}" class="btn-mabb-orange">
+                    <i class="bi bi-plus-lg"></i> Nouvelle joueuse
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    {# Filtres : recherche + équipe + archivées #}
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="padding:14px 20px;">
+            <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0;">
+                {# Champ recherche live (utilise le controller Stimulus search-filter) #}
+                <div style="flex:1; min-width:220px; position:relative;">
+                    <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--mabb-muted);"></i>
+                    <input
+                        type="search"
+                        name="q"
+                        value="{{ search_query }}"
+                        placeholder="Rechercher par nom, prénom ou licence..."
+                        class="form-control"
+                        style="padding-left:36px;"
+                        data-controller="search-filter"
+                        data-search-filter-target="input"
+                        data-search-filter-min-length-value="2"
+                        autofocus
+                    >
+                </div>
+
+                <label style="font-weight:600; margin:0;">Équipe :</label>
+                <select name="equipe_id" class="form-select" style="max-width:240px;" onchange="this.form.submit()">
+                    <option value="">— Toutes —</option>
+                    {% for e in equipes %}
+                        <option value="{{ e.id }}" {{ equipe_filtre and equipe_filtre.id == e.id ? 'selected' : '' }}>
+                            {{ e.nom }} ({{ e.categorie }})
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <label style="font-weight:500; margin:0; display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" name="archived" value="1" {{ show_archived ? 'checked' : '' }} onchange="this.form.submit()">
+                    Archivées
+                </label>
+
+                <button type="submit" class="btn-mabb-primary btn-sm">
+                    <i class="bi bi-search"></i> Filtrer
+                </button>
+
+                {% if search_query or equipe_filtre or show_archived %}
+                    <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-x-lg"></i> Réinitialiser
+                    </a>
+                {% endif %}
+            </form>
+            {% if search_query %}
+                <div style="margin-top:10px; color:var(--mabb-muted); font-size:.85rem;">
+                    <i class="bi bi-funnel"></i> Recherche : <strong>"{{ search_query }}"</strong> — {{ joueurs|length }} résultat(s)
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card-mabb">
+        {% if joueurs is empty %}
+            <div class="empty-state">
+                <i class="bi bi-person-badge"></i>
+                <h3>Aucune joueuse{% if equipe_filtre %} dans cette équipe{% endif %}</h3>
+                <p>Ajoute des joueuses pour commencer à gérer ton effectif.</p>
+            </div>
+        {% else %}
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th>N°</th>
+                        <th>Joueuse</th>
+                        <th>Équipe</th>
+                        <th>Poste</th>
+                        <th>Date naissance</th>
+                        <th>Statut</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for joueur in joueurs %}
+                        <tr class="{{ not joueur.isActive ? 'inactive' : '' }}">
+                            <td>
+                                {% if joueur.numeroMaillot is not null %}
+                                    <strong style="color:var(--mabb-blue);">{{ joueur.numeroMaillot }}</strong>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}" style="font-weight: 700; color: var(--mabb-dark); text-decoration: none;">
+                                    {{ joueur.prenom }} {{ joueur.nom }}
+                                </a>
+                                {% if joueur.licence %}
+                                    <div style="font-size:.75rem; color:var(--mabb-muted);">Licence {{ joueur.licence }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if joueur.equipe %}
+                                    <span class="badge-categorie">{{ joueur.equipe.nom }}</span>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.85rem;">Non affectée</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if joueur.poste %}{{ joueur.poste }}{% else %}<span style="color:var(--mabb-muted);">—</span>{% endif %}
+                            </td>
+                            <td>
+                                {% if joueur.dateNaissance %}
+                                    {{ joueur.dateNaissance|date('d/m/Y') }}
+                                {% else %}
+                                    <span style="color:var(--mabb-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if joueur.isActive %}
+                                    <span class="badge-active"><i class="bi bi-check-circle"></i> Active</span>
+                                {% else %}
+                                    <span class="badge-inactive"><i class="bi bi-archive"></i> Archivée</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}" class="btn-mabb-ghost btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if is_granted('CLUB_STAFF', joueur) %}
+                                    <a href="{{ path('manager_joueur_edit', {id: joueur.id}) }}" class="btn-mabb-ghost btn-sm">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                {% endif %}
+                                {% if is_granted('CLUB_ADMIN', joueur) %}
+                                    {% if joueur.isActive %}
+                                        <form method="post" action="{{ path('manager_joueur_archive', {id: joueur.id}) }}" style="display:inline;" onsubmit="return confirm('Archiver cette joueuse ?');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('archive_joueur_' ~ joueur.id) }}">
+                                            <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);">
+                                                <i class="bi bi-archive"></i>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{{ path('manager_joueur_reactivate', {id: joueur.id}) }}" style="display:inline;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('reactivate_joueur_' ~ joueur.id) }}">
+                                            <button type="submit" class="btn-mabb-ghost btn-sm" style="color:#166534; border-color:#166534;">
+                                                <i class="bi bi-arrow-counterclockwise"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+{% endblock %}

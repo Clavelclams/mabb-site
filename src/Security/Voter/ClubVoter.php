@@ -3,6 +3,7 @@
 namespace App\Security\Voter;
 
 use App\Entity\Core\Club;
+use App\Entity\Core\ClubAwareInterface;
 use App\Entity\Core\User;
 use App\Entity\Core\UserClubRole;
 use App\Security\Tenant\TenantResolver;
@@ -10,14 +11,20 @@ use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 
 /**
- * ClubVoter : vérifie les droits d'un user sur un club.
+ * ClubVoter : vérifie les droits d'un user sur un club OU sur une entité du club.
  *
- * Usage dans un controller :
- *   $this->denyAccessUnlessGranted('CLUB_MEMBER', $club);
- *   $this->denyAccessUnlessGranted('CLUB_COACH', $club);
- *   $this->denyAccessUnlessGranted('CLUB_ADMIN', $club);
+ * Accepte deux types de subject :
+ *   1. Un objet Club directement
+ *      $this->denyAccessUnlessGranted('CLUB_STAFF', $club);
+ *   2. Toute entité implémentant ClubAwareInterface (Equipe, Joueur, Seance,
+ *      Rencontre...). Le Voter extrait automatiquement le Club via getClub().
+ *      $this->denyAccessUnlessGranted('CLUB_STAFF', $equipe);
  *
- * @extends Voter<string, Club>
+ * Ce design suit l'Open/Closed Principle : pour protéger une nouvelle entité,
+ * il suffit de lui faire implémenter ClubAwareInterface — pas de modification
+ * du Voter requise.
+ *
+ * @extends Voter<string, Club|ClubAwareInterface>
  */
 class ClubVoter extends Voter
 {
@@ -42,8 +49,12 @@ class ClubVoter extends Voter
 
     protected function supports(string $attribute, mixed $subject): bool
     {
-        return in_array($attribute, self::SUPPORTED_ATTRIBUTES, true)
-            && $subject instanceof Club;
+        if (!in_array($attribute, self::SUPPORTED_ATTRIBUTES, true)) {
+            return false;
+        }
+        // Accepte un Club directement OU toute entité qui appartient à un club
+        return $subject instanceof Club
+            || $subject instanceof ClubAwareInterface;
     }
 
     protected function voteOnAttribute(string $attribute, mixed $subject, TokenInterface $token): bool
@@ -54,8 +65,19 @@ class ClubVoter extends Voter
             return false;
         }
 
-        /** @var Club $club */
-        $club = $subject;
+        // Extrait le Club du subject :
+        //   - si Club directement → on l'utilise tel quel
+        //   - si ClubAwareInterface → on appelle getClub() pour récupérer le Club
+        $club = $subject instanceof Club
+            ? $subject
+            : $subject->getClub();
+
+        // Cas pathologique : entité ClubAware sans club rattaché (ne devrait
+        // jamais arriver en BDD car contrainte NOT NULL, mais protège contre
+        // les bugs côté code (ex: $entity = new Equipe() sans setClub())
+        if (!$club instanceof Club) {
+            return false;
+        }
 
         return match ($attribute) {
             self::CLUB_MEMBER => $this->isMember($user, $club),

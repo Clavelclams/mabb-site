@@ -1,0 +1,52 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Nouvelle équipe{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>Nouvelle équipe</h1>
+            <p class="subtitle">Dans le club {{ club.nom }}</p>
+        </div>
+        <a href="{{ path('manager_equipe_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-mabb">
+        <div class="card-body form-mabb">
+            {{ form_start(form, {attr: {novalidate: 'novalidate'}}) }}
+                <div class="form-required-info">
+                    Les champs marqués <strong>*</strong> sont obligatoires.
+                </div>
+                {# Bloc d'erreurs visible en haut du form — affiche TOUS les champs en erreur #}
+                {% if not form.vars.valid %}
+                    <div class="flash flash-error" style="margin-bottom: 20px;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>Le formulaire contient des erreurs :</strong>
+                        <ul style="margin:6px 0 0; padding-left:24px;">
+                            {% for child in form.children %}
+                                {% for error in child.vars.errors %}
+                                    <li><strong>{{ child.vars.label ?: child.vars.name }}</strong> : {{ error.message }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+                <div class="row row-form g-3">
+                    <div class="col-md-8">{{ form_row(form.nom) }}</div>
+                    <div class="col-md-4">{{ form_row(form.categorie) }}</div>
+                    <div class="col-md-4">{{ form_row(form.saison) }}</div>
+                    <div class="col-md-8">{{ form_row(form.niveau) }}</div>
+                    <div class="col-12">{{ form_row(form.isActive) }}</div>
+                </div>
+                <div style="margin-top:24px; display:flex; gap:12px;">
+                    <button type="submit" class="btn-mabb-primary">
+                        <i class="bi bi-check-lg"></i> Créer l'équipe
+                    </button>
+                    <a href="{{ path('manager_equipe_index') }}" class="btn-mabb-ghost">Annuler</a>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}

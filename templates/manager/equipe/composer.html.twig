@@ -1,0 +1,152 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Composer l'effectif — {{ equipe.nom }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-people-fill"></i> Composer l'effectif</h1>
+            <p class="subtitle">
+                Équipe <strong>{{ equipe.nom }}</strong> ({{ equipe.categorie }})
+                — <strong>{{ nb_dans_equipe }}</strong> joueuse(s) actuellement affectée(s)
+            </p>
+        </div>
+        <a href="{{ path('manager_equipe_show', {id: equipe.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour à l'équipe
+        </a>
+    </div>
+
+    {# Aide contextuelle #}
+    <div class="card-mabb" style="margin-bottom:16px; background:#eff6ff; border-left:4px solid var(--mabb-blue);">
+        <div class="card-body">
+            <strong><i class="bi bi-info-circle"></i> Comment ça marche</strong>
+            <ul style="margin:6px 0 0; padding-left:20px;">
+                <li>Les joueuses <strong>déjà dans cette équipe</strong> sont pré-cochées (les décocher les retire)</li>
+                <li>Les joueuses <strong>non affectées</strong> apparaissent décochées (les cocher les ajoute)</li>
+                <li>Les joueuses <strong>dans une autre équipe</strong> ne sont pas listées ici — détache-les depuis leur équipe d'origine d'abord</li>
+            </ul>
+        </div>
+    </div>
+
+    {# Filtres recherche + catégorie #}
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="padding:14px 20px;">
+            <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0;">
+                <div style="flex:1; min-width:220px; position:relative;">
+                    <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--mabb-muted);"></i>
+                    <input type="search" name="q" value="{{ search_query }}"
+                           placeholder="Rechercher par nom, prénom ou licence..."
+                           class="form-control" style="padding-left:36px;" autofocus>
+                </div>
+
+                <label style="font-weight:600; margin:0;">Catégorie d'âge :</label>
+                <select name="cat_age" class="form-select" style="max-width:200px;" onchange="this.form.submit()">
+                    <option value="">— Toutes —</option>
+                    {% for cat in categories_presentes %}
+                        <option value="{{ cat }}" {{ cat == cat_filtre ? 'selected' : '' }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="btn-mabb-primary btn-sm">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+
+                {% if search_query or cat_filtre %}
+                    <a href="{{ path('manager_equipe_composer', {id: equipe.id}) }}" class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-x-lg"></i> Réinitialiser
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <form method="post">
+        <input type="hidden" name="_token" value="{{ csrf_token('composer_' ~ equipe.id) }}">
+
+        <div class="card-mabb">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>{{ nb_total }} joueuse(s) listée(s)</span>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-mabb-ghost btn-sm" onclick="toggleAll(true)">
+                        <i class="bi bi-check-all"></i> Tout cocher
+                    </button>
+                    <button type="button" class="btn-mabb-ghost btn-sm" onclick="toggleAll(false)">
+                        <i class="bi bi-x-circle"></i> Tout décocher
+                    </button>
+                </div>
+            </div>
+
+            {% if apercu is empty %}
+                <div class="empty-state">
+                    <i class="bi bi-person-x"></i>
+                    <h3>Aucune joueuse disponible</h3>
+                    <p>Soit toutes tes joueuses sont déjà dans d'autres équipes, soit aucune ne correspond aux filtres.</p>
+                </div>
+            {% else %}
+                <table class="table-mabb">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;"><input type="checkbox" id="check-all" onclick="toggleAll(this.checked)"></th>
+                            <th>Joueuse</th>
+                            <th>Licence</th>
+                            <th>Naissance</th>
+                            <th>Catégorie d'âge</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in apercu %}
+                            {% set j = a.joueur %}
+                            <tr{% if a.is_dans_equipe %} style="background:#eff6ff;"{% endif %}>
+                                <td>
+                                    <input type="checkbox" name="joueuses[{{ j.id }}]" value="1"{% if a.is_dans_equipe %} checked{% endif %}>
+                                </td>
+                                <td>
+                                    <strong>{{ j.prenom }} {{ j.nom }}</strong>
+                                    {% if j.numeroMaillot is not null %}
+                                        <div style="font-size:.72rem; color:var(--mabb-muted);">N° {{ j.numeroMaillot }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if j.licence %}
+                                        <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:.8rem;">{{ j.licence }}</code>
+                                    {% else %}<span style="color:var(--mabb-muted);">—</span>{% endif %}
+                                </td>
+                                <td>
+                                    {% if j.dateNaissance %}{{ j.dateNaissance|date('d/m/Y') }}
+                                    {% else %}<span style="color:var(--mabb-muted);">—</span>{% endif %}
+                                </td>
+                                <td>{{ a.cat_age ?: '—' }}</td>
+                                <td>
+                                    {% if a.is_dans_equipe %}
+                                        <span style="background:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:12px; font-size:.72rem; font-weight:700;">
+                                            <i class="bi bi-check-circle"></i> Dans l'équipe
+                                        </span>
+                                    {% else %}
+                                        <span style="background:#f1f5f9; color:#64748b; padding:3px 10px; border-radius:12px; font-size:.72rem; font-weight:700;">
+                                            <i class="bi bi-person"></i> Libre
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+
+        <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+            <a href="{{ path('manager_equipe_show', {id: equipe.id}) }}" class="btn-mabb-ghost">Annuler</a>
+            <button type="submit" class="btn-mabb-primary">
+                <i class="bi bi-check-lg"></i> Enregistrer l'effectif
+            </button>
+        </div>
+    </form>
+
+    <script>
+        function toggleAll(state) {
+            document.getElementById('check-all').checked = state;
+            document.querySelectorAll('input[name^="joueuses"]').forEach(cb => cb.checked = state);
+        }
+    </script>
+{% endblock %}

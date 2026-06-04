@@ -1,0 +1,217 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Pointage — {{ titre_evenement }}{% endblock %}
+
+{% block stylesheets %}
+<style>
+    .presence-row {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 14px;
+        align-items: center;
+        padding: 12px 16px;
+        border: 1.5px solid var(--mabb-border);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        background: #fff;
+        transition: background .15s, border-color .15s;
+    }
+    .presence-row.absent {
+        background: #fef2f2;
+        border-color: #fecaca;
+    }
+    .presence-row .joueur-nom {
+        font-weight: 700;
+        color: var(--mabb-dark);
+    }
+    .presence-row .joueur-meta {
+        font-size: .75rem;
+        color: var(--mabb-muted);
+    }
+    .presence-checkbox-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: #f0fdf4;
+        border: 1.5px solid #86efac;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: .85rem;
+        color: #166534;
+        transition: background .15s;
+        white-space: nowrap;
+    }
+    .presence-row.absent .presence-checkbox-wrapper {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #991b1b;
+    }
+    .presence-checkbox-wrapper input { margin: 0; }
+    .motif-input {
+        font-size: .82rem !important;
+        padding: 6px 10px !important;
+    }
+    .motif-input:disabled {
+        background: #f8fafc !important;
+        opacity: .5;
+    }
+    .presence-stats-bar {
+        background: var(--mabb-dark);
+        color: white;
+        border-radius: 12px;
+        padding: 16px 24px;
+        display: flex;
+        gap: 30px;
+        justify-content: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .presence-stats-bar .stat {
+        text-align: center;
+    }
+    .presence-stats-bar .stat-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .presence-stats-bar .stat-label {
+        font-size: .75rem;
+        opacity: .85;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-top: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-clipboard-check"></i> Pointage des présences</h1>
+            <p class="subtitle">{{ titre_evenement }} — {{ equipe.nom }}</p>
+        </div>
+        <a href="{{ retour_url }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    {# Stats live du pointage (calculées en JS au moment du chargement et à chaque clic) #}
+    <div class="presence-stats-bar" id="stats-bar">
+        <div class="stat"><div class="stat-value" id="stat-total">{{ joueurs|length }}</div><div class="stat-label">Effectif</div></div>
+        <div class="stat"><div class="stat-value" id="stat-present">0</div><div class="stat-label">Présentes</div></div>
+        <div class="stat"><div class="stat-value" id="stat-absent">0</div><div class="stat-label">Absentes</div></div>
+        <div class="stat"><div class="stat-value" id="stat-taux">0%</div><div class="stat-label">Taux présence</div></div>
+    </div>
+
+    {% if joueurs is empty %}
+        <div class="card-mabb">
+            <div class="empty-state">
+                <i class="bi bi-person-x"></i>
+                <h3>Aucune joueuse active dans cette équipe</h3>
+                <p>Ajoute des joueuses à l'équipe avant de pointer les présences.</p>
+            </div>
+        </div>
+    {% else %}
+        <form method="post" id="form-pointage">
+            <input type="hidden" name="_token" value="{{ csrf_token(csrf_id) }}">
+
+            <div style="margin-bottom: 16px; display:flex; gap:8px;">
+                <button type="button" class="btn-mabb-ghost btn-sm" onclick="toggleTous(true)">
+                    <i class="bi bi-check-all"></i> Tout cocher
+                </button>
+                <button type="button" class="btn-mabb-ghost btn-sm" onclick="toggleTous(false)">
+                    <i class="bi bi-x-circle"></i> Tout décocher
+                </button>
+            </div>
+
+            {% for joueur in joueurs %}
+                {% set presence = presences_by_joueur[joueur.id] ?? null %}
+                {% set checked = presence ? presence.isPresent : true %}
+                <div class="presence-row {{ checked ? '' : 'absent' }}" data-joueur-id="{{ joueur.id }}">
+                    {# Identité joueuse #}
+                    <div>
+                        <div class="joueur-nom">
+                            {{ joueur.prenom }} {{ joueur.nom }}
+                            {% if joueur.numeroMaillot is not null %}
+                                <span style="color:var(--mabb-blue); font-weight:700;">N°{{ joueur.numeroMaillot }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="joueur-meta">
+                            {% if joueur.poste %}{{ joueur.poste }}{% endif %}
+                            {% if joueur.licence %}— Licence {{ joueur.licence }}{% endif %}
+                        </div>
+                    </div>
+
+                    {# Checkbox Présente / Absente #}
+                    <label class="presence-checkbox-wrapper" title="Cocher si présente">
+                        <input type="checkbox"
+                               name="present[{{ joueur.id }}]"
+                               value="1"
+                               {{ checked ? 'checked' : '' }}
+                               onchange="toggleAbsent(this)">
+                        <span class="label-texte">{{ checked ? 'Présente' : 'Absente' }}</span>
+                    </label>
+
+                    {# Motif absence (visible/désactivé selon l'état) #}
+                    <input type="text"
+                           name="motif[{{ joueur.id }}]"
+                           value="{{ presence and presence.motifAbsence ? presence.motifAbsence : '' }}"
+                           placeholder="Motif d'absence (optionnel)"
+                           class="motif-input"
+                           {{ checked ? 'disabled' : '' }}>
+                </div>
+            {% endfor %}
+
+            <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--mabb-border); display:flex; gap:12px; justify-content:flex-end;">
+                <a href="{{ retour_url }}" class="btn-mabb-ghost">Annuler</a>
+                <button type="submit" class="btn-mabb-primary">
+                    <i class="bi bi-check-lg"></i> Enregistrer le pointage
+                </button>
+            </div>
+        </form>
+
+        <script>
+            // Mettre à jour les stats au chargement et à chaque changement
+            function updateStats() {
+                const all = document.querySelectorAll('input[name^="present"]');
+                const presents = Array.from(all).filter(c => c.checked).length;
+                const total = all.length;
+                const absents = total - presents;
+                const taux = total > 0 ? Math.round((presents / total) * 100) : 0;
+                document.getElementById('stat-present').textContent = presents;
+                document.getElementById('stat-absent').textContent = absents;
+                document.getElementById('stat-taux').textContent = taux + '%';
+            }
+
+            function toggleAbsent(checkbox) {
+                const row = checkbox.closest('.presence-row');
+                const motifInput = row.querySelector('.motif-input');
+                const labelTexte = row.querySelector('.label-texte');
+                if (checkbox.checked) {
+                    row.classList.remove('absent');
+                    motifInput.disabled = true;
+                    motifInput.value = '';
+                    labelTexte.textContent = 'Présente';
+                } else {
+                    row.classList.add('absent');
+                    motifInput.disabled = false;
+                    labelTexte.textContent = 'Absente';
+                    motifInput.focus();
+                }
+                updateStats();
+            }
+
+            function toggleTous(etat) {
+                document.querySelectorAll('input[name^="present"]').forEach(cb => {
+                    cb.checked = etat;
+                    toggleAbsent(cb);
+                });
+            }
+
+            // Init au chargement
+            updateStats();
+        </script>
+    {% endif %}
+{% endblock %}

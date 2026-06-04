@@ -1,0 +1,232 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ equipe.nom }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>{{ equipe.nom }}</h1>
+            <p class="subtitle">
+                <span class="badge-categorie">{{ equipe.categorie }}</span>
+                {% if equipe.niveau %}<span class="badge-niveau">{{ equipe.niveau }}</span>{% endif %}
+                <span style="color: var(--mabb-muted); margin-left: 8px;">Saison {{ equipe.saison }}</span>
+                {% if not equipe.isActive %}
+                    <span class="badge-inactive"><i class="bi bi-archive"></i> Archivée</span>
+                {% endif %}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ path('manager_equipe_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Toutes les équipes
+            </a>
+            {% if is_granted('CLUB_STAFF', equipe) %}
+                <a href="{{ path('manager_equipe_edit', {id: equipe.id}) }}" class="btn-mabb-primary">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ========================================================
+       Bandeau KPI rapide
+       ======================================================== #}
+    <div class="row g-3" style="margin-bottom: 20px;">
+        <div class="col-md-3">
+            <div class="card-mabb" style="text-align:center; padding:20px;">
+                <div style="font-size: 2rem; font-weight: 800; color: var(--mabb-blue);">{{ effectif }}</div>
+                <div style="color: var(--mabb-muted); font-size: .85rem;">Joueuses</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-mabb" style="text-align:center; padding:20px;">
+                <div style="font-size: 2rem; font-weight: 800; color: #22c55e;">{{ effectif_actif }}</div>
+                <div style="color: var(--mabb-muted); font-size: .85rem;">Actives</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-mabb" style="text-align:center; padding:20px; opacity: .5;">
+                <div style="font-size: 2rem; font-weight: 800; color: var(--mabb-muted);">—</div>
+                <div style="color: var(--mabb-muted); font-size: .85rem;">Séances saison</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-mabb" style="text-align:center; padding:20px; opacity: .5;">
+                <div style="font-size: 2rem; font-weight: 800; color: var(--mabb-muted);">—</div>
+                <div style="color: var(--mabb-muted); font-size: .85rem;">Matchs joués</div>
+            </div>
+        </div>
+    </div>
+
+    {# ========================================================
+       Liste des joueuses
+       ======================================================== #}
+    <div class="card-mabb">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i class="bi bi-people-fill"></i> Effectif de l'équipe</span>
+            {% if is_granted('CLUB_STAFF', equipe) %}
+                <div style="display:flex; gap:8px;">
+                    <a href="{{ path('manager_equipe_composer', {id: equipe.id}) }}" class="btn-mabb-ghost" style="padding: 6px 14px; font-size: .85rem;">
+                        <i class="bi bi-list-check"></i> Composer l'effectif
+                    </a>
+                    <a href="{{ path('manager_joueur_new', {equipe_id: equipe.id}) }}" class="btn-mabb-orange" style="padding: 6px 14px; font-size: .85rem;">
+                        <i class="bi bi-plus-lg"></i> Ajouter joueuse
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% if joueurs is empty %}
+            <div class="empty-state">
+                <i class="bi bi-person-x"></i>
+                <h3>Aucune joueuse dans cette équipe</h3>
+                <p>Affecte des joueuses à cette équipe pour commencer.</p>
+            </div>
+        {% else %}
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th>N°</th>
+                        <th>Joueuse</th>
+                        <th>Poste</th>
+                        <th>Né(e) le</th>
+                        <th>Statut</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for j in joueurs %}
+                        <tr class="{{ not j.isActive ? 'inactive' : '' }}">
+                            <td>
+                                {% if j.numeroMaillot is not null %}
+                                    <strong style="color:var(--mabb-blue);">{{ j.numeroMaillot }}</strong>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ path('manager_joueur_show', {id: j.id}) }}" style="font-weight: 600; color: var(--mabb-dark); text-decoration: none;">
+                                    {{ j.prenom }} {{ j.nom }}
+                                </a>
+                            </td>
+                            <td>{{ j.poste ?: '—' }}</td>
+                            <td>
+                                {% if j.dateNaissance %}{{ j.dateNaissance|date('d/m/Y') }}{% else %}—{% endif %}
+                            </td>
+                            <td>
+                                {% if j.isActive %}
+                                    <span class="badge-active">Active</span>
+                                {% else %}
+                                    <span class="badge-inactive">Archivée</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                <a href="{{ path('manager_joueur_show', {id: j.id}) }}" class="btn-mabb-ghost btn-sm">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    {# ========================================================
+       Planning hebdomadaire d'entraînement (créneaux récurrents)
+       ======================================================== #}
+    <div class="card-mabb" style="margin-top: 20px;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <span><i class="bi bi-calendar-week"></i> Planning hebdo d'entraînement</span>
+            {% if is_granted('CLUB_STAFF', equipe) %}
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <a href="{{ path('manager_planning_new', {id: equipe.id}) }}" class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-plus-lg"></i> Ajouter un créneau
+                    </a>
+                    {% if plannings|length > 0 %}
+                        <form method="post" action="{{ path('manager_planning_generer', {id: equipe.id}) }}" style="margin:0;" onsubmit="return confirm('Générer toutes les séances de la saison à partir des créneaux récurrents ?\n\nLes séances déjà existantes ne seront pas dupliquées.');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('generer_seances_' ~ equipe.id) }}">
+                            <button type="submit" class="btn-mabb-orange btn-sm">
+                                <i class="bi bi-magic"></i> Générer les séances de la saison
+                            </button>
+                        </form>
+                    {% endif %}
+                    <a href="{{ path('manager_seance_new', {equipe_id: equipe.id}) }}" class="btn-mabb-primary btn-sm">
+                        <i class="bi bi-plus-lg"></i> Séance exceptionnelle
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        {% if plannings is empty %}
+            <div class="empty-state">
+                <i class="bi bi-calendar-x"></i>
+                <h3>Aucun créneau récurrent défini</h3>
+                <p>Ajoute les créneaux d'entraînement hebdomadaires pour générer automatiquement les séances de toute la saison.</p>
+                {% if is_granted('CLUB_STAFF', equipe) %}
+                    <a href="{{ path('manager_planning_new', {id: equipe.id}) }}" class="btn-mabb-orange" style="margin-top: 12px;">
+                        <i class="bi bi-plus-lg"></i> Ajouter mon premier créneau
+                    </a>
+                {% endif %}
+            </div>
+        {% else %}
+            {# JOURS = constante PHP via _self ou hardcodée ici #}
+            {% set jours = {1:'Lundi', 2:'Mardi', 3:'Mercredi', 4:'Jeudi', 5:'Vendredi', 6:'Samedi', 7:'Dimanche'} %}
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th>Jour</th>
+                        <th>Heure</th>
+                        <th>Durée</th>
+                        <th>Lieu</th>
+                        <th>Type</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in plannings %}
+                        <tr>
+                            <td><strong>{{ jours[p.jourSemaine] }}</strong></td>
+                            <td>{{ p.heureDebut }}</td>
+                            <td>{{ p.dureeMinutes }} min</td>
+                            <td>{{ p.lieu }}</td>
+                            <td>{{ p.type }}</td>
+                            <td style="text-align:right;">
+                                {% if is_granted('CLUB_STAFF', p) %}
+                                    <a href="{{ path('manager_planning_edit', {id: p.id}) }}" class="btn-mabb-ghost btn-sm">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form method="post" action="{{ path('manager_planning_delete', {id: p.id}) }}" style="display:inline;" onsubmit="return confirm('Supprimer ce créneau récurrent ?\n\nLes séances déjà générées seront conservées (détachées).');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete_planning_' ~ p.id) }}">
+                                        <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    {# Liens rapides vers les listes filtrées de cette équipe #}
+    <div class="row g-3" style="margin-top: 20px;">
+        <div class="col-md-6">
+            <a href="{{ path('manager_seance_index', {equipe_id: equipe.id}) }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-header"><i class="bi bi-calendar-week"></i> Voir les séances de cette équipe</div>
+                    <div class="card-body" style="text-align:center; padding:20px;">
+                        <i class="bi bi-arrow-right-circle" style="font-size:1.5rem; color:var(--mabb-blue);"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="{{ path('manager_rencontre_index', {equipe_id: equipe.id}) }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-header"><i class="bi bi-trophy"></i> Voir les rencontres de cette équipe</div>
+                    <div class="card-body" style="text-align:center; padding:20px;">
+                        <i class="bi bi-arrow-right-circle" style="font-size:1.5rem; color:var(--mabb-orange);"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+{% endblock %}

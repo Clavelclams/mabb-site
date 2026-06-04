@@ -1,0 +1,123 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Rencontres{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>Rencontres (matchs)</h1>
+            <p class="subtitle">
+                {{ rencontres|length }} rencontre(s)
+                {% if equipe_filtre %} pour {{ equipe_filtre.nom }}{% endif %}
+                — {{ periode == 'a_venir' ? 'À venir' : (periode == 'passees' ? 'Passées' : 'Toutes') }}
+            </p>
+        </div>
+        {% if is_granted('CLUB_STAFF', club) %}
+            <a href="{{ path('manager_rencontre_new') }}" class="btn-mabb-orange">
+                <i class="bi bi-plus-lg"></i> Nouvelle rencontre
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="padding:14px 20px;">
+            <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0;">
+                <label style="font-weight:600; margin:0;">Équipe :</label>
+                <select name="equipe_id" class="form-select" style="max-width:240px;" onchange="this.form.submit()">
+                    <option value="">— Toutes —</option>
+                    {% for e in equipes %}
+                        <option value="{{ e.id }}" {{ equipe_filtre and equipe_filtre.id == e.id ? 'selected' : '' }}>
+                            {{ e.nom }} ({{ e.categorie }})
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <label style="font-weight:600; margin:0; margin-left:12px;">Période :</label>
+                <select name="periode" class="form-select" style="max-width:180px;" onchange="this.form.submit()">
+                    <option value="a_venir" {{ periode == 'a_venir' ? 'selected' : '' }}>À venir</option>
+                    <option value="passees" {{ periode == 'passees' ? 'selected' : '' }}>Passées</option>
+                    <option value="toutes"  {{ periode == 'toutes' ? 'selected' : '' }}>Toutes</option>
+                </select>
+
+                {% if equipe_filtre or periode != 'a_venir' %}
+                    <a href="{{ path('manager_rencontre_index') }}" class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-x-lg"></i> Réinitialiser
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="card-mabb">
+        {% if rencontres is empty %}
+            <div class="empty-state">
+                <i class="bi bi-trophy"></i>
+                <h3>Aucune rencontre {{ periode == 'a_venir' ? 'à venir' : (periode == 'passees' ? 'jouée' : '') }}</h3>
+                <p>Planifie ta première rencontre pour démarrer la saison.</p>
+            </div>
+        {% else %}
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Équipe</th>
+                        <th>Match</th>
+                        <th>Lieu</th>
+                        <th>Score</th>
+                        <th>Statut</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rencontres %}
+                        <tr>
+                            <td>
+                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="font-weight:700; color:var(--mabb-dark); text-decoration:none;">
+                                    {{ r.date|date('d/m/Y H:i') }}
+                                </a>
+                                <div style="font-size:.75rem; color:var(--mabb-muted);">{{ r.date|date('l', 'Europe/Paris')|capitalize }}</div>
+                            </td>
+                            <td><span class="badge-categorie">{{ r.equipe.nom }}</span></td>
+                            <td>
+                                {% if r.domicile %}
+                                    <strong>{{ r.equipe.nom }}</strong> vs {{ r.adversaire }}
+                                {% else %}
+                                    {{ r.adversaire }} vs <strong>{{ r.equipe.nom }}</strong>
+                                {% endif %}
+                            </td>
+                            <td>{{ r.lieu ?: '—' }}</td>
+                            <td>
+                                {% if r.aResultat %}
+                                    <strong style="font-size:1.05rem; color:{{ r.scoreEquipe > r.scoreAdverse ? '#166534' : (r.scoreEquipe < r.scoreAdverse ? '#991b1b' : 'var(--mabb-muted)') }};">
+                                        {{ r.scoreEquipe }} - {{ r.scoreAdverse }}
+                                    </strong>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.statut == 'brouillon' %}
+                                    <span style="background:#fef3e2; color:#d97706; padding:3px 10px; border-radius:12px; font-size:.75rem; font-weight:600;">Brouillon</span>
+                                {% elseif r.statut == 'valide' %}
+                                    <span class="badge-active"><i class="bi bi-check-circle"></i> Validée</span>
+                                {% elseif r.statut == 'verrouille' %}
+                                    <span style="background:#ddd6fe; color:#5b21b6; padding:3px 10px; border-radius:12px; font-size:.75rem; font-weight:600;"><i class="bi bi-lock-fill"></i> Verrouillée</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" class="btn-mabb-ghost btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if is_granted('CLUB_STAFF', r) and not r.isVerrouillee %}
+                                    <a href="{{ path('manager_rencontre_edit', {id: r.id}) }}" class="btn-mabb-ghost btn-sm">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+{% endblock %}

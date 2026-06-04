@@ -1,0 +1,230 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ rencontre.equipe.nom }} vs {{ rencontre.adversaire }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>
+                {% if rencontre.domicile %}
+                    {{ rencontre.equipe.nom }} <span style="color:var(--mabb-muted);">vs</span> {{ rencontre.adversaire }}
+                {% else %}
+                    {{ rencontre.adversaire }} <span style="color:var(--mabb-muted);">vs</span> {{ rencontre.equipe.nom }}
+                {% endif %}
+            </h1>
+            <p class="subtitle">
+                <strong>{{ rencontre.date|date('l d F Y, H:i', 'Europe/Paris')|capitalize }}</strong>
+                {% if rencontre.lieu %} — {{ rencontre.lieu }}{% endif %}
+                — {{ rencontre.domicile ? 'À domicile' : 'À l\'extérieur' }}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ path('manager_rencontre_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Toutes les rencontres
+            </a>
+            {% if is_granted('CLUB_STAFF', rencontre) and not rencontre.isVerrouillee %}
+                <a href="{{ path('manager_rencontre_edit', {id: rencontre.id}) }}" class="btn-mabb-primary">
+                    <i class="bi bi-pencil"></i> Modifier
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ========================================================
+       Carte SCORE en gros — la donnée la plus importante
+       ======================================================== #}
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="text-align:center; padding:30px 20px;">
+            {% if rencontre.aResultat %}
+                <div style="font-size:3rem; font-weight:800; color:var(--mabb-dark);">
+                    <span style="color: {{ rencontre.scoreEquipe > rencontre.scoreAdverse ? '#166534' : (rencontre.scoreEquipe < rencontre.scoreAdverse ? '#991b1b' : 'var(--mabb-dark)') }};">
+                        {{ rencontre.scoreEquipe }}
+                    </span>
+                    <span style="color:var(--mabb-muted);">-</span>
+                    <span style="color: {{ rencontre.scoreAdverse > rencontre.scoreEquipe ? '#166534' : (rencontre.scoreAdverse < rencontre.scoreEquipe ? '#991b1b' : 'var(--mabb-dark)') }};">
+                        {{ rencontre.scoreAdverse }}
+                    </span>
+                </div>
+                <div style="font-size:.95rem; color:var(--mabb-muted); margin-top:8px;">
+                    {{ rencontre.equipe.nom }} — {{ rencontre.adversaire }}
+                </div>
+                {% if rencontre.scoreEquipe > rencontre.scoreAdverse %}
+                    <div style="color:#166534; font-weight:700; margin-top:12px; font-size:1.1rem;">
+                        <i class="bi bi-trophy-fill"></i> Victoire de +{{ rencontre.scoreEquipe - rencontre.scoreAdverse }}
+                    </div>
+                {% elseif rencontre.scoreEquipe < rencontre.scoreAdverse %}
+                    <div style="color:#991b1b; font-weight:700; margin-top:12px; font-size:1.1rem;">
+                        Défaite de -{{ rencontre.scoreAdverse - rencontre.scoreEquipe }}
+                    </div>
+                {% else %}
+                    <div style="color:var(--mabb-muted); font-weight:700; margin-top:12px; font-size:1.1rem;">Match nul</div>
+                {% endif %}
+            {% else %}
+                <div style="color:var(--mabb-muted); font-style:italic;">
+                    <i class="bi bi-hourglass-split" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
+                    Score non saisi. Modifie la rencontre pour entrer le résultat.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-info-circle"></i> Informations</div>
+                <div class="card-body">
+                    <table class="table-mabb" style="margin:-20px;">
+                        <tbody>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted); width:35%;">Équipe</td><td>{{ rencontre.equipe.nom }} ({{ rencontre.equipe.categorie }})</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Adversaire</td><td>{{ rencontre.adversaire }}</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Date & heure</td><td>{{ rencontre.date|date('d/m/Y H:i') }}</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Lieu</td><td>{{ rencontre.lieu ?: '—' }}</td></tr>
+                            <tr><td style="font-weight:600; color:var(--mabb-muted);">Match</td><td>{{ rencontre.domicile ? 'À domicile' : 'À l\'extérieur' }}</td></tr>
+                            <tr>
+                                <td style="font-weight:600; color:var(--mabb-muted);">Statut</td>
+                                <td>
+                                    {% if rencontre.statut == 'brouillon' %}
+                                        <span style="background:#fef3e2; color:#d97706; padding:3px 10px; border-radius:12px; font-size:.8rem; font-weight:600;">Brouillon</span>
+                                    {% elseif rencontre.statut == 'valide' %}
+                                        <span class="badge-active"><i class="bi bi-check-circle"></i> Validée</span>
+                                    {% elseif rencontre.statut == 'verrouille' %}
+                                        <span style="background:#ddd6fe; color:#5b21b6; padding:3px 10px; border-radius:12px; font-size:.8rem; font-weight:600;"><i class="bi bi-lock-fill"></i> Verrouillée</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if rencontre.notes %}
+                <div class="card-mabb" style="margin-top:16px;">
+                    <div class="card-header"><i class="bi bi-card-text"></i> Notes</div>
+                    <div class="card-body">
+                        <p style="margin:0; white-space:pre-wrap;">{{ rencontre.notes }}</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-md-5">
+            {# Workflow statut — boutons selon le statut courant #}
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-shield-check"></i> Workflow feuille de match</div>
+                <div class="card-body">
+                    <p style="font-size:.85rem; color:var(--mabb-muted);">
+                        {% if rencontre.statut == 'brouillon' %}
+                            La rencontre est en brouillon. Une fois le score saisi, valide pour officialiser.
+                        {% elseif rencontre.statut == 'valide' %}
+                            La rencontre est validée. Un dirigeant peut la verrouiller pour empêcher toute modification ultérieure.
+                        {% elseif rencontre.statut == 'verrouille' %}
+                            La rencontre est verrouillée. Seul un dirigeant peut la déverrouiller.
+                        {% endif %}
+                    </p>
+
+                    {# Action : passer de brouillon à validé #}
+                    {% if rencontre.statut == 'brouillon' and is_granted('CLUB_STAFF', rencontre) %}
+                        <form method="post" action="{{ path('manager_rencontre_statut', {id: rencontre.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('statut_rencontre_' ~ rencontre.id) }}">
+                            <input type="hidden" name="action" value="valider">
+                            <button type="submit" class="btn-mabb-primary" style="width:100%;">
+                                <i class="bi bi-check-circle"></i> Valider la rencontre
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    {# Action : passer de validé à verrouillé (admin only) #}
+                    {% if rencontre.statut == 'valide' and is_granted('CLUB_ADMIN', rencontre) %}
+                        <form method="post" action="{{ path('manager_rencontre_statut', {id: rencontre.id}) }}" onsubmit="return confirm('Verrouiller la rencontre ? Plus aucune modification ne sera possible sauf déverrouillage par un dirigeant.');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('statut_rencontre_' ~ rencontre.id) }}">
+                            <input type="hidden" name="action" value="verrouiller">
+                            <button type="submit" class="btn-mabb-primary" style="width:100%;">
+                                <i class="bi bi-lock"></i> Verrouiller la feuille
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    {# Action : dever (admin only) #}
+                    {% if rencontre.statut == 'verrouille' and is_granted('CLUB_ADMIN', rencontre) %}
+                        <form method="post" action="{{ path('manager_rencontre_statut', {id: rencontre.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('statut_rencontre_' ~ rencontre.id) }}">
+                            <input type="hidden" name="action" value="dever">
+                            <button type="submit" class="btn-mabb-ghost" style="width:100%;">
+                                <i class="bi bi-unlock"></i> Déverrouiller
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Card Présences (joueuses ayant joué) #}
+            <div class="card-mabb" style="margin-top:16px;">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="bi bi-clipboard-check"></i> Présences au match</span>
+                    {% if is_granted('CLUB_STAFF', rencontre) %}
+                        <a href="{{ path('manager_presence_rencontre', {id: rencontre.id}) }}" class="btn-mabb-orange btn-sm">
+                            <i class="bi bi-pencil-square"></i> Faire le pointage
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% set presences = rencontre.presences %}
+                    {% if presences|length == 0 %}
+                        <p style="color:var(--mabb-muted); margin:0; font-size:.9rem; text-align:center; padding:14px 0;">
+                            <i class="bi bi-hourglass"></i> Aucun pointage saisi pour cette rencontre.
+                        </p>
+                    {% else %}
+                        {% set nb_present = 0 %}{% set nb_absent = 0 %}
+                        {% for p in presences %}
+                            {% if p.isPresent %}{% set nb_present = nb_present + 1 %}{% else %}{% set nb_absent = nb_absent + 1 %}{% endif %}
+                        {% endfor %}
+                        <div style="display:flex; gap:18px; justify-content:center; padding:6px 0 12px;">
+                            <div style="text-align:center;">
+                                <div style="font-size:1.4rem; font-weight:800; color:#22c55e;">{{ nb_present }}</div>
+                                <div style="font-size:.7rem; color:var(--mabb-muted); text-transform:uppercase;">Ont joué</div>
+                            </div>
+                            <div style="text-align:center;">
+                                <div style="font-size:1.4rem; font-weight:800; color:var(--mabb-red);">{{ nb_absent }}</div>
+                                <div style="font-size:.7rem; color:var(--mabb-muted); text-transform:uppercase;">Absentes</div>
+                            </div>
+                        </div>
+                        <div style="max-height:220px; overflow-y:auto; font-size:.85rem;">
+                            {% for p in presences %}
+                                <div style="padding:5px 2px; border-bottom:1px dashed #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                                    <span>{{ p.joueur.prenom }} {{ p.joueur.nom }}{% if p.motifAbsence %} <small style="color:var(--mabb-muted);">({{ p.motifAbsence }})</small>{% endif %}</span>
+                                    {% if p.isPresent %}
+                                        <span style="color:#22c55e;"><i class="bi bi-check-circle-fill"></i></span>
+                                    {% else %}
+                                        <span style="color:var(--mabb-red);"><i class="bi bi-x-circle-fill"></i></span>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card-mabb" style="margin-top:16px; opacity:.55;">
+                <div class="card-header"><i class="bi bi-people-fill"></i> Convocations (à venir)</div>
+                <div class="empty-state" style="padding:30px 20px;">
+                    <i class="bi bi-clock-history"></i>
+                    <p style="margin:0; font-size:.9rem;">Module convocations dans une prochaine itération.</p>
+                </div>
+            </div>
+
+            {% if is_granted('CLUB_ADMIN', rencontre) %}
+                <div class="card-mabb" style="margin-top:16px; border-left:4px solid var(--mabb-red);">
+                    <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Zone dangereuse</div>
+                    <div class="card-body">
+                        <form method="post" action="{{ path('manager_rencontre_delete', {id: rencontre.id}) }}" onsubmit="return confirm('Supprimer définitivement cette rencontre ? Si le score est saisi, cela impactera les stats.');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete_rencontre_' ~ rencontre.id) }}">
+                            <button type="submit" class="btn-mabb-ghost" style="color:var(--mabb-red); border-color:var(--mabb-red);">
+                                <i class="bi bi-trash"></i> Supprimer la rencontre
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

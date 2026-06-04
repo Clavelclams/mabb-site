@@ -1,4 +1,5 @@
-# Routes manager — manager.mabb.fr
+# Routes manager — manager.mabb.fr (prod) ou manager.localhost (dev)
+# Le domain est résolu via APP_HOST_DOMAIN (.env / .env.local)
 manager_controllers:
     resource:
         path: ../../src/Controller/Manager/
@@ -7,7 +8,7 @@ manager_controllers:
     host: '{subdomain}.{domain}'
     defaults:
         subdomain: manager
-        domain: mabb.fr
+        domain: '%app.host_domain%'
     requirements:
         subdomain: 'manager'
         domain: 'mabb\.fr|localhost'

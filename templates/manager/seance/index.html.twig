@@ -1,0 +1,100 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Séances{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>Séances d'entraînement</h1>
+            <p class="subtitle">
+                {{ seances|length }} séance(s)
+                {% if equipe_filtre %} pour {{ equipe_filtre.nom }}{% endif %}
+                — {{ periode == 'a_venir' ? 'À venir' : (periode == 'passees' ? 'Passées' : 'Toutes') }}
+            </p>
+        </div>
+        {% if is_granted('CLUB_STAFF', club) %}
+            <a href="{{ path('manager_seance_new') }}" class="btn-mabb-orange">
+                <i class="bi bi-plus-lg"></i> Nouvelle séance
+            </a>
+        {% endif %}
+    </div>
+
+    {# Filtres : équipe + période #}
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="padding:14px 20px;">
+            <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0;">
+                <label style="font-weight:600; margin:0;">Équipe :</label>
+                <select name="equipe_id" class="form-select" style="max-width:240px;" onchange="this.form.submit()">
+                    <option value="">— Toutes —</option>
+                    {% for e in equipes %}
+                        <option value="{{ e.id }}" {{ equipe_filtre and equipe_filtre.id == e.id ? 'selected' : '' }}>
+                            {{ e.nom }} ({{ e.categorie }})
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <label style="font-weight:600; margin:0; margin-left:12px;">Période :</label>
+                <select name="periode" class="form-select" style="max-width:180px;" onchange="this.form.submit()">
+                    <option value="a_venir" {{ periode == 'a_venir' ? 'selected' : '' }}>À venir</option>
+                    <option value="passees" {{ periode == 'passees' ? 'selected' : '' }}>Passées</option>
+                    <option value="toutes"  {{ periode == 'toutes' ? 'selected' : '' }}>Toutes</option>
+                </select>
+
+                {% if equipe_filtre or periode != 'a_venir' %}
+                    <a href="{{ path('manager_seance_index') }}" class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-x-lg"></i> Réinitialiser
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="card-mabb">
+        {% if seances is empty %}
+            <div class="empty-state">
+                <i class="bi bi-calendar-week"></i>
+                <h3>Aucune séance {{ periode == 'a_venir' ? 'à venir' : (periode == 'passees' ? 'passée' : '') }}</h3>
+                <p>Planifie ta première séance pour démarrer.</p>
+            </div>
+        {% else %}
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Équipe</th>
+                        <th>Lieu</th>
+                        <th>Type</th>
+                        <th>Durée</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in seances %}
+                        <tr>
+                            <td>
+                                <a href="{{ path('manager_seance_show', {id: s.id}) }}" style="font-weight:700; color:var(--mabb-dark); text-decoration:none;">
+                                    {{ s.date|date('d/m/Y H:i') }}
+                                </a>
+                                <div style="font-size:.75rem; color:var(--mabb-muted);">{{ s.date|date('l', 'Europe/Paris')|capitalize }}</div>
+                            </td>
+                            <td><span class="badge-categorie">{{ s.equipe.nom }}</span></td>
+                            <td>{{ s.lieu }}</td>
+                            <td>{{ s.type }}</td>
+                            <td>{% if s.dureeMinutes %}{{ s.dureeMinutes }} min{% else %}—{% endif %}</td>
+                            <td style="text-align:right;">
+                                <a href="{{ path('manager_seance_show', {id: s.id}) }}" class="btn-mabb-ghost btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                {% if is_granted('CLUB_STAFF', s) %}
+                                    <a href="{{ path('manager_seance_edit', {id: s.id}) }}" class="btn-mabb-ghost btn-sm">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+{% endblock %}

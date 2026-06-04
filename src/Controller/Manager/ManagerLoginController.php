@@ -45,12 +45,50 @@ class ManagerLoginController extends AbstractController
      * Cette page sera enrichie au fil des sprints (affichage du club, équipes...).
      */
     #[Route('/', name: 'manager_dashboard')]
-    public function dashboard(): Response
-    {
-        // Vérifie l'accès (double sécurité, en complément de l'access_control)
+    public function dashboard(
+        \App\Security\Tenant\TenantResolver $tenantResolver,
+        \App\Repository\Sport\SeanceRepository $seanceRepository,
+        \App\Repository\Sport\RencontreRepository $rencontreRepository,
+    ): Response {
         $this->denyAccessUnlessGranted('ROLE_USER');
 
-        return $this->render('manager/dashboard.html.twig');
+        // Récupération du club actif pour alimenter le dashboard
+        $club = $tenantResolver->getCurrentClub();
+        $prochainSeances = [];
+        $prochainRencontres = [];
+
+        if ($club) {
+            $now = new \DateTimeImmutable();
+            $dans7Jours = $now->modify('+7 days');
+
+            // Prochaines séances dans les 7 jours
+            $prochainSeances = $seanceRepository->createQueryBuilder('s')
+                ->where('s.club = :club')
+                ->andWhere('s.date BETWEEN :now AND :j7')
+                ->setParameter('club', $club)
+                ->setParameter('now', $now)
+                ->setParameter('j7', $dans7Jours)
+                ->orderBy('s.date', 'ASC')
+                ->setMaxResults(5)
+                ->getQuery()->getResult();
+
+            // Prochaines rencontres dans les 7 jours
+            $prochainRencontres = $rencontreRepository->createQueryBuilder('r')
+                ->where('r.club = :club')
+                ->andWhere('r.date BETWEEN :now AND :j7')
+                ->setParameter('club', $club)
+                ->setParameter('now', $now)
+                ->setParameter('j7', $dans7Jours)
+                ->orderBy('r.date', 'ASC')
+                ->setMaxResults(5)
+                ->getQuery()->getResult();
+        }
+
+        return $this->render('manager/dashboard.html.twig', [
+            'club'                => $club,
+            'prochain_seances'    => $prochainSeances,
+            'prochain_rencontres' => $prochainRencontres,
+        ]);
     }
 
     /**

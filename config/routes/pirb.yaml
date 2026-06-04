@@ -1,4 +1,5 @@
-# Routes PIRB — pirb.mabb.fr
+# Routes PIRB — pirb.mabb.fr (prod) ou pirb.localhost (dev)
+# Le domain est résolu via APP_HOST_DOMAIN (.env / .env.local)
 pirb_controllers:
     resource:
         path: ../../src/Controller/Pirb/
@@ -7,7 +8,7 @@ pirb_controllers:
     host: '{subdomain}.{domain}'
     defaults:
         subdomain: pirb
-        domain: mabb.fr
+        domain: '%app.host_domain%'
     requirements:
         subdomain: 'pirb'
         domain: 'mabb\.fr|localhost'

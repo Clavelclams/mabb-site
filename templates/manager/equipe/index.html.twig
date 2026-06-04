@@ -1,0 +1,132 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Équipes{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>Équipes</h1>
+            <p class="subtitle">
+                {{ equipes|length }} équipe(s)
+                {% if saison_filtre == 'all' %}
+                    — toutes saisons confondues
+                {% else %}
+                    — saison {{ saison_filtre }}
+                    {% if saison_filtre == saison_courante %}
+                        <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:600;margin-left:6px;">EN COURS</span>
+                    {% endif %}
+                {% endif %}
+            </p>
+        </div>
+        {% if is_granted('CLUB_STAFF', club) %}
+            <a href="{{ path('manager_equipe_new') }}" class="btn-mabb-orange">
+                <i class="bi bi-plus-lg"></i> Nouvelle équipe
+            </a>
+        {% endif %}
+    </div>
+
+    {# Bandeau filtres : saison + archivées #}
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="padding:14px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+            <form method="get" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin:0;">
+                <label style="font-weight:600; margin:0;">Saison :</label>
+                <select name="saison" class="form-select" style="max-width:220px;" onchange="this.form.submit()">
+                    <option value="{{ saison_courante }}" {{ saison_filtre == saison_courante ? 'selected' : '' }}>
+                        Saison en cours ({{ saison_courante }})
+                    </option>
+                    <option value="all" {{ saison_filtre == 'all' ? 'selected' : '' }}>
+                        Toutes les saisons
+                    </option>
+                    {% for s in saisons_disponibles %}
+                        {% if s != saison_courante %}
+                            <option value="{{ s }}" {{ saison_filtre == s ? 'selected' : '' }}>
+                                Saison {{ s }}
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+                <label style="font-weight:500; margin:0; display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" name="archived" value="1" {{ show_archived ? 'checked' : '' }} onchange="this.form.submit()">
+                    Afficher les archivées
+                </label>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-mabb">
+        {% if equipes is empty %}
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h3>Aucune équipe pour l'instant</h3>
+                <p>Crée la première équipe de ton club pour commencer.</p>
+            </div>
+        {% else %}
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th>Nom</th>
+                        <th>Catégorie</th>
+                        <th>Saison</th>
+                        <th>Niveau</th>
+                        <th>Statut</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for equipe in equipes %}
+                        <tr class="{{ not equipe.isActive ? 'inactive' : '' }}">
+                            <td>
+                                <a href="{{ path('manager_equipe_show', {id: equipe.id}) }}" style="font-weight: 700; color: var(--mabb-dark); text-decoration: none;">
+                                    {{ equipe.nom }}
+                                </a>
+                            </td>
+                            <td><span class="badge-categorie">{{ equipe.categorie }}</span></td>
+                            <td>{{ equipe.saison }}</td>
+                            <td>
+                                {% if equipe.niveau %}
+                                    <span class="badge-niveau">{{ equipe.niveau }}</span>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.85rem;">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if equipe.isActive %}
+                                    <span class="badge-active"><i class="bi bi-check-circle"></i> Active</span>
+                                {% else %}
+                                    <span class="badge-inactive"><i class="bi bi-archive"></i> Archivée</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                <a href="{{ path('manager_equipe_show', {id: equipe.id}) }}" class="btn-mabb-ghost btn-sm">
+                                    <i class="bi bi-eye"></i> Voir
+                                </a>
+                                {% if is_granted('CLUB_STAFF', equipe) %}
+                                    <a href="{{ path('manager_equipe_edit', {id: equipe.id}) }}" class="btn-mabb-ghost btn-sm">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </a>
+                                {% endif %}
+                                {% if is_granted('CLUB_ADMIN', equipe) %}
+                                    {% if equipe.isActive %}
+                                        <form method="post" action="{{ path('manager_equipe_archive', {id: equipe.id}) }}" style="display:inline;" onsubmit="return confirm('Archiver cette équipe ?');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('archive_equipe_' ~ equipe.id) }}">
+                                            <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);">
+                                                <i class="bi bi-archive"></i> Archiver
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{{ path('manager_equipe_reactivate', {id: equipe.id}) }}" style="display:inline;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('reactivate_equipe_' ~ equipe.id) }}">
+                                            <button type="submit" class="btn-mabb-ghost btn-sm" style="color:#166534; border-color:#166534;">
+                                                <i class="bi bi-arrow-counterclockwise"></i> Réactiver
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+{% endblock %}

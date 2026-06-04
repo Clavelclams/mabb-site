@@ -1,66 +1,142 @@
-{# templates/manager/dashboard.html.twig — STUB Sprint 1 #}
-{# Ce template sera remplacé en Phase 2 par le vrai dashboard manager #}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager — MABB</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        body { background: #f1f5f9; font-family: 'Segoe UI', sans-serif; }
-        .topbar {
-            background: linear-gradient(90deg, #063a55, #0b4fa3);
-            color: #fff;
-            padding: 14px 28px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .topbar .brand { font-weight: 800; font-size: 1.1rem; letter-spacing: .5px; }
-        .card-stub {
-            background: #fff;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            box-shadow: 0 2px 12px rgba(0,0,0,.06);
-            margin-top: 40px;
-        }
-        .card-stub .icon { font-size: 3rem; color: #0b4fa3; margin-bottom: 16px; }
-        .card-stub h2 { font-weight: 800; color: #0b1f3a; }
-        .card-stub p { color: #64748b; font-size: .95rem; }
-        .badge-sprint {
-            display: inline-block;
-            background: #fef3e2;
-            color: #d97706;
-            border-radius: 20px;
-            font-size: .75rem;
-            font-weight: 700;
-            padding: 4px 14px;
-            margin-bottom: 12px;
-        }
-    </style>
-</head>
-<body>
-    <div class="topbar">
-        <span class="brand">🏀 MABB Manager</span>
-        <a href="{{ path('manager_logout') }}" class="btn btn-sm btn-outline-light rounded-pill">
-            <i class="bi bi-box-arrow-right me-1"></i>Déconnexion
-        </a>
-    </div>
+{% extends 'manager/base.html.twig' %}
 
-    <div class="container">
-        <div class="card-stub">
-            <div class="icon"><i class="bi bi-tools"></i></div>
-            <div class="badge-sprint">Sprint 2 — en cours de développement</div>
-            <h2>Dashboard Manager</h2>
-            <p>
-                Bienvenue {{ app.user.prenom ?? 'Coach' }} 👋<br>
-                L'interface de gestion du club sera disponible à partir du Sprint 2.<br>
-                <strong>Tu es connecté avec le rôle :</strong> {{ app.user.roles | join(', ') }}
-            </p>
+{% block title %}Tableau de bord{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>Bonjour {{ app.user.prenom }} 👋</h1>
+            <p class="subtitle">Voici un aperçu rapide de ton club.</p>
         </div>
     </div>
-</body>
-</html>
+
+    {# Modules disponibles — pour l'instant uniquement Équipes et Joueuses #}
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_equipe_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer; transition:transform .15s;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-people-fill" style="font-size:2.5rem; color:var(--mabb-blue);"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Équipes</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Créer, modifier et archiver les équipes du club.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_joueur_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer; transition:transform .15s;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-person-badge" style="font-size:2.5rem; color:var(--mabb-blue);"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Joueuses</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Effectif du club : créer, affecter, archiver.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_planning_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-grid-3x3-gap" style="font-size:2.5rem; color:#8b5cf6;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Planning</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Créneaux hebdo des équipes.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_seance_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-calendar-week" style="font-size:2.5rem; color:var(--mabb-blue);"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Séances</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Entraînements de la semaine.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_rencontre_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-trophy" style="font-size:2.5rem; color:var(--mabb-orange);"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Rencontres</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Matchs à venir et résultats.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_classement') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-trophy-fill" style="font-size:2.5rem; color:#facc15;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Classement</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">XP, niveau, badges des joueuses.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    {# ========================================================
+       Bandeau "Mes 7 prochains jours" — séances et rencontres mixées
+       ======================================================== #}
+    {% if prochain_seances|length > 0 or prochain_rencontres|length > 0 %}
+        <div class="card-mabb" style="margin-top:24px;">
+            <div class="card-header"><i class="bi bi-calendar-event"></i> Mes 7 prochains jours</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% if prochain_seances|length > 0 %}
+                        <div class="col-md-6">
+                            <h4 style="font-size:.9rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;">
+                                <i class="bi bi-calendar-week"></i> Séances
+                            </h4>
+                            {% for s in prochain_seances %}
+                                <a href="{{ path('manager_seance_show', {id: s.id}) }}" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; text-decoration:none; color:var(--mabb-text); margin-bottom:6px; transition: background .15s;"
+                                   onmouseover="this.style.background='#f8fafc'"
+                                   onmouseout="this.style.background='transparent'">
+                                    <div style="background:#dbeafe; color:var(--mabb-blue); border-radius:8px; padding:8px 12px; text-align:center; min-width:60px;">
+                                        <div style="font-size:.7rem; font-weight:700;">{{ s.date|date('M', 'Europe/Paris')|upper }}</div>
+                                        <div style="font-size:1.2rem; font-weight:800;">{{ s.date|date('d') }}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;">{{ s.equipe.nom }} — {{ s.type }}</div>
+                                        <div style="font-size:.8rem; color:var(--mabb-muted);">
+                                            {{ s.date|date('H:i') }} · {{ s.lieu }}
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {% if prochain_rencontres|length > 0 %}
+                        <div class="col-md-6">
+                            <h4 style="font-size:.9rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;">
+                                <i class="bi bi-trophy"></i> Rencontres
+                            </h4>
+                            {% for r in prochain_rencontres %}
+                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; text-decoration:none; color:var(--mabb-text); margin-bottom:6px; transition: background .15s;"
+                                   onmouseover="this.style.background='#f8fafc'"
+                                   onmouseout="this.style.background='transparent'">
+                                    <div style="background:#fff7ed; color:var(--mabb-orange); border-radius:8px; padding:8px 12px; text-align:center; min-width:60px;">
+                                        <div style="font-size:.7rem; font-weight:700;">{{ r.date|date('M', 'Europe/Paris')|upper }}</div>
+                                        <div style="font-size:1.2rem; font-weight:800;">{{ r.date|date('d') }}</div>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600;">{{ r.equipe.nom }} vs {{ r.adversaire }}</div>
+                                        <div style="font-size:.8rem; color:var(--mabb-muted);">
+                                            {{ r.date|date('H:i') }} · {{ r.domicile ? 'Domicile' : 'Extérieur' }}{% if r.lieu %} · {{ r.lieu }}{% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,188 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Aperçu de l'import — {{ nb_total }} joueuse(s){% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-eye"></i> Aperçu de l'import</h1>
+            <p class="subtitle">
+                <strong>{{ nb_total }}</strong> joueuse(s) détectée(s) :
+                <span style="color:#22c55e;">{{ nb_nouvelle }} nouvelle(s)</span>,
+                <span style="color:var(--mabb-orange);">{{ nb_maj }} mise(s) à jour</span>
+            </p>
+        </div>
+        <a href="{{ path('manager_import_trombi_upload') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Recommencer
+        </a>
+    </div>
+
+    {# Métadonnées du PDF #}
+    {% if equipe_info.nom or equipe_info.club_nom %}
+        <div class="card-mabb" style="margin-bottom:16px; background:#eff6ff; border-left:4px solid var(--mabb-blue);">
+            <div class="card-body">
+                <strong><i class="bi bi-info-circle"></i> Métadonnées détectées :</strong>
+                {% if equipe_info.nom %}<span style="margin-left:8px;">Équipe « <strong>{{ equipe_info.nom }}</strong> »</span>{% endif %}
+                {% if equipe_info.club_nom %}<span style="margin-left:8px;">— Club <strong>{{ equipe_info.club_nom }}</strong></span>{% endif %}
+                {% if equipe_info.saison %}<span style="margin-left:8px;">— Saison <strong>{{ equipe_info.saison }}</strong></span>{% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# Avertissement staff/externes probable #}
+    {% if nb_staff > 0 or nb_externe > 0 %}
+        <div class="card-mabb" style="margin-bottom:16px; background:#fff7ed; border-left:4px solid var(--mabb-orange);">
+            <div class="card-body">
+                <strong style="color:var(--mabb-orange);"><i class="bi bi-exclamation-triangle-fill"></i> Vérifications à faire</strong>
+                <ul style="margin:8px 0 0; padding-left:20px;">
+                    {% if nb_staff > 0 %}
+                        <li>
+                            <strong>{{ nb_staff }} personne(s) marquée(s) « Staff probable »</strong>
+                            — sexe minoritaire dans le PDF ou licence rattachée à un autre club
+                            (ex: coach, dirigeant, président). Le système ne les importe pas comme joueur
+                            sauf si tu recoches manuellement.
+                        </li>
+                    {% endif %}
+                    {% if nb_externe > 0 %}
+                        <li>
+                            <strong>{{ nb_externe }} licence(s) FFBB externe(s)</strong>
+                            — rattachée(s) à un autre club que le tien (mutation, double licence…).
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+
+    <form method="post">
+        <input type="hidden" name="_token" value="{{ csrf_token('confirm_trombi') }}">
+
+        {# Affectation équipe #}
+        <div class="card-mabb" style="margin-bottom:16px;">
+            <div class="card-body" style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+                <label style="font-weight:600; margin:0;"><i class="bi bi-people-fill"></i> Affecter à l'équipe :</label>
+                <select name="equipe_affectation" class="form-select" style="max-width:340px;">
+                    <option value="">— Non affecté (à faire après) —</option>
+                    {% for e in equipes %}
+                        <option value="{{ e.id }}">{{ e.nom }} ({{ e.categorie }})</option>
+                    {% endfor %}
+                </select>
+                <small style="color:var(--mabb-muted); font-size:.82rem;">Seules les joueuses créées ou non affectées seront concernées.</small>
+            </div>
+        </div>
+
+        {# Tableau de preview #}
+        <div class="card-mabb">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Joueuses détectées</span>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-mabb-ghost btn-sm" onclick="toggleAll(true)">
+                        <i class="bi bi-check-all"></i> Tout cocher
+                    </button>
+                    <button type="button" class="btn-mabb-ghost btn-sm" onclick="toggleAll(false)">
+                        <i class="bi bi-x-circle"></i> Tout décocher
+                    </button>
+                </div>
+            </div>
+            <table class="table-mabb">
+                <thead>
+                    <tr>
+                        <th style="width:40px;"><input type="checkbox" id="check-all" checked onclick="toggleAll(this.checked)"></th>
+                        <th>Rôle</th>
+                        <th>Prénom</th>
+                        <th>Nom</th>
+                        <th>Licence</th>
+                        <th>Naissance</th>
+                        <th>Sexe</th>
+                        <th>Cat.</th>
+                        <th>Club FFBB</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in apercu %}
+                        {% set est_staff = (a.role_probable == 'Staff') %}
+                        <tr{% if a.est_externe or est_staff %} style="background:#fff7ed;"{% endif %}>
+                            <td><input type="checkbox" name="importer[{{ a.index }}]" value="1"{% if not a.est_externe and not est_staff %} checked{% endif %}></td>
+                            <td>
+                                {% if est_staff %}
+                                    <span title="Probablement coach, dirigeant ou autre staff (sexe minoritaire ou licence externe)" style="background:#fef3c7; color:#92400e; padding:3px 8px; border-radius:6px; font-size:.72rem; font-weight:700; border:1px solid #fcd34d;">
+                                        <i class="bi bi-person-badge"></i> Staff
+                                    </span>
+                                {% else %}
+                                    <span style="background:#dbeafe; color:#1e40af; padding:3px 8px; border-radius:6px; font-size:.72rem; font-weight:700;">
+                                        <i class="bi bi-dribbble"></i> Joueur
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>{{ a.prenom }}</td>
+                            <td>
+                                <strong>{{ a.nom }}</strong>
+                                {% if a.annee_naissance %}
+                                    <div style="font-size:.7rem; color:var(--mabb-muted);">né(e) en {{ a.annee_naissance }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.licence %}<code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">{{ a.licence }}</code>{% else %}—{% endif %}
+                            </td>
+                            <td>{{ a.ddn ? (a.ddn|date('d/m/Y')) : '—' }}</td>
+                            <td>{{ a.sexe == 'Féminin' ? 'F' : (a.sexe == 'Masculin' ? 'M' : '—') }}</td>
+                            <td>
+                                {% if a.categorie %}
+                                    <strong>{{ a.categorie }}</strong>
+                                    {# Si la cat affichée vient du calcul (pas du PDF), on le signale #}
+                                    {% if a.categorie != a.categorie_pdf and a.categorie == a.categorie_calculee %}
+                                        <div title="Calculée à partir de l'année de naissance pour la saison en cours" style="font-size:.65rem; color:var(--mabb-blue);">
+                                            <i class="bi bi-calculator"></i> calculée
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.club_nom %}
+                                    {% if a.est_externe %}
+                                        <span title="Licence FFBB rattachée à un autre club" style="background:#fff7ed; color:var(--mabb-orange); padding:3px 8px; border-radius:6px; font-size:.72rem; font-weight:700; border:1px solid var(--mabb-orange);">
+                                            <i class="bi bi-exclamation-triangle"></i> {{ a.club_nom }}
+                                        </span>
+                                        {% if a.club_code %}<div style="font-size:.7rem; color:var(--mabb-muted); margin-top:2px;">{{ a.club_code }}</div>{% endif %}
+                                    {% else %}
+                                        <span style="color:var(--mabb-muted); font-size:.82rem;">{{ a.club_nom }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span style="color:var(--mabb-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.statut == 'nouvelle' %}
+                                    <span style="background:#dcfce7; color:#166534; padding:3px 10px; border-radius:12px; font-size:.72rem; font-weight:700;">
+                                        <i class="bi bi-plus-circle"></i> Nouvelle
+                                    </span>
+                                {% else %}
+                                    <span style="background:#fff7ed; color:var(--mabb-orange); padding:3px 10px; border-radius:12px; font-size:.72rem; font-weight:700;">
+                                        <i class="bi bi-arrow-clockwise"></i> Mise à jour
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+            <a href="{{ path('manager_import_trombi_upload') }}" class="btn-mabb-ghost">Annuler</a>
+            <button type="submit" class="btn-mabb-primary">
+                <i class="bi bi-check-lg"></i> Confirmer l'import
+            </button>
+        </div>
+    </form>
+
+    <script>
+        function toggleAll(state) {
+            document.getElementById('check-all').checked = state;
+            document.querySelectorAll('input[name^="importer"]').forEach(cb => cb.checked = state);
+        }
+    </script>
+{% endblock %}

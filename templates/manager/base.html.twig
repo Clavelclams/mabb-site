@@ -1,0 +1,566 @@
+{# templates/manager/base.html.twig
+   Layout commun à toutes les pages de manager.mabb.fr
+   - Navbar haut (logo + menu modules + user)
+   - Flash messages
+   - Bloc contenu principal
+   - Footer minimal
+#}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Manager{% endblock %} — MABB</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --mabb-blue:   #0062a8;
+            --mabb-dark:   #0e2a54;
+            --mabb-light:  #1c7ec4;
+            --mabb-orange: #fc702a;
+            --mabb-red:    #ff3b2f;
+            --mabb-bg:     #f1f5f9;
+            --mabb-card:   #ffffff;
+            --mabb-border: #e2e8f0;
+            --mabb-text:   #0f172a;
+            --mabb-muted:  #64748b;
+        }
+
+        body {
+            background: var(--mabb-bg);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: var(--mabb-text);
+        }
+
+        /* ───── Navbar ───── */
+        .topbar {
+            background: linear-gradient(90deg, var(--mabb-dark), var(--mabb-blue));
+            color: #fff;
+            padding: 14px 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(14, 42, 84, 0.18);
+        }
+        .topbar .brand {
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: .5px;
+            color: #fff;
+            text-decoration: none;
+        }
+        .topbar .nav-modules {
+            display: flex;
+            gap: 4px;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        .topbar .nav-modules a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: .9rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            transition: background .15s;
+        }
+        .topbar .nav-modules a:hover,
+        .topbar .nav-modules a.active {
+            background: rgba(255,255,255,0.12);
+            color: #fff;
+        }
+        .topbar .user-zone {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: .9rem;
+        }
+        .topbar .user-zone .user-name {
+            color: rgba(255,255,255,0.9);
+        }
+
+        /* ───── Contenu ───── */
+        main.container-app {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 28px 24px;
+        }
+
+        /* ───── Page header ───── */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .page-header h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--mabb-dark);
+            margin: 0;
+        }
+        .page-header .subtitle {
+            color: var(--mabb-muted);
+            font-size: .9rem;
+            margin-top: 4px;
+        }
+
+        /* ───── Cards ───── */
+        .card-mabb {
+            background: var(--mabb-card);
+            border-radius: 12px;
+            border: 1px solid var(--mabb-border);
+            box-shadow: 0 1px 3px rgba(0,0,0,.04);
+            overflow: hidden;
+        }
+        .card-mabb .card-header {
+            background: #f8fafc;
+            border-bottom: 1px solid var(--mabb-border);
+            padding: 14px 20px;
+            font-weight: 700;
+            color: var(--mabb-dark);
+        }
+        .card-mabb .card-body { padding: 20px; }
+
+        /* ───── Boutons MABB ───── */
+        .btn-mabb-primary {
+            background: var(--mabb-blue);
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: .9rem;
+            transition: background .15s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-mabb-primary:hover { background: var(--mabb-dark); color: #fff; }
+        .btn-mabb-orange {
+            background: var(--mabb-orange);
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: .9rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-mabb-orange:hover { background: var(--mabb-red); color: #fff; }
+        .btn-mabb-ghost {
+            background: transparent;
+            color: var(--mabb-blue);
+            border: 1px solid var(--mabb-blue);
+            padding: 7px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: .85rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-mabb-ghost:hover { background: var(--mabb-blue); color: #fff; }
+
+        /* ───── Badges ───── */
+        .badge-categorie {
+            background: #e0f2fe;
+            color: var(--mabb-dark);
+            font-weight: 600;
+            font-size: .75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+        .badge-niveau {
+            background: #fff7ed;
+            color: var(--mabb-orange);
+            font-weight: 600;
+            font-size: .75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+        .badge-inactive {
+            background: #fee2e2;
+            color: #991b1b;
+            font-weight: 600;
+            font-size: .75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+        .badge-active {
+            background: #dcfce7;
+            color: #166534;
+            font-weight: 600;
+            font-size: .75rem;
+            padding: 3px 10px;
+            border-radius: 12px;
+        }
+
+        /* ───── Table ───── */
+        .table-mabb { width: 100%; border-collapse: collapse; }
+        .table-mabb thead th {
+            background: #f8fafc;
+            color: var(--mabb-dark);
+            font-weight: 700;
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 2px solid var(--mabb-border);
+        }
+        .table-mabb tbody td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: .9rem;
+        }
+        .table-mabb tbody tr:hover { background: #f8fafc; }
+        .table-mabb tbody tr.inactive { opacity: 0.55; }
+
+        /* ───── Flash messages ───── */
+        .flash {
+            padding: 14px 20px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            border-left: 4px solid;
+            font-weight: 500;
+        }
+        .flash-success { background: #f0fdf4; border-color: #22c55e; color: #166534; }
+        .flash-error   { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+        .flash-warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+        .flash-info    { background: #eff6ff; border-color: var(--mabb-blue); color: var(--mabb-dark); }
+
+        /* ───── Forms : design moderne ───── */
+        .form-mabb { font-family: inherit; }
+        .form-mabb label {
+            font-weight: 600;
+            color: var(--mabb-dark);
+            margin-bottom: 6px;
+            font-size: .88rem;
+            display: block;
+        }
+
+        /* Inputs texte unifiés */
+        .form-mabb input[type="text"],
+        .form-mabb input[type="email"],
+        .form-mabb input[type="password"],
+        .form-mabb input[type="number"],
+        .form-mabb input[type="date"],
+        .form-mabb input[type="datetime-local"],
+        .form-mabb input[type="time"],
+        .form-mabb input[type="search"],
+        .form-mabb input[type="url"],
+        .form-mabb input[type="tel"],
+        .form-mabb textarea,
+        .form-mabb select,
+        .form-mabb .form-control,
+        .form-mabb .form-select {
+            width: 100%;
+            border: 1.5px solid var(--mabb-border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: .92rem;
+            font-family: inherit;
+            background-color: #fff;
+            color: var(--mabb-text);
+            transition: border-color .15s, box-shadow .15s, background-color .15s;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        .form-mabb input::placeholder,
+        .form-mabb textarea::placeholder {
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+        /* Hover (sans focus) — bordure légèrement plus marquée */
+        .form-mabb input:hover:not(:focus):not(:disabled),
+        .form-mabb textarea:hover:not(:focus):not(:disabled),
+        .form-mabb select:hover:not(:focus):not(:disabled) {
+            border-color: #cbd5e1;
+            background-color: #fafbfc;
+        }
+
+        /* Focus : ring orange MABB */
+        .form-mabb input:focus,
+        .form-mabb textarea:focus,
+        .form-mabb select:focus,
+        .form-mabb .form-control:focus,
+        .form-mabb .form-select:focus {
+            outline: none;
+            border-color: var(--mabb-orange);
+            box-shadow: 0 0 0 4px rgba(252, 112, 42, 0.15);
+            background-color: #fff;
+        }
+
+        /* Select custom — chevron SVG inline, sans apparence native moche */
+        .form-mabb select,
+        .form-mabb .form-select {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%230e2a54' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+            cursor: pointer;
+        }
+        .form-mabb select:focus,
+        .form-mabb .form-select:focus {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23fc702a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+        }
+        .form-mabb select option {
+            padding: 10px;
+            background-color: #fff;
+            color: var(--mabb-text);
+        }
+
+        /* Textarea : redimensionnement vertical seul + min-height confortable */
+        .form-mabb textarea {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.5;
+        }
+
+        /* Inputs date / datetime-local : icône native plus moderne */
+        .form-mabb input[type="date"],
+        .form-mabb input[type="datetime-local"],
+        .form-mabb input[type="time"] {
+            font-family: inherit;
+        }
+        .form-mabb input[type="date"]::-webkit-calendar-picker-indicator,
+        .form-mabb input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+        .form-mabb input[type="time"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            opacity: .6;
+            transition: opacity .15s;
+        }
+        .form-mabb input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        /* Checkbox custom */
+        .form-mabb input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid var(--mabb-border);
+            border-radius: 5px;
+            cursor: pointer;
+            accent-color: var(--mabb-orange);
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .form-mabb .form-check {
+            padding: 8px 0;
+        }
+        .form-mabb .form-check-label {
+            cursor: pointer;
+            font-weight: 500 !important;
+            color: var(--mabb-text) !important;
+        }
+
+        /* Help text sous chaque champ */
+        .form-mabb .form-text,
+        .form-mabb small.form-text {
+            display: block;
+            color: var(--mabb-muted);
+            font-size: .78rem;
+            margin-top: 6px;
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        /* État invalide */
+        .form-mabb input.is-invalid,
+        .form-mabb textarea.is-invalid,
+        .form-mabb select.is-invalid {
+            border-color: var(--mabb-red);
+            background-color: #fef2f2;
+        }
+        .form-mabb input.is-invalid:focus,
+        .form-mabb textarea.is-invalid:focus,
+        .form-mabb select.is-invalid:focus {
+            box-shadow: 0 0 0 4px rgba(255, 59, 47, 0.15);
+        }
+        .form-mabb .invalid-feedback {
+            display: block;
+            color: var(--mabb-red);
+            font-size: .82rem;
+            font-weight: 500;
+            margin-top: 6px;
+        }
+
+        /* Disabled */
+        .form-mabb input:disabled,
+        .form-mabb textarea:disabled,
+        .form-mabb select:disabled {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+            opacity: .7;
+        }
+
+        /* Asterisque rouge automatique sur les labels des champs requis.
+           Symfony Form ajoute la classe "required" aux labels quand
+           le champ est obligatoire — on l'exploite ici. */
+        .form-mabb label.required::after {
+            content: ' *';
+            color: var(--mabb-red);
+            font-weight: 800;
+            margin-left: 2px;
+        }
+        /* Bandeau "champs obligatoires" en haut des formulaires */
+        .form-mabb .form-required-info {
+            font-size: .85rem;
+            color: var(--mabb-muted);
+            margin-bottom: 16px;
+            padding: 8px 12px;
+            background: #f8fafc;
+            border-left: 3px solid var(--mabb-orange);
+            border-radius: 4px;
+        }
+        .form-mabb .form-required-info strong { color: var(--mabb-red); }
+        .form-mabb .form-control,
+        .form-mabb .form-select {
+            border: 1px solid var(--mabb-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: .95rem;
+        }
+        .form-mabb .form-control:focus,
+        .form-mabb .form-select:focus {
+            border-color: var(--mabb-blue);
+            box-shadow: 0 0 0 3px rgba(0, 98, 168, 0.12);
+        }
+        .form-mabb .form-text { color: var(--mabb-muted); font-size: .8rem; margin-top: 4px; }
+        .form-mabb .row-form > div { margin-bottom: 16px; }
+
+        /* ───── Empty state ───── */
+        .empty-state {
+            text-align: center;
+            padding: 50px 24px;
+            color: var(--mabb-muted);
+        }
+        .empty-state i { font-size: 2.5rem; color: #cbd5e1; margin-bottom: 10px; display: block; }
+        .empty-state h3 { color: var(--mabb-dark); margin-bottom: 6px; font-weight: 700; font-size: 1.1rem; }
+        .empty-state p { font-size: .9rem; margin-bottom: 0; }
+        /* Bouton CTA dans l'empty-state — plus discret, taille raisonnable */
+        .empty-state .btn-mabb-orange,
+        .empty-state .btn-mabb-primary {
+            padding: 8px 20px;
+            font-size: .85rem;
+            border-radius: 20px;
+            margin-top: 16px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(252, 112, 42, 0.25);
+        }
+
+        /* ───── Variantes "small" des boutons ───── */
+        .btn-mabb-primary.btn-sm,
+        .btn-mabb-orange.btn-sm,
+        .btn-mabb-ghost.btn-sm {
+            padding: 5px 12px;
+            font-size: .78rem;
+            border-radius: 6px;
+        }
+
+        /* ───── Sections de formulaire ───── */
+        .form-section {
+            margin-bottom: 24px;
+        }
+        .form-section-title {
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--mabb-orange);
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin: 0 0 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .form-section-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--mabb-border);
+            margin-left: 8px;
+        }
+    </style>
+
+    {% block stylesheets %}{% endblock %}
+</head>
+<body>
+
+<div class="topbar">
+    <a href="{{ path('manager_dashboard') }}" class="brand">🏀 MABB Manager</a>
+
+    <ul class="nav-modules">
+        <li><a href="{{ path('manager_dashboard') }}" class="{{ app.request.attributes.get('_route') == 'manager_dashboard' ? 'active' : '' }}">
+            <i class="bi bi-grid"></i> Tableau de bord
+        </a></li>
+        <li><a href="{{ path('manager_equipe_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_equipe' ? 'active' : '' }}">
+            <i class="bi bi-people-fill"></i> Équipes
+        </a></li>
+        <li><a href="{{ path('manager_joueur_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_joueur' ? 'active' : '' }}">
+            <i class="bi bi-person-badge"></i> Joueuses
+        </a></li>
+        <li><a href="{{ path('manager_planning_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_planning' ? 'active' : '' }}">
+            <i class="bi bi-grid-3x3-gap"></i> Planning
+        </a></li>
+        <li><a href="{{ path('manager_seance_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_seance' ? 'active' : '' }}">
+            <i class="bi bi-calendar-week"></i> Séances
+        </a></li>
+        <li><a href="{{ path('manager_rencontre_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_rencontre' ? 'active' : '' }}">
+            <i class="bi bi-trophy"></i> Rencontres
+        </a></li>
+        <li><a href="{{ path('manager_classement') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_classement' ? 'active' : '' }}">
+            <i class="bi bi-trophy-fill"></i> Classement
+        </a></li>
+    </ul>
+
+    <div class="user-zone">
+        {% if app.user %}
+            <a href="{{ path('manager_profil') }}" class="user-name" style="text-decoration:none; color:rgba(255,255,255,0.9); display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; transition: background .15s;"
+               onmouseover="this.style.background='rgba(255,255,255,0.12)'"
+               onmouseout="this.style.background='transparent'"
+               title="Voir mon profil">
+                <i class="bi bi-person-circle"></i>
+                {{ app.user.prenom }} {{ app.user.nom }}
+            </a>
+            <a href="{{ path('manager_logout') }}" class="btn btn-sm btn-outline-light rounded-pill">
+                <i class="bi bi-box-arrow-right"></i> Déconnexion
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<main class="container-app">
+    {# Flash messages — affichés une fois puis disparaissent #}
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="flash flash-{{ type }}">
+                <i class="bi bi-{{ type == 'success' ? 'check-circle-fill' : type == 'error' ? 'x-circle-fill' : type == 'warning' ? 'exclamation-triangle-fill' : 'info-circle-fill' }}"></i>
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    {% block body %}{% endblock %}
+</main>
+
+{% block javascripts %}{% endblock %}
+
+</body>
+</html>
