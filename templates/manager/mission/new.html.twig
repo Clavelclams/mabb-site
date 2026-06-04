@@ -1,0 +1,85 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Ajouter une mission — {{ joueur.prenom }} {{ joueur.nom }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-hand-thumbs-up"></i> Ajouter une mission bénévole</h1>
+            <p class="subtitle">
+                Pour <strong>{{ joueur.prenom }} {{ joueur.nom }}</strong>
+                {% if joueur.equipe %} · {{ joueur.equipe.nom }}{% endif %}
+            </p>
+        </div>
+        <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour à la fiche
+        </a>
+    </div>
+
+    <div class="card-mabb" style="margin-bottom:16px; background:#eff6ff; border-left:4px solid var(--mabb-blue);">
+        <div class="card-body">
+            <strong><i class="bi bi-info-circle"></i> À quoi ça sert ?</strong>
+            Cette page permet d'ajouter manuellement une action bénévole accomplie par
+            {{ joueur.prenom }} (ex: a tenu la buvette, a arbitré un match jeune,
+            a aidé à ranger le matériel, est venu à l'AG...). La mission débloque
+            de l'XP et potentiellement des badges Axe C bénévolat dans la gamification.
+        </div>
+    </div>
+
+    {% if errors|length > 0 %}
+        <div class="card-mabb" style="margin-bottom:16px; background:#fef2f2; border-left:4px solid var(--mabb-red);">
+            <div class="card-body" style="color:var(--mabb-red);">
+                <strong><i class="bi bi-exclamation-triangle"></i> Erreurs :</strong>
+                <ul style="margin:6px 0 0;">
+                    {% for err in errors %}<li>{{ err }}</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+
+    <form method="post" style="max-width:700px; margin:0 auto;">
+        <input type="hidden" name="_token" value="{{ csrf_token('new_mission_' ~ joueur.id) }}">
+
+        <div class="card-mabb">
+            <div class="card-body">
+                <div class="form-section-title"><i class="bi bi-tag"></i> Type de mission</div>
+
+                <div style="margin-bottom:18px;">
+                    <label class="form-label" for="type">Type <span style="color:var(--mabb-red);">*</span></label>
+                    <select name="type" id="type" class="form-select" required>
+                        <option value="">— Choisir le type d'action —</option>
+                        {% for code, libelle in types_libelles %}
+                            <option value="{{ code }}">{{ libelle }}</option>
+                        {% endfor %}
+                    </select>
+                    <small style="font-size:.78rem; color:var(--mabb-muted);">
+                        XP attribué selon le type : 25 XP (engagement service) /
+                        15 XP (engagement médian) / 10 XP (présence/soutien)
+                    </small>
+                </div>
+
+                <div class="form-section-title"><i class="bi bi-calendar"></i> Date</div>
+
+                <div style="margin-bottom:18px;">
+                    <label class="form-label" for="date">Date de l'action <span style="color:var(--mabb-red);">*</span></label>
+                    <input type="date" name="date" id="date" class="form-control" required value="{{ date_defaut }}">
+                </div>
+
+                <div class="form-section-title"><i class="bi bi-pencil"></i> Description (optionnel)</div>
+
+                <div>
+                    <label class="form-label" for="description">Détails de l'action</label>
+                    <textarea name="description" id="description" class="form-control" rows="3"
+                              placeholder="Ex: A tenu la buvette pendant le tournoi U13 du 12 mai, a aidé au montage des paniers..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+            <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}" class="btn-mabb-ghost">Annuler</a>
+            <button type="submit" class="btn-mabb-primary">
+                <i class="bi bi-check-lg"></i> Ajouter la mission
+            </button>
+        </div>
+    </form>
+{% endblock %}

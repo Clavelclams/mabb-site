@@ -37,6 +37,9 @@
                 <a href="{{ path('manager_joueur_edit', {id: joueur.id}) }}" class="btn-mabb-primary">
                     <i class="bi bi-pencil"></i> Modifier
                 </a>
+                <a href="{{ path('manager_mission_new', {id: joueur.id}) }}" class="btn-mabb-orange">
+                    <i class="bi bi-hand-thumbs-up"></i> Ajouter mission
+                </a>
             {% endif %}
         </div>
     </div>
