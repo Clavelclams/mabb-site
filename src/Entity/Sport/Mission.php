@@ -91,6 +91,24 @@ class Mission implements ClubAwareInterface
     private ?string $description = null;
 
     /**
+     * True = action volontaire au-delà des obligations (bénévolat pur).
+     * False = action dans le cadre du poste rémunéré (employé/SC/alternant).
+     *
+     * Détermine quel compteur d'XP gamification est alimenté :
+     *   - true  → axe C bénévolat (XP "membre")
+     *   - false → axe D performance employé (XP "pro")
+     *
+     * Pour les non-employés, ce flag est toujours true (les bénévoles ne
+     * font pas de "missions de poste"). Pour les employés, le staff coche
+     * la case "dans le cadre du poste" lors de la saisie pour basculer.
+     *
+     * Default true : par sécurité, toute mission est considérée bénévole
+     * tant qu'on n'a pas explicitement marqué l'inverse.
+     */
+    #[ORM\Column(options: ['default' => true])]
+    private bool $estBenevole = true;
+
+    /**
      * Staff qui a validé la mission (créateur de l'enregistrement).
      * Pour traçabilité — utile pour les audits subvention.
      */
@@ -131,6 +149,9 @@ class Mission implements ClubAwareInterface
 
     public function getValidePar(): ?User { return $this->validePar; }
     public function setValidePar(?User $validePar): static { $this->validePar = $validePar; return $this; }
+
+    public function isEstBenevole(): bool { return $this->estBenevole; }
+    public function setEstBenevole(bool $b): static { $this->estBenevole = $b; return $this; }
 
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
 }

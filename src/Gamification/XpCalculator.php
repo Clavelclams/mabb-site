@@ -161,14 +161,26 @@ class XpCalculator
         // Le streak "actuel" = série en cours à la dernière séance
         $stats['streak_actuel'] = $serieEnCours;
 
-        // ======== XP des Missions (axe C bénévolat) ========
+        // ======== XP des Missions (split bénévolat / employé) ========
+        // Axe C (bénévolat) : missions estBenevole=true → alimentent xp_missions et xp_total
+        // Axe D (employé)   : missions estBenevole=false → alimentent xp_employe SÉPARÉMENT
+        // (sans toucher xp_total bénévolat — sinon dévalorisation des vrais bénévoles)
         $missions = $this->missionRepository->pourJoueurDansPeriode($joueur, $debut, $fin);
-        $stats['nb_missions'] = count($missions);
-        $stats['xp_missions'] = 0;
+        $stats['nb_missions']         = 0;
+        $stats['xp_missions']         = 0;
+        $stats['nb_missions_employe'] = 0;
+        $stats['xp_employe']          = 0;
         foreach ($missions as $m) {
             $xp = self::XP_PAR_TYPE_MISSION[$m->getType()] ?? 10;
-            $stats['xp_missions'] += $xp;
-            $stats['xp_total']    += $xp;
+            if ($m->isEstBenevole()) {
+                $stats['nb_missions']++;
+                $stats['xp_missions'] += $xp;
+                $stats['xp_total']    += $xp;
+            } else {
+                // Mission dans le cadre du poste : alimente uniquement axe D employé
+                $stats['nb_missions_employe']++;
+                $stats['xp_employe']  += $xp;
+            }
         }
 
         // XP ne peut jamais être négatif (sinon affichage moche)
@@ -257,12 +269,36 @@ class XpCalculator
             }
         }
 
-        // Ajout XP missions (axe C bénévolat)
+        // Ajout XP missions BÉNÉVOLAT uniquement (axe C).
+        // Les missions "dans le cadre du poste" (estBenevole=false) sont
+        // exclues du score bénévolat — elles sont comptées séparément en axe D.
         $missions = $this->missionRepository->pourJoueurDansPeriode($joueur, $debut, $fin);
         foreach ($missions as $m) {
-            $xp += self::XP_PAR_TYPE_MISSION[$m->getType()] ?? 10;
+            if ($m->isEstBenevole()) {
+                $xp += self::XP_PAR_TYPE_MISSION[$m->getType()] ?? 10;
+            }
         }
 
         return max(0, $xp);
+    }
+
+    /**
+     * XP performance employé sur la saison — axe D dédié aux missions
+     * "dans le cadre du poste". Sépare le travail rémunéré du bénévolat
+     * pour ne pas dévaloriser les vrais bénévoles.
+     *
+     * Utilisé pour le classement employés et les badges Axe D.
+     */
+    public function xpEmploye(Joueur $joueur, ?string $saison = null): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $missions = $this->missionRepository->pourJoueurDansPeriode($joueur, $debut, $fin);
+        $xp = 0;
+        foreach ($missions as $m) {
+            if (!$m->isEstBenevole()) {
+                $xp += self::XP_PAR_TYPE_MISSION[$m->getType()] ?? 10;
+            }
+        }
+        return $xp;
     }
 }

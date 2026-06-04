@@ -19,8 +19,9 @@ namespace App\Gamification;
 class BadgeCatalog
 {
     public const AXE_REGULARITE = 'regularite';
-    public const AXE_PERFORMANCE = 'performance';
+    public const AXE_PERFORMANCE = 'performance';     // sportif (basket — V2 via stats FFBB)
     public const AXE_BENEVOLAT = 'benevolat';
+    public const AXE_EMPLOYE = 'employe';             // performance pro (salariés/SC/alternants)
     public const AXE_TRANSVERSE = 'transverse';
 
     /**
@@ -33,6 +34,19 @@ class BadgeCatalog
     public const C_POLYVALENT     = 'C_POLYVALENT';
     public const C_TABLE_5        = 'C_TABLE_5';
     public const C_AG_PRESENT     = 'C_AG_PRESENT';
+
+    /**
+     * Codes badges Axe D (performance employé / salarié / SC).
+     * Compteur dédié au travail "dans le cadre du poste rémunéré".
+     * Sert au président pour valoriser les employés sans polluer le
+     * bénévolat. Élection employé du mois, SC du mois, etc.
+     */
+    public const D_FIRST_JOB_MISSION = 'D_FIRST_JOB_MISSION';
+    public const D_JOB_10            = 'D_JOB_10';
+    public const D_JOB_30            = 'D_JOB_30';
+    public const D_JOB_50            = 'D_JOB_50';
+    public const D_JOB_100           = 'D_JOB_100';
+    public const D_EMPLOYE_DU_MOIS   = 'D_EMPLOYE_DU_MOIS';   // attribué manuellement par président
 
     /**
      * Codes badges Axe A (régularité). Tous activés en V1.0.
@@ -179,6 +193,50 @@ class BadgeCatalog
                 'description' => 'Présent(e) à l\'Assemblée Générale du club.',
                 'icone' => 'bi-megaphone',
                 'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => true,
+            ],
+
+            // ============ AXE D — PERFORMANCE EMPLOYÉ ============
+            self::D_FIRST_JOB_MISSION => [
+                'nom' => 'Pro débutant',
+                'description' => 'Première mission accomplie dans le cadre du poste.',
+                'icone' => 'bi-briefcase',
+                'axe' => self::AXE_EMPLOYE,
+                'par_saison' => false,
+            ],
+            self::D_JOB_10 => [
+                'nom' => 'Actif au poste',
+                'description' => '10 missions accomplies dans le cadre du poste rémunéré.',
+                'icone' => 'bi-briefcase-fill',
+                'axe' => self::AXE_EMPLOYE,
+                'par_saison' => true,
+            ],
+            self::D_JOB_30 => [
+                'nom' => 'Pilier du staff',
+                'description' => '30 missions au poste dans la saison. Le club tourne grâce à toi.',
+                'icone' => 'bi-building-fill',
+                'axe' => self::AXE_EMPLOYE,
+                'par_saison' => true,
+            ],
+            self::D_JOB_50 => [
+                'nom' => 'Salarié dévoué',
+                'description' => '50 missions au poste dans la saison.',
+                'icone' => 'bi-gem',
+                'axe' => self::AXE_EMPLOYE,
+                'par_saison' => true,
+            ],
+            self::D_JOB_100 => [
+                'nom' => 'Cheville ouvrière',
+                'description' => '100 missions au poste cumulées. Indispensable.',
+                'icone' => 'bi-tools',
+                'axe' => self::AXE_EMPLOYE,
+                'par_saison' => false,
+            ],
+            self::D_EMPLOYE_DU_MOIS => [
+                'nom' => 'Employé du mois',
+                'description' => 'Distinction attribuée par le président — investissement remarquable sur le mois.',
+                'icone' => 'bi-trophy-fill',
+                'axe' => self::AXE_EMPLOYE,
                 'par_saison' => true,
             ],
         ];

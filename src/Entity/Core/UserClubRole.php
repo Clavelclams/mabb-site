@@ -27,6 +27,15 @@ class UserClubRole
     public const ROLE_JOUEUR     = 'JOUEUR';
     public const ROLE_PARENT     = 'PARENT';
     public const ROLE_BENEVOLE   = 'BENEVOLE';
+    /**
+     * EMPLOYE : salarié, alternant ou service civique du club.
+     * Distinct des autres rôles : leurs missions "dans le cadre du poste"
+     * ne donnent pas d'XP bénévolat (sinon dévalorisation des vrais bénévoles).
+     * À la place, ils alimentent un compteur d'XP performance employé
+     * (Axe D gamification) — sert au président pour voir qui bosse le plus
+     * et élire l'employé du mois / SC du mois.
+     */
+    public const ROLE_EMPLOYE    = 'EMPLOYE';
 
     public const ROLES_DISPONIBLES = [
         self::ROLE_DIRIGEANT,
@@ -35,6 +44,7 @@ class UserClubRole
         self::ROLE_JOUEUR,
         self::ROLE_PARENT,
         self::ROLE_BENEVOLE,
+        self::ROLE_EMPLOYE,
     ];
 
     /**

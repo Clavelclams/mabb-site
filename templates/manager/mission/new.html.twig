@@ -67,10 +67,30 @@
 
                 <div class="form-section-title"><i class="bi bi-pencil"></i> Description (optionnel)</div>
 
-                <div>
+                <div style="margin-bottom:18px;">
                     <label class="form-label" for="description">Détails de l'action</label>
                     <textarea name="description" id="description" class="form-control" rows="3"
                               placeholder="Ex: A tenu la buvette pendant le tournoi U13 du 12 mai, a aidé au montage des paniers..."></textarea>
+                </div>
+
+                {# ============ Checkbox bénévolat vs dans le cadre du poste ============ #}
+                <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:8px; padding:14px 16px;">
+                    <label style="display:flex; gap:10px; cursor:pointer; margin:0;">
+                        <input type="checkbox" name="dans_cadre_poste" value="1" style="margin-top:3px;">
+                        <span>
+                            <strong style="color:#92400e;">
+                                <i class="bi bi-briefcase"></i> Mission dans le cadre du poste (rémunéré)
+                            </strong>
+                            <div style="font-size:.78rem; color:#78350f; margin-top:4px;">
+                                Coche cette case si l'action fait partie du travail rémunéré
+                                (alternant, service civique, salarié BPJEPS, etc.).
+                                Dans ce cas, l'XP sera comptabilisé en
+                                <strong>performance employé</strong> au lieu de
+                                <strong>bénévolat</strong> — ça permet de valoriser le travail pro
+                                sans dévaloriser les vrais bénévoles.
+                            </div>
+                        </span>
+                    </label>
                 </div>
             </div>
         </div>

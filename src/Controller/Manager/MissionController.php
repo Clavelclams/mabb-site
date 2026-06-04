@@ -57,6 +57,9 @@ class MissionController extends AbstractController
             $type        = (string) $request->request->get('type', '');
             $dateStr     = (string) $request->request->get('date', '');
             $description = trim((string) $request->request->get('description', '')) ?: null;
+            // Checkbox "dans le cadre du poste" : par défaut décochée = action bénévole.
+            // Cochée = mission rémunérée → XP ira en axe D (performance employé) au lieu de C (bénévolat).
+            $estBenevole = !$request->request->getBoolean('dans_cadre_poste');
 
             if (!in_array($type, Mission::TYPES, true)) {
                 $errors[] = 'Type de mission invalide.';
@@ -80,6 +83,7 @@ class MissionController extends AbstractController
                 $mission->setType($type);
                 $mission->setDate($date);
                 $mission->setDescription($description);
+                $mission->setEstBenevole($estBenevole);
                 $mission->setValidePar($this->getUser() instanceof User ? $this->getUser() : null);
                 $this->em->persist($mission);
                 $this->em->flush();

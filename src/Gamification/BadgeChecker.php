@@ -101,15 +101,97 @@ class BadgeChecker
             BadgeCatalog::A_SEASON_90      => $this->tauxPresenceSaison($presences, $saisonCourante) >= 0.90,
 
             // ===== AXE C : bénévolat / vie de club =====
-            BadgeCatalog::C_FIRST_MISSION => count($missions) >= 1,
-            BadgeCatalog::C_BENEVOLE_5    => $this->nbMissionsDansSaison($missions, $saisonCourante) >= 5,
-            BadgeCatalog::C_BENEVOLE_10   => $this->nbMissionsDansSaison($missions, $saisonCourante) >= 10,
-            BadgeCatalog::C_POLYVALENT    => $this->nbTypesMissionsDistincts($missions, $saisonCourante) >= 3,
-            BadgeCatalog::C_TABLE_5       => $this->nbMissionsType($missions, Mission::TYPE_TENUE_TABLE, $saisonCourante) >= 5,
-            BadgeCatalog::C_AG_PRESENT    => $this->aFaitMissionType($missions, Mission::TYPE_AG, $saisonCourante),
+            // Note : on ne compte QUE les missions où estBenevole=true.
+            // Les missions "dans le cadre du poste" sont exclues du bénévolat.
+            BadgeCatalog::C_FIRST_MISSION => $this->nbMissionsBenevolat($missions) >= 1,
+            BadgeCatalog::C_BENEVOLE_5    => $this->nbMissionsBenevolatDansSaison($missions, $saisonCourante) >= 5,
+            BadgeCatalog::C_BENEVOLE_10   => $this->nbMissionsBenevolatDansSaison($missions, $saisonCourante) >= 10,
+            BadgeCatalog::C_POLYVALENT    => $this->nbTypesMissionsDistinctsBenevolat($missions, $saisonCourante) >= 3,
+            BadgeCatalog::C_TABLE_5       => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_TENUE_TABLE, $saisonCourante) >= 5,
+            BadgeCatalog::C_AG_PRESENT    => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_AG, $saisonCourante) >= 1,
+
+            // ===== AXE D : performance employé =====
+            // Inverse de l'axe C : on compte uniquement les missions
+            // estBenevole=false (job rémunéré).
+            BadgeCatalog::D_FIRST_JOB_MISSION => $this->nbMissionsEmploye($missions) >= 1,
+            BadgeCatalog::D_JOB_10            => $this->nbMissionsEmployeDansSaison($missions, $saisonCourante) >= 10,
+            BadgeCatalog::D_JOB_30            => $this->nbMissionsEmployeDansSaison($missions, $saisonCourante) >= 30,
+            BadgeCatalog::D_JOB_50            => $this->nbMissionsEmployeDansSaison($missions, $saisonCourante) >= 50,
+            BadgeCatalog::D_JOB_100           => $this->nbMissionsEmploye($missions) >= 100,
+            // D_EMPLOYE_DU_MOIS : attribué manuellement par le président via une
+            // future UI admin (V1.1). Pas de critère automatique pour l'instant.
+            BadgeCatalog::D_EMPLOYE_DU_MOIS   => false,
 
             default => false,
         };
+    }
+
+    // ============ Helpers axe C (bénévolat) — filtrage estBenevole=true ============
+
+    /** @param Mission[] $missions */
+    private function nbMissionsBenevolat(array $missions): int
+    {
+        return count(array_filter($missions, fn($m) => $m->isEstBenevole()));
+    }
+
+    /** @param Mission[] $missions */
+    private function nbMissionsBenevolatDansSaison(array $missions, string $saison): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $n = 0;
+        foreach ($missions as $m) {
+            if (!$m->isEstBenevole()) continue;
+            $d = $m->getDate();
+            if ($d && $d >= $debut && $d <= $fin) $n++;
+        }
+        return $n;
+    }
+
+    /** @param Mission[] $missions */
+    private function nbTypesMissionsDistinctsBenevolat(array $missions, string $saison): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $types = [];
+        foreach ($missions as $m) {
+            if (!$m->isEstBenevole()) continue;
+            $d = $m->getDate();
+            if ($d && $d >= $debut && $d <= $fin) $types[$m->getType()] = true;
+        }
+        return count($types);
+    }
+
+    /** @param Mission[] $missions */
+    private function nbMissionsTypeBenevolat(array $missions, string $type, string $saison): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $n = 0;
+        foreach ($missions as $m) {
+            if (!$m->isEstBenevole() || $m->getType() !== $type) continue;
+            $d = $m->getDate();
+            if ($d && $d >= $debut && $d <= $fin) $n++;
+        }
+        return $n;
+    }
+
+    // ============ Helpers axe D (employé) — filtrage estBenevole=false ============
+
+    /** @param Mission[] $missions */
+    private function nbMissionsEmploye(array $missions): int
+    {
+        return count(array_filter($missions, fn($m) => !$m->isEstBenevole()));
+    }
+
+    /** @param Mission[] $missions */
+    private function nbMissionsEmployeDansSaison(array $missions, string $saison): int
+    {
+        [$debut, $fin] = $this->bornesSaison($saison);
+        $n = 0;
+        foreach ($missions as $m) {
+            if ($m->isEstBenevole()) continue;
+            $d = $m->getDate();
+            if ($d && $d >= $debut && $d <= $fin) $n++;
+        }
+        return $n;
     }
 
     // ============ Helpers axe C ============
