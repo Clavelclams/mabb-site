@@ -1,0 +1,81 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Tarifs cotisations — {{ saison }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-tags"></i> Tarifs cotisations</h1>
+            <p class="subtitle">
+                Saison <strong>{{ saison }}</strong> · 1 tarif par catégorie d'âge ·
+                <a href="{{ path('manager_cotisations_index', {saison: saison}) }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    ← Cotisations
+                </a>
+            </p>
+        </div>
+        <form method="GET" style="display:flex; gap:6px; align-items:center;">
+            <label for="saison_sel" style="font-size:.85rem; color:var(--mabb-muted);">Saison :</label>
+            <select id="saison_sel" name="saison" onchange="this.form.submit()"
+                    style="padding:6px 10px; border:2px solid #e5e7eb; border-radius:6px; background:white;">
+                {% for s in saisons %}
+                    <option value="{{ s }}" {% if s == saison %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <div class="card-mabb" style="border-left:4px solid #3b82f6; background:#eff6ff; margin-bottom:20px;">
+        <div class="card-body" style="padding:14px 18px; display:flex; gap:12px; align-items:start;">
+            <i class="bi bi-info-circle-fill" style="color:#1e40af; font-size:1.5rem; flex-shrink:0; margin-top:2px;"></i>
+            <div style="flex:1; color:#1e3a8a; font-size:.88rem;">
+                Définis le tarif de la licence pour chaque catégorie d'âge.
+                Lors de la <strong>génération des cotisations</strong>, chaque joueuse héritera du tarif de sa catégorie (récupérée via son équipe).
+                Si une catégorie reste vide ou à 0, le montant par défaut saisi à la génération sera appliqué pour les joueuses concernées.
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ path('manager_tarifs_index') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('save_tarifs') }}">
+        <input type="hidden" name="saison" value="{{ saison }}">
+
+        <div class="card-mabb" style="margin-bottom:16px;">
+            <div class="card-header">
+                <i class="bi bi-grid-3x3"></i> Catégories d'âge ({{ categories|length }})
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:14px; padding:18px;">
+                    {% for cat in categories %}
+                        {% set montant_courant = tarifs_map[cat] is defined ? tarifs_map[cat] : '' %}
+                        {% set est_defini = montant_courant != '' and montant_courant != '0.00' %}
+                        <label style="display:flex; flex-direction:column; gap:6px; padding:14px; background:{{ est_defini ? '#f0fdf4' : '#fafafa' }}; border:2px solid {{ est_defini ? '#bbf7d0' : '#e5e7eb' }}; border-radius:10px; transition:all .15s; cursor:text;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <strong style="color:var(--mabb-dark); font-size:.95rem;">{{ cat }}</strong>
+                                {% if est_defini %}
+                                    <span style="background:#dcfce7; color:#166534; font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:8px;">DÉFINI</span>
+                                {% endif %}
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <input type="text"
+                                       name="montants[{{ cat }}]"
+                                       value="{{ est_defini ? montant_courant : '' }}"
+                                       placeholder="0.00"
+                                       pattern="^\d+([.,]\d{1,2})?$"
+                                       style="flex:1; padding:8px 12px; border:2px solid #e5e7eb; border-radius:6px; font-size:1rem; font-weight:600; text-align:right; background:white;">
+                                <span style="color:var(--mabb-muted); font-weight:600;">€</span>
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; align-items:center;">
+            <small style="color:var(--mabb-muted);">Laisse vide ou 0 pour effacer un tarif.</small>
+            <a href="{{ path('manager_cotisations_index', {saison: saison}) }}" class="btn-mabb-secondary">Annuler</a>
+            <button type="submit" class="btn-mabb-orange">
+                <i class="bi bi-check-lg"></i> Enregistrer les tarifs
+            </button>
+        </div>
+    </form>
+{% endblock %}

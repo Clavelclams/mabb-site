@@ -1,0 +1,233 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Cotisation {{ cotisation.joueur.prenom }} {{ cotisation.joueur.nom }} — {{ cotisation.saison }}{% endblock %}
+
+{% block body %}
+    {% set statut_color = {
+        'A_PAYER':    '#dc2626',
+        'ECHEANCIER': '#f59e0b',
+        'PAYEE':      '#10b981',
+        'EXEMPTEE':   '#8b5cf6',
+    } %}
+    {% set statut_bg = {
+        'A_PAYER':    '#fee2e2',
+        'ECHEANCIER': '#fef3c7',
+        'PAYEE':      '#dcfce7',
+        'EXEMPTEE':   '#ede9fe',
+    } %}
+    {% set color = statut_color[cotisation.statut] %}
+    {% set bg    = statut_bg[cotisation.statut] %}
+
+    <div class="page-header">
+        <div>
+            <h1>
+                <i class="bi bi-cash-coin"></i>
+                Cotisation — {{ cotisation.joueur.prenom }} {{ cotisation.joueur.nom }}
+            </h1>
+            <p class="subtitle">
+                Saison <strong>{{ cotisation.saison }}</strong> ·
+                <a href="{{ path('manager_cotisations_index', {saison: cotisation.saison}) }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    <i class="bi bi-arrow-left"></i> Retour à la liste
+                </a>
+            </p>
+        </div>
+        <div style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:{{ bg }}; border:2px solid {{ color }}; border-radius:20px;">
+            <strong style="color:{{ color }};">{{ cotisation.statutLabel }}</strong>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {# === Colonne principale === #}
+        <div class="col-md-8">
+            <div class="card-mabb" style="margin-bottom:16px;">
+                <div class="card-header"><i class="bi bi-info-circle"></i> Détails</div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns:170px 1fr; gap:14px 18px; font-size:.95rem;">
+                        <strong style="color:var(--mabb-muted);">Joueuse</strong>
+                        <span>
+                            <a href="{{ path('manager_joueur_show', {id: cotisation.joueur.id}) }}" style="color:var(--mabb-blue); font-weight:600;">
+                                {{ cotisation.joueur.prenom }} {{ cotisation.joueur.nom }}
+                            </a>
+                            {% if cotisation.joueur.equipe %}
+                                <small style="color:var(--mabb-muted);"> · {{ cotisation.joueur.equipe.nom }}</small>
+                            {% endif %}
+                        </span>
+
+                        <strong style="color:var(--mabb-muted);">Saison</strong>
+                        <span>{{ cotisation.saison }}</span>
+
+                        <strong style="color:var(--mabb-muted);">Montant attendu</strong>
+                        <span style="font-weight:700; font-size:1.05rem;">{{ cotisation.montantAttendu|number_format(2, ',', ' ') }} €</span>
+
+                        <strong style="color:var(--mabb-muted);">Montant payé</strong>
+                        <span style="font-weight:700; color:{{ color }}; font-size:1.05rem;">
+                            {{ cotisation.montantPaye|number_format(2, ',', ' ') }} €
+                        </span>
+
+                        {% if not cotisation.isPayee and not cotisation.isExemptee %}
+                            <strong style="color:var(--mabb-muted);">Reste dû</strong>
+                            <span style="font-weight:700; color:#dc2626;">{{ cotisation.montantRestant|number_format(2, ',', ' ') }} €</span>
+                        {% endif %}
+
+                        {% if cotisation.datePaiement %}
+                            <strong style="color:var(--mabb-muted);">Date paiement</strong>
+                            <span>{{ cotisation.datePaiement|date('d/m/Y') }}</span>
+                        {% endif %}
+
+                        {% if cotisation.motifExemption %}
+                            <strong style="color:var(--mabb-muted);">Motif exemption</strong>
+                            <span style="background:#ede9fe; padding:6px 10px; border-radius:6px; color:#5b21b6;">{{ cotisation.motifExemption }}</span>
+                        {% endif %}
+
+                        {% if cotisation.notes %}
+                            <strong style="color:var(--mabb-muted);">Notes</strong>
+                            <span style="white-space:pre-wrap; font-size:.88rem; color:var(--mabb-muted);">{{ cotisation.notes }}</span>
+                        {% endif %}
+                    </div>
+
+                    {# Barre de progression #}
+                    {% if not cotisation.isExemptee %}
+                        <div style="margin-top:20px;">
+                            <div style="display:flex; justify-content:space-between; font-size:.78rem; margin-bottom:4px;">
+                                <span style="color:var(--mabb-muted);">Progression</span>
+                                <span style="font-weight:700; color:{{ color }};">{{ cotisation.pourcentagePaye }}%</span>
+                            </div>
+                            <div style="background:#f3f4f6; border-radius:6px; height:10px; overflow:hidden;">
+                                <div style="background:{{ color }}; height:100%; width:{{ cotisation.pourcentagePaye }}%; transition:width .3s;"></div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# === Édition montant attendu (si pas payée) === #}
+            {% if not cotisation.isPayee %}
+                <div class="card-mabb" style="margin-bottom:16px;">
+                    <div class="card-header"><i class="bi bi-pencil-square"></i> Modifier</div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ path('manager_cotisation_show', {id: cotisation.id}) }}">
+                            <div class="row g-3" style="margin-bottom:14px;">
+                                <div class="col-md-6">
+                                    <label for="montant_attendu" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                                        Montant attendu (€)
+                                    </label>
+                                    <input type="text" id="montant_attendu" name="montant_attendu"
+                                           value="{{ cotisation.montantAttendu }}"
+                                           pattern="^\d+([.,]\d{1,2})?$"
+                                           style="width:100%; padding:8px 12px; border:2px solid #e5e7eb; border-radius:6px;">
+                                </div>
+                            </div>
+                            <div style="margin-bottom:14px;">
+                                <label for="notes" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                                    Notes
+                                </label>
+                                <textarea id="notes" name="notes" rows="2"
+                                          style="width:100%; padding:8px 12px; border:2px solid #e5e7eb; border-radius:6px; font-family:inherit; resize:vertical;">{{ cotisation.notes }}</textarea>
+                            </div>
+                            <button type="submit" class="btn-mabb-secondary">
+                                <i class="bi bi-check"></i> Enregistrer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {# === Colonne droite : actions === #}
+        <div class="col-md-4">
+            {% if cotisation.isPayee %}
+                <div class="card-mabb" style="border-left:4px solid #10b981; background:#f0fdf4;">
+                    <div class="card-body" style="padding:18px; text-align:center;">
+                        <i class="bi bi-check-circle-fill" style="font-size:2.5rem; color:#10b981;"></i>
+                        <strong style="display:block; margin-top:8px; color:#166534;">Cotisation soldée</strong>
+                        <small style="color:#15803d;">Payée le {{ cotisation.datePaiement|date('d/m/Y') }}</small>
+                    </div>
+                </div>
+            {% elseif cotisation.isExemptee %}
+                <div class="card-mabb" style="border-left:4px solid #8b5cf6; background:#faf5ff;">
+                    <div class="card-body" style="padding:18px; text-align:center;">
+                        <i class="bi bi-shield-fill-check" style="font-size:2.5rem; color:#8b5cf6;"></i>
+                        <strong style="display:block; margin-top:8px; color:#5b21b6;">Cotisation exemptée</strong>
+                    </div>
+                </div>
+            {% else %}
+                {# === ACTION 1 : Marquer payée intégralement === #}
+                <div class="card-mabb" style="margin-bottom:14px; border-left:4px solid #10b981;">
+                    <div class="card-header" style="background:#f0fdf4;">
+                        <i class="bi bi-cash"></i> Marquer payée
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ path('manager_cotisation_payer', {id: cotisation.id}) }}"
+                              onsubmit="return confirm('Marquer comme payée intégralement ? Une opération de recette ({{ cotisation.montantRestant|e('js') }} €) sera créée en trésorerie.');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('payer_cotisation_' ~ cotisation.id) }}">
+                            <label for="date_paiement_p" style="display:block; font-size:.82rem; font-weight:600; color:var(--mabb-dark); margin-bottom:4px;">
+                                Date du paiement
+                            </label>
+                            <input type="date" id="date_paiement_p" name="date_paiement"
+                                   value="{{ 'now'|date('Y-m-d') }}"
+                                   max="{{ 'now'|date('Y-m-d') }}"
+                                   style="width:100%; padding:6px 10px; border:2px solid #e5e7eb; border-radius:6px; margin-bottom:10px;">
+                            <button type="submit" class="btn-mabb-orange" style="width:100%; background:#10b981; border-color:#10b981;">
+                                <i class="bi bi-check-lg"></i> Encaisser {{ cotisation.montantRestant|number_format(2, ',', ' ') }} €
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {# === ACTION 2 : Versement partiel === #}
+                <details style="margin-bottom:14px;">
+                    <summary style="cursor:pointer; padding:12px 14px; background:#fef3c7; border-radius:8px; color:#92400e; font-weight:600;">
+                        <i class="bi bi-arrow-repeat"></i> Versement partiel (échéancier)
+                    </summary>
+                    <div class="card-mabb" style="margin-top:8px; border-left:4px solid #f59e0b;">
+                        <div class="card-body">
+                            <form method="POST" action="{{ path('manager_cotisation_versement', {id: cotisation.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('versement_cotisation_' ~ cotisation.id) }}">
+                                <label for="montant_versement" style="display:block; font-size:.82rem; font-weight:600; color:var(--mabb-dark); margin-bottom:4px;">
+                                    Montant du versement (€)
+                                </label>
+                                <input type="text" id="montant_versement" name="montant_versement" required
+                                       placeholder="ex: 50.00"
+                                       pattern="^\d+([.,]\d{1,2})?$"
+                                       style="width:100%; padding:6px 10px; border:2px solid #fde68a; border-radius:6px; margin-bottom:8px;">
+                                <label for="date_versement_p" style="display:block; font-size:.82rem; font-weight:600; color:var(--mabb-dark); margin-bottom:4px;">
+                                    Date
+                                </label>
+                                <input type="date" id="date_versement_p" name="date_versement"
+                                       value="{{ 'now'|date('Y-m-d') }}"
+                                       style="width:100%; padding:6px 10px; border:2px solid #fde68a; border-radius:6px; margin-bottom:10px;">
+                                <button type="submit" class="btn-mabb-orange" style="width:100%; background:#f59e0b; border-color:#f59e0b;">
+                                    Enregistrer versement
+                                </button>
+                                <small style="color:var(--mabb-muted); display:block; margin-top:6px;">
+                                    Si le versement couvre tout le restant, la cotisation passera automatiquement en « Payée ».
+                                </small>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+
+                {# === ACTION 3 : Exempter === #}
+                <details>
+                    <summary style="cursor:pointer; padding:12px 14px; background:#ede9fe; border-radius:8px; color:#5b21b6; font-weight:600;">
+                        <i class="bi bi-shield"></i> Exempter
+                    </summary>
+                    <div class="card-mabb" style="margin-top:8px; border-left:4px solid #8b5cf6;">
+                        <div class="card-body">
+                            <form method="POST" action="{{ path('manager_cotisation_exempter', {id: cotisation.id}) }}"
+                                  onsubmit="return confirm('Exempter cette cotisation ? Aucun paiement ne sera attendu.');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('exempter_cotisation_' ~ cotisation.id) }}">
+                                <textarea name="motif" required rows="2"
+                                          placeholder="Motif obligatoire (ex: service civique, dirigeant bénévole…)"
+                                          style="width:100%; padding:8px 10px; border:2px solid #ddd6fe; border-radius:6px; font-family:inherit; resize:vertical; margin-bottom:8px;"></textarea>
+                                <button type="submit" class="btn-mabb-secondary" style="width:100%; background:#8b5cf6; color:white; border-color:#8b5cf6;">
+                                    Confirmer l'exemption
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

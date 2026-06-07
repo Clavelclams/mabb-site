@@ -1,0 +1,119 @@
+{# ============================================================================
+   PARTIAL : Section "Ma cotisation" / "Cotisation joueuse" — Bureau D.3.2
+
+   Variables attendues :
+     - joueur            : objet Joueur (obligatoire)
+     - cotisation        : objet CotisationJoueur (saison courante) ou null
+     - is_self           : bool — true si le user connecté est CE joueur
+     - is_tresorier      : bool — true si user a TRESORERIE_VIEW (lien admin visible)
+
+   Pourquoi un partial ?
+     - Réutilisable sur la fiche joueuse + page profil perso + (futur) page parent
+     - Logique de rendu centralisée : si on change le visuel, 1 fichier touché
+     - SRP côté template : la fiche joueuse n'a pas à connaître la mécanique
+       de couleurs/statuts/barres
+   ============================================================================ #}
+
+{% set saison_courante = constant('App\\Entity\\Sport\\CotisationJoueur::getSaisonCourante') is defined ? '' : '' %}
+
+<div class="card-mabb" style="margin-top:16px;">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span><i class="bi bi-cash-coin"></i> {{ is_self ? 'Ma cotisation' : 'Cotisation licence' }}</span>
+        {% if is_tresorier and cotisation %}
+            <a href="{{ path('manager_cotisation_show', {id: cotisation.id}) }}"
+               style="font-size:.75rem; color:var(--mabb-muted); text-decoration:none;"
+               title="Gérer côté trésorerie">
+                <i class="bi bi-gear"></i> Gérer
+            </a>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if cotisation is null %}
+            {# === Cas 1 : pas de cotisation pour la saison courante === #}
+            <div style="display:flex; gap:14px; align-items:center; padding:12px; background:#f9fafb; border-radius:8px; border-left:4px solid #d1d5db;">
+                <i class="bi bi-info-circle" style="color:var(--mabb-muted); font-size:1.5rem;"></i>
+                <div style="flex:1;">
+                    <strong style="color:var(--mabb-muted);">Aucune cotisation enregistrée</strong>
+                    <div style="font-size:.82rem; color:var(--mabb-muted);">
+                        Pour la saison en cours. {% if is_tresorier %}Lance la génération depuis la page Cotisations.{% else %}Le trésorier ne l'a pas encore créée.{% endif %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            {# === Cas 2 : cotisation existante — affichage selon statut === #}
+            {% set colors = {
+                'A_PAYER':    {'main': '#dc2626', 'bg': '#fee2e2', 'icon': 'bi-hourglass-split'},
+                'ECHEANCIER': {'main': '#f59e0b', 'bg': '#fef3c7', 'icon': 'bi-arrow-repeat'},
+                'PAYEE':      {'main': '#10b981', 'bg': '#dcfce7', 'icon': 'bi-check-circle-fill'},
+                'EXEMPTEE':   {'main': '#8b5cf6', 'bg': '#ede9fe', 'icon': 'bi-shield-fill-check'},
+            } %}
+            {% set c = colors[cotisation.statut] %}
+
+            {# === Bandeau statut === #}
+            <div style="display:flex; gap:14px; align-items:center; padding:14px 16px; background:{{ c.bg }}; border-radius:10px; margin-bottom:14px;">
+                <div style="width:44px; height:44px; border-radius:10px; background:white; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="bi {{ c.icon }}" style="color:{{ c.main }}; font-size:1.4rem;"></i>
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:700; color:{{ c.main }}; font-size:1.05rem;">{{ cotisation.statutLabel }}</div>
+                    <div style="font-size:.82rem; color:{{ c.main }}; opacity:.85;">
+                        Saison {{ cotisation.saison }}
+                        {% if cotisation.datePaiement %}
+                            · payée le {{ cotisation.datePaiement|date('d/m/Y') }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# === Détails montants (skip si exemptée) === #}
+            {% if not cotisation.isExemptee %}
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:14px;">
+                    <div style="padding:10px; background:#f9fafb; border-radius:8px; text-align:center;">
+                        <div style="font-size:.7rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">Attendu</div>
+                        <div style="font-weight:700; font-size:1.1rem; color:var(--mabb-dark); margin-top:2px;">
+                            {{ cotisation.montantAttendu|number_format(2, ',', ' ') }} €
+                        </div>
+                    </div>
+                    <div style="padding:10px; background:#f0fdf4; border-radius:8px; text-align:center;">
+                        <div style="font-size:.7rem; color:#15803d; text-transform:uppercase; letter-spacing:.05em; font-weight:600;">Payé</div>
+                        <div style="font-weight:700; font-size:1.1rem; color:#15803d; margin-top:2px;">
+                            {{ cotisation.montantPaye|number_format(2, ',', ' ') }} €
+                        </div>
+                    </div>
+                    <div style="padding:10px; background:{{ cotisation.isPayee ? '#f0fdf4' : '#fef2f2' }}; border-radius:8px; text-align:center;">
+                        <div style="font-size:.7rem; color:{{ cotisation.isPayee ? '#15803d' : '#991b1b' }}; text-transform:uppercase; letter-spacing:.05em; font-weight:600;">Reste dû</div>
+                        <div style="font-weight:700; font-size:1.1rem; color:{{ cotisation.isPayee ? '#15803d' : '#dc2626' }}; margin-top:2px;">
+                            {{ cotisation.montantRestant|number_format(2, ',', ' ') }} €
+                        </div>
+                    </div>
+                </div>
+
+                {# === Barre de progression === #}
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:.78rem; margin-bottom:4px;">
+                        <span style="color:var(--mabb-muted);">Progression</span>
+                        <span style="font-weight:700; color:{{ c.main }};">{{ cotisation.pourcentagePaye }}%</span>
+                    </div>
+                    <div style="background:#f3f4f6; border-radius:6px; height:10px; overflow:hidden;">
+                        <div style="background:{{ c.main }}; height:100%; width:{{ cotisation.pourcentagePaye }}%; transition:width .3s;"></div>
+                    </div>
+                </div>
+            {% else %}
+                {# Exemptée : juste afficher le motif #}
+                {% if cotisation.motifExemption %}
+                    <div style="padding:10px 14px; background:#faf5ff; border-radius:8px; color:#5b21b6; font-size:.88rem;">
+                        <strong>Motif :</strong> {{ cotisation.motifExemption }}
+                    </div>
+                {% endif %}
+            {% endif %}
+
+            {# === Message d'aide pour le joueur lui-même === #}
+            {% if is_self and (cotisation.isAPayer or cotisation.isEcheancier) %}
+                <div style="margin-top:14px; padding:10px 14px; background:#eff6ff; border-radius:8px; font-size:.82rem; color:#1e3a8a;">
+                    <i class="bi bi-info-circle"></i>
+                    Contacte le trésorier du club pour régler ta cotisation (chèque, virement, espèces).
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>

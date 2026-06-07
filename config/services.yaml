@@ -37,3 +37,16 @@ services:
     App\Service\ReunionDocumentUploader:
         arguments:
             $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/reunions'
+
+    # Service d'upload des justificatifs des opérations de trésorerie (Bureau Phase D.1).
+    # Les fichiers sont stockés dans un sous-dossier par club pour multi-tenant.
+    App\Service\JustificatifOperationUploader:
+        arguments:
+            $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/tresorerie'
+
+    # Service d'upload des justificatifs des notes de frais (Bureau Phase D.2).
+    # Même base que les opérations mais sous-dossier "notes_frais/" — séparation
+    # pour faciliter les exports et purges spécifiques.
+    App\Service\JustificatifNoteFraisUploader:
+        arguments:
+            $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/tresorerie'

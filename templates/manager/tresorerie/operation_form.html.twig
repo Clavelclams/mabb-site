@@ -1,0 +1,241 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ is_new ? 'Nouvelle opération' : 'Opération — ' ~ operation.libelle }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>
+                <i class="bi bi-{{ is_new ? 'plus-circle' : 'pencil-square' }}"></i>
+                {{ is_new ? 'Nouvelle opération' : 'Modifier l\'opération' }}
+            </h1>
+            <p class="subtitle">
+                <a href="{{ path('manager_tresorerie_dashboard') }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    <i class="bi bi-arrow-left"></i> Retour à la trésorerie
+                </a>
+            </p>
+        </div>
+    </div>
+
+    {# Erreurs de validation regroupées en haut #}
+    {% if errors|length > 0 %}
+        <div class="card-mabb" style="border-left:4px solid #dc2626; background:#fef2f2; margin-bottom:16px;">
+            <div class="card-body" style="padding:14px 18px;">
+                <strong style="color:#991b1b;"><i class="bi bi-exclamation-triangle-fill"></i> Corrige ces erreurs :</strong>
+                <ul style="margin:8px 0 0; padding-left:24px; color:#7f1d1d;">
+                    {% for err in errors %}
+                        <li>{{ err }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ============================================================
+       FORMULAIRE — création ou édition d'une opération
+       ============================================================ #}
+    <form method="POST"
+          enctype="multipart/form-data"
+          action="{{ is_new
+                    ? path('manager_tresorerie_operation_new')
+                    : path('manager_tresorerie_operation_show', {id: operation.id}) }}">
+
+        <div class="card-mabb" style="margin-bottom:16px;">
+            <div class="card-body" style="padding:24px;">
+
+                {# === Type (RECETTE / DEPENSE) — toggle visuel === #}
+                <div style="margin-bottom:20px;">
+                    <label style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:8px;">
+                        Type d'opération
+                    </label>
+                    <div style="display:flex; gap:10px;">
+                        <label style="flex:1; cursor:pointer;">
+                            <input type="radio" name="type" value="RECETTE"
+                                   {% if operation.type == 'RECETTE' %}checked{% endif %}
+                                   style="display:none;"
+                                   onchange="updateCategories(this.value)">
+                            <div class="type-option" data-type="RECETTE"
+                                 style="padding:14px; border:2px solid {% if operation.type == 'RECETTE' %}#10b981{% else %}#e5e7eb{% endif %}; border-radius:10px; background:{% if operation.type == 'RECETTE' %}#f0fdf4{% else %}#fff{% endif %}; text-align:center; transition:all .15s;">
+                                <i class="bi bi-arrow-down-circle" style="font-size:1.6rem; color:#10b981;"></i>
+                                <div style="font-weight:700; color:#10b981; margin-top:4px;">Recette</div>
+                                <small style="color:var(--mabb-muted);">Entrée d'argent</small>
+                            </div>
+                        </label>
+                        <label style="flex:1; cursor:pointer;">
+                            <input type="radio" name="type" value="DEPENSE"
+                                   {% if operation.type == 'DEPENSE' %}checked{% endif %}
+                                   style="display:none;"
+                                   onchange="updateCategories(this.value)">
+                            <div class="type-option" data-type="DEPENSE"
+                                 style="padding:14px; border:2px solid {% if operation.type == 'DEPENSE' %}#dc2626{% else %}#e5e7eb{% endif %}; border-radius:10px; background:{% if operation.type == 'DEPENSE' %}#fef2f2{% else %}#fff{% endif %}; text-align:center; transition:all .15s;">
+                                <i class="bi bi-arrow-up-circle" style="font-size:1.6rem; color:#dc2626;"></i>
+                                <div style="font-weight:700; color:#dc2626; margin-top:4px;">Dépense</div>
+                                <small style="color:var(--mabb-muted);">Sortie d'argent</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                {# === Montant + Date === #}
+                <div class="row g-3" style="margin-bottom:20px;">
+                    <div class="col-md-6">
+                        <label for="montant" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                            Montant (€) *
+                        </label>
+                        <input type="text" id="montant" name="montant" required
+                               value="{{ operation.montant != '0.00' ? operation.montant : '' }}"
+                               placeholder="ex: 125.50"
+                               pattern="^\d+([.,]\d{1,2})?$"
+                               style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; font-size:1.1rem; font-weight:600;">
+                        <small style="color:var(--mabb-muted);">Toujours positif. La virgule ou le point sont acceptés.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="date" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                            Date *
+                        </label>
+                        <input type="date" id="date" name="date" required
+                               value="{{ operation.date|date('Y-m-d') }}"
+                               style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; font-size:1rem;">
+                        <small style="color:var(--mabb-muted);">Date effective (de l'achat / de l'encaissement).</small>
+                    </div>
+                </div>
+
+                {# === Catégorie === #}
+                <div style="margin-bottom:20px;">
+                    <label for="categorie" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                        Catégorie *
+                    </label>
+                    <select id="categorie" name="categorie" required
+                            style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; font-size:1rem; background:white;">
+                        {% for cat_code in constant('App\\Entity\\Sport\\OperationTresorerie::CATEGORIES') %}
+                            {% set cat_label = constant('App\\Entity\\Sport\\OperationTresorerie::CATEGORIES_LABELS')[cat_code] %}
+                            {% set est_recette = cat_code in constant('App\\Entity\\Sport\\OperationTresorerie::CATEGORIES_PAR_TYPE')['RECETTE'] %}
+                            <option value="{{ cat_code }}"
+                                    data-type="{{ est_recette ? 'RECETTE' : 'DEPENSE' }}"
+                                    {% if cat_code == operation.categorie %}selected{% endif %}>
+                                {{ cat_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {# === Libellé === #}
+                <div style="margin-bottom:20px;">
+                    <label for="libelle" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                        Libellé *
+                    </label>
+                    <input type="text" id="libelle" name="libelle" required
+                           value="{{ operation.libelle }}"
+                           maxlength="255"
+                           placeholder="ex: Achat ballons U13"
+                           style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; font-size:1rem;">
+                </div>
+
+                {# === Notes (optionnelles) === #}
+                <div style="margin-bottom:20px;">
+                    <label for="notes" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                        Notes (optionnel)
+                    </label>
+                    <textarea id="notes" name="notes" rows="2"
+                              placeholder="Précisions, contexte, fournisseur…"
+                              style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; font-size:.95rem; font-family:inherit; resize:vertical;">{{ operation.notes }}</textarea>
+                </div>
+
+                {# === Justificatif === #}
+                <div style="margin-bottom:8px;">
+                    <label for="justificatif" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                        Justificatif (optionnel)
+                    </label>
+                    {% if operation.hasJustificatif %}
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#f0f9ff; border-radius:8px; margin-bottom:8px;">
+                            <i class="bi bi-paperclip" style="color:var(--mabb-blue);"></i>
+                            <a href="{{ path('manager_tresorerie_justificatif', {id: operation.id}) }}" target="_blank" style="flex:1; color:var(--mabb-blue); font-weight:600; text-decoration:none;">
+                                {{ operation.justificatifNomOriginal }}
+                            </a>
+                            <small style="color:var(--mabb-muted);">{{ operation.justificatifTailleHumaine }}</small>
+                        </div>
+                        <small style="color:var(--mabb-muted);">Choisir un nouveau fichier ci-dessous remplacera l'actuel.</small>
+                    {% endif %}
+                    <input type="file" id="justificatif" name="justificatif"
+                           accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                           style="display:block; padding:10px; border:2px dashed #d1d5db; border-radius:8px; width:100%; background:#fafafa;">
+                    <small style="color:var(--mabb-muted);">
+                        PDF, JPG, PNG, WebP, HEIC. Max 5 Mo.
+                        <strong>Conseil :</strong> pour partager au comptable, préfère PDF ou JPG (HEIC = iPhone uniquement).
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        {# Boutons #}
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <a href="{{ path('manager_tresorerie_dashboard') }}" class="btn-mabb-secondary">Annuler</a>
+            <button type="submit" class="btn-mabb-orange">
+                <i class="bi bi-check-lg"></i>
+                {{ is_new ? 'Enregistrer' : 'Mettre à jour' }}
+            </button>
+        </div>
+    </form>
+
+    {# === Bloc suppression (édition seulement) === #}
+    {% if not is_new %}
+        <div class="card-mabb" style="margin-top:24px; border-left:4px solid #dc2626;">
+            <div class="card-body" style="padding:18px; display:flex; justify-content:space-between; align-items:center; gap:14px;">
+                <div>
+                    <strong style="color:#991b1b;"><i class="bi bi-trash"></i> Zone dangereuse</strong>
+                    <div style="font-size:.85rem; color:#7f1d1d;">Supprimer cette opération est irréversible.</div>
+                </div>
+                <form method="POST" action="{{ path('manager_tresorerie_operation_delete', {id: operation.id}) }}"
+                      onsubmit="return confirm('Supprimer définitivement « {{ operation.libelle|e('js') }} » ?');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete_operation_' ~ operation.id) }}">
+                    <button type="submit" class="btn-mabb-danger">
+                        <i class="bi bi-trash"></i> Supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Toggle visuel du type RECETTE/DEPENSE + filtrage du select catégorie
+        (function() {
+            const radios = document.querySelectorAll('input[name="type"]');
+            const select = document.getElementById('categorie');
+            const options = Array.from(select.options);
+
+            function updateView(type) {
+                // Toggle des cards
+                document.querySelectorAll('.type-option').forEach(el => {
+                    const isSelected = el.dataset.type === type;
+                    const isRecette = el.dataset.type === 'RECETTE';
+                    el.style.borderColor = isSelected ? (isRecette ? '#10b981' : '#dc2626') : '#e5e7eb';
+                    el.style.background  = isSelected ? (isRecette ? '#f0fdf4' : '#fef2f2') : '#fff';
+                });
+
+                // Filtrer les options du select selon le type
+                let firstMatching = null;
+                options.forEach(opt => {
+                    const match = opt.dataset.type === type;
+                    opt.hidden = !match;
+                    opt.disabled = !match;
+                    if (match && !firstMatching) firstMatching = opt;
+                });
+
+                // Si la catégorie courante est masquée, en sélectionner une compatible
+                if (select.options[select.selectedIndex]?.hidden && firstMatching) {
+                    firstMatching.selected = true;
+                }
+            }
+
+            window.updateCategories = updateView;
+
+            // Application initiale au chargement
+            const checked = document.querySelector('input[name="type"]:checked');
+            if (checked) updateView(checked.value);
+        })();
+    </script>
+{% endblock %}

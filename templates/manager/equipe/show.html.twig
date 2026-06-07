@@ -82,6 +82,9 @@
             </div>
         {% else %}
             <table class="table-mabb">
+                {# is_granted CLUB_STAFF → colonne Cotisation visible pour coach/dirigeant/staff
+                   uniquement. cotisations_map contient au plus 1 entrée par joueur (saison courante). #}
+                {% set show_cotisation = is_granted('CLUB_STAFF', equipe) and cotisations_map is defined %}
                 <thead>
                     <tr>
                         <th>N°</th>
@@ -89,6 +92,7 @@
                         <th>Poste</th>
                         <th>Né(e) le</th>
                         <th>Statut</th>
+                        {% if show_cotisation %}<th>Cotisation</th>{% endif %}
                         <th style="text-align:right;">Actions</th>
                     </tr>
                 </thead>
@@ -116,6 +120,39 @@
                                     <span class="badge-inactive">Archivée</span>
                                 {% endif %}
                             </td>
+                            {% if show_cotisation %}
+                                {# Colonne cotisation — 4 cas possibles selon statut.
+                                   Si pas de ligne dans cotisations_map → pas de cotisation pour la saison courante. #}
+                                <td>
+                                    {% if cotisations_map[j.id] is defined %}
+                                        {% set c = cotisations_map[j.id] %}
+                                        {% set color = {
+                                            'A_PAYER':    '#dc2626',
+                                            'ECHEANCIER': '#f59e0b',
+                                            'PAYEE':      '#10b981',
+                                            'EXEMPTEE':   '#8b5cf6',
+                                        }[c.statut] %}
+                                        {% set bg = {
+                                            'A_PAYER':    '#fee2e2',
+                                            'ECHEANCIER': '#fef3c7',
+                                            'PAYEE':      '#dcfce7',
+                                            'EXEMPTEE':   '#ede9fe',
+                                        }[c.statut] %}
+                                        <span style="display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:10px; background:{{ bg }}; color:{{ color }}; font-size:.75rem; font-weight:700;"
+                                              title="{{ c.statutLabel }} — {{ c.montantPaye|number_format(2, ',', ' ') }} € / {{ c.montantAttendu|number_format(2, ',', ' ') }} €">
+                                            {% if c.isPayee %}
+                                                <i class="bi bi-check-circle-fill"></i> Payée
+                                            {% elseif c.isExemptee %}
+                                                <i class="bi bi-shield-fill-check"></i> Exemptée
+                                            {% else %}
+                                                <i class="bi bi-hourglass-split"></i> {{ c.montantRestant|number_format(2, ',', ' ') }} €
+                                            {% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span style="color:#9ca3af; font-size:.78rem;">—</span>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
                             <td style="text-align:right;">
                                 <a href="{{ path('manager_joueur_show', {id: j.id}) }}" class="btn-mabb-ghost btn-sm">
                                     <i class="bi bi-eye"></i> Voir

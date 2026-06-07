@@ -52,6 +52,7 @@ class ManagerLoginController extends AbstractController
         \App\Repository\Sport\ReunionConvocationRepository $convocationRepository,
         \App\Repository\Sport\EvenementRepository $evenementRepository,
         \App\Service\FeedAggregator $feedAggregator,
+        \App\Repository\Sport\NoteFraisRepository $noteFraisRepository,
     ): Response {
         $this->denyAccessUnlessGranted('ROLE_USER');
 
@@ -64,6 +65,8 @@ class ManagerLoginController extends AbstractController
         $mesPvNonLus = [];
         // Feed "Pour toi" Phase 1 MVP — items personnalisés en tête de dashboard
         $feedItems = [];
+        // Compteur pour le badge "X en attente" sur la card trésorier (D.2)
+        $nbNotesAValider = 0;
 
         if ($club) {
             $now = new \DateTimeImmutable();
@@ -117,16 +120,22 @@ class ManagerLoginController extends AbstractController
                 // appelle juste le service et passe le résultat à la vue.
                 $feedItems = $feedAggregator->buildForUser($userConnecte, $club);
             }
+
+            // Badge "X notes à valider" — utile uniquement pour TRESORIER/SUPER_ADMIN
+            // mais on calcule pour tous (la card n'est affichée que pour eux).
+            // Coût : 1 COUNT(*) SQL → négligeable.
+            $nbNotesAValider = $noteFraisRepository->countEnAttente($club);
         }
 
         return $this->render('manager/dashboard.html.twig', [
-            'club'                => $club,
-            'prochain_seances'    => $prochainSeances,
-            'prochain_rencontres' => $prochainRencontres,
-            'prochain_evenements' => $prochainEvenements,
-            'mes_reunions_avenir' => $mesReunionsAVenir,
-            'mes_pv_non_lus'      => $mesPvNonLus,
-            'feed_items'          => $feedItems,
+            'club'                 => $club,
+            'prochain_seances'     => $prochainSeances,
+            'prochain_rencontres'  => $prochainRencontres,
+            'prochain_evenements'  => $prochainEvenements,
+            'mes_reunions_avenir'  => $mesReunionsAVenir,
+            'mes_pv_non_lus'       => $mesPvNonLus,
+            'feed_items'           => $feedItems,
+            'nb_notes_a_valider'   => $nbNotesAValider,
         ]);
     }
 

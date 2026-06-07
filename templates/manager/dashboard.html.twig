@@ -271,6 +271,56 @@
             </div>
         {% endif %}
 
+        {# Card Trésorerie — visible UNIQUEMENT TRESORIER + SUPER_ADMIN.
+           Le TresorerieVoter accepte un Club comme subject → on vérifie
+           directement contre club_actuel. #}
+        {% if club is defined and club and is_granted('TRESORERIE_VIEW', club) %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_tresorerie_dashboard') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer; position:relative;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-cash-stack" style="font-size:2.5rem; color:#16a34a;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Trésorerie</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Solde, recettes, dépenses du club.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            {# Card Notes à valider — badge nb si > 0. Visible trésorier/SUPER_ADMIN. #}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_tresorerie_notes_frais') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer; position:relative;">
+                        {% if nb_notes_a_valider is defined and nb_notes_a_valider > 0 %}
+                            <span style="position:absolute; top:12px; right:12px; background:#f59e0b; color:white; border-radius:10px; padding:3px 10px; font-size:.72rem; font-weight:700;">
+                                {{ nb_notes_a_valider }} en attente
+                            </span>
+                        {% endif %}
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-receipt-cutoff" style="font-size:2.5rem; color:#f59e0b;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Notes à valider</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Remboursements à traiter (trésorier).</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endif %}
+
+        {# Card "Mes notes de frais" — visible à TOUT membre du club. #}
+        {% if club is defined and club and is_granted('CLUB_MEMBER', club) %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_mes_notes_frais') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-receipt" style="font-size:2.5rem; color:#8b5cf6;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Mes notes de frais</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Demande un remboursement avec ticket/facture.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endif %}
+
         {# Card Réunions — visible CLUB_MEMBER (tout membre voit, seul staff crée) #}
         {% if club is defined and club and is_granted('CLUB_MEMBER', club) %}
             <div class="col-md-6 col-lg-4">

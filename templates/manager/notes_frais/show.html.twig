@@ -1,0 +1,179 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Note de frais — {{ note.libelle }}{% endblock %}
+
+{% block body %}
+    {% set color = note.statut == 'VALIDEE' ? '#10b981' : (note.statut == 'REJETEE' ? '#dc2626' : '#f59e0b') %}
+    {% set bg    = note.statut == 'VALIDEE' ? '#f0fdf4' : (note.statut == 'REJETEE' ? '#fef2f2' : '#fef9e7') %}
+
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-receipt"></i> Note de frais #{{ note.id }}</h1>
+            <p class="subtitle">
+                <a href="javascript:history.back()" style="color:var(--mabb-muted); text-decoration:none;">
+                    <i class="bi bi-arrow-left"></i> Retour
+                </a>
+            </p>
+        </div>
+        <div style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:{{ bg }}; border:2px solid {{ color }}; border-radius:20px;">
+            <i class="bi {% if note.statut == 'VALIDEE' %}bi-check-circle-fill{% elseif note.statut == 'REJETEE' %}bi-x-circle-fill{% else %}bi-hourglass-split{% endif %}" style="color:{{ color }};"></i>
+            <strong style="color:{{ color }};">{{ note.statutLabel }}</strong>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {# Colonne principale : infos de la note #}
+        <div class="col-md-8">
+            <div class="card-mabb" style="margin-bottom:16px;">
+                <div class="card-header"><i class="bi bi-info-circle"></i> Détails</div>
+                <div class="card-body">
+                    <div style="display:grid; grid-template-columns:140px 1fr; gap:12px 18px; font-size:.95rem;">
+                        <strong style="color:var(--mabb-muted);">Libellé</strong>
+                        <span>{{ note.libelle }}</span>
+
+                        <strong style="color:var(--mabb-muted);">Montant</strong>
+                        <span style="font-weight:700; color:{{ color }}; font-size:1.1rem;">
+                            {{ note.montant|number_format(2, ',', ' ') }} €
+                        </span>
+
+                        <strong style="color:var(--mabb-muted);">Date dépense</strong>
+                        <span>{{ note.dateDepense|date('d/m/Y') }}</span>
+
+                        <strong style="color:var(--mabb-muted);">Demandeur</strong>
+                        <span>
+                            {% if note.demandeur %}
+                                {{ note.demandeur.prenom }} {{ note.demandeur.nom }}
+                                <small style="color:var(--mabb-muted);">({{ note.demandeur.email }})</small>
+                            {% else %}
+                                <em style="color:var(--mabb-muted);">Utilisateur supprimé</em>
+                            {% endif %}
+                        </span>
+
+                        <strong style="color:var(--mabb-muted);">Déposée le</strong>
+                        <span>{{ note.createdAt|date('d/m/Y à H:i') }}</span>
+
+                        {% if note.notes %}
+                            <strong style="color:var(--mabb-muted);">Notes</strong>
+                            <span style="white-space:pre-wrap;">{{ note.notes }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {# Bloc validation / rejet visible UNIQUEMENT si la note est verrouillée #}
+            {% if note.isVerrouillee %}
+                <div class="card-mabb" style="margin-bottom:16px; border-left:4px solid {{ color }};">
+                    <div class="card-header" style="background:{{ bg }};">
+                        <i class="bi {% if note.statut == 'VALIDEE' %}bi-check-circle{% else %}bi-x-circle{% endif %}"></i>
+                        {{ note.statut == 'VALIDEE' ? 'Validation' : 'Rejet' }}
+                    </div>
+                    <div class="card-body">
+                        <div style="display:grid; grid-template-columns:140px 1fr; gap:12px 18px; font-size:.95rem;">
+                            <strong style="color:var(--mabb-muted);">Traité par</strong>
+                            <span>
+                                {% if note.validateur %}
+                                    {{ note.validateur.prenom }} {{ note.validateur.nom }}
+                                {% else %}
+                                    <em>Utilisateur supprimé</em>
+                                {% endif %}
+                            </span>
+
+                            <strong style="color:var(--mabb-muted);">Le</strong>
+                            <span>{{ note.dateValidation|date('d/m/Y à H:i') }}</span>
+
+                            {% if note.isRejetee and note.motifRejet %}
+                                <strong style="color:var(--mabb-muted);">Motif du rejet</strong>
+                                <span style="background:#fef2f2; padding:8px 12px; border-radius:6px; color:#991b1b; white-space:pre-wrap;">
+                                    {{ note.motifRejet }}
+                                </span>
+                            {% endif %}
+
+                            {% if note.isValidee and note.operationTresorerie %}
+                                <strong style="color:var(--mabb-muted);">Opération créée</strong>
+                                <span>
+                                    <a href="{{ path('manager_tresorerie_operation_show', {id: note.operationTresorerie.id}) }}" style="color:var(--mabb-blue); font-weight:600;">
+                                        Voir l'opération #{{ note.operationTresorerie.id }}
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {# Colonne droite : justificatif + actions #}
+        <div class="col-md-4">
+            <div class="card-mabb" style="margin-bottom:16px;">
+                <div class="card-header"><i class="bi bi-paperclip"></i> Justificatif</div>
+                <div class="card-body">
+                    <a href="{{ path('manager_note_frais_justificatif', {id: note.id}) }}" target="_blank"
+                       style="display:block; padding:16px; background:#f9fafb; border:2px dashed #d1d5db; border-radius:8px; text-align:center; text-decoration:none; color:var(--mabb-dark); transition:background .15s;"
+                       onmouseover="this.style.background='#eff6ff'"
+                       onmouseout="this.style.background='#f9fafb'">
+                        <i class="bi bi-file-earmark-pdf" style="font-size:2.5rem; color:var(--mabb-blue);"></i>
+                        <div style="font-weight:600; margin-top:8px; word-break:break-all;">{{ note.justificatifNomOriginal }}</div>
+                        <small style="color:var(--mabb-muted);">{{ note.justificatifTailleHumaine }} · clic pour ouvrir</small>
+                    </a>
+                </div>
+            </div>
+
+            {# === Actions trésorier (visible si EN_ATTENTE et user a droit valider) === #}
+            {% if note.isEnAttente and is_granted('NOTE_FRAIS_VALIDATE', note) %}
+                <div class="card-mabb" style="margin-bottom:16px; border-left:4px solid #f59e0b;">
+                    <div class="card-header" style="background:#fef9e7;">
+                        <i class="bi bi-shield-check"></i> Action trésorier
+                    </div>
+                    <div class="card-body">
+                        {# Bouton VALIDER #}
+                        <form method="POST" action="{{ path('manager_note_frais_valider', {id: note.id}) }}"
+                              onsubmit="return confirm('Valider cette note ? Une opération de remboursement de {{ note.montant|e('js') }} € va être créée automatiquement.');"
+                              style="margin-bottom:10px;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('valider_note_frais_' ~ note.id) }}">
+                            <button type="submit" class="btn-mabb-orange" style="width:100%; background:#10b981; border-color:#10b981;">
+                                <i class="bi bi-check-lg"></i> Valider et rembourser
+                            </button>
+                        </form>
+
+                        {# Bouton REJETER avec motif inline #}
+                        <details>
+                            <summary style="cursor:pointer; padding:10px; background:#fef2f2; border-radius:6px; color:#991b1b; font-weight:600; text-align:center;">
+                                <i class="bi bi-x-lg"></i> Rejeter avec motif
+                            </summary>
+                            <form method="POST" action="{{ path('manager_note_frais_rejeter', {id: note.id}) }}"
+                                  style="margin-top:10px;"
+                                  onsubmit="return confirm('Rejeter cette note ? Cette action est définitive.');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('rejeter_note_frais_' ~ note.id) }}">
+                                <textarea name="motif" required rows="3"
+                                          placeholder="Motif obligatoire (ex: justificatif illisible, dépense non éligible…)"
+                                          style="width:100%; padding:10px; border:2px solid #fecaca; border-radius:6px; font-size:.9rem; font-family:inherit; resize:vertical;"></textarea>
+                                <button type="submit" class="btn-mabb-danger" style="width:100%; margin-top:8px;">
+                                    Confirmer le rejet
+                                </button>
+                            </form>
+                        </details>
+                    </div>
+                </div>
+            {% endif %}
+
+            {# === Suppression par le demandeur (si EN_ATTENTE) === #}
+            {% if note.isEnAttente and is_granted('NOTE_FRAIS_DELETE', note) %}
+                <div class="card-mabb" style="border-left:4px solid #dc2626;">
+                    <div class="card-body" style="padding:14px;">
+                        <small style="color:var(--mabb-muted); display:block; margin-bottom:8px;">
+                            Tu peux retirer cette note tant qu'elle n'est pas validée.
+                        </small>
+                        <form method="POST" action="{{ path('manager_note_frais_delete', {id: note.id}) }}"
+                              onsubmit="return confirm('Supprimer définitivement cette note de frais ?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete_note_frais_' ~ note.id) }}">
+                            <button type="submit" class="btn-mabb-danger" style="width:100%;">
+                                <i class="bi bi-trash"></i> Retirer ma note
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

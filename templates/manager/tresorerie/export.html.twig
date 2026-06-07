@@ -1,0 +1,163 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Export trésorerie{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-download"></i> Export trésorerie</h1>
+            <p class="subtitle">
+                <a href="{{ path('manager_tresorerie_dashboard') }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    <i class="bi bi-arrow-left"></i> Retour trésorerie
+                </a>
+            </p>
+        </div>
+    </div>
+
+    {# Bandeau info — explication usage #}
+    <div class="card-mabb" style="border-left:4px solid #3b82f6; background:#eff6ff; margin-bottom:20px;">
+        <div class="card-body" style="padding:14px 18px; display:flex; gap:12px; align-items:start;">
+            <i class="bi bi-info-circle-fill" style="color:#1e40af; font-size:1.5rem; flex-shrink:0; margin-top:2px;"></i>
+            <div style="flex:1; color:#1e3a8a; font-size:.88rem;">
+                Exporte les opérations sur la période choisie au format <strong>CSV</strong>
+                (compatible Excel et tous les outils comptables).
+                Encodage <strong>UTF-8 avec BOM</strong> + séparateur point-virgule → ouvre directement dans Excel français.
+                Les montants sont au format français (virgule décimale) avec une colonne « Montant signé » utilisable
+                pour une somme directe dans Excel.
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ path('manager_tresorerie_export_csv') }}">
+        <div class="card-mabb" style="margin-bottom:20px;">
+            <div class="card-header"><i class="bi bi-funnel"></i> Filtres</div>
+            <div class="card-body">
+
+                {# === Période === #}
+                <div class="row g-3" style="margin-bottom:20px;">
+                    <div class="col-md-6">
+                        <label for="debut" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                            Date début *
+                        </label>
+                        <input type="date" id="debut" name="debut" required
+                               value="{{ debut_defaut }}"
+                               style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px;">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="fin" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                            Date fin *
+                        </label>
+                        <input type="date" id="fin" name="fin" required
+                               value="{{ fin_defaut }}"
+                               style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px;">
+                    </div>
+                </div>
+
+                {# === Raccourcis période === #}
+                <div style="margin-bottom:24px;">
+                    <small style="display:block; color:var(--mabb-muted); margin-bottom:6px;">Raccourcis :</small>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" class="btn-mabb-secondary" style="font-size:.78rem; padding:4px 12px;"
+                                onclick="setPeriode('mois_courant')">Mois en cours</button>
+                        <button type="button" class="btn-mabb-secondary" style="font-size:.78rem; padding:4px 12px;"
+                                onclick="setPeriode('mois_dernier')">Mois dernier</button>
+                        <button type="button" class="btn-mabb-secondary" style="font-size:.78rem; padding:4px 12px;"
+                                onclick="setPeriode('trimestre')">Trimestre en cours</button>
+                        <button type="button" class="btn-mabb-secondary" style="font-size:.78rem; padding:4px 12px;"
+                                onclick="setPeriode('annee_civile')">Année civile</button>
+                        <button type="button" class="btn-mabb-secondary" style="font-size:.78rem; padding:4px 12px;"
+                                onclick="setPeriode('saison')">Saison sportive</button>
+                    </div>
+                </div>
+
+                {# === Filtres optionnels === #}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="type" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                            Type (optionnel)
+                        </label>
+                        <select id="type" name="type"
+                                style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; background:white;">
+                            <option value="">— Toutes les opérations —</option>
+                            <option value="RECETTE">Recettes uniquement</option>
+                            <option value="DEPENSE">Dépenses uniquement</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="categorie" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">
+                            Catégorie (optionnel)
+                        </label>
+                        <select id="categorie" name="categorie"
+                                style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; background:white;">
+                            <option value="">— Toutes les catégories —</option>
+                            {% for cat_code in constant('App\\Entity\\Sport\\OperationTresorerie::CATEGORIES') %}
+                                {% set cat_label = constant('App\\Entity\\Sport\\OperationTresorerie::CATEGORIES_LABELS')[cat_code] %}
+                                <option value="{{ cat_code }}">{{ cat_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <a href="{{ path('manager_tresorerie_dashboard') }}" class="btn-mabb-secondary">Annuler</a>
+            <button type="submit" class="btn-mabb-orange">
+                <i class="bi bi-download"></i> Télécharger le CSV
+            </button>
+        </div>
+    </form>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+        // Raccourcis pour pré-remplir les dates rapidement.
+        // Logique côté JS pour éviter un rechargement par raccourci.
+        function setPeriode(type) {
+            const debut = document.getElementById('debut');
+            const fin   = document.getElementById('fin');
+            const today = new Date();
+            const yyyy  = today.getFullYear();
+            const mm    = today.getMonth(); // 0-11
+
+            function fmt(d) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
+            switch (type) {
+                case 'mois_courant':
+                    debut.value = fmt(new Date(yyyy, mm, 1));
+                    fin.value   = fmt(new Date(yyyy, mm + 1, 0)); // dernier jour du mois
+                    break;
+                case 'mois_dernier':
+                    debut.value = fmt(new Date(yyyy, mm - 1, 1));
+                    fin.value   = fmt(new Date(yyyy, mm, 0));
+                    break;
+                case 'trimestre':
+                    // Trimestre courant = T1(jan-mar), T2(avr-juin), T3(juil-sept), T4(oct-déc)
+                    const tStart = Math.floor(mm / 3) * 3;
+                    debut.value  = fmt(new Date(yyyy, tStart, 1));
+                    fin.value    = fmt(new Date(yyyy, tStart + 3, 0));
+                    break;
+                case 'annee_civile':
+                    debut.value = `${yyyy}-01-01`;
+                    fin.value   = `${yyyy}-12-31`;
+                    break;
+                case 'saison':
+                    // Saison sportive : sept N → août N+1. On détecte selon le mois courant.
+                    if (mm >= 8) { // sept (8) et après
+                        debut.value = `${yyyy}-09-01`;
+                        fin.value   = `${yyyy + 1}-08-31`;
+                    } else {
+                        debut.value = `${yyyy - 1}-09-01`;
+                        fin.value   = `${yyyy}-08-31`;
+                    }
+                    break;
+            }
+        }
+    </script>
+{% endblock %}

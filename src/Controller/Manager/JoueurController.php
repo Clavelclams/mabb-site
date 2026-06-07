@@ -139,8 +139,23 @@ class JoueurController extends AbstractController
         \App\Repository\Sport\JoueurBadgeRepository $badgeRepository,
         \App\Service\EvaluationCalculator $evaluationCalculator,
         \App\Repository\Sport\EvaluationMatchRepository $evaluationMatchRepository,
+        \App\Repository\Sport\CotisationJoueurRepository $cotisationRepository,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $joueur);
+
+        // ====================================================================
+        // Bureau D.3.2 — Cotisation saison courante (visible joueur+staff+coach)
+        // ====================================================================
+        // Récupère la cotisation de la saison en cours pour affichage en lecture
+        // seule sur la fiche. La gestion (paiement, exemption) reste dans
+        // /tresorerie/cotisations/{id} pour le trésorier.
+        $cotisationCourante = $cotisationRepository->findCouranteByJoueur($joueur);
+        // is_self : true si le user connecté est ce joueur (auto-lien email match)
+        $userConnecte = $this->getUser();
+        $isSelf = $userConnecte instanceof \App\Entity\Core\User
+            && $joueur->getUser() !== null
+            && $joueur->getUser()->getId() === $userConnecte->getId();
+        $isTresorier = $this->isGranted(\App\Security\Voter\TresorerieVoter::CAN_VIEW, $joueur->getClub());
 
         $age = null;
         if ($joueur->getDateNaissance()) {
@@ -219,6 +234,10 @@ class JoueurController extends AbstractController
             ],
             'performances_saison' => $performancesSaison,
             'evaluations_recentes' => $evaluationsRecentes,
+            // D.3.2 — Section "Ma cotisation" sur la fiche
+            'cotisation_courante' => $cotisationCourante,
+            'is_self'             => $isSelf,
+            'is_tresorier'        => $isTresorier,
         ]);
     }
 

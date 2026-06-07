@@ -120,6 +120,7 @@ class EquipeController extends AbstractController
     public function show(
         Equipe $equipe,
         \App\Repository\Sport\PlanningSeanceRepository $planningRepo,
+        \App\Repository\Sport\CotisationJoueurRepository $cotisationRepository,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $equipe);
 
@@ -132,12 +133,36 @@ class EquipeController extends AbstractController
         // Plannings récurrents (créneaux hebdo d'entraînement)
         $plannings = $planningRepo->findActifsByEquipe($equipe->getId());
 
+        // ====================================================================
+        // Bureau D.3.2 — Map cotisations saison courante par joueur
+        // ====================================================================
+        // Optim N+1 : 1 seule requête pour récupérer toutes les cotisations,
+        // puis indexation côté PHP par joueur_id pour lookup O(1) dans le template.
+        // Visible uniquement par CLUB_STAFF (coach/dirigeant/staff) — masqué
+        // pour un joueur lambda qui regarderait la page équipe.
+        $cotisationsMap = [];
+        if ($this->isGranted(ClubVoter::CLUB_STAFF, $equipe)) {
+            $saisonCourante = \App\Entity\Sport\CotisationJoueur::getSaisonCourante();
+            $toutes = $cotisationRepository->createQueryBuilder('c')
+                ->where('c.saison = :saison')
+                ->andWhere('c.joueur IN (:joueurs)')
+                ->setParameter('saison', $saisonCourante)
+                ->setParameter('joueurs', $joueurs)
+                ->getQuery()
+                ->getResult();
+            foreach ($toutes as $c) {
+                /** @var \App\Entity\Sport\CotisationJoueur $c */
+                $cotisationsMap[$c->getJoueur()->getId()] = $c;
+            }
+        }
+
         return $this->render('manager/equipe/show.html.twig', [
-            'equipe'         => $equipe,
-            'joueurs'        => $joueurs,
-            'effectif'       => $effectif,
-            'effectif_actif' => $effectifActif,
-            'plannings'      => $plannings,
+            'equipe'           => $equipe,
+            'joueurs'          => $joueurs,
+            'effectif'         => $effectif,
+            'effectif_actif'   => $effectifActif,
+            'plannings'        => $plannings,
+            'cotisations_map'  => $cotisationsMap,
         ]);
     }
 

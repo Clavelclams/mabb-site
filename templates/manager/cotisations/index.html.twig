@@ -1,0 +1,226 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Cotisations — {{ saison }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-cash-coin"></i> Cotisations licenciées</h1>
+            <p class="subtitle">
+                Saison <strong>{{ saison }}</strong> · <a href="{{ path('manager_tresorerie_dashboard') }}" style="color:var(--mabb-muted); text-decoration:none;">← Retour trésorerie</a>
+            </p>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <a href="{{ path('manager_tarifs_index', {saison: saison}) }}"
+               style="display:flex; align-items:center; gap:10px; padding:10px 16px; background:white; border:2px solid #e5e7eb; border-radius:10px; text-decoration:none; color:var(--mabb-dark); font-weight:600; font-size:.88rem; transition:all .15s;"
+               onmouseover="this.style.borderColor='#8b5cf6'; this.style.background='#faf5ff'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(139,92,246,.15)'"
+               onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'; this.style.transform='none'; this.style.boxShadow='none'">
+                <div style="width:32px; height:32px; border-radius:7px; background:#ede9fe; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="bi bi-tags" style="color:#8b5cf6; font-size:1rem;"></i>
+                </div>
+                <div>
+                    <div>Tarifs par catégorie</div>
+                    <small style="color:var(--mabb-muted); font-weight:500;">Configurer U7→Seniors</small>
+                </div>
+            </a>
+
+            {# Dropdown saison — style aligné avec les pills #}
+            <form method="GET" style="display:flex; gap:8px; align-items:center; padding:10px 14px; background:white; border:2px solid #e5e7eb; border-radius:10px;">
+                <i class="bi bi-calendar3" style="color:var(--mabb-muted); font-size:.9rem;"></i>
+                <label for="saison" style="font-size:.8rem; color:var(--mabb-muted); font-weight:500;">Saison</label>
+                <select id="saison" name="saison" onchange="this.form.submit()"
+                        style="padding:4px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; font-weight:600; cursor:pointer;">
+                    {% for s in saisons %}
+                        <option value="{{ s }}" {% if s == saison %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    {# ============================================================
+       4 STATS CARDS — Compteurs par statut
+       ============================================================ #}
+    {% set total_lignes = compteurs.A_PAYER + compteurs.PAYEE + compteurs.ECHEANCIER + compteurs.EXEMPTEE %}
+    <div class="row g-3" style="margin-bottom:20px;">
+        <div class="col-md-3">
+            <div class="card-mabb" style="border-top:4px solid #dc2626;">
+                <div class="card-body" style="padding:18px;">
+                    <div style="font-size:.72rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-hourglass"></i> À payer
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:800; color:#dc2626; margin-top:4px;">
+                        {{ compteurs.A_PAYER }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-mabb" style="border-top:4px solid #f59e0b;">
+                <div class="card-body" style="padding:18px;">
+                    <div style="font-size:.72rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-arrow-repeat"></i> Échéancier
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:800; color:#f59e0b; margin-top:4px;">
+                        {{ compteurs.ECHEANCIER }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-mabb" style="border-top:4px solid #10b981;">
+                <div class="card-body" style="padding:18px;">
+                    <div style="font-size:.72rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-check-circle"></i> Payées
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:800; color:#10b981; margin-top:4px;">
+                        {{ compteurs.PAYEE }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card-mabb" style="border-top:4px solid #8b5cf6;">
+                <div class="card-body" style="padding:18px;">
+                    <div style="font-size:.72rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-shield"></i> Exemptées
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:800; color:#8b5cf6; margin-top:4px;">
+                        {{ compteurs.EXEMPTEE }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ============================================================
+       BARRE DE PROGRESSION GLOBALE — perçu / attendu
+       ============================================================ #}
+    <div class="card-mabb" style="margin-bottom:20px;">
+        <div class="card-body" style="padding:18px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+                <strong style="color:var(--mabb-dark);">Progression saison {{ saison }}</strong>
+                <small style="color:var(--mabb-muted);">
+                    {{ totaux.percu|number_format(2, ',', ' ') }} € / {{ totaux.attendu|number_format(2, ',', ' ') }} € · {{ taux_paiement }}%
+                </small>
+            </div>
+            <div style="background:#f3f4f6; border-radius:10px; height:14px; overflow:hidden;">
+                <div style="background:linear-gradient(90deg, #10b981, #16a34a); height:100%; width:{{ taux_paiement }}%; transition:width .4s;"></div>
+            </div>
+        </div>
+    </div>
+
+    {# ============================================================
+       BLOC ACTION — Générer les cotisations manquantes
+       ============================================================ #}
+    {% if total_lignes == 0 %}
+        <div class="card-mabb" style="border-left:4px solid #3b82f6; background:#eff6ff; margin-bottom:20px;">
+            <div class="card-body" style="padding:18px;">
+                <div style="display:flex; align-items:start; gap:14px;">
+                    <i class="bi bi-info-circle-fill" style="color:#1e40af; font-size:1.5rem; flex-shrink:0;"></i>
+                    <div style="flex:1;">
+                        <strong style="color:#1e3a8a;">Aucune cotisation pour cette saison.</strong>
+                        <div style="font-size:.88rem; color:#1e3a8a; margin-top:4px;">
+                            Lance la génération en masse : ça créera une ligne « À payer » pour chaque joueuse active du club. Tu pourras ensuite ajuster les montants un par un.
+                        </div>
+                        <form method="POST" action="{{ path('manager_cotisations_generer') }}" style="margin-top:14px; display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('generer_cotisations') }}">
+                            <input type="hidden" name="saison" value="{{ saison }}">
+                            <div>
+                                <label style="display:block; font-size:.78rem; font-weight:600; color:#1e3a8a; margin-bottom:4px;">
+                                    Montant par défaut (€) *
+                                </label>
+                                <input type="text" name="montant_defaut" required
+                                       placeholder="ex: 180.00"
+                                       pattern="^\d+([.,]\d{1,2})?$"
+                                       style="padding:8px 12px; border:2px solid #93c5fd; border-radius:6px; width:140px;">
+                            </div>
+                            <button type="submit" class="btn-mabb-orange">
+                                <i class="bi bi-plus-lg"></i> Générer les cotisations
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ============================================================
+       LISTE DES COTISATIONS
+       ============================================================ #}
+    {% if cotisations|length > 0 %}
+        <div class="card-mabb">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-people"></i> Liste ({{ cotisations|length }})</span>
+                {# Bouton "Générer manquantes" si certaines joueuses actives n'ont pas de ligne #}
+                <form method="POST" action="{{ path('manager_cotisations_generer') }}" style="display:inline;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('generer_cotisations') }}">
+                    <input type="hidden" name="saison" value="{{ saison }}">
+                    <input type="hidden" name="montant_defaut" value="0">
+                    <button type="submit" class="btn-mabb-secondary" style="font-size:.82rem; padding:6px 12px;"
+                            onclick="return confirm('Générer une ligne A_PAYER (0 €) pour les joueuses actives sans cotisation cette saison ?');">
+                        <i class="bi bi-arrow-clockwise"></i> Compléter les manquantes
+                    </button>
+                </form>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f9fafb; border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Joueuse</th>
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Équipe</th>
+                                <th style="padding:10px 14px; text-align:right; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Attendu</th>
+                                <th style="padding:10px 14px; text-align:right; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Payé</th>
+                                <th style="padding:10px 14px; text-align:center; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Statut</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in cotisations %}
+                                {% set statut_color = {
+                                    'A_PAYER':    '#dc2626',
+                                    'ECHEANCIER': '#f59e0b',
+                                    'PAYEE':      '#10b981',
+                                    'EXEMPTEE':   '#8b5cf6',
+                                } %}
+                                {% set statut_bg = {
+                                    'A_PAYER':    '#fee2e2',
+                                    'ECHEANCIER': '#fef3c7',
+                                    'PAYEE':      '#dcfce7',
+                                    'EXEMPTEE':   '#ede9fe',
+                                } %}
+                                <tr style="border-bottom:1px solid #f3f4f6;">
+                                    <td style="padding:10px 14px;">
+                                        <a href="{{ path('manager_cotisation_show', {id: c.id}) }}" style="color:var(--mabb-dark); font-weight:600; text-decoration:none;">
+                                            {{ c.joueur.prenom }} {{ c.joueur.nom }}
+                                        </a>
+                                    </td>
+                                    <td style="padding:10px 14px; font-size:.82rem; color:var(--mabb-muted);">
+                                        {{ c.joueur.equipe ? c.joueur.equipe.nom : '—' }}
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right; white-space:nowrap;">
+                                        {{ c.montantAttendu|number_format(2, ',', ' ') }} €
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right; font-weight:600; color:{{ statut_color[c.statut] }}; white-space:nowrap;">
+                                        {{ c.montantPaye|number_format(2, ',', ' ') }} €
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:center;">
+                                        <span style="padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700; background:{{ statut_bg[c.statut] }}; color:{{ statut_color[c.statut] }};">
+                                            {{ c.statutLabel }}
+                                        </span>
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right;">
+                                        <a href="{{ path('manager_cotisation_show', {id: c.id}) }}" style="color:var(--mabb-muted);">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

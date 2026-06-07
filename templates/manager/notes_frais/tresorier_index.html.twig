@@ -1,0 +1,127 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Notes de frais à valider{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-receipt-cutoff"></i> Notes de frais</h1>
+            <p class="subtitle">
+                <a href="{{ path('manager_tresorerie_dashboard') }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    <i class="bi bi-arrow-left"></i> Retour trésorerie
+                </a>
+            </p>
+        </div>
+    </div>
+
+    {# ============================================================
+       FILE D'ATTENTE — notes à valider
+       ============================================================ #}
+    <div class="card-mabb" style="margin-bottom:20px;">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i class="bi bi-hourglass-split"></i> À valider ({{ en_attente|length }})</span>
+            {% if en_attente|length > 0 %}
+                {% set total = 0 %}
+                {% for n in en_attente %}{% set total = total + n.montant %}{% endfor %}
+                <small style="color:var(--mabb-muted); font-weight:500;">
+                    Total : {{ total|number_format(2, ',', ' ') }} €
+                </small>
+            {% endif %}
+        </div>
+        <div class="card-body" style="padding:0;">
+            {% if en_attente is empty %}
+                <div style="text-align:center; padding:40px 20px;">
+                    <i class="bi bi-check-circle" style="font-size:3rem; color:#10b981;"></i>
+                    <p style="margin-top:12px; color:var(--mabb-muted);">Aucune note en attente. Tu es à jour 🎉</p>
+                </div>
+            {% else %}
+                <div style="display:flex; flex-direction:column;">
+                    {% for n in en_attente %}
+                        <a href="{{ path('manager_note_frais_show', {id: n.id}) }}"
+                           style="display:flex; align-items:center; gap:14px; padding:16px 20px; border-bottom:1px solid #f3f4f6; text-decoration:none; color:inherit; transition:background .15s;"
+                           onmouseover="this.style.background='#fef9e7'"
+                           onmouseout="this.style.background='transparent'">
+                            <div style="width:42px; height:42px; border-radius:10px; background:#fef9e7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="bi bi-hourglass-split" style="color:#f59e0b; font-size:1.3rem;"></i>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:600; color:var(--mabb-dark); font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                    {{ n.libelle }}
+                                </div>
+                                <div style="font-size:.78rem; color:var(--mabb-muted);">
+                                    {% if n.demandeur %}{{ n.demandeur.prenom }} {{ n.demandeur.nom }}{% else %}—{% endif %}
+                                    · dépense du {{ n.dateDepense|date('d/m/Y') }}
+                                    · déposée {{ n.createdAt|date('d/m/Y') }}
+                                </div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-weight:700; font-size:1.05rem; color:#f59e0b;">
+                                    {{ n.montant|number_format(2, ',', ' ') }} €
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-right" style="color:var(--mabb-muted); flex-shrink:0;"></i>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ============================================================
+       HISTORIQUE — notes déjà traitées (max 20)
+       ============================================================ #}
+    {% if historique|length > 0 %}
+        <div class="card-mabb">
+            <div class="card-header">
+                <i class="bi bi-clock-history"></i> Historique récent ({{ historique|length }})
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f9fafb; border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Date traitement</th>
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Libellé</th>
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Demandeur</th>
+                                <th style="padding:10px 14px; text-align:right; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Montant</th>
+                                <th style="padding:10px 14px; text-align:center; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Statut</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for n in historique %}
+                                {% set is_validee = n.statut == 'VALIDEE' %}
+                                <tr style="border-bottom:1px solid #f3f4f6;">
+                                    <td style="padding:10px 14px; font-size:.82rem; color:var(--mabb-muted); white-space:nowrap;">
+                                        {{ n.dateValidation|date('d/m/Y') }}
+                                    </td>
+                                    <td style="padding:10px 14px;">
+                                        <a href="{{ path('manager_note_frais_show', {id: n.id}) }}" style="color:var(--mabb-dark); font-weight:600; text-decoration:none;">
+                                            {{ n.libelle }}
+                                        </a>
+                                    </td>
+                                    <td style="padding:10px 14px; font-size:.85rem; color:var(--mabb-muted);">
+                                        {% if n.demandeur %}{{ n.demandeur.prenom }} {{ n.demandeur.nom }}{% else %}—{% endif %}
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right; font-weight:700; color:{{ is_validee ? '#10b981' : '#dc2626' }}; white-space:nowrap;">
+                                        {{ n.montant|number_format(2, ',', ' ') }} €
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:center;">
+                                        <span style="padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700; background:{{ is_validee ? '#dcfce7' : '#fee2e2' }}; color:{{ is_validee ? '#166534' : '#991b1b' }};">
+                                            {{ is_validee ? 'Validée' : 'Rejetée' }}
+                                        </span>
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right;">
+                                        <a href="{{ path('manager_note_frais_show', {id: n.id}) }}" style="color:var(--mabb-muted);">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

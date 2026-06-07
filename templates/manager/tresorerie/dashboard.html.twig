@@ -1,0 +1,269 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Trésorerie{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-cash-stack"></i> Trésorerie</h1>
+            <p class="subtitle">Vue d'ensemble des finances du club <strong>{{ club.nom }}</strong></p>
+        </div>
+        <a href="{{ path('manager_tresorerie_operation_new') }}" class="btn-mabb-orange">
+            <i class="bi bi-plus-lg"></i> Nouvelle opération
+        </a>
+    </div>
+
+    {# ============================================================
+       BARRE DE NAVIGATION SECONDAIRE — 3 pills colorés vers les
+       sous-modules trésorerie. Chacun a son icône + sa couleur d'accent.
+       ============================================================ #}
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:20px;">
+        <a href="{{ path('manager_cotisations_index') }}"
+           style="display:flex; align-items:center; gap:10px; padding:12px 18px; background:white; border:2px solid #e5e7eb; border-radius:12px; text-decoration:none; color:var(--mabb-dark); font-weight:600; font-size:.9rem; transition:all .15s;"
+           onmouseover="this.style.borderColor='#10b981'; this.style.background='#f0fdf4'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(16,185,129,.15)'"
+           onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'; this.style.transform='none'; this.style.boxShadow='none'">
+            <div style="width:36px; height:36px; border-radius:8px; background:#dcfce7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-cash-coin" style="color:#10b981; font-size:1.1rem;"></i>
+            </div>
+            <div>
+                <div>Cotisations</div>
+                <small style="color:var(--mabb-muted); font-weight:500;">Suivi licenciées</small>
+            </div>
+        </a>
+
+        <a href="{{ path('manager_tresorerie_notes_frais') }}"
+           style="display:flex; align-items:center; gap:10px; padding:12px 18px; background:white; border:2px solid #e5e7eb; border-radius:12px; text-decoration:none; color:var(--mabb-dark); font-weight:600; font-size:.9rem; transition:all .15s;"
+           onmouseover="this.style.borderColor='#f59e0b'; this.style.background='#fef9e7'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245,158,11,.15)'"
+           onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'; this.style.transform='none'; this.style.boxShadow='none'">
+            <div style="width:36px; height:36px; border-radius:8px; background:#fef3c7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-receipt-cutoff" style="color:#f59e0b; font-size:1.1rem;"></i>
+            </div>
+            <div>
+                <div>Notes de frais</div>
+                <small style="color:var(--mabb-muted); font-weight:500;">Demandes & validations</small>
+            </div>
+        </a>
+
+        <a href="{{ path('manager_tresorerie_export') }}"
+           style="display:flex; align-items:center; gap:10px; padding:12px 18px; background:white; border:2px solid #e5e7eb; border-radius:12px; text-decoration:none; color:var(--mabb-dark); font-weight:600; font-size:.9rem; transition:all .15s;"
+           onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(59,130,246,.15)'"
+           onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'; this.style.transform='none'; this.style.boxShadow='none'">
+            <div style="width:36px; height:36px; border-radius:8px; background:#dbeafe; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-download" style="color:#3b82f6; font-size:1.1rem;"></i>
+            </div>
+            <div>
+                <div>Export CSV</div>
+                <small style="color:var(--mabb-muted); font-weight:500;">Pour le comptable</small>
+            </div>
+        </a>
+    </div>
+
+    {# ============================================================
+       3 STATS CARDS — Solde / Recettes mois / Dépenses mois
+       ============================================================ #}
+    {% set solde_num = solde|number_format(2, '.', '') %}
+    {% set solde_positif = solde_num >= 0 %}
+    <div class="row g-3" style="margin-bottom:20px;">
+        <div class="col-md-4">
+            <div class="card-mabb" style="border-top:4px solid {{ solde_positif ? '#10b981' : '#dc2626' }};">
+                <div class="card-body" style="padding:20px;">
+                    <div style="font-size:.78rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-wallet2"></i> Solde courant
+                    </div>
+                    <div style="font-size:2rem; font-weight:800; color:{{ solde_positif ? '#10b981' : '#dc2626' }}; margin-top:6px;">
+                        {{ solde|number_format(2, ',', ' ') }} €
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-mabb" style="border-top:4px solid #10b981;">
+                <div class="card-body" style="padding:20px;">
+                    <div style="font-size:.78rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-arrow-down-circle"></i> Recettes du mois
+                    </div>
+                    <div style="font-size:2rem; font-weight:800; color:#10b981; margin-top:6px;">
+                        + {{ recettes_mois|number_format(2, ',', ' ') }} €
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-mabb" style="border-top:4px solid #dc2626;">
+                <div class="card-body" style="padding:20px;">
+                    <div style="font-size:.78rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-arrow-up-circle"></i> Dépenses du mois
+                    </div>
+                    <div style="font-size:2rem; font-weight:800; color:#dc2626; margin-top:6px;">
+                        − {{ depenses_mois|number_format(2, ',', ' ') }} €
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ============================================================
+       GRAPHE ÉVOLUTION 12 MOIS — Chart.js
+       Le graphe est rendu côté JS : on injecte les données via data-attributes
+       sur un container pour ne pas mélanger JS et Twig en escape hell.
+       ============================================================ #}
+    <div class="card-mabb" style="margin-bottom:20px;">
+        <div class="card-header">
+            <i class="bi bi-graph-up"></i> Évolution sur 12 mois
+        </div>
+        <div class="card-body">
+            <canvas id="evolutionChart"
+                    style="max-height:280px;"
+                    data-labels='{{ evolution_12_mois|keys|json_encode|raw }}'
+                    data-recettes='[{% for v in evolution_12_mois %}{{ v.recettes }}{% if not loop.last %},{% endif %}{% endfor %}]'
+                    data-depenses='[{% for v in evolution_12_mois %}{{ v.depenses }}{% if not loop.last %},{% endif %}{% endfor %}]'></canvas>
+        </div>
+    </div>
+
+    {# ============================================================
+       PAR CATÉGORIE — agrégation du mois en cours
+       ============================================================ #}
+    {% if par_categorie|length > 0 %}
+        <div class="card-mabb" style="margin-bottom:20px;">
+            <div class="card-header">
+                <i class="bi bi-pie-chart"></i> Par catégorie — ce mois
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for ligne in par_categorie %}
+                        {% set is_recette = ligne.type == 'RECETTE' %}
+                        {% set label = constant('App\\Entity\\Sport\\OperationTresorerie::CATEGORIES_LABELS')[ligne.categorie] ?? ligne.categorie %}
+                        <div class="col-md-6">
+                            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:{{ is_recette ? '#f0fdf4' : '#fef2f2' }}; border-left:3px solid {{ is_recette ? '#10b981' : '#dc2626' }}; border-radius:6px;">
+                                <div>
+                                    <strong style="color:var(--mabb-dark); font-size:.92rem;">{{ label }}</strong>
+                                    <div style="font-size:.72rem; color:var(--mabb-muted);">{{ ligne.nb }} opération{{ ligne.nb > 1 ? 's' : '' }}</div>
+                                </div>
+                                <div style="font-weight:700; color:{{ is_recette ? '#10b981' : '#dc2626' }};">
+                                    {{ is_recette ? '+' : '−' }} {{ ligne.total|number_format(2, ',', ' ') }} €
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {# ============================================================
+       LISTE DES DERNIÈRES OPÉRATIONS
+       ============================================================ #}
+    <div class="card-mabb">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i class="bi bi-list-ul"></i> Dernières opérations ({{ operations|length }})</span>
+            <small style="color:var(--mabb-muted); font-weight:500;">30 dernières</small>
+        </div>
+        <div class="card-body" style="padding:0;">
+            {% if operations is empty %}
+                <div style="text-align:center; padding:40px 20px;">
+                    <i class="bi bi-inbox" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                    <p style="margin-top:12px; color:var(--mabb-muted);">Aucune opération enregistrée.</p>
+                    <a href="{{ path('manager_tresorerie_operation_new') }}" class="btn-mabb-primary mt-2">
+                        Enregistrer la première opération
+                    </a>
+                </div>
+            {% else %}
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f9fafb; border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Date</th>
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Libellé</th>
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Catégorie</th>
+                                <th style="padding:10px 14px; text-align:right; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Montant</th>
+                                <th style="padding:10px 14px; text-align:center; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Justif.</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for op in operations %}
+                                {% set is_recette = op.type == 'RECETTE' %}
+                                <tr style="border-bottom:1px solid #f3f4f6;">
+                                    <td style="padding:10px 14px; font-size:.85rem; color:var(--mabb-muted); white-space:nowrap;">
+                                        {{ op.date|date('d/m/Y') }}
+                                    </td>
+                                    <td style="padding:10px 14px;">
+                                        <a href="{{ path('manager_tresorerie_operation_show', {id: op.id}) }}" style="color:var(--mabb-dark); font-weight:600; text-decoration:none;">
+                                            {{ op.libelle }}
+                                        </a>
+                                    </td>
+                                    <td style="padding:10px 14px; font-size:.82rem; color:var(--mabb-muted);">
+                                        {{ op.categorieLabel }}
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right; font-weight:700; color:{{ is_recette ? '#10b981' : '#dc2626' }}; white-space:nowrap;">
+                                        {{ is_recette ? '+' : '−' }} {{ op.montant|number_format(2, ',', ' ') }} €
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:center;">
+                                        {% if op.hasJustificatif %}
+                                            <a href="{{ path('manager_tresorerie_justificatif', {id: op.id}) }}" target="_blank" title="Voir le justificatif" style="color:var(--mabb-blue);">
+                                                <i class="bi bi-paperclip"></i>
+                                            </a>
+                                        {% else %}
+                                            <span style="color:#d1d5db;">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right;">
+                                        <a href="{{ path('manager_tresorerie_operation_show', {id: op.id}) }}" style="color:var(--mabb-muted);">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Graphe évolution 12 mois — Chart.js
+        // Les données viennent de data-attributes sur le canvas (pas de mix JS/Twig).
+        (function() {
+            const canvas = document.getElementById('evolutionChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            const labels   = JSON.parse(canvas.dataset.labels);
+            const recettes = JSON.parse(canvas.dataset.recettes);
+            const depenses = JSON.parse(canvas.dataset.depenses);
+
+            // Convertir "YYYY-MM" en "MMM YY" lisible
+            const moisLabels = labels.map(l => {
+                const [y, m] = l.split('-');
+                const noms = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+                return noms[parseInt(m, 10) - 1] + ' ' + y.slice(2);
+            });
+
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: moisLabels,
+                    datasets: [
+                        { label: 'Recettes', data: recettes, backgroundColor: '#10b981' },
+                        { label: 'Dépenses', data: depenses, backgroundColor: '#dc2626' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: v => v.toLocaleString('fr-FR') + ' €' }
+                        }
+                    }
+                }
+            });
+        })();
+    </script>
+{% endblock %}

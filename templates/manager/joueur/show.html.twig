@@ -469,5 +469,18 @@
             joueur: joueur,
             is_self: joueur.user is not null and app.user is not null and joueur.user.id == app.user.id
         } only %}
+
+        {# ========================================================
+           Section "Cotisation licence" — Bureau D.3.2
+           Visible par : joueur lui-même (is_self) + staff/coach/trésorier
+           (déjà filtré via CLUB_MEMBER plus haut + RGPD bloc 5).
+           cotisation_courante peut être null si pas générée pour la saison.
+           ======================================================== #}
+        {% include 'manager/joueur/_cotisation_section.html.twig' with {
+            joueur:       joueur,
+            cotisation:   cotisation_courante,
+            is_self:      is_self,
+            is_tresorier: is_tresorier
+        } only %}
     </div>
 {% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Mes notes de frais{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-receipt"></i> Mes notes de frais</h1>
+            <p class="subtitle">Demandes de remboursement déposées dans <strong>{{ club.nom }}</strong></p>
+        </div>
+        <a href="{{ path('manager_note_frais_new') }}" class="btn-mabb-orange">
+            <i class="bi bi-plus-lg"></i> Nouvelle note
+        </a>
+    </div>
+
+    {% if notes is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:40px 20px;">
+                <i class="bi bi-receipt" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                <p style="margin-top:12px; color:var(--mabb-muted);">Aucune note de frais déposée.</p>
+                <a href="{{ path('manager_note_frais_new') }}" class="btn-mabb-primary mt-2">
+                    Déposer ma première note
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            {% for n in notes %}
+                {% set color = n.statut == 'VALIDEE' ? '#10b981' : (n.statut == 'REJETEE' ? '#dc2626' : '#f59e0b') %}
+                {% set bg    = n.statut == 'VALIDEE' ? '#f0fdf4' : (n.statut == 'REJETEE' ? '#fef2f2' : '#fef9e7') %}
+                {% set icon  = n.statut == 'VALIDEE' ? 'bi-check-circle-fill' : (n.statut == 'REJETEE' ? 'bi-x-circle-fill' : 'bi-hourglass-split') %}
+
+                <a href="{{ path('manager_note_frais_show', {id: n.id}) }}" style="text-decoration:none; color:inherit;">
+                    <div class="card-mabb" style="border-left:4px solid {{ color }}; cursor:pointer; transition:transform .15s;"
+                         onmouseover="this.style.transform='translateX(3px)'"
+                         onmouseout="this.style.transform='none'">
+                        <div class="card-body" style="display:flex; align-items:center; gap:14px; padding:14px 18px;">
+                            <div style="width:42px; height:42px; border-radius:10px; background:{{ bg }}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="bi {{ icon }}" style="color:{{ color }}; font-size:1.3rem;"></i>
+                            </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:.7rem; font-weight:700; color:{{ color }}; text-transform:uppercase; letter-spacing:.05em;">
+                                    {{ n.statutLabel }}
+                                </div>
+                                <div style="font-weight:600; color:var(--mabb-dark); font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                    {{ n.libelle }}
+                                </div>
+                                <div style="font-size:.78rem; color:var(--mabb-muted);">
+                                    Dépense du {{ n.dateDepense|date('d/m/Y') }} · déposée le {{ n.createdAt|date('d/m/Y') }}
+                                </div>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div style="font-weight:700; font-size:1.05rem; color:{{ color }};">
+                                    {{ n.montant|number_format(2, ',', ' ') }} €
+                                </div>
+                                {% if n.hasAttribute is not defined %}{# placeholder pour cohérence #}{% endif %}
+                            </div>
+                            <i class="bi bi-chevron-right" style="color:var(--mabb-muted); flex-shrink:0;"></i>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}
