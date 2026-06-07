@@ -1,0 +1,157 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{% block title %}Planning — MABB Amiens Métropole Basket Ball{% endblock %}
+{% block meta_description %}Le planning des entraînements MABB par équipe : horaires, gymnases, coachs. {% endblock %}
+
+{% block body %}
+
+{# ===== HEADER ===== #}
+<div class="page-header">
+    <div class="container text-center">
+        <span class="badge-label mb-3">
+            <i class="bi bi-calendar3 me-1"></i>
+            {{ saison_data.libelle }}
+        </span>
+        <h1>Planning des entraînements</h1>
+        <p style="color:rgba(255,255,255,.75)">
+            Toutes les équipes — jours, horaires, gymnases
+        </p>
+        <nav aria-label="breadcrumb" class="mt-3">
+            <ol class="breadcrumb justify-content-center">
+                <li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}" style="color:#fff">Accueil</a></li>
+                <li class="breadcrumb-item active" style="color:#fc702a;font-weight:600">
+                    <i class="bi bi-calendar3 me-1"></i>Planning
+                </li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+{# ===== SÉLECTEUR DE SAISON ===== #}
+<section class="section section-gray" style="padding-top:32px; padding-bottom:32px;">
+    <div class="container">
+        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <div>
+                <label for="saisonSelect" class="form-label fw-bold mb-1" style="color:var(--mabb-dark)">
+                    <i class="bi bi-calendar-range"></i> Choisir une saison
+                </label>
+                <p class="text-muted mb-0" style="font-size:.85rem;">
+                    Le planning évolue chaque saison — sélectionne la saison qui t'intéresse.
+                </p>
+            </div>
+            <form method="get" action="{{ path('vitrine_planning') }}" style="min-width:280px;">
+                <select id="saisonSelect" name="saison" onchange="this.form.submit()"
+                        class="form-select fw-semibold" style="padding:10px 14px; border:2px solid var(--mabb-blue); border-radius:10px;">
+                    {% for saison in saisons_disponibles %}
+                        <option value="{{ saison.key }}" {{ saison.key == saison_selectionnee ? 'selected' }}>
+                            {{ saison.libelle }}{% if saison.active %} (en cours){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+</section>
+
+{# ===== GYMNASES ===== #}
+{% if saison_data.gymnases is not empty %}
+<section class="section">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="section-title text-white">Nos <span>gymnases</span></h2>
+            <p class="section-subtitle text-white-force">3 lieux d'entraînement à travers Amiens</p>
+        </div>
+        <div class="row g-3">
+            {% for g in saison_data.gymnases %}
+                <div class="col-md-4">
+                    <div class="card card-mabb h-100 p-4" style="border-left:4px solid {{ g.couleur ?? 'var(--mabb-blue)' }}">
+                        <div style="display:flex; gap:12px; align-items:flex-start;">
+                            <div style="width:48px; height:48px; border-radius:10px; background:{{ g.couleur ?? 'var(--mabb-blue)' }}15; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <i class="bi bi-geo-alt-fill" style="color:{{ g.couleur ?? 'var(--mabb-blue)' }}; font-size:1.3rem;"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">{{ g.nom }}</h5>
+                                <p class="text-muted mb-0" style="font-size:.85rem;">{{ g.adresse }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# ===== CRÉNEAUX PAR ÉQUIPE ===== #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">Créneaux par <span>équipe</span></h2>
+            <p class="section-subtitle">Trouve les horaires qui correspondent à ta catégorie</p>
+        </div>
+
+        {% if creneaux_par_equipe is empty %}
+            <div class="text-center py-5">
+                <i class="bi bi-calendar-x" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                <p class="text-muted mt-3">Aucun créneau disponible pour cette saison.</p>
+            </div>
+        {% else %}
+            <div class="row g-4">
+                {% for equipe, creneaux in creneaux_par_equipe %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card card-mabb h-100 p-0" style="overflow:hidden; border-top:4px solid var(--mabb-orange);">
+                            <div style="padding:18px 20px 14px; background:linear-gradient(135deg, var(--mabb-dark), var(--mabb-blue)); color:#fff;">
+                                <h5 class="fw-bold mb-1">{{ equipe }}</h5>
+                                <small style="color:rgba(255,255,255,.7); font-size:.78rem;">
+                                    {{ creneaux|length }} créneau{{ creneaux|length > 1 ? 'x' : '' }} par semaine
+                                </small>
+                            </div>
+                            <div style="padding:14px 18px;">
+                                {% for c in creneaux %}
+                                    <div class="d-flex gap-3 align-items-start" style="padding:10px 0; {% if not loop.last %}border-bottom:1px solid #e5e7eb;{% endif %}">
+                                        <div style="min-width:80px;">
+                                            <div style="font-weight:700; color:var(--mabb-dark); font-size:.92rem;">
+                                                <i class="bi bi-clock me-1" style="color:var(--mabb-orange); font-size:.85rem;"></i>{{ c.jour }}
+                                            </div>
+                                            <div style="font-size:.82rem; color:var(--mabb-blue); font-weight:600;">{{ c.horaire }}</div>
+                                        </div>
+                                        <div style="flex:1; font-size:.82rem;">
+                                            <div style="color:var(--mabb-muted);">
+                                                <i class="bi bi-geo-alt"></i> {{ c.gymnase }}
+                                            </div>
+                                            {% if c.coach is defined and c.coach %}
+                                                <div style="color:var(--mabb-muted); margin-top:2px;">
+                                                    <i class="bi bi-person"></i> Coach : {{ c.coach }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+{# ===== CTA INSCRIPTION ===== #}
+<section class="section">
+    <div class="container text-center">
+        <h3 class="section-title text-white">Tu veux <span>rejoindre</span> le club ?</h3>
+        <p class="text-white-force fs-5 mb-4">
+            Inscriptions ouvertes toute la saison — viens essayer un créneau gratuitement avant de t'engager.
+        </p>
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a href="{{ path('vitrine_contact') }}" class="btn btn-mabb rounded-pill px-4">
+                <i class="bi bi-envelope me-1"></i>Nous contacter
+            </a>
+            <a href="{{ path('vitrine_equipes') }}" class="btn btn-outline-light rounded-pill px-4">
+                <i class="bi bi-people me-1"></i>Découvrir nos équipes
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

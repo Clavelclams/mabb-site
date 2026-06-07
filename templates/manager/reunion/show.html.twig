@@ -1,0 +1,318 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ reunion.titre }}{% endblock %}
+
+{% block body %}
+    {% set statut_color = {'planifie': '#3b82f6', 'tenue': '#16a34a', 'annulee': '#dc2626'} %}
+    {% set statut_libelle = {'planifie': 'Planifiée', 'tenue': 'Tenue', 'annulee': 'Annulée'} %}
+
+    <div class="page-header">
+        <div>
+            <h1>{{ reunion.titre }}</h1>
+            <p class="subtitle">
+                <strong style="color:var(--mabb-orange);">{{ reunion.typeLibelle }}</strong>
+                · {{ reunion.date|date('l d F Y à H:i', 'Europe/Paris')|capitalize }}
+                {% if reunion.lieu %} · {{ reunion.lieu }}{% endif %}
+                <span style="background:{{ statut_color[reunion.statut] }}15; color:{{ statut_color[reunion.statut] }}; padding:3px 12px; border-radius:12px; font-size:.75rem; font-weight:700; margin-left:8px;">
+                    {{ statut_libelle[reunion.statut] }}
+                </span>
+            </p>
+        </div>
+        <a href="{{ path('manager_reunion_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Toutes les réunions
+        </a>
+    </div>
+
+    <div class="row g-3">
+        {# === Ordre du jour === #}
+        <div class="col-lg-6">
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-list-ol"></i> Ordre du jour</div>
+                <div class="card-body" style="white-space:pre-wrap; font-family:inherit; line-height:1.7;">{{ reunion.ordreDuJour }}</div>
+            </div>
+        </div>
+
+        {# === Convoqués + présences === #}
+        <div class="col-lg-6">
+            <div class="card-mabb">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="bi bi-people"></i> Convoqués ({{ reunion.convocations|length }})</span>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    {% if reunion.convocations|length == 0 %}
+                        <p class="text-muted text-center" style="padding:30px;">Aucun convoqué.</p>
+                    {% else %}
+                        {% set presence_color = {
+                            'convoque': '#64748b',
+                            'present':  '#16a34a',
+                            'excuse':   '#f59e0b',
+                            'absent':   '#dc2626'
+                        } %}
+                        {% set presence_libelle = {
+                            'convoque': 'Convoqué',
+                            'present':  'Présent',
+                            'excuse':   'Excusé',
+                            'absent':   'Absent'
+                        } %}
+                        <table class="table-mabb" style="width:100%; margin:0;">
+                            <tbody>
+                                {% for c in reunion.convocations %}
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight:600;">{{ c.user.prenom }} {{ c.user.nom }}</div>
+                                            <small style="color:var(--mabb-muted);">{{ c.user.email }}</small>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            {% if is_granted('CLUB_STAFF', reunion) and reunion.isPlanifiee == false %}
+                                                <form method="post" action="{{ path('manager_reunion_presence', {id: c.id}) }}" style="display:inline;">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('presence_' ~ c.id) }}">
+                                                    <select name="statut" onchange="this.form.submit()" style="padding:4px 8px; border:1px solid {{ presence_color[c.statut] }}; color:{{ presence_color[c.statut] }}; border-radius:6px; font-size:.78rem; font-weight:600; background:{{ presence_color[c.statut] }}10;">
+                                                        <option value="convoque" {{ c.statut == 'convoque' ? 'selected' }}>Convoqué</option>
+                                                        <option value="present"  {{ c.statut == 'present'  ? 'selected' }}>Présent</option>
+                                                        <option value="excuse"   {{ c.statut == 'excuse'   ? 'selected' }}>Excusé</option>
+                                                        <option value="absent"   {{ c.statut == 'absent'   ? 'selected' }}>Absent</option>
+                                                    </select>
+                                                </form>
+                                            {% else %}
+                                                <span style="background:{{ presence_color[c.statut] }}15; color:{{ presence_color[c.statut] }}; padding:3px 10px; border-radius:8px; font-size:.75rem; font-weight:700;">
+                                                    {{ presence_libelle[c.statut] }}
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# === PV — édition pour staff, lecture pour convoqués === #}
+        <div class="col-12">
+            <div class="card-mabb" style="border-left:4px solid {{ reunion.hasPv ? '#16a34a' : 'var(--mabb-orange)' }};">
+                <div class="card-header">
+                    <i class="bi bi-file-text"></i>
+                    Compte-rendu (PV)
+                    {% if reunion.hasPv %}
+                        <span style="background:#16a34a15; color:#16a34a; padding:3px 10px; border-radius:8px; font-size:.7rem; font-weight:700; margin-left:8px;">✅ Saisi</span>
+                    {% else %}
+                        <span style="background:var(--mabb-orange)15; color:var(--mabb-orange); padding:3px 10px; border-radius:8px; font-size:.7rem; font-weight:700; margin-left:8px;">⏳ À saisir</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if is_granted('CLUB_STAFF', reunion) %}
+                        <form method="post" action="{{ path('manager_reunion_pv', {id: reunion.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('pv_reunion_' ~ reunion.id) }}">
+                            <textarea name="pvContenu" rows="15"
+                                      placeholder="Saisir le compte-rendu de la réunion ici…&#10;&#10;Format suggéré :&#10;1. Point 1 : décisions prises&#10;2. Point 2 : décisions prises&#10;..."
+                                      style="width:100%; padding:14px 16px; border:1px solid #d1d5db; border-radius:8px; font-size:.92rem; font-family:inherit; line-height:1.6;">{{ reunion.pvContenu }}</textarea>
+                            <small class="text-muted">La saisie du PV passe automatiquement la réunion au statut "Tenue".</small>
+                            <div style="margin-top:14px; display:flex; gap:10px; justify-content:flex-end;">
+                                <button type="submit" class="btn-mabb-primary">
+                                    <i class="bi bi-save"></i> Enregistrer le PV
+                                </button>
+                            </div>
+                        </form>
+                    {% elseif reunion.hasPv %}
+                        <div style="white-space:pre-wrap; line-height:1.7;">{{ reunion.pvContenu }}</div>
+                    {% else %}
+                        <p class="text-muted text-center" style="padding:20px;">
+                            <i class="bi bi-hourglass-split"></i> Le compte-rendu n'a pas encore été saisi.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# === DOCUMENTS ATTACHÉS (Phase F) === #}
+        <div class="col-12">
+            <div class="card-mabb" style="border-left:4px solid #8b5cf6;">
+                <div class="card-header"><i class="bi bi-paperclip"></i> Documents attachés ({{ reunion.documents|length }})</div>
+                <div class="card-body">
+                    {% if reunion.documents|length > 0 %}
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:10px; margin-bottom:14px;">
+                            {% for doc in reunion.documents %}
+                                <div style="display:flex; gap:10px; align-items:center; padding:10px 12px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
+                                    <i class="bi {{ doc.icone }}" style="color:#8b5cf6; font-size:1.6rem; flex-shrink:0;"></i>
+                                    <div style="flex:1; min-width:0;">
+                                        <a href="{{ path('manager_reunion_document_serve', {id: doc.id}) }}" target="_blank"
+                                           style="font-weight:600; color:var(--mabb-dark); text-decoration:none; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                            {{ doc.nomOriginal }}
+                                        </a>
+                                        <small style="color:var(--mabb-muted); font-size:.72rem;">
+                                            {{ doc.tailleHumaine }}
+                                            {% if doc.uploadePar %} · {{ doc.uploadePar.prenom }}{% endif %}
+                                            · {{ doc.createdAt|date('d/m/Y') }}
+                                        </small>
+                                    </div>
+                                    {% if is_granted('CLUB_STAFF', reunion) %}
+                                        <form method="post" action="{{ path('manager_reunion_document_delete', {id: doc.id}) }}"
+                                              onsubmit="return confirm('Supprimer ce document ?');" style="display:inline;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('delete_doc_' ~ doc.id) }}">
+                                            <button type="submit" title="Supprimer" style="background:transparent; border:0; color:#dc2626; cursor:pointer; padding:4px;">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted" style="font-size:.85rem; margin-bottom:14px;">Aucun document attaché pour le moment.</p>
+                    {% endif %}
+
+                    {% if is_granted('CLUB_STAFF', reunion) %}
+                        <form method="post" action="{{ path('manager_reunion_document_upload', {id: reunion.id}) }}" enctype="multipart/form-data"
+                              style="display:flex; gap:10px; align-items:center;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('upload_doc_' ~ reunion.id) }}">
+                            <label style="flex:1; display:flex; align-items:center; gap:10px; padding:10px 14px; background:#faf5ff; border:2px dashed #c4b5fd; border-radius:8px; cursor:pointer;">
+                                <i class="bi bi-cloud-upload" style="color:#8b5cf6; font-size:1.3rem;"></i>
+                                <span style="color:#6b21a8; font-weight:600; font-size:.88rem;">Joindre un fichier (PDF, Word, Excel, image — max 10 Mo)</span>
+                                <input type="file" name="document" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.jpg,.jpeg,.png,.webp,.txt"
+                                       onchange="this.form.submit()" style="display:none;">
+                            </label>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# === SYNTHÈSE PUBLIQUE (Phase F) === #}
+        {% if is_granted('CLUB_STAFF', reunion) or (reunion.isSynthesePubliee and reunion.hasSynthese) %}
+            <div class="col-12">
+                <div class="card-mabb" style="border-left:4px solid {{ reunion.isSynthesePubliee ? '#16a34a' : '#f59e0b' }};">
+                    <div class="card-header">
+                        <i class="bi bi-megaphone"></i> Synthèse publique
+                        {% if reunion.isSynthesePubliee %}
+                            <span style="background:#16a34a15; color:#16a34a; padding:3px 10px; border-radius:8px; font-size:.7rem; font-weight:700; margin-left:8px;">📢 Publiée à : {{ reunion.syntheseVisibleRoles|join(', ') }}</span>
+                        {% elseif reunion.hasSynthese %}
+                            <span style="background:#f59e0b15; color:#92400e; padding:3px 10px; border-radius:8px; font-size:.7rem; font-weight:700; margin-left:8px;">📝 Brouillon (non publiée)</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if is_granted('CLUB_STAFF', reunion) %}
+                            <form method="post" action="{{ path('manager_reunion_synthese', {id: reunion.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('synthese_' ~ reunion.id) }}">
+                                <p class="text-muted small mb-2">
+                                    La synthèse est une version courte du PV destinée à diffuser certaines décisions.
+                                    Choisis ci-dessous quels rôles peuvent y accéder. Si aucun rôle coché → brouillon (staff seul).
+                                </p>
+                                <textarea name="synthesePublique" rows="6"
+                                          placeholder="Résumé de la réunion en quelques lignes…&#10;Décisions clés, prochaines étapes."
+                                          style="width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:8px; font-size:.92rem; font-family:inherit; line-height:1.5;">{{ reunion.synthesePublique }}</textarea>
+
+                                {# === SÉLECTEUR DE RÔLES AUTORISÉS (Phase F.2) === #}
+                                {% set roles_disponibles = ['DIRIGEANT', 'COACH', 'STAFF', 'JOUEUR', 'PARENT', 'BENEVOLE', 'EMPLOYE'] %}
+                                {% set role_color = {
+                                    'DIRIGEANT': '#8b5cf6',
+                                    'COACH':     'var(--mabb-blue)',
+                                    'STAFF':     '#0891b2',
+                                    'JOUEUR':    'var(--mabb-orange)',
+                                    'PARENT':    '#ec4899',
+                                    'BENEVOLE':  '#22c55e',
+                                    'EMPLOYE':   '#0d9488'
+                                } %}
+                                {% set roles_actifs = reunion.syntheseVisibleRoles %}
+
+                                <div style="margin-top:16px; padding:14px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                        <strong style="font-size:.88rem; color:var(--mabb-dark);">
+                                            <i class="bi bi-eye"></i> Qui peut voir la synthèse ?
+                                        </strong>
+                                        <div style="display:flex; gap:6px;">
+                                            <button type="button" onclick="document.querySelectorAll('input[name=\'rolesVisibles[]\']').forEach(c => c.checked = true);"
+                                                    style="background:transparent; border:1px solid var(--mabb-blue); color:var(--mabb-blue); padding:3px 8px; border-radius:6px; font-size:.72rem; font-weight:600; cursor:pointer;">
+                                                Tout cocher
+                                            </button>
+                                            <button type="button" onclick="document.querySelectorAll('input[name=\'rolesVisibles[]\']').forEach(c => c.checked = false);"
+                                                    style="background:transparent; border:1px solid var(--mabb-muted); color:var(--mabb-muted); padding:3px 8px; border-radius:6px; font-size:.72rem; font-weight:600; cursor:pointer;">
+                                                Tout décocher
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                        {% for role in roles_disponibles %}
+                                            {% set est_actif = role in roles_actifs %}
+                                            <label style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:{{ est_actif ? role_color[role] ~ '15' : '#fff' }}; border:1.5px solid {{ est_actif ? role_color[role] : '#d1d5db' }}; border-radius:20px; cursor:pointer; transition:all .15s;"
+                                                   onmouseover="this.style.borderColor='{{ role_color[role] }}'"
+                                                   onmouseout="this.style.borderColor='{{ est_actif ? role_color[role] : '#d1d5db' }}'">
+                                                <input type="checkbox" name="rolesVisibles[]" value="{{ role }}" {{ est_actif ? 'checked' }} style="margin:0;">
+                                                <span style="color:{{ role_color[role] }}; font-weight:700; font-size:.78rem;">{{ role }}</span>
+                                            </label>
+                                        {% endfor %}
+                                    </div>
+                                    <small style="display:block; margin-top:10px; color:var(--mabb-muted); font-size:.72rem;">
+                                        <i class="bi bi-info-circle"></i>
+                                        Exemples : "DIRIGEANT + COACH" pour une note de bureau · "PARENT + JOUEUR" pour une annonce familles · "BENEVOLE" pour une info bénévoles
+                                    </small>
+                                </div>
+
+                                <div style="display:flex; gap:14px; align-items:center; margin-top:14px;">
+                                    <button type="submit" class="btn-mabb-primary" style="margin-left:auto;">
+                                        <i class="bi bi-save"></i> Enregistrer la synthèse
+                                    </button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div style="white-space:pre-wrap; line-height:1.7;">{{ reunion.synthesePublique }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# === HISTORIQUE DES VERSIONS DU PV (Phase F) === #}
+        {% if is_granted('CLUB_STAFF', reunion) and reunion.pvVersions|length > 0 %}
+            <div class="col-12">
+                <div class="card-mabb">
+                    <div class="card-header">
+                        <i class="bi bi-clock-history"></i> Versions précédentes du PV ({{ reunion.pvVersions|length }})
+                        <small style="color:var(--mabb-muted); font-weight:500; margin-left:8px;">— audit trail anti-perte de données</small>
+                    </div>
+                    <div class="card-body">
+                        {% for version in reunion.pvVersions %}
+                            <details style="margin-bottom:10px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px;">
+                                <summary style="cursor:pointer; padding:10px 14px; font-weight:600; display:flex; align-items:center; gap:10px;">
+                                    <i class="bi bi-file-text"></i>
+                                    Version du {{ version.createdAt|date('d/m/Y à H:i') }}
+                                    {% if version.modifiePar %}
+                                        <small style="color:var(--mabb-muted); font-weight:500;">— par {{ version.modifiePar.prenom }} {{ version.modifiePar.nom }}</small>
+                                    {% endif %}
+                                </summary>
+                                <div style="padding:14px 18px; background:#fff; border-top:1px solid #e5e7eb; white-space:pre-wrap; line-height:1.6; font-size:.9rem;">{{ version.contenuSnapshot }}</div>
+                            </details>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        {# === Actions admin : changer statut === #}
+        {% if is_granted('CLUB_STAFF', reunion) %}
+            <div class="col-12">
+                <div class="card-mabb" style="border:1px dashed #d1d5db;">
+                    <div class="card-body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <strong style="color:var(--mabb-muted); font-size:.85rem;">Actions :</strong>
+                        {% for statut in ['planifie', 'tenue', 'annulee'] %}
+                            {% if statut != reunion.statut %}
+                                <form method="post" action="{{ path('manager_reunion_statut', {id: reunion.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('statut_reunion_' ~ reunion.id) }}">
+                                    <input type="hidden" name="statut" value="{{ statut }}">
+                                    <button type="submit" class="btn-mabb-ghost" style="padding:5px 12px; font-size:.78rem; color:{{ statut_color[statut] }}; border-color:{{ statut_color[statut] }};">
+                                        → {{ statut_libelle[statut] }}
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endfor %}
+                        {% if reunion.createur %}
+                            <small style="color:var(--mabb-muted); margin-left:auto;">
+                                Créée par {{ reunion.createur.prenom }} {{ reunion.createur.nom }} le {{ reunion.createdAt|date('d/m/Y') }}
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

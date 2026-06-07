@@ -132,6 +132,17 @@
 				</div>
 			{% endfor %}
 		</div>
+
+		{# CTA vers la page dédiée Employés — découverte de l'équipe pro complète #}
+		<div class="text-center mt-5">
+			<a href="{{ path('vitrine_employes') }}" class="btn rounded-pill px-4 py-2 fw-semibold"
+			   style="background:var(--mabb-orange);color:#fff;border:2px solid var(--mabb-orange);transition:all .2s;"
+			   onmouseover="this.style.background='#fff';this.style.color='var(--mabb-orange)';"
+			   onmouseout="this.style.background='var(--mabb-orange)';this.style.color='#fff';">
+				<i class="bi bi-people-fill me-2"></i>Découvrir tous nos employés
+				<i class="bi bi-arrow-right ms-2"></i>
+			</a>
+		</div>
 	</div>
 </section>
 

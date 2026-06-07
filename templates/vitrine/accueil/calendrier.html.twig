@@ -124,10 +124,15 @@
             {% endfor %}
         </div>
 
-        {# Lien Scorenco pour les résultats #}
+        {# Lien Scorenco — bouton lisible : bleu MABB sur fond clair, inverse au hover #}
         <div class="text-center">
             <p class="text-muted text-white-force">Pour les résultats et le calendrier des matchs officiels :</p>
-            <a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" class="btn btn-outline-mabb text-white-force" target="_blank">
+            <a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p"
+               target="_blank" rel="noopener"
+               class="btn rounded-pill px-4 py-2 fw-semibold"
+               style="background:#fff; color:var(--mabb-blue); border:2px solid var(--mabb-blue); transition:all .2s;"
+               onmouseover="this.style.background='var(--mabb-blue)'; this.style.color='#fff';"
+               onmouseout="this.style.background='#fff'; this.style.color='var(--mabb-blue)';">
                 <i class="bi bi-bar-chart-line me-2"></i>Résultats sur Scorenco
             </a>
         </div>

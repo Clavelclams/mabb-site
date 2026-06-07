@@ -5,10 +5,18 @@
 {% block body %}
     <div class="page-header">
         <div style="display:flex; align-items:center; gap: 20px;">
-            {# Avatar avec initiales (fallback en attendant les photos — V1 trombinoscope) #}
-            <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color: white; display:flex; align-items:center; justify-content:center; font-size: 1.8rem; font-weight: 800;">
-                {{ joueur.prenom|first|upper }}{{ joueur.nom|first|upper }}
-            </div>
+            {# Avatar : photo PIRB si la joueuse en a uploadé une, sinon fallback initiales.
+               La photo est gérée par la joueuse elle-même côté PIRB (RGPD : auto-détermination).
+               Côté Manager, lecture seule — pas d'upload, pas de suppression. #}
+            {% if joueur.photoPath %}
+                <img src="{{ asset('uploads/joueurs/' ~ joueur.photoPath) }}"
+                     alt="{{ joueur.nomComplet }}"
+                     style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 8px rgba(0,0,0,.15);">
+            {% else %}
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color: white; display:flex; align-items:center; justify-content:center; font-size: 1.8rem; font-weight: 800;">
+                    {{ joueur.prenom|first|upper }}{{ joueur.nom|first|upper }}
+                </div>
+            {% endif %}
             <div>
                 <h1 style="margin:0;">{{ joueur.prenom }} {{ joueur.nom }}</h1>
                 <p class="subtitle" style="margin-top: 6px;">
@@ -43,6 +51,33 @@
             {% endif %}
         </div>
     </div>
+
+    {# ========================================================
+       BLOC 5 — Filtre RGPD : qui peut voir la totalité de la fiche ?
+       Règle : STAFF/COACH/DIRIGEANT voient tout (gestion club).
+       La JOUEUSE ELLE-MÊME voit son propre profil complet.
+       Les autres (BENEVOLE, PARENT, autre JOUEUR, EMPLOYE) → vue limitée
+       à l'identité publique. Préparation pour PIRB V2 où chaque joueuse
+       pilotera elle-même ce qui est public sur son profil.
+       ======================================================== #}
+    {% set can_see_full_stats = is_granted('CLUB_STAFF', joueur)
+                             or (joueur.user is not null and app.user is not null and joueur.user.id == app.user.id) %}
+
+    {% if not can_see_full_stats %}
+        {# Bandeau informatif pour les vues restreintes #}
+        <div class="card-mabb" style="margin-bottom:16px; border-left:4px solid var(--mabb-blue);">
+            <div class="card-body" style="display:flex; gap:14px; align-items:center; padding:14px 18px;">
+                <i class="bi bi-shield-lock" style="color:var(--mabb-blue); font-size:1.4rem; flex-shrink:0;"></i>
+                <div style="font-size:.88rem;">
+                    <strong>Profil public</strong> — tu vois la fiche d'identité de cette joueuse.
+                    <br><small style="color:var(--mabb-muted);">
+                        Les stats détaillées et la gamification sont accessibles uniquement au staff
+                        et à la joueuse elle-même (RGPD).
+                    </small>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 
     <div class="row g-3">
         {# ========================================================
@@ -98,8 +133,9 @@
         </div>
 
         {# ========================================================
-           Colonne droite : stats (placeholders en attendant les modules)
+           Colonne droite : stats — VISIBLE STAFF + SELF UNIQUEMENT (RGPD)
            ======================================================== #}
+        {% if can_see_full_stats %}
         <div class="col-md-6">
             <div class="card-mabb">
                 <div class="card-header"><i class="bi bi-bar-chart-line"></i> Statistiques de présence</div>
@@ -117,9 +153,21 @@
                             </div>
                             <div style="color: var(--mabb-muted); font-size: .8rem;">Matchs joués</div>
                         </div>
+                        {# Eval moy. saison FIBA — remplace l'ancienne tuile "Moy. points" (réducteur).
+                           Couleur conditionnelle pour signaler le niveau global de la joueuse :
+                             >= 15 vert (dominant), 5-15 orange (solide), < 5 gris/rouge (raté). #}
                         <div class="col-6" style="text-align: center; padding: 12px;">
-                            <div style="font-size: 1.6rem; font-weight: 800; color: var(--mabb-muted);">—</div>
-                            <div style="color: var(--mabb-muted); font-size: .8rem;">Moy. points (à venir)</div>
+                            {% if performances_saison.eval_moyenne is not null %}
+                                {% set eval = performances_saison.eval_moyenne %}
+                                {% set color = eval >= 15 ? '#16a34a' : (eval >= 5 ? '#f59e0b' : (eval >= 0 ? '#64748b' : '#dc2626')) %}
+                                <div style="font-size: 1.6rem; font-weight: 800; color: {{ color }};" title="Eval FIBA moyenne sur {{ performances_saison.nb_matchs }} matchs">
+                                    {{ eval }}
+                                </div>
+                                <div style="color: var(--mabb-muted); font-size: .8rem;">Eval moy. saison</div>
+                            {% else %}
+                                <div style="font-size: 1.6rem; font-weight: 800; color: var(--mabb-muted);">—</div>
+                                <div style="color: var(--mabb-muted); font-size: .8rem;">Eval moy. saison</div>
+                            {% endif %}
                         </div>
                         <div class="col-6" style="text-align: center; padding: 12px;">
                             {% if taux_presence is not null %}
@@ -140,6 +188,7 @@
                 </div>
             </div>
         </div>
+        {% endif %} {# fin can_see_full_stats — Stats de présence #}
 
         {# ========================================================
            Card NOTES confidentielles — visible uniquement par le staff
@@ -168,8 +217,147 @@
         {% endif %}
 
         {# ========================================================
-           Gamification — XP, niveau, badges (saison courante)
+           Performances Éval FIBA — affiché uniquement si au moins 1 éval saisie.
+           Sinon la section reste cachée pour éviter l'effet "page vide".
+           VISIBLE STAFF + SELF UNIQUEMENT (RGPD).
            ======================================================== #}
+        {% if can_see_full_stats and performances_saison.nb_matchs > 0 %}
+        <div class="col-12">
+            <div class="card-mabb">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="bi bi-graph-up-arrow" style="color:var(--mabb-blue);"></i> Performances Éval — Saison {{ gamification.saison }}</span>
+                    <small style="color:var(--mabb-muted); font-weight:500;">
+                        {{ performances_saison.nb_matchs }} match{{ performances_saison.nb_matchs > 1 ? 's' : '' }} évalué{{ performances_saison.nb_matchs > 1 ? 's' : '' }}
+                    </small>
+                </div>
+                <div class="card-body">
+                    {# === Tuiles de moyennes ===
+                       Grille auto-fit : 1 tuile sur mobile, 4-6 sur desktop selon largeur.
+                       Toujours la même hauteur grâce à display:flex column. #}
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:24px;">
+                        {# Eval moyenne — couleur conditionnelle (le KPI signature) #}
+                        {% set evalMoy = performances_saison.eval_moyenne %}
+                        {% set evalColor = evalMoy >= 15 ? '#16a34a' : (evalMoy >= 5 ? '#f59e0b' : (evalMoy >= 0 ? '#64748b' : '#dc2626')) %}
+                        <div style="background:{{ evalColor }}11; border:1px solid {{ evalColor }}33; padding:14px; border-radius:10px; text-align:center;">
+                            <div style="font-size:1.8rem; font-weight:800; color:{{ evalColor }};">{{ evalMoy }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Eval moy. FIBA</div>
+                        </div>
+
+                        <div style="background:#fff7ed; padding:14px; border-radius:10px; text-align:center;">
+                            <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-orange);">{{ performances_saison.points_moyenne }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Pts / match</div>
+                        </div>
+
+                        <div style="background:#eff6ff; padding:14px; border-radius:10px; text-align:center;">
+                            <div style="font-size:1.8rem; font-weight:800; color:#0369a1;">{{ performances_saison.rebonds_moyenne }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Rebonds / match</div>
+                        </div>
+
+                        <div style="background:#f0fdf4; padding:14px; border-radius:10px; text-align:center;">
+                            <div style="font-size:1.8rem; font-weight:800; color:#15803d;">{{ performances_saison.passes_moyenne }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Passes déc.</div>
+                        </div>
+
+                        <div style="background:#fef3c7; padding:14px; border-radius:10px; text-align:center;">
+                            <div style="font-size:1.8rem; font-weight:800; color:#92400e;">
+                                {% if performances_saison.pourcentage_tirs is not null %}
+                                    {{ performances_saison.pourcentage_tirs }}<small style="font-size:1rem;">%</small>
+                                {% else %}—{% endif %}
+                            </div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">% tirs réussis</div>
+                        </div>
+
+                        {# Mises en valeur : meilleure eval + matchs dominants #}
+                        <div style="background:#fdf4ff; padding:14px; border-radius:10px; text-align:center; border:1px dashed #d8b4fe;">
+                            <div style="font-size:1.8rem; font-weight:800; color:#7c3aed;">{{ performances_saison.meilleure_eval }}</div>
+                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Meilleure éval</div>
+                        </div>
+
+                        {% if performances_saison.nb_matchs_dominants > 0 %}
+                            <div style="background:#dcfce7; padding:14px; border-radius:10px; text-align:center;">
+                                <div style="font-size:1.8rem; font-weight:800; color:#15803d;">
+                                    {{ performances_saison.nb_matchs_dominants }}<small style="font-size:1rem; color:var(--mabb-muted);">/{{ performances_saison.nb_matchs }}</small>
+                                </div>
+                                <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">🏆 Matchs dominants</div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# === Tableau des 5 derniers matchs ===
+                       Affichage compact avec eval colorée et stats clés. #}
+                    {% if evaluations_recentes|length > 0 %}
+                        <h4 style="margin:24px 0 12px; color:var(--mabb-dark); font-size:1rem;">
+                            <i class="bi bi-clock-history"></i> Derniers matchs évalués
+                        </h4>
+                        <div style="overflow-x:auto;">
+                            <table class="table-mabb" style="width:100%; font-size:.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Adversaire</th>
+                                        <th style="text-align:center;">Min</th>
+                                        <th style="text-align:center;">Pts</th>
+                                        <th style="text-align:center;">Reb</th>
+                                        <th style="text-align:center;">PD</th>
+                                        <th style="text-align:center;">% Tirs</th>
+                                        <th style="text-align:center; background:rgba(252,112,42,.1);">EVAL</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ev in evaluations_recentes %}
+                                        {% set r = ev.rencontre %}
+                                        {% set evalScore = ev.eval %}
+                                        {% set evalColor = evalScore >= 15 ? '#16a34a' : (evalScore >= 5 ? '#f59e0b' : (evalScore >= 0 ? '#64748b' : '#dc2626')) %}
+                                        <tr>
+                                            <td style="font-size:.78rem;">
+                                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none;">
+                                                    {{ r.date|date('d/m/Y') }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none; font-weight:600;">
+                                                    {{ r.adversaire }}
+                                                    {% if not r.domicile %}<small style="color:var(--mabb-muted);">(ext.)</small>{% endif %}
+                                                </a>
+                                                {% if ev.isStarter %}<span title="Titulaire" style="color:var(--mabb-orange);">⭐</span>{% endif %}
+                                            </td>
+                                            <td style="text-align:center;">{{ ev.minutesJouees }}</td>
+                                            <td style="text-align:center; font-weight:600;">{{ ev.points }}</td>
+                                            <td style="text-align:center;">{{ ev.rebonds }}</td>
+                                            <td style="text-align:center;">{{ ev.passesDecisives }}</td>
+                                            <td style="text-align:center;">
+                                                {% if ev.pourcentageTirs is not null %}
+                                                    {{ ev.pourcentageTirs }}%
+                                                {% else %}—{% endif %}
+                                            </td>
+                                            <td style="text-align:center; font-weight:800; color:{{ evalColor }}; background:{{ evalColor }}0d;">
+                                                {{ evalScore }}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+
+                    {# === Message pédagogique anti-réductionnisme ===
+                       Rappel volontaire que l'eval n'est pas LA vérité — c'est UN indicateur. #}
+                    <p style="margin:16px 0 0; padding:12px 14px; background:#fef9e7; border-left:3px solid #f59e0b; font-size:.78rem; color:#78350f; border-radius:0 6px 6px 0;">
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>L'éval ne fait pas tout.</strong> Une joueuse peut avoir une éval faible
+                        et être ESSENTIELLE pour l'équipe (défense, leadership, énergie). C'est un outil
+                        pour discuter, pas pour classer.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ========================================================
+           Gamification — XP, niveau, badges (saison courante)
+           VISIBLE STAFF + SELF UNIQUEMENT (RGPD).
+           ======================================================== #}
+        {% if can_see_full_stats %}
         <div class="col-12">
             <div class="card-mabb">
                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
@@ -270,28 +458,16 @@
                 </div>
             </div>
         </div>
+        {% endif %} {# fin can_see_full_stats — Gamification #}
 
         {# ========================================================
-           Bandeau actions futures
+           Bloc Bilan saison & profil public — partial réutilisé sur page profil aussi
+           is_self : true si le user connecté EST cette joueuse (compte rattaché),
+           false si c'est le staff qui regarde une fiche externe.
            ======================================================== #}
-        <div class="col-12">
-            <div class="card-mabb" style="opacity: .55;">
-                <div class="card-header"><i class="bi bi-clipboard-data"></i> Bilan saison & profil public</div>
-                <div class="card-body" style="display:flex; gap:12px; flex-wrap: wrap;">
-                    <button class="btn-mabb-ghost" disabled>
-                        <i class="bi bi-journal-text"></i> Voir le bilan saison
-                    </button>
-                    <button class="btn-mabb-ghost" disabled>
-                        <i class="bi bi-person-bounding-box"></i> Voir le profil PIRB
-                    </button>
-                    <button class="btn-mabb-ghost" disabled>
-                        <i class="bi bi-camera"></i> Ajouter une photo
-                    </button>
-                    <span style="color: var(--mabb-muted); font-size: .85rem; align-self: center;">
-                        Modules à venir
-                    </span>
-                </div>
-            </div>
-        </div>
+        {% include 'manager/_partials/bloc_bilan_profil.html.twig' with {
+            joueur: joueur,
+            is_self: joueur.user is not null and app.user is not null and joueur.user.id == app.user.id
+        } only %}
     </div>
 {% endblock %}

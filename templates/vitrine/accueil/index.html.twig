@@ -142,10 +142,25 @@
                     scolaires et les quartiers prioritaires d'Amiens : école de mini-basket,
                     aide aux devoirs, stages gratuits Génération Basket, tournois 3x3.
                 </p>
+                {# ===== Lien Google Avis — URL "Donner un avis" directement =====
+                   Pour pointer DIRECTEMENT sur le formulaire d'avis Google, utiliser :
+                     https://search.google.com/local/writereview?placeid=<PLACE_ID>
+
+                   📍 Trouver le Place ID MABB :
+                     https://developers.google.com/maps/documentation/places/web-service/place-id
+                     → chercher "Amiens Métropole Basket Ball" → copier le Place ID (commence par "ChI...")
+                     → coller dans la variable `google_review_url` ci-dessous
+
+                   En attendant : URL fallback de la page "Avis" Google de MABB (meilleure qu'une simple
+                   recherche, mais ouvre la fiche Lecture seule au lieu du formulaire d'avis direct). #}
+                {% set google_review_url = 'https://www.google.com/search?sa=X&sca_esv=13664839709b14a6&sxsrf=ANbL-n60J-gmss4Mh9M31CuHTC_Tp2HPCw:1780390294217&q=Amiens+M%C3%A9tropole+Basket+Ball+(MABB)+Avis&rflfq=1&num=20&stick=H4sIAAAAAAAAAONgkxI2tzQwNDAwNzMwMbU0MjIwtDAx28DI-IpR0zE3MzWvWMH38MqSovyC_JxUBafE4uzUEiCVk6Og4evo5KSp4FiWWbyIlXi1AJdxs7tyAAAA&rldimm=7901007604592201846&tbm=lcl#lkt=LocalPoiReviews' %}
+                {# Quand tu as le Place ID, remplace par :
+                   {% set google_review_url = 'https://search.google.com/local/writereview?placeid=CHI_PLACE_ID_ICI' %} #}
+
                 <div class="d-flex flex-wrap gap-2 mt-3">
-                    <a href="https://www.google.com/search?q=Amiens+M%C3%A9tropole+Basket+Ball+%28MABB%29+Avis" target="_blank" rel="noopener" class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline text-decoration-none" title="Voir les avis Google sur MABB"><i class="bi bi-check-circle me-1"></i> Club Formateur <span class="badge-star">★★★</span></a>
-                    <a href="https://www.google.com/search?q=Amiens+M%C3%A9tropole+Basket+Ball+%28MABB%29+Avis" target="_blank" rel="noopener" class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline text-decoration-none" title="Voir les avis Google sur MABB"><i class="bi bi-check-circle me-1"></i> Citoyenneté <span class="badge-star">★★★</span></a>
-                    <a href="https://www.google.com/search?q=Amiens+M%C3%A9tropole+Basket+Ball+%28MABB%29+Avis" target="_blank" rel="noopener" class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline text-decoration-none" title="Voir les avis Google sur MABB"><i class="bi bi-check-circle me-1"></i> Mini Basket <span class="badge-star">★★★</span></a>
+                    <a href="{{ google_review_url }}" target="_blank" rel="noopener" class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline text-decoration-none" title="Donner un avis Google sur MABB"><i class="bi bi-check-circle me-1"></i> Club Formateur <span class="badge-star">★★★</span></a>
+                    <a href="{{ google_review_url }}" target="_blank" rel="noopener" class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline text-decoration-none" title="Donner un avis Google sur MABB"><i class="bi bi-check-circle me-1"></i> Citoyenneté <span class="badge-star">★★★</span></a>
+                    <a href="{{ google_review_url }}" target="_blank" rel="noopener" class="badge px-3 py-2 rounded-pill fw-bold badge-label-outline text-decoration-none" title="Donner un avis Google sur MABB"><i class="bi bi-check-circle me-1"></i> Mini Basket <span class="badge-star">★★★</span></a>
                 </div>
             </div>
             <div class="col-lg-6 text-center">
@@ -240,6 +255,56 @@
 			</div>
 		</div>
 	</section>
+
+		{# ===== DERNIÈRES PHOTOS — BLOC 4 V2 =====
+		   Affiche les 6 photos les plus récentes en mosaïque cliquable.
+		   Lien vers la galerie complète en bas. #}
+		<section class="section section-gray">
+			<div class="container">
+				<div class="text-center mb-5">
+					<h2 class="section-title">Dernières
+						<span>photos</span>
+					</h2>
+					<p class="section-subtitle">Le club en images — entraînements, matchs, animations</p>
+				</div>
+				{% if dernieres_photos is defined and dernieres_photos|length > 0 %}
+					<div class="row g-3">
+						{% for photo in dernieres_photos %}
+							<div class="col-6 col-md-4 col-lg-2">
+								<a href="{{ path('vitrine_galerie') }}" class="d-block text-decoration-none">
+									<div style="aspect-ratio:1/1; overflow:hidden; border-radius:12px; position:relative; box-shadow:0 2px 8px rgba(0,0,0,.1); transition:transform .25s, box-shadow .25s;"
+									     onmouseover="this.style.transform='scale(1.03)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.18)'"
+									     onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'">
+										<img src="{{ asset('uploads/galerie/' ~ photo.path) }}"
+										     alt="{{ photo.legende ?: photo.nom }}"
+										     loading="lazy"
+										     style="width:100%; height:100%; object-fit:cover; display:block;">
+										{% if photo.legende %}
+											<div style="position:absolute; bottom:0; left:0; right:0; padding:8px 10px; background:linear-gradient(to top, rgba(0,0,0,.7), transparent); color:#fff; font-size:.75rem;">
+												{{ photo.legende }}
+											</div>
+										{% endif %}
+									</div>
+								</a>
+							</div>
+						{% endfor %}
+					</div>
+					<div class="text-center mt-4">
+						<a href="{{ path('vitrine_galerie') }}" class="btn rounded-pill px-4 py-2 fw-semibold"
+						   style="background:var(--mabb-orange); color:#fff; border:2px solid var(--mabb-orange); transition:all .2s;"
+						   onmouseover="this.style.background='#fff'; this.style.color='var(--mabb-orange)';"
+						   onmouseout="this.style.background='var(--mabb-orange)'; this.style.color='#fff';">
+							<i class="bi bi-images me-1"></i>Voir toute la galerie
+							<i class="bi bi-arrow-right ms-1"></i>
+						</a>
+					</div>
+				{% else %}
+					<div class="text-center py-4">
+						<p class="text-muted">Aucune photo pour le moment.</p>
+					</div>
+				{% endif %}
+			</div>
+		</section>
 
 	{# ===== CTA INSCRIPTION : ===== #}
 	<section class="section-cta-inscription">

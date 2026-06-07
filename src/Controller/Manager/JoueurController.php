@@ -137,6 +137,8 @@ class JoueurController extends AbstractController
         \App\Repository\Sport\PresenceRepository $presenceRepository,
         \App\Gamification\XpCalculator $xpCalculator,
         \App\Repository\Sport\JoueurBadgeRepository $badgeRepository,
+        \App\Service\EvaluationCalculator $evaluationCalculator,
+        \App\Repository\Sport\EvaluationMatchRepository $evaluationMatchRepository,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $joueur);
 
@@ -191,6 +193,15 @@ class JoueurController extends AbstractController
         $details  = $xpCalculator->detailsSaison($joueur, $saison);
         $badges   = $badgeRepository->badgesPourJoueur($joueur, $saison);
 
+        // ====================================================================
+        // Performances Éval saison (FIBA) — moyennes + 5 derniers matchs
+        // ====================================================================
+        // 1 service injecté pour calcul des moyennes (agrégation centralisée),
+        // 1 repository pour la liste des derniers matchs (data access pur).
+        // Séparation Service/Repository assumée : moy = logique métier, list = data.
+        $performancesSaison    = $evaluationCalculator->moyennesSaison($joueur, $saison);
+        $evaluationsRecentes   = $evaluationMatchRepository->evaluationsRecentes($joueur, 5);
+
         return $this->render('manager/joueur/show.html.twig', [
             'joueur'              => $joueur,
             'age'                 => $age,
@@ -206,6 +217,8 @@ class JoueurController extends AbstractController
                 'saison'       => $saison,
                 'catalog'      => \App\Gamification\BadgeCatalog::all(),
             ],
+            'performances_saison' => $performancesSaison,
+            'evaluations_recentes' => $evaluationsRecentes,
         ]);
     }
 

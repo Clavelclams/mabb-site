@@ -1,0 +1,110 @@
+{#
+    PARTIAL — Bloc "Bilan saison & profil public"
+
+    Réutilisable sur :
+      - templates/manager/joueur/show.html.twig    (fiche joueuse vue par staff ou par soi-même)
+      - templates/manager/profil/show.html.twig    (page "Mon profil" du user connecté)
+
+    VARIABLES D'ENTRÉE :
+      - joueur  : entité Joueur|null
+                  null sur page profil si user pas rattaché à une fiche joueuse
+      - is_self : bool
+                  true  → on regarde sa propre fiche/son propre profil
+                  false → staff regarde la fiche d'une autre personne
+
+    LOGIQUE D'AFFICHAGE :
+      - "Voir le bilan saison"     : visible si on a un joueur (staff + self)
+      - "Voir le profil PIRB"      : visible si on a un joueur (staff + self)
+      - "Ajouter une photo"        : visible UNIQUEMENT si is_self ET joueur existe
+                                      (RGPD : auto-détermination, c'est à la joueuse de mettre sa photo)
+      - "Modules à venir"          : placeholder grisé toujours visible
+
+    POURQUOI UN PARTIAL :
+      Évite la duplication entre fiche joueuse et page profil. Si on change l'UI,
+      on ne le fait qu'à un endroit. Pattern DRY (Don't Repeat Yourself).
+#}
+
+<div class="col-12">
+    <div class="card-mabb">
+        <div class="card-header">
+            <i class="bi bi-trophy"></i> Bilan saison & profil public
+        </div>
+        <div class="card-body">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+
+                {# === ACTION 1 : Voir le bilan saison === #}
+                {% if joueur %}
+                    {# TODO V1.1 : créer la route manager_joueur_bilan + sa vue dédiée.
+                       En attendant, on link vers la fiche joueuse (où les stats sont déjà). #}
+                    <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}#stats"
+                       class="bilan-action-card"
+                       style="text-decoration:none; padding:18px; border-radius:10px; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:white; display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s;"
+                       onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 18px rgba(0,98,168,.25)'"
+                       onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                        <i class="bi bi-graph-up-arrow" style="font-size:1.5rem;"></i>
+                        <strong style="font-size:1rem;">Voir le bilan saison</strong>
+                        <small style="opacity:.85; font-size:.78rem;">XP, badges, présences, missions</small>
+                    </a>
+                {% endif %}
+
+                {# === ACTION 2 : Voir le profil PIRB ===
+                   Lien direct vers le sous-domaine pirb.mabb.fr (désormais en prod).
+                   target=_blank car cross-domain : on ouvre dans un nouvel onglet. #}
+                {% if joueur %}
+                    <a href="https://pirb.mabb.fr"
+                       target="_blank" rel="noopener"
+                       class="bilan-action-card"
+                       style="text-decoration:none; padding:18px; border-radius:10px; background:linear-gradient(135deg, var(--mabb-orange), #d65d1f); color:white; display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s;"
+                       onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 18px rgba(252,112,42,.3)'"
+                       onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                        <i class="bi bi-person-badge" style="font-size:1.5rem;"></i>
+                        <strong style="font-size:1rem;">Voir le profil PIRB</strong>
+                        <small style="opacity:.85; font-size:.78rem;">pirb.mabb.fr <i class="bi bi-box-arrow-up-right"></i></small>
+                    </a>
+                {% endif %}
+
+                {# === ACTION 3 : Ajouter une photo ===
+                   UNIQUEMENT visible si is_self : la photo appartient au joueur,
+                   pas au staff. Redirige vers PIRB où l'upload est géré. #}
+                {% if is_self and joueur %}
+                    <a href="https://pirb.mabb.fr"
+                       target="_blank" rel="noopener"
+                       class="bilan-action-card"
+                       style="text-decoration:none; padding:18px; border-radius:10px; background:#f3f4f6; color:var(--mabb-dark); border: 2px dashed #d1d5db; display:flex; flex-direction:column; gap:6px; transition:border-color .15s, background .15s;"
+                       onmouseover="this.style.borderColor='var(--mabb-blue)'; this.style.background='#eff6ff'"
+                       onmouseout="this.style.borderColor='#d1d5db'; this.style.background='#f3f4f6'">
+                        <i class="bi bi-camera" style="font-size:1.5rem;"></i>
+                        <strong style="font-size:1rem;">
+                            {% if joueur.photoPath %}Changer ma photo{% else %}Ajouter une photo{% endif %}
+                        </strong>
+                        <small style="color:var(--mabb-muted); font-size:.78rem;">Géré depuis pirb.mabb.fr</small>
+                    </a>
+                {% endif %}
+
+                {# === Si pas de joueur rattaché (page profil sans fiche), on affiche un placeholder informatif === #}
+                {% if not joueur %}
+                    <div style="padding:18px; border-radius:10px; background:#fff3cd; color:#856404; border:1px solid #ffeaa7;">
+                        <i class="bi bi-info-circle"></i>
+                        <strong style="display:block; margin-top:4px;">Aucune fiche joueuse rattachée</strong>
+                        <small style="display:block; margin-top:4px;">Demande à un coach/dirigeant de te rattacher à ta fiche pour voir ton bilan saison.</small>
+                    </div>
+                {% endif %}
+
+                {# === Modules à venir : placeholder grisé pour signaler les évolutions futures === #}
+                <div style="padding:18px; border-radius:10px; background:#f9fafb; color:var(--mabb-muted); border:1px solid #e5e7eb; display:flex; flex-direction:column; gap:6px; opacity:.7;">
+                    <i class="bi bi-three-dots" style="font-size:1.5rem;"></i>
+                    <strong style="font-size:1rem;">Modules à venir</strong>
+                    <small style="font-size:.78rem;">Convocations, vidéos, feedback…</small>
+                </div>
+            </div>
+
+            {# Note de contexte selon qui regarde #}
+            {% if not is_self and joueur %}
+                <p style="color:var(--mabb-muted); font-size:.78rem; margin: 16px 0 0; font-style:italic;">
+                    <i class="bi bi-shield-check"></i>
+                    La photo est gérée par la joueuse elle-même depuis PIRB (RGPD).
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>

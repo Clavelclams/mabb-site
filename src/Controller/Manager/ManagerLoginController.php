@@ -49,6 +49,9 @@ class ManagerLoginController extends AbstractController
         \App\Security\Tenant\TenantResolver $tenantResolver,
         \App\Repository\Sport\SeanceRepository $seanceRepository,
         \App\Repository\Sport\RencontreRepository $rencontreRepository,
+        \App\Repository\Sport\ReunionConvocationRepository $convocationRepository,
+        \App\Repository\Sport\EvenementRepository $evenementRepository,
+        \App\Service\FeedAggregator $feedAggregator,
     ): Response {
         $this->denyAccessUnlessGranted('ROLE_USER');
 
@@ -56,6 +59,11 @@ class ManagerLoginController extends AbstractController
         $club = $tenantResolver->getCurrentClub();
         $prochainSeances = [];
         $prochainRencontres = [];
+        $prochainEvenements = [];
+        $mesReunionsAVenir = [];
+        $mesPvNonLus = [];
+        // Feed "Pour toi" Phase 1 MVP — items personnalisés en tête de dashboard
+        $feedItems = [];
 
         if ($club) {
             $now = new \DateTimeImmutable();
@@ -82,12 +90,43 @@ class ManagerLoginController extends AbstractController
                 ->orderBy('r.date', 'ASC')
                 ->setMaxResults(5)
                 ->getQuery()->getResult();
+
+            // Prochains événements dans les 7 jours (publiés uniquement)
+            $prochainEvenements = $evenementRepository->createQueryBuilder('e')
+                ->where('e.club = :club')
+                ->andWhere('e.date BETWEEN :now AND :j7')
+                ->andWhere('e.statut = :publie')
+                ->setParameter('club', $club)
+                ->setParameter('now', $now)
+                ->setParameter('j7', $dans7Jours)
+                ->setParameter('publie', \App\Entity\Sport\Evenement::STATUT_PUBLIE)
+                ->orderBy('e.date', 'ASC')
+                ->setMaxResults(5)
+                ->getQuery()->getResult();
+
+            // === BUREAU MANAGER Phase C — retour membre ===
+            // Mes réunions à venir où je suis convoqué (badge "X réunions à venir")
+            // Mes PV non lus (badge "X nouveau(x) PV")
+            $userConnecte = $this->getUser();
+            if ($userConnecte instanceof \App\Entity\Core\User) {
+                $mesReunionsAVenir = $convocationRepository->findMesReunionsAVenir($userConnecte, $club);
+                $mesPvNonLus       = $convocationRepository->findPvNonLus($userConnecte, $club);
+
+                // Feed "Pour toi" — agrégation déléguée au FeedAggregator (SRP).
+                // Le controller ne sait pas COMMENT le feed est construit, il
+                // appelle juste le service et passe le résultat à la vue.
+                $feedItems = $feedAggregator->buildForUser($userConnecte, $club);
+            }
         }
 
         return $this->render('manager/dashboard.html.twig', [
             'club'                => $club,
             'prochain_seances'    => $prochainSeances,
             'prochain_rencontres' => $prochainRencontres,
+            'prochain_evenements' => $prochainEvenements,
+            'mes_reunions_avenir' => $mesReunionsAVenir,
+            'mes_pv_non_lus'      => $mesPvNonLus,
+            'feed_items'          => $feedItems,
         ]);
     }
 

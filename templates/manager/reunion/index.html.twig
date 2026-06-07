@@ -1,0 +1,69 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Réunions du bureau{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-people-fill"></i> Réunions du bureau</h1>
+            <p class="subtitle">Conseils d'administration, AG, bureaux restreints du club <strong>{{ club.nom }}</strong></p>
+        </div>
+        {% if is_granted('CLUB_STAFF', club) %}
+            <a href="{{ path('manager_reunion_new') }}" class="btn-mabb-orange">
+                <i class="bi bi-plus-lg"></i> Nouvelle réunion
+            </a>
+        {% endif %}
+    </div>
+
+    {% if reunions is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:40px 20px;">
+                <i class="bi bi-calendar-x" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                <p style="margin-top:12px; color:var(--mabb-muted);">Aucune réunion enregistrée pour le moment.</p>
+                {% if is_granted('CLUB_STAFF', club) %}
+                    <a href="{{ path('manager_reunion_new') }}" class="btn-mabb-primary mt-2">Créer la première réunion</a>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="row g-3">
+            {% for r in reunions %}
+                {% set statut_color = {
+                    'planifie': '#3b82f6',
+                    'tenue':    '#16a34a',
+                    'annulee':  '#dc2626'
+                } %}
+                {% set statut_libelle = {
+                    'planifie': 'Planifiée',
+                    'tenue':    'Tenue',
+                    'annulee':  'Annulée'
+                } %}
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ path('manager_reunion_show', {id: r.id}) }}" style="text-decoration:none;">
+                        <div class="card-mabb h-100" style="border-top:4px solid {{ statut_color[r.statut] ?? '#64748b' }}; transition:transform .15s, box-shadow .15s; cursor:pointer;"
+                             onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 18px rgba(0,0,0,.1)'"
+                             onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+                            <div class="card-body">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:6px;">
+                                    <span style="background:{{ statut_color[r.statut] }}15; color:{{ statut_color[r.statut] }}; padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700;">
+                                        {{ statut_libelle[r.statut] }}
+                                    </span>
+                                    {% if r.hasPv %}
+                                        <small style="color:#16a34a; font-weight:700;"><i class="bi bi-file-text-fill"></i> PV</small>
+                                    {% endif %}
+                                </div>
+                                <h5 class="fw-bold mb-1" style="color:var(--mabb-dark);">{{ r.titre }}</h5>
+                                <small style="color:var(--mabb-orange); font-weight:600;">{{ r.typeLibelle }}</small>
+                                <div style="margin-top:10px; font-size:.85rem; color:var(--mabb-muted);">
+                                    <div><i class="bi bi-calendar3"></i> {{ r.date|date('d/m/Y H:i') }}</div>
+                                    {% if r.lieu %}<div><i class="bi bi-geo-alt"></i> {{ r.lieu }}</div>{% endif %}
+                                    <div><i class="bi bi-people"></i> {{ r.convocations|length }} convoqué{{ r.convocations|length > 1 ? 's' : '' }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

@@ -65,15 +65,17 @@
                                 </td>
                                 <td style="text-align:right;">
                                     <div style="display:inline-flex; gap:6px;">
+                                        {# Echappement JS strict des noms : si un user s'appelle "L'Henry" l'apostrophe
+                                           cassait le confirm() → le bouton "ne faisait rien". |e('js') protège. #}
                                         <form method="post" action="{{ path('manager_demandes_valider', {id: d.id}) }}" style="display:inline;"
-                                              onsubmit="return confirm('Valider {{ d.user.prenom }} {{ d.user.nom }} comme {{ d.roleDemande ?: d.role }} ?');">
+                                              onsubmit="return confirm('Valider {{ d.user.prenom|e('js') }} {{ d.user.nom|e('js') }} comme {{ (d.roleDemande ?: d.role)|e('js') }} ?');">
                                             <input type="hidden" name="_token" value="{{ csrf_token('valider_demande_' ~ d.id) }}">
                                             <button type="submit" class="btn-mabb-primary btn-sm" title="Accepter">
                                                 <i class="bi bi-check-lg"></i> Valider
                                             </button>
                                         </form>
                                         <form method="post" action="{{ path('manager_demandes_rejeter', {id: d.id}) }}" style="display:inline;"
-                                              onsubmit="return confirm('Rejeter la demande de {{ d.user.prenom }} {{ d.user.nom }} ?');">
+                                              onsubmit="return confirm('Rejeter la demande de {{ d.user.prenom|e('js') }} {{ d.user.nom|e('js') }} ?');">
                                             <input type="hidden" name="_token" value="{{ csrf_token('rejeter_demande_' ~ d.id) }}">
                                             <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);" title="Refuser">
                                                 <i class="bi bi-x-lg"></i> Rejeter

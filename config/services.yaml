@@ -26,3 +26,14 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    # Service d'upload des PDFs FFBB officiels (résumé, feuille, positions tirs).
+    # Le dossier d'upload est injecté en string — pas auto-wireable.
+    App\Service\RencontrePdfUploader:
+        arguments:
+            $uploadDirectory: '%kernel.project_dir%/public/uploads/rencontres'
+
+    # Service d'upload des documents attachés aux réunions (Bureau Phase F).
+    App\Service\ReunionDocumentUploader:
+        arguments:
+            $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/reunions'

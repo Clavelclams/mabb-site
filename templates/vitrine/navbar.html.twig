@@ -30,6 +30,9 @@
 							<a class="dropdown-item" href="/club">Le Club</a>
 						</li>
 						<li>
+							<a class="dropdown-item" href="/employes">Nos Employés</a>
+						</li>
+						<li>
 							<a class="dropdown-item" href="/victoires">Nos Victoires</a>
 						</li>
 					</ul>
@@ -48,6 +51,9 @@
 						</li>
 						<li>
 							<a class="dropdown-item" href="/calendrier">Calendrier</a>
+						</li>
+						<li>
+							<a class="dropdown-item" href="/planning">Planning des entraînements</a>
 						</li>
 						<li><hr class="dropdown-divider"></li>
 						<li>
@@ -73,9 +79,13 @@
 				</li>
 			</ul>
 
-			{# Boutons auth — {% if app.user %} déjà présent, conservé #}
+			{# Boutons auth — wrapper responsive pour éviter le débordement mobile en mode connecté.
+			   Sur mobile/tablette : stack vertical full-width.
+			   Sur desktop (xxl+) : layout inline horizontal comme avant. #}
+			<div class="d-flex flex-column flex-xxl-row gap-2 align-items-stretch align-items-xxl-center w-100 w-xxl-auto mt-3 mt-xxl-0">
 			{% if app.user %}
-				<a href="/compte/mon-compte" class="btn btn-outline-light btn-sm rounded-pill me-2">
+				<a href="/compte/mon-compte" class="btn btn-outline-light btn-sm rounded-pill text-truncate"
+				   style="max-width:100%">
 					<i class="bi bi-person-circle"></i>
 					{{ app.user.prenom }}
 				</a>
@@ -84,7 +94,7 @@
 					Déconnexion
 				</a>
 			{% else %}
-				<a href="/compte/se-connecter" class="btn btn-outline-light btn-sm rounded-pill me-2">
+				<a href="/compte/se-connecter" class="btn btn-outline-light btn-sm rounded-pill">
 					<i class="bi bi-box-arrow-in-right"></i>
 					Connexion
 				</a>
@@ -93,6 +103,7 @@
 					S'inscrire
 				</a>
 			{% endif %}
+			</div>
 		</div>
 	</div>
 </nav>

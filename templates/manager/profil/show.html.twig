@@ -147,6 +147,16 @@
         </div>
 
         {# ========================================================
+           Bloc Bilan saison & profil public — partial réutilisé sur fiche joueuse aussi.
+           Sur la page profil, on est TOUJOURS sur son propre compte → is_self = true.
+           Le partial gère le cas où user n'a pas de fiche joueuse rattachée (fiche_joueur null).
+           ======================================================== #}
+        {% include 'manager/_partials/bloc_bilan_profil.html.twig' with {
+            joueur: fiche_joueur,
+            is_self: true
+        } only %}
+
+        {# ========================================================
            Sécurité & RGPD — actions placeholders (modules à venir)
            ======================================================== #}
         <div class="col-12">

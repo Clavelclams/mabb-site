@@ -1,0 +1,868 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Stats LIVE — {{ rencontre.equipe.nom }} vs {{ rencontre.adversaire }}{% endblock %}
+
+{#
+    ============================================================
+    STATS LIVE — saisie temps réel pendant le match
+    ============================================================
+    Layout tablette paysage :
+       ┌──────────┬──────────────────┬─────────────┐
+       │ JOUEUSES │  DEMI-TERRAIN    │  ACTIONS    │
+       │   col-2  │       SVG        │  catégories │
+       │          │  cliquable       │             │
+       ├──────────┴──────────────────┴─────────────┤
+       │       HISTORIQUE (10 dernières actions)    │
+       └────────────────────────────────────────────┘
+
+    WORKFLOW :
+       1. Clic JOUEUSE → elle devient ACTIVE (border bleu)
+       2. Pour un TIR : clic SUR LE TERRAIN → marker temporaire, options "réussi/raté"
+          → clic option → POST création ActionMatch + MAJ compteurs
+       3. Pour une autre action : clic JOUEUSE + clic BOUTON catégorie
+          → POST création + MAJ
+       4. Chaque action ajoutée → apparait en haut de l'historique
+       5. Bouton Annuler sur chaque action récente → DELETE
+
+    JS pur vanilla, pas de framework. Tout dans ce fichier pour rester simple.
+#}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* ===== Layout principal — fix viewport pour tablette ===== */
+        body { background: #0f172a; color: #e2e8f0; }
+        .stats-live-wrapper {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            min-height: calc(100vh - 60px);
+            gap: 8px;
+            padding: 8px;
+        }
+
+        /* ===== Header : score live + QT + chrono ===== */
+        .stats-header {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 12px;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #1e293b, #334155);
+            border-radius: 10px;
+            align-items: center;
+        }
+        .score-block { text-align: center; }
+        .score-team {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+        .score-value {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #fbbf24;
+            line-height: 1;
+            margin: 2px 0;
+        }
+        .qt-block {
+            text-align: center;
+            background: #f97316;
+            border-radius: 10px;
+            padding: 8px 18px;
+            min-width: 160px;
+        }
+        .qt-label {
+            font-size: 0.7rem;
+            color: #fff;
+            opacity: 0.85;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+        .qt-buttons {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            margin-top: 4px;
+        }
+        .qt-btn {
+            background: rgba(255,255,255,.15);
+            border: 1px solid rgba(255,255,255,.3);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background .15s;
+        }
+        .qt-btn.active {
+            background: #fff;
+            color: #ea580c;
+            box-shadow: 0 0 0 2px #fff;
+        }
+        .qt-btn:hover { background: rgba(255,255,255,.3); }
+
+        /* ===== Grid 3 colonnes ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 240px 1fr 280px;
+            gap: 8px;
+            min-height: 500px;
+        }
+        @media (max-width: 1100px) {
+            .stats-grid { grid-template-columns: 200px 1fr 240px; }
+        }
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+        }
+
+        /* ===== Sidebar joueuses ===== */
+        .joueuses-list {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 6px;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+        }
+        .joueuse-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            border: 2px solid transparent;
+            transition: all .15s;
+            user-select: none;
+        }
+        .joueuse-item:hover { background: rgba(59,130,246,.15); }
+        .joueuse-item.active {
+            background: rgba(59,130,246,.25);
+            border-color: #3b82f6;
+        }
+        .joueuse-avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3b82f6, #1e40af);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 0.82rem;
+            flex-shrink: 0;
+        }
+        .joueuse-info { flex: 1; min-width: 0; }
+        .joueuse-name {
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: #f1f5f9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .joueuse-stats {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 1px;
+        }
+        .joueuse-stats .pts {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
+        /* ===== Centre : terrain SVG ===== */
+        .court-zone {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .court-svg-wrap {
+            width: 100%;
+            max-width: 600px;
+            cursor: crosshair;
+            position: relative;
+        }
+        .court-svg-wrap.disabled { cursor: not-allowed; opacity: .55; }
+        .court-svg {
+            width: 100%;
+            display: block;
+            background: #c2410c;
+            border: 3px solid #fff;
+            border-radius: 4px;
+        }
+        .court-line { stroke: #fff; stroke-width: 4; fill: none; }
+        .court-paint { fill: rgba(255,255,255,.15); }
+        .court-hint {
+            color: #94a3b8;
+            text-align: center;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+        .pending-tir-marker {
+            fill: #fbbf24;
+            stroke: #fff;
+            stroke-width: 3;
+            r: 12;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* ===== Panneau actions ===== */
+        .actions-panel {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .actions-group { margin-bottom: 4px; }
+        .actions-group-title {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            padding-left: 4px;
+        }
+        .action-btn {
+            display: block;
+            width: 100%;
+            padding: 10px 12px;
+            background: #334155;
+            color: #f1f5f9;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin-bottom: 4px;
+            text-align: left;
+            transition: all .12s;
+            user-select: none;
+        }
+        .action-btn:hover { background: #475569; transform: translateX(2px); }
+        .action-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .action-btn.action-shot { background: #16a34a; border-color: #15803d; }
+        .action-btn.action-shot:hover { background: #15803d; }
+        .action-btn.action-shot-miss { background: #dc2626; border-color: #991b1b; }
+        .action-btn.action-shot-miss:hover { background: #991b1b; }
+        .action-btn.action-positive { background: #2563eb; border-color: #1d4ed8; }
+        .action-btn.action-positive:hover { background: #1d4ed8; }
+        .action-btn.action-negative { background: #b45309; border-color: #92400e; }
+        .action-btn.action-negative:hover { background: #92400e; }
+
+        /* ===== Mode tir : cache les actions non-tir ===== */
+        .stats-live-wrapper.mode-tir .actions-group:not(.shoot-options) { display: none; }
+        .stats-live-wrapper:not(.mode-tir) .shoot-options { display: none; }
+
+        /* ===== Historique footer ===== */
+        .history-bar {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-height: 80px;
+        }
+        .history-bar-title {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            margin-bottom: 2px;
+        }
+        .history-items {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .history-item {
+            background: #334155;
+            color: #e2e8f0;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .history-item .undo-btn {
+            background: transparent;
+            border: 0;
+            color: #ef4444;
+            cursor: pointer;
+            padding: 0;
+            font-weight: 800;
+        }
+        .history-item .undo-btn:hover { color: #fca5a5; }
+
+        /* ===== Toast feedback ===== */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 18px;
+            border-radius: 8px;
+            background: #16a34a;
+            color: #fff;
+            font-weight: 700;
+            transform: translateY(120%);
+            transition: transform .25s ease;
+            z-index: 9999;
+        }
+        #toast.show { transform: translateY(0); }
+        #toast.error { background: #dc2626; }
+    </style>
+{% endblock %}
+
+{% block body %}
+
+    {# ===== HEADER : score live + QT en cours ===== #}
+    <div class="stats-live-wrapper" id="liveWrapper">
+        <div class="stats-header">
+            <div class="score-block">
+                <div class="score-team">{{ rencontre.equipe.nom }}</div>
+                <div class="score-value" id="scoreMabb">0</div>
+                <small style="color:#94a3b8;">MABB</small>
+            </div>
+
+            <div class="qt-block">
+                <div class="qt-label">QUART-TEMPS</div>
+                <div class="qt-buttons" id="qtButtons">
+                    <button type="button" class="qt-btn active" data-qt="QT1">Q1</button>
+                    <button type="button" class="qt-btn" data-qt="QT2">Q2</button>
+                    <button type="button" class="qt-btn" data-qt="QT3">Q3</button>
+                    <button type="button" class="qt-btn" data-qt="QT4">Q4</button>
+                    <button type="button" class="qt-btn" data-qt="EXT1">P1</button>
+                </div>
+            </div>
+
+            <div class="score-block">
+                <div class="score-team">{{ rencontre.adversaire }}</div>
+                <div class="score-value" style="color:#cbd5e1;">—</div>
+                <small style="color:#94a3b8;">Saisie manuelle</small>
+            </div>
+        </div>
+
+        {# ===== GRID 3 COLONNES ===== #}
+        <div class="stats-grid">
+
+            {# ===== COLONNE 1 : LISTE DES JOUEUSES ===== #}
+            <div class="joueuses-list" id="joueusesList">
+                {% if joueuses is empty %}
+                    <p style="color:#94a3b8; padding:12px; font-size:0.85rem;">
+                        Aucune joueuse active dans cette équipe.<br>
+                        <a href="{{ path('manager_joueur_new', {equipe_id: rencontre.equipe.id}) }}" style="color:#3b82f6;">Ajouter une joueuse</a>
+                    </p>
+                {% else %}
+                    {% for j in joueuses %}
+                        {% set comptages = comptages_par_joueur[j.id] ?? {} %}
+                        {# Calcul points côté serveur pour 1er render — JS prend le relais après #}
+                        {% set pts = ((comptages.tir_2pt_int_reussi ?? 0) + (comptages.tir_2pt_ext_reussi ?? 0)) * 2
+                                   + (comptages.tir_3pt_reussi ?? 0) * 3
+                                   + (comptages.lancer_reussi ?? 0) %}
+                        <div class="joueuse-item" data-joueur-id="{{ j.id }}" data-pts="{{ pts }}">
+                            <div class="joueuse-avatar">
+                                {% if j.numeroMaillot is not null %}{{ j.numeroMaillot }}{% else %}{{ j.prenom|first|upper }}{% endif %}
+                            </div>
+                            <div class="joueuse-info">
+                                <div class="joueuse-name">{{ j.prenom }} {{ j.nom }}</div>
+                                <div class="joueuse-stats">
+                                    <span class="pts" data-joueur-pts="{{ j.id }}">{{ pts }}</span> pts
+                                    {% if j.poste %} · {{ j.poste }}{% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            {# ===== COLONNE 2 : TERRAIN SVG ===== #}
+            <div class="court-zone">
+                <div class="court-svg-wrap" id="courtWrap">
+                    {# Demi-terrain offensif FFBB — proportions réelles (15m largeur × 14m profondeur).
+                       Panier à (750, 130). ViewBox sized en cm × 1. #}
+                    <svg class="court-svg" id="courtSvg" viewBox="0 0 1500 1400" preserveAspectRatio="xMidYMid meet">
+                        {# Ligne de fond (haut) #}
+                        <line x1="0" y1="0" x2="1500" y2="0" class="court-line"/>
+
+                        {# Lignes côté (gauche/droite) #}
+                        <line x1="0" y1="0" x2="0" y2="1400" class="court-line"/>
+                        <line x1="1500" y1="0" x2="1500" y2="1400" class="court-line"/>
+
+                        {# Ligne médiane (bas) #}
+                        <line x1="0" y1="1400" x2="1500" y2="1400" class="court-line"/>
+
+                        {# Raquette (4.9m large × 5.8m profondeur) #}
+                        <rect x="505" y="0" width="490" height="580" class="court-paint court-line"/>
+
+                        {# Cercle des LF (1.8m rayon) centré à 5.8m de la ligne de fond #}
+                        <circle cx="750" cy="580" r="180" class="court-line"/>
+
+                        {# Demi-cercle "no-charge" sous le panier (rayon 1.25m) #}
+                        <path d="M 625,130 A 125,125 0 0 0 875,130" class="court-line"/>
+
+                        {# Ligne 3pts (6.75m) — arc + 2 segments verticaux dans les coins #}
+                        {# Coin gauche : segment vertical depuis ligne de fond jusqu'à 2.99m, puis arc #}
+                        <line x1="90" y1="0" x2="90" y2="299" class="court-line"/>
+                        <line x1="1410" y1="0" x2="1410" y2="299" class="court-line"/>
+                        {# Arc 3pts : rayon 6.75m centré sur le panier (750, 130) #}
+                        <path d="M 90,299 A 675,675 0 0 0 1410,299" class="court-line"/>
+
+                        {# Panier — petit rectangle de planche + cercle anneau #}
+                        <line x1="660" y1="100" x2="840" y2="100" class="court-line" style="stroke-width:6;"/>
+                        <circle cx="750" cy="130" r="22" fill="none" stroke="#fff" stroke-width="4"/>
+
+                        {# Calque pour les marqueurs de tirs (rempli en JS) #}
+                        <g id="shotMarkers"></g>
+
+                        {# Marqueur du tir en cours (avant choix réussi/raté) #}
+                        <circle id="pendingTir" class="pending-tir-marker" cx="-100" cy="-100" style="display:none;"/>
+                    </svg>
+                </div>
+                <div class="court-hint" id="courtHint">
+                    <i class="bi bi-info-circle"></i>
+                    Sélectionne une joueuse à gauche, puis clique sur le terrain pour saisir un tir.
+                </div>
+            </div>
+
+            {# ===== COLONNE 3 : ACTIONS ===== #}
+            <div class="actions-panel" id="actionsPanel">
+
+                {# === Boutons APRES clic sur terrain (mode tir) === #}
+                <div class="actions-group shoot-options">
+                    <div class="actions-group-title">Tir saisi sur le terrain</div>
+                    <button type="button" class="action-btn action-shot" data-action="shot_reussi">
+                        <i class="bi bi-check-circle-fill"></i> RÉUSSI <small id="shotZoneLabel" style="display:block;opacity:.85;font-weight:500;">—</small>
+                    </button>
+                    <button type="button" class="action-btn action-shot-miss" data-action="shot_rate">
+                        <i class="bi bi-x-circle-fill"></i> RATÉ
+                    </button>
+                    <button type="button" class="action-btn" data-action="cancel_shot" style="background:#475569;">
+                        <i class="bi bi-arrow-counterclockwise"></i> Annuler tir
+                    </button>
+                </div>
+
+                {# === Lancers francs === #}
+                <div class="actions-group">
+                    <div class="actions-group-title">Lancers francs</div>
+                    <button type="button" class="action-btn action-shot" data-type="lancer_reussi">
+                        <i class="bi bi-check-lg"></i> LF Réussi (+1)
+                    </button>
+                    <button type="button" class="action-btn action-shot-miss" data-type="lancer_rate">
+                        <i class="bi bi-x-lg"></i> LF Raté
+                    </button>
+                </div>
+
+                {# === Défense / passes === #}
+                <div class="actions-group">
+                    <div class="actions-group-title">Défense + passes</div>
+                    <button type="button" class="action-btn action-positive" data-type="rebond_defensif">
+                        <i class="bi bi-arrow-down-circle"></i> Rebond DEF
+                    </button>
+                    <button type="button" class="action-btn action-positive" data-type="rebond_offensif">
+                        <i class="bi bi-arrow-up-circle"></i> Rebond OFF
+                    </button>
+                    <button type="button" class="action-btn action-positive" data-type="passe_decisive">
+                        <i class="bi bi-arrow-right-circle"></i> Passe décisive
+                    </button>
+                    <button type="button" class="action-btn action-positive" data-type="interception">
+                        <i class="bi bi-shield-fill"></i> Interception
+                    </button>
+                    <button type="button" class="action-btn action-positive" data-type="contre">
+                        <i class="bi bi-hand-thumbs-up-fill"></i> Contre
+                    </button>
+                    <button type="button" class="action-btn action-positive" data-type="faute_provoquee">
+                        <i class="bi bi-emoji-sunglasses"></i> Faute provoquée
+                    </button>
+                </div>
+
+                {# === Erreurs === #}
+                <div class="actions-group">
+                    <div class="actions-group-title">Erreurs</div>
+                    <button type="button" class="action-btn action-negative" data-type="perte_balle">
+                        <i class="bi bi-x-octagon"></i> Perte de balle
+                    </button>
+                    <button type="button" class="action-btn action-negative" data-type="faute_commise">
+                        <i class="bi bi-exclamation-triangle"></i> Faute commise
+                    </button>
+                    <button type="button" class="action-btn action-negative" data-type="contre_subi">
+                        <i class="bi bi-hand-thumbs-down"></i> Contre subi
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        {# ===== HISTORIQUE FOOTER ===== #}
+        <div class="history-bar">
+            <div class="history-bar-title">
+                <i class="bi bi-clock-history"></i> HISTORIQUE — dernières actions (cliquer ⨯ pour annuler)
+            </div>
+            <div class="history-items" id="historyItems">
+                {% for action in historique %}
+                    <div class="history-item" data-action-id="{{ action.id }}">
+                        <strong>{{ action.joueur.prenom|first|upper }}{{ action.joueur.nom|first|upper }}</strong>
+                        <span style="color:#fbbf24;">{{ action.type }}</span>
+                        <small style="color:#94a3b8;">{{ action.quartTemps }} {{ action.minute }}'{{ action.secondes }}"</small>
+                        <button class="undo-btn" title="Annuler">✕</button>
+                    </div>
+                {% endfor %}
+                {% if historique is empty %}
+                    <small style="color:#94a3b8; font-style:italic;">Aucune action saisie pour le moment.</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Toast feedback en bas à droite #}
+    <div id="toast"></div>
+
+{% endblock %}
+
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    (function(){
+        // ====================================================================
+        // CONFIGURATION — données injectées depuis Twig
+        // ====================================================================
+        const RENCONTRE_ID = {{ rencontre.id }};
+        const CSRF_TOKEN = '{{ csrf_token('stats_live_' ~ rencontre.id) }}';
+        const URL_ACTION_CREATE = '{{ path('manager_rencontre_stats_live_action_create', {id: rencontre.id}) }}';
+        const URL_ACTION_DELETE_BASE = '{{ path('manager_rencontre_stats_live_action_delete', {id: rencontre.id, actionId: 0}) }}'.replace(/\/0$/, '/');
+
+        // ====================================================================
+        // ÉTAT LOCAL
+        // ====================================================================
+        let state = {
+            joueurActif: null,       // id de la joueuse sélectionnée
+            tirX: null,              // position X normalisée 0-1 du tir en cours
+            tirY: null,              // position Y normalisée 0-1 du tir en cours
+            tirZone: null,           // zone détectée (3pt / 2pt int / 2pt ext)
+            quartTemps: 'QT1',
+            minute: 0,
+            secondes: 0,
+        };
+
+        // ====================================================================
+        // HELPERS
+        // ====================================================================
+        function toast(msg, isError) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = isError ? 'show error' : 'show';
+            setTimeout(() => t.className = '', 2500);
+        }
+
+        function setMode(modeTir) {
+            const wrapper = document.getElementById('liveWrapper');
+            if (modeTir) wrapper.classList.add('mode-tir');
+            else wrapper.classList.remove('mode-tir');
+        }
+
+        function clearPendingTir() {
+            state.tirX = null;
+            state.tirY = null;
+            state.tirZone = null;
+            const marker = document.getElementById('pendingTir');
+            marker.style.display = 'none';
+            setMode(false);
+        }
+
+        // Détecte la zone d'un tir à partir des coords X/Y normalisées (0-1)
+        // Aligné avec ShotChartCalculator côté PHP
+        function detectZone(x, y) {
+            // 3pts : panier à (0.5, ~0.09) ; ligne 3pts ~0.45 du Y
+            const dx = x - 0.5;
+            const dy = y - 0.093;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            // Si distance > 0.42 du panier OU dans les coins (Y < 0.2 et X aux extrêmes)
+            const dansCoinGauche = (y < 0.215 && x < 0.06);
+            const dansCoinDroit = (y < 0.215 && x > 0.94);
+            const auDelaArc3pts = dist > 0.42;
+
+            if (dansCoinGauche || dansCoinDroit || auDelaArc3pts) {
+                return { type3pts: true, label: '3 PTS' };
+            }
+            // 2pts : intérieur si dans la raquette, sinon extérieur
+            const dansRaquette = (x >= 0.336 && x <= 0.664 && y < 0.45);
+            if (dansRaquette || dist < 0.18) {
+                return { type3pts: false, interieur: true, label: '2 PTS INT' };
+            }
+            return { type3pts: false, interieur: false, label: '2 PTS EXT' };
+        }
+
+        // ====================================================================
+        // RENDU
+        // ====================================================================
+        function updateJoueurPts(joueurId, comptages) {
+            const span = document.querySelector(`[data-joueur-pts="${joueurId}"]`);
+            if (!span) return;
+            const pts = ((comptages.tir_2pt_int_reussi || 0) + (comptages.tir_2pt_ext_reussi || 0)) * 2
+                      + (comptages.tir_3pt_reussi || 0) * 3
+                      + (comptages.lancer_reussi || 0);
+            span.textContent = pts;
+        }
+
+        function updateScoreEquipe() {
+            // Somme des pts de toutes les joueuses (depuis le DOM)
+            let total = 0;
+            document.querySelectorAll('[data-joueur-pts]').forEach(el => {
+                total += parseInt(el.textContent, 10) || 0;
+            });
+            document.getElementById('scoreMabb').textContent = total;
+        }
+
+        function addToHistory(actionId, joueurInitiales, type, qt, minute, secondes) {
+            const items = document.getElementById('historyItems');
+            const empty = items.querySelector('small');
+            if (empty) empty.remove();
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.dataset.actionId = actionId;
+            item.innerHTML = `
+                <strong>${joueurInitiales}</strong>
+                <span style="color:#fbbf24;">${type}</span>
+                <small style="color:#94a3b8;">${qt} ${minute}'${secondes}"</small>
+                <button class="undo-btn" title="Annuler">✕</button>
+            `;
+            items.insertBefore(item, items.firstChild);
+
+            // Garde max 15 items dans l'historique visible
+            const all = items.querySelectorAll('.history-item');
+            if (all.length > 15) all[all.length - 1].remove();
+        }
+
+        // ====================================================================
+        // AJAX — création d'action
+        // ====================================================================
+        async function saveAction(type, options) {
+            options = options || {};
+            if (!state.joueurActif) {
+                toast('Sélectionne une joueuse d\'abord', true);
+                return;
+            }
+
+            const payload = {
+                joueurId: state.joueurActif,
+                type: type,
+                quartTemps: state.quartTemps,
+                minute: state.minute,
+                secondes: state.secondes,
+                positionX: options.positionX !== undefined ? options.positionX : state.tirX,
+                positionY: options.positionY !== undefined ? options.positionY : state.tirY,
+            };
+
+            try {
+                const res = await fetch(URL_ACTION_CREATE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': CSRF_TOKEN,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    toast(data.error || 'Erreur', true);
+                    return;
+                }
+
+                // === Met à jour les compteurs joueuse ===
+                updateJoueurPts(state.joueurActif, data.comptages);
+                updateScoreEquipe();
+
+                // === Ajoute à l'historique ===
+                const joueurEl = document.querySelector(`[data-joueur-id="${state.joueurActif}"]`);
+                const initiales = joueurEl ? joueurEl.querySelector('.joueuse-avatar').textContent.trim() : '?';
+                addToHistory(data.actionId, initiales, type, state.quartTemps, state.minute, state.secondes);
+
+                // === Si c'était un tir, on dessine le marker permanent ===
+                if (payload.positionX !== null && payload.positionY !== null) {
+                    drawShotMarker(payload.positionX, payload.positionY, type.endsWith('_reussi'));
+                }
+
+                // === Reset mode tir ===
+                clearPendingTir();
+                toast('Action enregistrée');
+
+            } catch (e) {
+                toast('Erreur réseau : ' + e.message, true);
+            }
+        }
+
+        // ====================================================================
+        // AJAX — suppression d'action (undo)
+        // ====================================================================
+        async function deleteAction(actionId) {
+            try {
+                const res = await fetch(URL_ACTION_DELETE_BASE + actionId, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-Token': CSRF_TOKEN },
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    toast(data.error || 'Erreur', true);
+                    return;
+                }
+                // Retire l'item de l'historique
+                const item = document.querySelector(`[data-action-id="${actionId}"]`);
+                if (item) item.remove();
+                // MAJ compteurs si on a retrouvé le joueur
+                if (data.joueurId) {
+                    updateJoueurPts(data.joueurId, data.comptages);
+                    updateScoreEquipe();
+                }
+                toast('Action annulée');
+            } catch (e) {
+                toast('Erreur réseau : ' + e.message, true);
+            }
+        }
+
+        // ====================================================================
+        // DESSIN MARKERS DE TIR (permanent)
+        // ====================================================================
+        function drawShotMarker(x, y, reussi) {
+            const svg = document.getElementById('courtSvg');
+            const group = document.getElementById('shotMarkers');
+            const cx = x * 1500;
+            const cy = y * 1400;
+
+            // Crée un cercle SVG vert si réussi, rouge si raté
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', cx);
+            circle.setAttribute('cy', cy);
+            circle.setAttribute('r', '14');
+            circle.setAttribute('fill', reussi ? '#16a34a' : '#dc2626');
+            circle.setAttribute('stroke', '#fff');
+            circle.setAttribute('stroke-width', '2');
+            group.appendChild(circle);
+        }
+
+        // ====================================================================
+        // ÉVÉNEMENTS UI
+        // ====================================================================
+
+        // --- Sélection joueuse ---
+        document.querySelectorAll('.joueuse-item').forEach(el => {
+            el.addEventListener('click', () => {
+                document.querySelectorAll('.joueuse-item').forEach(e => e.classList.remove('active'));
+                el.classList.add('active');
+                state.joueurActif = parseInt(el.dataset.joueurId, 10);
+                clearPendingTir();
+            });
+        });
+
+        // --- Clic sur le terrain ---
+        document.getElementById('courtSvg').addEventListener('click', (e) => {
+            if (!state.joueurActif) {
+                toast('Sélectionne une joueuse d\'abord', true);
+                return;
+            }
+
+            // Coordonnées clic en pixel SVG (basées sur le viewBox)
+            const svg = e.currentTarget;
+            const pt = svg.createSVGPoint();
+            pt.x = e.clientX;
+            pt.y = e.clientY;
+            const ctm = svg.getScreenCTM();
+            if (!ctm) return;
+            const svgPoint = pt.matrixTransform(ctm.inverse());
+            // Normalisation 0-1
+            const x = Math.max(0, Math.min(1, svgPoint.x / 1500));
+            const y = Math.max(0, Math.min(1, svgPoint.y / 1400));
+
+            state.tirX = x;
+            state.tirY = y;
+            state.tirZone = detectZone(x, y);
+
+            // Affiche le marker pending
+            const marker = document.getElementById('pendingTir');
+            marker.setAttribute('cx', x * 1500);
+            marker.setAttribute('cy', y * 1400);
+            marker.style.display = 'block';
+
+            // Affiche les options réussi/raté en mode tir
+            setMode(true);
+            document.getElementById('shotZoneLabel').textContent = state.tirZone.label;
+        });
+
+        // --- Boutons actions (panneau droit) ---
+        document.querySelectorAll('.action-btn[data-type]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                saveAction(type);
+            });
+        });
+
+        // --- Boutons shoot réussi/raté/annuler ---
+        document.querySelectorAll('.action-btn[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.action;
+                if (action === 'cancel_shot') {
+                    clearPendingTir();
+                    return;
+                }
+                if (state.tirX === null) {
+                    toast('Aucun tir positionné', true);
+                    return;
+                }
+                const reussi = (action === 'shot_reussi');
+                const zone = state.tirZone;
+                let type;
+                if (zone.type3pts) type = reussi ? 'tir_3pt_reussi' : 'tir_3pt_rate';
+                else if (zone.interieur) type = reussi ? 'tir_2pt_int_reussi' : 'tir_2pt_int_rate';
+                else type = reussi ? 'tir_2pt_ext_reussi' : 'tir_2pt_ext_rate';
+
+                saveAction(type);
+            });
+        });
+
+        // --- Quart-temps ---
+        document.querySelectorAll('#qtButtons .qt-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#qtButtons .qt-btn').forEach(e => e.classList.remove('active'));
+                btn.classList.add('active');
+                state.quartTemps = btn.dataset.qt;
+                toast('Quart-temps : ' + state.quartTemps);
+            });
+        });
+
+        // --- Annulation actions (délégation pour les items ajoutés dynamiquement) ---
+        document.getElementById('historyItems').addEventListener('click', (e) => {
+            const undo = e.target.closest('.undo-btn');
+            if (!undo) return;
+            const item = undo.closest('.history-item');
+            if (!item) return;
+            const actionId = parseInt(item.dataset.actionId, 10);
+            if (!actionId) return;
+            if (!confirm('Annuler cette action ?')) return;
+            deleteAction(actionId);
+        });
+
+        // === Init : draw markers des tirs existants depuis le DOM (si re-chargement) ===
+        // (TODO : exposer les tirs existants depuis Twig pour re-render au mount)
+
+    })();
+    </script>
+{% endblock %}

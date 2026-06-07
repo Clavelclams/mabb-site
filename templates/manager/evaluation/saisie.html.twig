@@ -1,0 +1,453 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Saisie évals — {{ rencontre.equipe.nom }} vs {{ rencontre.adversaire }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>
+                <i class="bi bi-clipboard-data"></i> Saisie des évaluations
+            </h1>
+            <p class="subtitle">
+                <strong>{{ rencontre.equipe.nom }}</strong> vs {{ rencontre.adversaire }}
+                — {{ rencontre.date|date('d/m/Y H:i') }}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            {# Si le résumé FFBB est uploadé, bouton pour ouvrir le panneau latéral
+               de saisie assistée (PDF affiché à droite, tableau saisie à gauche).
+               Approche pragmatique : pas d'OCR, le coach lit le PDF et tape les chiffres. #}
+            {% if rencontre.resumePath %}
+                <button type="button"
+                        id="toggle-pdf-panel"
+                        class="btn-mabb-orange"
+                        title="Afficher le résumé FFBB à côté pour saisie assistée">
+                    <i class="bi bi-file-earmark-pdf"></i> Résumé FFBB
+                </button>
+            {% endif %}
+            <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Retour à la rencontre
+            </a>
+        </div>
+    </div>
+
+    {# Panneau latéral PDF — fixed à droite, toggle au clic du bouton ci-dessus.
+       Affiche le résumé FFBB en iframe pour saisie assistée (le coach lit ici, tape à gauche).
+       Permet aussi de redimensionner via la barre de gauche (resize handle). #}
+    {% if rencontre.resumePath %}
+        <aside id="pdf-side-panel" class="pdf-side-panel" aria-hidden="true">
+            <div class="pdf-side-panel-header">
+                <strong><i class="bi bi-file-earmark-pdf-fill" style="color:var(--mabb-red);"></i> Résumé FFBB</strong>
+                <div style="display:flex; gap:6px;">
+                    <a href="{{ path('manager_rencontre_pdf_serve', {id: rencontre.id, type: 'resume'}) }}"
+                       target="_blank" rel="noopener"
+                       class="btn-mabb-ghost"
+                       style="font-size:.75rem; padding:4px 10px;"
+                       title="Ouvrir dans un nouvel onglet">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <button type="button" id="close-pdf-panel" class="btn-mabb-ghost" style="font-size:.75rem; padding:4px 10px;" title="Fermer">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <iframe
+                src="{{ path('manager_rencontre_pdf_serve', {id: rencontre.id, type: 'resume'}) }}"
+                style="border:0; width:100%; flex:1; background:#525659;"
+                title="Résumé FFBB — saisie assistée"></iframe>
+        </aside>
+        <style>
+            /* Panneau latéral fixed — masqué par défaut, glisse depuis la droite à l'ouverture */
+            .pdf-side-panel {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: 45vw;
+                max-width: 720px;
+                min-width: 360px;
+                background: #fff;
+                box-shadow: -8px 0 24px rgba(0,0,0,.12);
+                z-index: 1050;
+                display: flex;
+                flex-direction: column;
+                transform: translateX(100%);
+                transition: transform .25s cubic-bezier(.4,0,.2,1);
+            }
+            .pdf-side-panel.open {
+                transform: translateX(0);
+            }
+            .pdf-side-panel-header {
+                padding: 12px 16px;
+                border-bottom: 1px solid #e5e7eb;
+                background: #f8fafc;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 8px;
+                flex-shrink: 0;
+            }
+            /* Quand le panneau est ouvert, on pousse le contenu principal pour qu'il
+               reste lisible côte-à-côte (effet split-screen sur desktop) */
+            body.pdf-panel-open #main-content,
+            body.pdf-panel-open .container-fluid,
+            body.pdf-panel-open main {
+                padding-right: 45vw;
+                transition: padding-right .25s ease;
+            }
+            /* Sur mobile/tablette, le panneau prend tout l'écran (mode "plein") */
+            @media (max-width: 900px) {
+                .pdf-side-panel { width: 100vw; max-width: none; min-width: 0; }
+                body.pdf-panel-open #main-content,
+                body.pdf-panel-open .container-fluid,
+                body.pdf-panel-open main {
+                    padding-right: 0;
+                }
+            }
+        </style>
+        <script>
+        (function(){
+            var btn   = document.getElementById('toggle-pdf-panel');
+            var panel = document.getElementById('pdf-side-panel');
+            var close = document.getElementById('close-pdf-panel');
+            if (!btn || !panel || !close) return;
+
+            function open(){
+                panel.classList.add('open');
+                panel.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('pdf-panel-open');
+                // mémorise la préférence pour que le panneau reste ouvert quand on revient
+                try { localStorage.setItem('mabb_pdf_panel_open', '1'); } catch(e){}
+            }
+            function closeP(){
+                panel.classList.remove('open');
+                panel.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('pdf-panel-open');
+                try { localStorage.setItem('mabb_pdf_panel_open', '0'); } catch(e){}
+            }
+
+            btn.addEventListener('click', function(){
+                if (panel.classList.contains('open')) { closeP(); } else { open(); }
+            });
+            close.addEventListener('click', closeP);
+
+            // ESC ferme le panneau
+            document.addEventListener('keydown', function(e){
+                if (e.key === 'Escape' && panel.classList.contains('open')) closeP();
+            });
+
+            // Restauration : si l'utilisateur l'avait laissé ouvert, on le rouvre
+            try {
+                if (localStorage.getItem('mabb_pdf_panel_open') === '1') open();
+            } catch(e){}
+        })();
+        </script>
+    {% endif %}
+
+    {# ========================================================
+       Aide contextuelle — explication formule FIBA
+       ======================================================== #}
+    <div class="card-mabb" style="margin-bottom:16px; border-left:4px solid var(--mabb-blue);">
+        <div class="card-body" style="display:flex; gap:16px; align-items:flex-start; padding:16px 20px;">
+            <i class="bi bi-info-circle" style="color:var(--mabb-blue); font-size:1.4rem; flex-shrink:0;"></i>
+            <div>
+                <strong>Eval FIBA</strong> = (Points + Rebonds + Passes + Interceptions + Contres + Fautes provoquées) − (Tirs ratés + Lancers ratés + Pertes de balle + Fautes commises + Contres subis)
+                <br>
+                <small style="color:var(--mabb-muted);">
+                    L'eval se calcule automatiquement à mesure que tu remplis. Repères :
+                    <span style="color:#16a34a; font-weight:600;">≥ 15 dominant</span>
+                    · <span style="color:#f59e0b; font-weight:600;">5–14 solide</span>
+                    · <span style="color:#64748b; font-weight:600;">0–4 correct</span>
+                    · <span style="color:#dc2626; font-weight:600;">&lt; 0 raté</span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    {% if joueuses is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:40px 20px;">
+                <i class="bi bi-people" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                <p style="color:var(--mabb-muted); margin-top:12px;">
+                    Aucune joueuse active dans <strong>{{ rencontre.equipe.nom }}</strong>.
+                    <br><a href="{{ path('manager_joueur_new', {equipe_id: rencontre.equipe.id}) }}">Ajouter une joueuse</a>
+                </p>
+            </div>
+        </div>
+    {% else %}
+
+        <form method="post" action="{{ path('manager_rencontre_evals', {id: rencontre.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('evals_rencontre_' ~ rencontre.id) }}">
+
+            {# ========================================================
+               Tableau de saisie — une ligne par joueuse, scrollable horizontalement sur mobile
+               ======================================================== #}
+            <div class="card-mabb">
+                <div class="card-body" style="padding:0; overflow-x:auto;">
+                    <table class="evals-saisie-table" style="width:100%; border-collapse:collapse; font-size:.85rem; min-width:1200px;">
+                        <thead style="background:linear-gradient(180deg, var(--mabb-dark), var(--mabb-blue)); color:white; font-size:.72rem;">
+                            <tr>
+                                <th style="padding:10px 8px; text-align:left; position:sticky; left:0; background:var(--mabb-dark); z-index:2;">Joueuse</th>
+                                <th style="padding:10px 6px;" title="Titulaire (5 majeur)">5⭐</th>
+                                <th style="padding:10px 6px;" title="Minutes jouées">Min</th>
+                                <th style="padding:10px 6px; background:rgba(34,197,94,.15);" title="Tirs à 2 points : réussis / tentés">2pts ✓/T</th>
+                                <th style="padding:10px 6px; background:rgba(34,197,94,.15);" title="Tirs à 3 points : réussis / tentés">3pts ✓/T</th>
+                                <th style="padding:10px 6px; background:rgba(34,197,94,.15);" title="Lancers francs : réussis / tentés">LF ✓/T</th>
+                                <th style="padding:10px 6px;" title="Rebonds offensifs / défensifs">Reb O/D</th>
+                                <th style="padding:10px 6px;" title="Passes décisives">PD</th>
+                                <th style="padding:10px 6px;" title="Interceptions">Int</th>
+                                <th style="padding:10px 6px;" title="Contres réussis / subis">Ctr ✓/S</th>
+                                <th style="padding:10px 6px;" title="Fautes provoquées / commises">F+/−</th>
+                                <th style="padding:10px 6px;" title="Pertes de balle">TO</th>
+                                <th style="padding:10px 6px; background:rgba(252,112,42,.2);" title="Points (calculés)">Pts</th>
+                                <th style="padding:10px 8px; background:var(--mabb-orange); font-weight:800;" title="Eval FIBA (calculée)">EVAL</th>
+                                <th style="padding:10px 6px;" title="Skip = ne pas créer d'éval pour cette joueuse">Skip</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for joueur in joueuses %}
+                                {% set ev = evals_par_joueur[joueur.id] ?? null %}
+                                <tr data-joueur-id="{{ joueur.id }}" style="border-bottom:1px solid #e5e7eb;">
+                                    {# === Identité === #}
+                                    <td style="padding:8px; font-weight:600; position:sticky; left:0; background:#fff; z-index:1; min-width:180px;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:white; display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; flex-shrink:0;">
+                                                {{ joueur.prenom|first|upper }}{{ joueur.nom|first|upper }}
+                                            </div>
+                                            <div style="min-width:0;">
+                                                <div style="font-size:.85rem;">{{ joueur.prenom }} {{ joueur.nom }}</div>
+                                                {% if joueur.numeroMaillot is not null %}
+                                                    <div style="font-size:.7rem; color:var(--mabb-muted);">N°{{ joueur.numeroMaillot }} {% if joueur.poste %}— {{ joueur.poste }}{% endif %}</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {# === Titulaire === #}
+                                    <td style="padding:8px 4px; text-align:center;">
+                                        <input type="checkbox"
+                                               name="evals[{{ joueur.id }}][is_starter]"
+                                               {{ ev and ev.isStarter ? 'checked' }}>
+                                    </td>
+
+                                    {# === Minutes === #}
+                                    <td style="padding:8px 4px;">
+                                        {{ _self.statInput(joueur, 'minutes_jouees', ev ? ev.minutesJouees : 0, 60) }}
+                                    </td>
+
+                                    {# === Tirs 2pts (réussis / tentés) === #}
+                                    <td style="padding:8px 4px; background:rgba(34,197,94,.05);">
+                                        <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                            {{ _self.statInput(joueur, 'tirs2pts_reussis', ev ? ev.tirs2ptsReussis : 0) }}
+                                            <span style="color:var(--mabb-muted);">/</span>
+                                            {{ _self.statInput(joueur, 'tirs2pts_tentes', ev ? ev.tirs2ptsTentes : 0) }}
+                                        </div>
+                                    </td>
+
+                                    {# === Tirs 3pts === #}
+                                    <td style="padding:8px 4px; background:rgba(34,197,94,.05);">
+                                        <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                            {{ _self.statInput(joueur, 'tirs3pts_reussis', ev ? ev.tirs3ptsReussis : 0) }}
+                                            <span style="color:var(--mabb-muted);">/</span>
+                                            {{ _self.statInput(joueur, 'tirs3pts_tentes', ev ? ev.tirs3ptsTentes : 0) }}
+                                        </div>
+                                    </td>
+
+                                    {# === Lancers === #}
+                                    <td style="padding:8px 4px; background:rgba(34,197,94,.05);">
+                                        <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                            {{ _self.statInput(joueur, 'lancers_reussis', ev ? ev.lancersReussis : 0) }}
+                                            <span style="color:var(--mabb-muted);">/</span>
+                                            {{ _self.statInput(joueur, 'lancers_tentes', ev ? ev.lancersTentes : 0) }}
+                                        </div>
+                                    </td>
+
+                                    {# === Rebonds === #}
+                                    <td style="padding:8px 4px;">
+                                        <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                            {{ _self.statInput(joueur, 'rebonds_offensifs', ev ? ev.rebondsOffensifs : 0) }}
+                                            <span style="color:var(--mabb-muted);">/</span>
+                                            {{ _self.statInput(joueur, 'rebonds_defensifs', ev ? ev.rebondsDefensifs : 0) }}
+                                        </div>
+                                    </td>
+
+                                    {# === Passes décisives === #}
+                                    <td style="padding:8px 4px;">
+                                        {{ _self.statInput(joueur, 'passes_decisives', ev ? ev.passesDecisives : 0) }}
+                                    </td>
+
+                                    {# === Interceptions === #}
+                                    <td style="padding:8px 4px;">
+                                        {{ _self.statInput(joueur, 'interceptions', ev ? ev.interceptions : 0) }}
+                                    </td>
+
+                                    {# === Contres réussis / subis === #}
+                                    <td style="padding:8px 4px;">
+                                        <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                            {{ _self.statInput(joueur, 'contres', ev ? ev.contres : 0) }}
+                                            <span style="color:var(--mabb-muted);">/</span>
+                                            {{ _self.statInput(joueur, 'contres_subis', ev ? ev.contresSubis : 0) }}
+                                        </div>
+                                    </td>
+
+                                    {# === Fautes (provoquées / commises) === #}
+                                    <td style="padding:8px 4px;">
+                                        <div style="display:flex; gap:2px; align-items:center; justify-content:center;">
+                                            {{ _self.statInput(joueur, 'fautes_provoquees', ev ? ev.fautesProvoquees : 0) }}
+                                            <span style="color:var(--mabb-muted);">/</span>
+                                            {{ _self.statInput(joueur, 'fautes_commises', ev ? ev.fautesCommises : 0) }}
+                                        </div>
+                                    </td>
+
+                                    {# === Pertes de balle === #}
+                                    <td style="padding:8px 4px;">
+                                        {{ _self.statInput(joueur, 'pertes_balle', ev ? ev.pertesBalle : 0) }}
+                                    </td>
+
+                                    {# === Points (calculés en JS) === #}
+                                    <td style="padding:8px 6px; text-align:center; background:rgba(252,112,42,.05); font-weight:700; color:var(--mabb-dark);">
+                                        <span class="points-calc" data-joueur-id="{{ joueur.id }}">{{ ev ? ev.points : 0 }}</span>
+                                    </td>
+
+                                    {# === Eval (calculée en JS, couleur conditionnelle) === #}
+                                    <td style="padding:8px 8px; text-align:center; font-weight:800; font-size:.95rem;">
+                                        <span class="eval-calc" data-joueur-id="{{ joueur.id }}">{{ ev ? ev.eval : 0 }}</span>
+                                    </td>
+
+                                    {# === Skip === #}
+                                    <td style="padding:8px 4px; text-align:center;">
+                                        <input type="checkbox"
+                                               name="evals[{{ joueur.id }}][skip]"
+                                               title="Cocher si la joueuse n'a pas joué — n'enregistre pas d'éval">
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {# ========================================================
+               Section notes coach (optionnelle, par joueuse)
+               Une zone repliable plus loin pour ne pas alourdir le tableau principal
+               ======================================================== #}
+            <details style="margin-top:16px;">
+                <summary style="cursor:pointer; padding:12px 16px; background:#f8fafc; border-radius:8px; font-weight:600; color:var(--mabb-dark);">
+                    <i class="bi bi-chat-quote"></i> Notes coach par joueuse (optionnel)
+                </summary>
+                <div class="card-mabb" style="margin-top:8px;">
+                    <div class="card-body" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:12px;">
+                        {% for joueur in joueuses %}
+                            {% set ev = evals_par_joueur[joueur.id] ?? null %}
+                            <div>
+                                <label style="display:block; font-weight:600; font-size:.85rem; margin-bottom:4px;">
+                                    {{ joueur.prenom }} {{ joueur.nom }}
+                                </label>
+                                <textarea name="evals[{{ joueur.id }}][notes_coach]"
+                                          rows="2"
+                                          placeholder="Feedback humain (ce qui a marché, à travailler...)"
+                                          style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.85rem;">{{ ev ? ev.notesCoach : '' }}</textarea>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </details>
+
+            {# ========================================================
+               Submit
+               ======================================================== #}
+            <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
+                <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" class="btn-mabb-ghost">
+                    Annuler
+                </a>
+                <button type="submit" class="btn-mabb-primary">
+                    <i class="bi bi-check-lg"></i> Enregistrer toutes les évals
+                </button>
+            </div>
+        </form>
+    {% endif %}
+
+    {# ========================================================
+       JS — calcul live de l'eval FIBA pour feedback utilisateur
+       ======================================================== #}
+    <script>
+    (function(){
+        // Sélecteur des champs qui composent l'eval pour une ligne donnée
+        function getVal(row, field){
+            var input = row.querySelector('input[name="evals[' + row.dataset.joueurId + '][' + field + ']"]');
+            return input ? (parseInt(input.value, 10) || 0) : 0;
+        }
+        function setText(row, selector, value){
+            var span = row.querySelector(selector);
+            if (span) span.textContent = value;
+        }
+        function colorEval(val){
+            if (val >= 15) return '#16a34a';   // green
+            if (val >= 5)  return '#f59e0b';   // amber
+            if (val >= 0)  return '#64748b';   // slate
+            return '#dc2626';                  // red
+        }
+        function recalc(row){
+            var t2r = getVal(row, 'tirs2pts_reussis');
+            var t2t = getVal(row, 'tirs2pts_tentes');
+            var t3r = getVal(row, 'tirs3pts_reussis');
+            var t3t = getVal(row, 'tirs3pts_tentes');
+            var lr  = getVal(row, 'lancers_reussis');
+            var lt  = getVal(row, 'lancers_tentes');
+            var ro  = getVal(row, 'rebonds_offensifs');
+            var rd  = getVal(row, 'rebonds_defensifs');
+            var pd  = getVal(row, 'passes_decisives');
+            var int_ = getVal(row, 'interceptions');
+            var ct  = getVal(row, 'contres');
+            var cs  = getVal(row, 'contres_subis');
+            var fp  = getVal(row, 'fautes_provoquees');
+            var fc  = getVal(row, 'fautes_commises');
+            var to  = getVal(row, 'pertes_balle');
+
+            var points  = (t2r * 2) + (t3r * 3) + lr;
+            var rebonds = ro + rd;
+            var tirsRates = (t2t - t2r) + (t3t - t3r);
+            var lfRates = lt - lr;
+
+            // Eval FIBA officielle
+            var positif = points + rebonds + pd + int_ + ct + fp;
+            var negatif = tirsRates + lfRates + to + fc + cs;
+            var evalScore = positif - negatif;
+
+            setText(row, '.points-calc', points);
+            var evalSpan = row.querySelector('.eval-calc');
+            if (evalSpan) {
+                evalSpan.textContent = evalScore;
+                evalSpan.style.color = colorEval(evalScore);
+            }
+        }
+
+        // Écoute les changements sur tous les inputs et recalcule la ligne concernée
+        document.querySelectorAll('.evals-saisie-table tbody tr').forEach(function(row){
+            // Couleur initiale (basée sur l'eval déjà affichée)
+            var evalSpan = row.querySelector('.eval-calc');
+            if (evalSpan) evalSpan.style.color = colorEval(parseInt(evalSpan.textContent, 10) || 0);
+
+            row.querySelectorAll('input[type="number"]').forEach(function(input){
+                input.addEventListener('input', function(){ recalc(row); });
+            });
+        });
+    })();
+    </script>
+{% endblock %}
+
+{# ========================================================
+   MACRO : input numérique compact pour les compteurs
+   - Réutilisé partout dans le tableau pour cohérence
+   - min=0 (impossible d'avoir des stats négatives en basket)
+   - inputmode=numeric → bon clavier sur mobile
+   ======================================================== #}
+{% macro statInput(joueur, field, valeur, max=99) %}
+    <input type="number"
+           name="evals[{{ joueur.id }}][{{ field }}]"
+           value="{{ valeur }}"
+           min="0"
+           max="{{ max }}"
+           inputmode="numeric"
+           style="width:42px; padding:4px 2px; border:1px solid #d1d5db; border-radius:4px; text-align:center; font-size:.82rem; font-weight:600;">
+{% endmacro %}

@@ -14,10 +14,15 @@ use App\Repository\Sport\RencontreRepository;
 use App\Repository\Sport\RencontreRoleRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
+use App\Service\RencontrePdfUploader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -436,5 +441,159 @@ class RencontreController extends AbstractController
             $nbBadges > 0 ? sprintf(' 🏆 %d badge(s) débloqué(s) !', $nbBadges) : ''
         ));
         return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
+
+    // ====================================================================
+    // GESTION DES PDFs FFBB OFFICIELS (Étape C — Stats FFBB)
+    //
+    // 3 types supportés : resume | feuille | positions
+    // Requirements regex pour bloquer les valeurs hors whitelist au niveau routing
+    // (défense en profondeur — le service valide aussi côté code).
+    // ====================================================================
+
+    /**
+     * Upload un PDF FFBB pour une rencontre (résumé / feuille / positions tirs).
+     *
+     *   POST manager.mabb.fr/rencontres/{id}/pdfs/{type}
+     *
+     * Sécurité :
+     *   - CLUB_STAFF requis sur la rencontre
+     *   - CSRF nominatif lié à la rencontre + type
+     *   - Validation MIME application/pdf stricte par le service
+     */
+    #[Route(
+        '/rencontres/{id}/pdfs/{type}',
+        name: 'manager_rencontre_pdf_upload',
+        methods: ['POST'],
+        requirements: ['id' => '\d+', 'type' => 'resume|feuille|positions']
+    )]
+    public function uploadPdf(
+        Request $request,
+        Rencontre $rencontre,
+        string $type,
+        RencontrePdfUploader $uploader,
+    ): Response {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('upload_pdf_' . $type . '_' . $rencontre->getId(), $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('pdf');
+        if (!$file instanceof UploadedFile) {
+            $this->addFlash('error', 'Aucun fichier reçu.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        try {
+            $filename = $uploader->upload($file, $rencontre, $type);
+            $rencontre->setPdfPath($type, $filename);
+            $this->em->flush();
+
+            $libelles = ['resume' => 'résumé', 'feuille' => 'feuille de match', 'positions' => 'positions de tirs'];
+            $this->addFlash('success', sprintf('PDF %s mis à jour.', $libelles[$type]));
+        } catch (\InvalidArgumentException $e) {
+            $this->addFlash('error', $e->getMessage());
+        } catch (FileException $e) {
+            $this->addFlash('error', 'Impossible d\'enregistrer le fichier sur le serveur.');
+        }
+
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
+
+    /**
+     * Suppression d'un PDF FFBB.
+     *
+     *   POST manager.mabb.fr/rencontres/{id}/pdfs/{type}/supprimer
+     */
+    #[Route(
+        '/rencontres/{id}/pdfs/{type}/supprimer',
+        name: 'manager_rencontre_pdf_delete',
+        methods: ['POST'],
+        requirements: ['id' => '\d+', 'type' => 'resume|feuille|positions']
+    )]
+    public function deletePdf(
+        Request $request,
+        Rencontre $rencontre,
+        string $type,
+        RencontrePdfUploader $uploader,
+    ): Response {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('delete_pdf_' . $type . '_' . $rencontre->getId(), $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        if ($rencontre->getPdfPath($type) === null) {
+            $this->addFlash('info', 'Aucun PDF à supprimer pour ce type.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        // Supprime le fichier physique D'ABORD, puis met le path à null en BDD
+        $uploader->delete($rencontre, $type);
+        $rencontre->setPdfPath($type, null);
+        $this->em->flush();
+
+        $libelles = ['resume' => 'résumé', 'feuille' => 'feuille de match', 'positions' => 'positions de tirs'];
+        $this->addFlash('success', sprintf('PDF %s supprimé.', $libelles[$type]));
+
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
+
+    /**
+     * Sert un PDF FFBB en streaming avec contrôle multi-tenant.
+     *
+     *   GET manager.mabb.fr/rencontres/{id}/pdfs/{type}/voir
+     *
+     * POURQUOI UNE ROUTE ET PAS UN LIEN DIRECT public/uploads/... :
+     *   - Les PDFs contiennent des données semi-confidentielles (noms,
+     *     scores, fautes) qui ne doivent pas être accessibles à un autre club.
+     *   - Servir via une route Symfony permet d'appliquer le ClubVoter.
+     *   - Le filename uniqid limite la fuite mais n'est pas une vraie sécurité.
+     *
+     * Le PDF est servi inline (affichable dans un iframe pour le split-screen
+     * de saisie des évals).
+     */
+    #[Route(
+        '/rencontres/{id}/pdfs/{type}/voir',
+        name: 'manager_rencontre_pdf_serve',
+        methods: ['GET'],
+        requirements: ['id' => '\d+', 'type' => 'resume|feuille|positions']
+    )]
+    public function servePdf(
+        Rencontre $rencontre,
+        string $type,
+        RencontrePdfUploader $uploader,
+    ): Response {
+        // CLUB_MEMBER suffit pour consulter (lecture seule) — pas besoin d'être staff
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $rencontre);
+
+        $absolutePath = $uploader->getAbsolutePath($rencontre, $type);
+        if ($absolutePath === null) {
+            throw $this->createNotFoundException('PDF introuvable.');
+        }
+
+        // Streaming en mémoire-friendly via BinaryFileResponse
+        // disposition INLINE pour affichage dans un iframe (pas de download)
+        $libelles = ['resume' => 'resume', 'feuille' => 'feuille-de-match', 'positions' => 'positions-de-tirs'];
+        $nomTelechargement = sprintf(
+            'mabb-%s-%s-vs-%s.pdf',
+            $libelles[$type],
+            $rencontre->getDate()?->format('Y-m-d') ?? 'rencontre',
+            preg_replace('/[^a-z0-9-]+/i', '-', $rencontre->getAdversaire() ?? 'adversaire')
+        );
+
+        $response = new BinaryFileResponse($absolutePath);
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_INLINE,
+            $nomTelechargement
+        );
+        return $response;
     }
 }

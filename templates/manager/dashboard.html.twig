@@ -10,6 +10,160 @@
         </div>
     </div>
 
+    {# ============================================================
+       FEED "POUR TOI" — Phase 1 MVP
+       Items personnalisés agrégés par App\Service\FeedAggregator :
+         - Prochaine réunion à venir où je suis convoqué
+         - Dernière réunion tenue dont je vois la synthèse
+         - Dernier PV publié que je n'ai pas lu
+       Triés par date desc (récent en premier).
+       Le service prépare des FeedItem typés → le template fait juste du rendu.
+       ============================================================ #}
+    {% if feed_items is defined and feed_items|length > 0 %}
+        <div style="margin-bottom:20px;">
+            <h2 style="font-size:1.1rem; font-weight:700; color:var(--mabb-dark); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                <i class="bi bi-stars" style="color:var(--mabb-orange);"></i>
+                Pour toi
+                <span style="font-size:.7rem; font-weight:500; color:var(--mabb-muted); background:#f3f4f6; padding:2px 8px; border-radius:10px;">
+                    {{ feed_items|length }}
+                </span>
+            </h2>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                {% for item in feed_items %}
+                    {# Une card par item. Le style hérite de item.couleur (border-left)
+                       pour différencier visuellement réunion/synthèse/PV au coup d'œil. #}
+                    <a href="{{ item.lien }}" style="text-decoration:none; color:inherit;">
+                        <div class="card-mabb"
+                             style="border-left:4px solid {{ item.couleur }}; cursor:pointer; transition:transform .15s, box-shadow .15s;"
+                             onmouseover="this.style.transform='translateX(3px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,.06)'"
+                             onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <div class="card-body" style="display:flex; gap:14px; align-items:center; padding:14px 18px;">
+                                {# Pastille icône colorée à gauche #}
+                                <div style="width:42px; height:42px; border-radius:10px; background:{{ item.couleur }}15; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i class="bi {{ item.icone }}" style="color:{{ item.couleur }}; font-size:1.3rem;"></i>
+                                </div>
+                                {# Contenu central : type, titre, sous-titre #}
+                                <div style="flex:1; min-width:0;">
+                                    <div style="font-size:.7rem; font-weight:700; color:{{ item.couleur }}; text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px;">
+                                        {{ item.labelType }}
+                                    </div>
+                                    <div style="font-weight:600; color:var(--mabb-dark); font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        {{ item.titre }}
+                                    </div>
+                                    <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:1px;">
+                                        {{ item.sousTitre }}
+                                    </div>
+                                </div>
+                                <i class="bi bi-chevron-right" style="color:var(--mabb-muted); flex-shrink:0;"></i>
+                            </div>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# ========================================================
+       Bandeau "À VENIR" — séances, rencontres, événements (7 prochains jours).
+       Placé EN HAUT du dashboard pour donner immédiatement la vue de ce qui arrive.
+       ======================================================== #}
+    {# Pré-calcul : nombre total d'items à afficher dans le bloc "À venir".
+       On compte aussi les réunions (mes_reunions_avenir = convocations où l'user
+       est attendu) pour ne pas casser si une seule des sources a du contenu. #}
+    {% set nb_reunions = mes_reunions_avenir is defined ? mes_reunions_avenir|length : 0 %}
+    {% set nb_total_avenir = prochain_seances|length + prochain_rencontres|length + prochain_evenements|length + nb_reunions %}
+    {% if nb_total_avenir > 0 %}
+        <div class="card-mabb" style="margin-bottom:20px; border-top:4px solid var(--mabb-orange);">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-calendar-event"></i> À venir — 7 prochains jours</span>
+                <small style="color:var(--mabb-muted); font-weight:500;">
+                    {{ nb_total_avenir }} élément{{ nb_total_avenir > 1 ? 's' : '' }}
+                </small>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+
+                    {# === SÉANCES === #}
+                    {% if prochain_seances|length > 0 %}
+                        <div class="col-md-6 col-lg-4">
+                            <h4 style="font-size:.78rem; color:var(--mabb-blue); text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:10px;">
+                                <i class="bi bi-calendar-week"></i> Séances ({{ prochain_seances|length }})
+                            </h4>
+                            {% for s in prochain_seances %}
+                                <a href="{{ path('manager_seance_show', {id: s.id}) }}" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; text-decoration:none; color:var(--mabb-text); margin-bottom:5px; transition: background .15s;"
+                                   onmouseover="this.style.background='#eff6ff'"
+                                   onmouseout="this.style.background='transparent'">
+                                    <div style="background:#dbeafe; color:var(--mabb-blue); border-radius:8px; padding:6px 10px; text-align:center; min-width:52px; flex-shrink:0;">
+                                        <div style="font-size:.65rem; font-weight:700;">{{ s.date|date('M', 'Europe/Paris')|upper }}</div>
+                                        <div style="font-size:1.1rem; font-weight:800;">{{ s.date|date('d') }}</div>
+                                    </div>
+                                    <div style="min-width:0; flex:1;">
+                                        <div style="font-weight:600; font-size:.88rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.equipe.nom }}</div>
+                                        <div style="font-size:.72rem; color:var(--mabb-muted);">
+                                            {{ s.date|date('H:i') }}{% if s.lieu %} · {{ s.lieu }}{% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {# === RENCONTRES === #}
+                    {% if prochain_rencontres|length > 0 %}
+                        <div class="col-md-6 col-lg-4">
+                            <h4 style="font-size:.78rem; color:var(--mabb-orange); text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:10px;">
+                                <i class="bi bi-trophy"></i> Rencontres ({{ prochain_rencontres|length }})
+                            </h4>
+                            {% for r in prochain_rencontres %}
+                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; text-decoration:none; color:var(--mabb-text); margin-bottom:5px; transition: background .15s;"
+                                   onmouseover="this.style.background='#fff7ed'"
+                                   onmouseout="this.style.background='transparent'">
+                                    <div style="background:#fff7ed; color:var(--mabb-orange); border-radius:8px; padding:6px 10px; text-align:center; min-width:52px; flex-shrink:0;">
+                                        <div style="font-size:.65rem; font-weight:700;">{{ r.date|date('M', 'Europe/Paris')|upper }}</div>
+                                        <div style="font-size:1.1rem; font-weight:800;">{{ r.date|date('d') }}</div>
+                                    </div>
+                                    <div style="min-width:0; flex:1;">
+                                        <div style="font-weight:600; font-size:.88rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ r.equipe.nom }} vs {{ r.adversaire }}</div>
+                                        <div style="font-size:.72rem; color:var(--mabb-muted);">
+                                            {{ r.date|date('H:i') }} · {{ r.domicile ? 'Domicile' : 'Extérieur' }}
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    {# === ÉVÉNEMENTS === #}
+                    {% if prochain_evenements|length > 0 %}
+                        <div class="col-md-6 col-lg-4">
+                            <h4 style="font-size:.78rem; color:#8b5cf6; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:10px;">
+                                <i class="bi bi-stars"></i> Événements ({{ prochain_evenements|length }})
+                            </h4>
+                            {% for ev in prochain_evenements %}
+                                <a href="{{ path('manager_evenement_show', {id: ev.id}) }}" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; text-decoration:none; color:var(--mabb-text); margin-bottom:5px; transition: background .15s;"
+                                   onmouseover="this.style.background='#faf5ff'"
+                                   onmouseout="this.style.background='transparent'">
+                                    <div style="background:#ede9fe; color:#7c3aed; border-radius:8px; padding:6px 10px; text-align:center; min-width:52px; flex-shrink:0;">
+                                        <div style="font-size:.65rem; font-weight:700;">{{ ev.date|date('M', 'Europe/Paris')|upper }}</div>
+                                        <div style="font-size:1.1rem; font-weight:800;">{{ ev.date|date('d') }}</div>
+                                    </div>
+                                    <div style="min-width:0; flex:1;">
+                                        <div style="font-weight:600; font-size:.88rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ ev.titre }}</div>
+                                        <div style="font-size:.72rem; color:var(--mabb-muted);">
+                                            {{ ev.date|date('H:i') }}{% if ev.lieu %} · {{ ev.lieu }}{% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     {# Modules disponibles — pour l'instant uniquement Équipes et Joueuses #}
     <div class="row g-3">
         <div class="col-md-6 col-lg-4">
@@ -102,66 +256,35 @@
                     </div>
                 </a>
             </div>
+
+            {# Card Utilisateurs & Rôles — gestion des membres du club (Bloc 6) #}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_utilisateurs_index') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer; position:relative;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-people-fill" style="font-size:2.5rem; color:#8b5cf6;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Utilisateurs & Rôles</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Gérer les membres et leurs rôles dans le club.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endif %}
+
+        {# Card Réunions — visible CLUB_MEMBER (tout membre voit, seul staff crée) #}
+        {% if club is defined and club and is_granted('CLUB_MEMBER', club) %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_reunion_index') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer; position:relative;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-people-fill" style="font-size:2.5rem; color:#0891b2;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Réunions</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">CA, AG, bureaux — convocations + PV.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
         {% endif %}
     </div>
 
-    {# ========================================================
-       Bandeau "Mes 7 prochains jours" — séances et rencontres mixées
-       ======================================================== #}
-    {% if prochain_seances|length > 0 or prochain_rencontres|length > 0 %}
-        <div class="card-mabb" style="margin-top:24px;">
-            <div class="card-header"><i class="bi bi-calendar-event"></i> Mes 7 prochains jours</div>
-            <div class="card-body">
-                <div class="row g-3">
-                    {% if prochain_seances|length > 0 %}
-                        <div class="col-md-6">
-                            <h4 style="font-size:.9rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;">
-                                <i class="bi bi-calendar-week"></i> Séances
-                            </h4>
-                            {% for s in prochain_seances %}
-                                <a href="{{ path('manager_seance_show', {id: s.id}) }}" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; text-decoration:none; color:var(--mabb-text); margin-bottom:6px; transition: background .15s;"
-                                   onmouseover="this.style.background='#f8fafc'"
-                                   onmouseout="this.style.background='transparent'">
-                                    <div style="background:#dbeafe; color:var(--mabb-blue); border-radius:8px; padding:8px 12px; text-align:center; min-width:60px;">
-                                        <div style="font-size:.7rem; font-weight:700;">{{ s.date|date('M', 'Europe/Paris')|upper }}</div>
-                                        <div style="font-size:1.2rem; font-weight:800;">{{ s.date|date('d') }}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:600;">{{ s.equipe.nom }} — {{ s.type }}</div>
-                                        <div style="font-size:.8rem; color:var(--mabb-muted);">
-                                            {{ s.date|date('H:i') }} · {{ s.lieu }}
-                                        </div>
-                                    </div>
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-
-                    {% if prochain_rencontres|length > 0 %}
-                        <div class="col-md-6">
-                            <h4 style="font-size:.9rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;">
-                                <i class="bi bi-trophy"></i> Rencontres
-                            </h4>
-                            {% for r in prochain_rencontres %}
-                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; text-decoration:none; color:var(--mabb-text); margin-bottom:6px; transition: background .15s;"
-                                   onmouseover="this.style.background='#f8fafc'"
-                                   onmouseout="this.style.background='transparent'">
-                                    <div style="background:#fff7ed; color:var(--mabb-orange); border-radius:8px; padding:8px 12px; text-align:center; min-width:60px;">
-                                        <div style="font-size:.7rem; font-weight:700;">{{ r.date|date('M', 'Europe/Paris')|upper }}</div>
-                                        <div style="font-size:1.2rem; font-weight:800;">{{ r.date|date('d') }}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:600;">{{ r.equipe.nom }} vs {{ r.adversaire }}</div>
-                                        <div style="font-size:.8rem; color:var(--mabb-muted);">
-                                            {{ r.date|date('H:i') }} · {{ r.domicile ? 'Domicile' : 'Extérieur' }}{% if r.lieu %} · {{ r.lieu }}{% endif %}
-                                        </div>
-                                    </div>
-                                </a>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    {% endif %}
 {% endblock %}

@@ -37,6 +37,15 @@ class UserClubRole
      */
     public const ROLE_EMPLOYE    = 'EMPLOYE';
 
+    /**
+     * TRESORIER : seul rôle habilité à voir, saisir et valider les opérations
+     * de trésorerie du club (Bureau Phase D). Distinct de DIRIGEANT pour permettre
+     * qu'un trésorier non-membre du CA puisse exister, et inversement (un dirigeant
+     * lambda ne voit pas la compta). Un user PEUT cumuler DIRIGEANT + TRESORIER
+     * via 2 UserClubRole distincts.
+     */
+    public const ROLE_TRESORIER  = 'TRESORIER';
+
     public const ROLES_DISPONIBLES = [
         self::ROLE_DIRIGEANT,
         self::ROLE_COACH,
@@ -45,6 +54,7 @@ class UserClubRole
         self::ROLE_PARENT,
         self::ROLE_BENEVOLE,
         self::ROLE_EMPLOYE,
+        self::ROLE_TRESORIER,
     ];
 
     /**
@@ -235,8 +245,12 @@ class UserClubRole
      * Action métier : un dirigeant valide la demande.
      * Bascule status=active, applique le roleDemande si présent, trace l'auditeur.
      */
-    public function valider(User $par, ?string $roleFinal = null): static
+    public function valider(?User $par, ?string $roleFinal = null): static
     {
+        // Tolère $par null : si la session Symfony retourne un user bizarre,
+        // on garde l'action métier (status → active) sans crasher l'app.
+        // L'audit perd la trace de l'auteur dans ce cas edge, mais c'est moins
+        // grave que de bloquer la validation entière.
         $this->status = self::STATUS_ACTIVE;
         $this->valideParUser = $par;
         $this->valideAt = new \DateTimeImmutable();
@@ -251,8 +265,9 @@ class UserClubRole
     /**
      * Action métier : un dirigeant rejette la demande.
      */
-    public function rejeter(User $par): static
+    public function rejeter(?User $par): static
     {
+        // Idem valider() : tolère $par null pour éviter de bloquer l'action métier
         $this->status = self::STATUS_REJECTED;
         $this->valideParUser = $par;
         $this->valideAt = new \DateTimeImmutable();

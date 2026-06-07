@@ -1,0 +1,191 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Utilisateurs & Rôles{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-people-fill"></i> Utilisateurs & Rôles</h1>
+            <p class="subtitle">
+                Gestion des membres du club <strong>{{ club.nom }}</strong> — ajouter, modifier ou retirer un rôle.
+            </p>
+        </div>
+        <a href="{{ path('manager_dashboard') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Tableau de bord
+        </a>
+    </div>
+
+    {# ===== Aide contextuelle ===== #}
+    <div class="card-mabb" style="margin-bottom:16px; border-left:4px solid var(--mabb-blue);">
+        <div class="card-body" style="display:flex; gap:16px; align-items:flex-start; padding:14px 18px;">
+            <i class="bi bi-info-circle" style="color:var(--mabb-blue); font-size:1.4rem; flex-shrink:0;"></i>
+            <div style="font-size:.88rem;">
+                <strong>Rappel :</strong> un utilisateur peut avoir plusieurs rôles dans le club
+                (ex. COACH + PARENT). Pour retirer toute son présence, désactive chacun de ses rôles.
+                <br>
+                <small style="color:var(--mabb-muted);">
+                    🚫 <strong>Anti-bricking</strong> : le système empêche de retirer le dernier DIRIGEANT
+                    actif (sinon plus personne ne peut administrer le club).
+                </small>
+            </div>
+        </div>
+    </div>
+
+    {# ===== Barre de recherche ===== #}
+    <form method="get" action="{{ path('manager_utilisateurs_index') }}" style="margin-bottom:16px; display:flex; gap:8px;">
+        <input type="text" name="q" value="{{ recherche }}" placeholder="Rechercher par nom, prénom ou email…"
+               style="flex:1; padding:10px 14px; border:1px solid #d1d5db; border-radius:8px; font-size:.95rem;">
+        <button type="submit" class="btn-mabb-primary">
+            <i class="bi bi-search"></i> Rechercher
+        </button>
+        {% if recherche %}
+            <a href="{{ path('manager_utilisateurs_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-x-lg"></i> Effacer
+            </a>
+        {% endif %}
+    </form>
+
+    {# ===== Stats récap ===== #}
+    {% set total_membres = membres_par_user|length %}
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-bottom:20px;">
+        <div class="card-mabb" style="padding:14px; text-align:center;">
+            <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-blue);">{{ total_membres }}</div>
+            <div style="font-size:.75rem; color:var(--mabb-muted);">Membres actifs</div>
+        </div>
+    </div>
+
+    {# ===== Liste des membres ===== #}
+    {% if membres_par_user is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:40px 20px;">
+                <i class="bi bi-people" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                <p style="margin-top:12px; color:var(--mabb-muted);">
+                    {% if recherche %}
+                        Aucun membre ne correspond à « {{ recherche }} ».
+                    {% else %}
+                        Aucun membre actif dans ce club pour le moment.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    {% else %}
+        <div class="card-mabb">
+            <div class="card-body" style="padding:0; overflow-x:auto;">
+                <table class="table-mabb" style="width:100%; min-width:760px;">
+                    <thead>
+                        <tr>
+                            <th>Membre</th>
+                            <th>Email</th>
+                            <th>Rôles actifs</th>
+                            <th style="text-align:right;">Ajouter un rôle</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in membres_par_user %}
+                            {% set user = row.user %}
+                            {% set is_self = (app.user is not null and app.user.id == user.id) %}
+                            <tr>
+                                {# --- Identité --- #}
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div style="width:36px; height:36px; border-radius:50%; background:var(--mabb-blue); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; flex-shrink:0;">
+                                            {{ user.prenom|first|upper }}{{ user.nom|first|upper }}
+                                        </div>
+                                        <div>
+                                            <div style="font-weight:700;">
+                                                {{ user.prenom }} {{ user.nom }}
+                                                {% if is_self %}
+                                                    <span style="background:#dbeafe; color:#1e40af; font-size:.65rem; padding:2px 6px; border-radius:6px; margin-left:4px;">VOUS</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if user.telephone %}
+                                                <small style="color:var(--mabb-muted); font-size:.75rem;">
+                                                    <i class="bi bi-telephone"></i> {{ user.telephone }}
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+
+                                {# --- Email --- #}
+                                <td style="font-size:.85rem; color:var(--mabb-muted);">{{ user.email }}</td>
+
+                                {# --- Rôles actifs avec actions --- #}
+                                <td>
+                                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                                        {% for ucr in row.roles %}
+                                            {% set color = {
+                                                'DIRIGEANT': '#8b5cf6',
+                                                'COACH': 'var(--mabb-blue)',
+                                                'STAFF': '#0891b2',
+                                                'JOUEUR': 'var(--mabb-orange)',
+                                                'PARENT': '#ec4899',
+                                                'BENEVOLE': '#22c55e',
+                                                'EMPLOYE': '#0d9488'
+                                            } %}
+
+                                            <div style="display:inline-flex; align-items:center; gap:4px; background:{{ color[ucr.role] ?? '#64748b' }}15; border:1px solid {{ color[ucr.role] ?? '#64748b' }}40; border-radius:10px; padding:3px 6px 3px 10px; font-size:.78rem;">
+                                                <span style="color:{{ color[ucr.role] ?? '#64748b' }}; font-weight:700;">{{ ucr.role }}</span>
+
+                                                {# Bouton modifier (dropdown via détails HTML) #}
+                                                <details style="display:inline-block;">
+                                                    <summary style="cursor:pointer; list-style:none; padding:2px 4px; border-radius:4px; color:var(--mabb-muted); font-size:.7rem;" title="Modifier ce rôle">
+                                                        <i class="bi bi-pencil-fill"></i>
+                                                    </summary>
+                                                    <div style="position:absolute; z-index:10; background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:8px; box-shadow:0 4px 12px rgba(0,0,0,.1); margin-top:4px;">
+                                                        <form method="post" action="{{ path('manager_utilisateurs_role_modifier', {ucrId: ucr.id}) }}"
+                                                              style="display:flex; gap:4px; align-items:center;">
+                                                            <input type="hidden" name="_token" value="{{ csrf_token('modifier_role_' ~ ucr.id) }}">
+                                                            <select name="role" style="padding:4px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.78rem;">
+                                                                {% for role in roles_disponibles %}
+                                                                    <option value="{{ role }}" {{ role == ucr.role ? 'selected' }}>{{ role }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                            <button type="submit" class="btn-mabb-primary" style="padding:4px 8px; font-size:.7rem;">OK</button>
+                                                        </form>
+                                                    </div>
+                                                </details>
+
+                                                {# Bouton désactiver (croix rouge) #}
+                                                <form method="post" action="{{ path('manager_utilisateurs_role_desactiver', {ucrId: ucr.id}) }}"
+                                                      onsubmit="return confirm('Retirer le rôle {{ ucr.role }} à {{ user.prenom|e('js') }} {{ user.nom|e('js') }} ?');"
+                                                      style="display:inline;">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('desactiver_role_' ~ ucr.id) }}">
+                                                    <button type="submit" title="Retirer ce rôle" style="background:transparent; border:0; color:#dc2626; cursor:pointer; padding:2px 4px; font-size:.7rem;">
+                                                        <i class="bi bi-x-circle-fill"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+
+                                {# --- Ajouter un rôle --- #}
+                                <td style="text-align:right;">
+                                    <form method="post" action="{{ path('manager_utilisateurs_role_ajouter', {userId: user.id}) }}"
+                                          style="display:inline-flex; gap:4px;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('ajouter_role_' ~ user.id) }}">
+                                        <select name="role" style="padding:5px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:.78rem; max-width:120px;">
+                                            <option value="">+ Rôle…</option>
+                                            {% for role in roles_disponibles %}
+                                                {# Filtre : ne propose pas un rôle déjà actif (la BDD le bloquerait via UniqueConstraint) #}
+                                                {% set deja = false %}
+                                                {% for ucr in row.roles %}{% if ucr.role == role %}{% set deja = true %}{% endif %}{% endfor %}
+                                                {% if not deja %}
+                                                    <option value="{{ role }}">{{ role }}</option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="btn-mabb-primary" style="padding:5px 10px; font-size:.78rem;">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

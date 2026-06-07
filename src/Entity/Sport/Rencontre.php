@@ -93,6 +93,30 @@ class Rencontre implements ClubAwareInterface
     #[ORM\Column(length: 120, nullable: true)]
     private ?string $arbitreExterneNom = null;
 
+    // ====================================================================
+    // Documents FFBB officiels — uploadés par le staff après match
+    // Stockés dans public/uploads/rencontres/ avec nom sécurisé.
+    // Servent à la saisie assistée des évals (PDF résumé à côté du form).
+    //
+    // Pourquoi 3 champs séparés et pas une table Document:
+    //   - Chaque type de document est UNIQUE par rencontre (1 résumé, 1 feuille,
+    //     1 positions de tirs). Pas de 1-N à modéliser.
+    //   - Champ string suffit (juste le nom du fichier).
+    //   - Évite jointures BDD pour un simple chemin.
+    // ====================================================================
+
+    /** Chemin relatif du PDF "résumé" FFBB (stats individuelles agrégées). */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $resumePath = null;
+
+    /** Chemin relatif du PDF "feuille de match" FFBB (table de marque officielle). */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $feuilleMatchPath = null;
+
+    /** Chemin relatif du PDF "positions des tirs" FFBB (shot chart). */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $positionsTirsPath = null;
+
     /**
      * Rôles bénévoles internes (arbitres, marqueur, chrono, e-marque, stats…).
      * Voir entité RencontreRole pour le détail. Chaque rôle peut être pris
@@ -159,6 +183,44 @@ class Rencontre implements ClubAwareInterface
 
     public function getArbitreExterneNom(): ?string { return $this->arbitreExterneNom; }
     public function setArbitreExterneNom(?string $nom): static { $this->arbitreExterneNom = $nom; return $this; }
+
+    // ====== Documents FFBB ======
+    public function getResumePath(): ?string { return $this->resumePath; }
+    public function setResumePath(?string $path): static { $this->resumePath = $path; return $this; }
+
+    public function getFeuilleMatchPath(): ?string { return $this->feuilleMatchPath; }
+    public function setFeuilleMatchPath(?string $path): static { $this->feuilleMatchPath = $path; return $this; }
+
+    public function getPositionsTirsPath(): ?string { return $this->positionsTirsPath; }
+    public function setPositionsTirsPath(?string $path): static { $this->positionsTirsPath = $path; return $this; }
+
+    /**
+     * Helper : récupère le path d'un PDF par son type ('resume', 'feuille', 'positions').
+     * Évite des if/else dans le controller. Renvoie null si type invalide.
+     */
+    public function getPdfPath(string $type): ?string
+    {
+        return match($type) {
+            'resume'    => $this->resumePath,
+            'feuille'   => $this->feuilleMatchPath,
+            'positions' => $this->positionsTirsPath,
+            default     => null,
+        };
+    }
+
+    /**
+     * Helper : assigne un path par type. Source de vérité unique pour les types valides.
+     */
+    public function setPdfPath(string $type, ?string $path): static
+    {
+        match($type) {
+            'resume'    => $this->resumePath = $path,
+            'feuille'   => $this->feuilleMatchPath = $path,
+            'positions' => $this->positionsTirsPath = $path,
+            default     => throw new \InvalidArgumentException("Type de PDF invalide : $type"),
+        };
+        return $this;
+    }
 
     /** @return Collection<int, RencontreRole> */
     public function getRoles(): Collection { return $this->roles; }

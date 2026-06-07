@@ -22,6 +22,22 @@
             <a href="{{ path('manager_rencontre_index') }}" class="btn-mabb-ghost">
                 <i class="bi bi-arrow-left"></i> Toutes les rencontres
             </a>
+            {# 2 modes de saisie disponibles pour le staff :
+                 - "Stats LIVE" : saisie temps réel pendant le match (façon Easy Stats)
+                 - "Saisir les évals" : saisie rapide post-match en remplissant les compteurs FIBA
+               Les 2 cohabitent : selon que la table de marque a noté ou pas. #}
+            {% if is_granted('CLUB_STAFF', rencontre) %}
+                <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}"
+                   class="btn-mabb-primary"
+                   title="Saisie live pendant le match (tablette / table de marque)">
+                    <i class="bi bi-broadcast"></i> Stats LIVE
+                </a>
+                <a href="{{ path('manager_rencontre_evals', {id: rencontre.id}) }}"
+                   class="btn-mabb-orange"
+                   title="Saisie rapide des compteurs FIBA après le match">
+                    <i class="bi bi-clipboard-data"></i> Saisir les évals
+                </a>
+            {% endif %}
             {% if is_granted('CLUB_STAFF', rencontre) and not rencontre.isVerrouillee %}
                 <a href="{{ path('manager_rencontre_edit', {id: rencontre.id}) }}" class="btn-mabb-primary">
                     <i class="bi bi-pencil"></i> Modifier
@@ -321,6 +337,23 @@
                 </div>
             </div>
 
+            {# ========================================================
+               Documents officiels FFBB — résumé, feuille de match, positions tirs
+               3 cartes d'upload identiques (DRY via macro). Visible CLUB_MEMBER en
+               lecture, upload/suppression réservés CLUB_STAFF.
+               ======================================================== #}
+            <div class="card-mabb" style="margin-top:16px;">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span><i class="bi bi-file-earmark-pdf-fill" style="color:var(--mabb-red);"></i> Documents officiels FFBB</span>
+                    <small style="color:var(--mabb-muted); font-weight:500;">PDFs exportés depuis Easy Stats / e-marque</small>
+                </div>
+                <div class="card-body" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                    {{ _self.pdfUploadCard(rencontre, 'resume',    'Résumé du match',   'bi-list-ol',          'Stats individuelles (points, tirs, LF, fautes)') }}
+                    {{ _self.pdfUploadCard(rencontre, 'feuille',   'Feuille de match',  'bi-file-earmark-text','Table de marque officielle action par action') }}
+                    {{ _self.pdfUploadCard(rencontre, 'positions', 'Positions des tirs','bi-bullseye',          'Shot chart — carte des tirs sur le terrain') }}
+                </div>
+            </div>
+
             {% if is_granted('CLUB_ADMIN', rencontre) %}
                 <div class="card-mabb" style="margin-top:16px; border-left:4px solid var(--mabb-red);">
                     <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Zone dangereuse</div>
@@ -337,3 +370,64 @@
         </div>
     </div>
 {% endblock %}
+
+{# ========================================================
+   MACRO : carte d'upload PDF
+   - Si pas de PDF : zone drag-drop avec form upload
+   - Si PDF présent : preview iframe + actions Voir/Supprimer
+   - Visible CLUB_MEMBER en lecture, upload/delete réservés CLUB_STAFF
+   ======================================================== #}
+{% macro pdfUploadCard(rencontre, type, libelle, icone, description) %}
+    {% set path = rencontre.pdfPath(type) %}
+    <div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:14px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <i class="bi {{ icone }}" style="color:var(--mabb-blue); font-size:1.3rem;"></i>
+            <strong style="font-size:.95rem;">{{ libelle }}</strong>
+        </div>
+        <p style="margin:0; color:var(--mabb-muted); font-size:.78rem; line-height:1.4;">{{ description }}</p>
+
+        {% if path %}
+            {# PDF présent — actions : voir / remplacer / supprimer #}
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:auto;">
+                <a href="{{ path('manager_rencontre_pdf_serve', {id: rencontre.id, type: type}) }}"
+                   target="_blank" rel="noopener"
+                   class="btn-mabb-primary"
+                   style="font-size:.78rem; padding:6px 12px;">
+                    <i class="bi bi-eye"></i> Voir
+                </a>
+                {% if is_granted('CLUB_STAFF', rencontre) %}
+                    <form method="post" action="{{ path('manager_rencontre_pdf_delete', {id: rencontre.id, type: type}) }}"
+                          onsubmit="return confirm('Supprimer ce PDF ?');" style="display:inline;">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete_pdf_' ~ type ~ '_' ~ rencontre.id) }}">
+                        <button type="submit" class="btn-mabb-ghost" style="font-size:.78rem; padding:6px 12px; color:var(--mabb-red); border-color:var(--mabb-red);">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        {% else %}
+            {# PDF absent — bouton upload (staff uniquement) #}
+            {% if is_granted('CLUB_STAFF', rencontre) %}
+                <form method="post"
+                      action="{{ path('manager_rencontre_pdf_upload', {id: rencontre.id, type: type}) }}"
+                      enctype="multipart/form-data"
+                      style="margin-top:auto;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('upload_pdf_' ~ type ~ '_' ~ rencontre.id) }}">
+                    <label style="display:block; padding:10px; background:#f3f4f6; border:2px dashed #d1d5db; border-radius:8px; text-align:center; cursor:pointer; transition:background .15s, border-color .15s;"
+                           onmouseover="this.style.background='#eff6ff'; this.style.borderColor='var(--mabb-blue)'"
+                           onmouseout="this.style.background='#f3f4f6'; this.style.borderColor='#d1d5db'">
+                        <i class="bi bi-cloud-upload" style="font-size:1.4rem; display:block; color:var(--mabb-muted); margin-bottom:4px;"></i>
+                        <small style="font-weight:600;">Choisir un PDF</small>
+                        <input type="file" name="pdf" accept="application/pdf"
+                               onchange="this.form.submit();"
+                               style="display:none;">
+                    </label>
+                </form>
+            {% else %}
+                <p style="margin:0; color:var(--mabb-muted); font-size:.78rem; font-style:italic;">
+                    <i class="bi bi-dash-circle"></i> Pas encore uploadé.
+                </p>
+            {% endif %}
+        {% endif %}
+    </div>
+{% endmacro %}

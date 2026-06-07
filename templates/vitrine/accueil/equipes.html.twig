@@ -93,7 +93,7 @@
 			{% endif %}
 		</div>
 	</div>
-</div>{% endfor %}</div>{# Lien Scorenco #}<div class="text-center mt-5"><p class="text-muted mb-2 text-white-force">Résultats et classements en temps réel :</p><a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" class="btn btn-outline-mabb text-white-force" target="_blank">
+</div>{% endfor %}</div>{# Lien Scorenco — même style que sur /calendrier : bleu lisible + hover inverse #}<div class="text-center mt-5"><p class="text-muted mb-2 text-white-force">Résultats et classements en temps réel :</p><a href="https://scorenco.com/basket/clubs/amiens-metropole-basket-ball-2p8p" target="_blank" rel="noopener" class="btn rounded-pill px-4 py-2 fw-semibold" style="background:#fff; color:var(--mabb-blue); border:2px solid var(--mabb-blue); transition:all .2s;" onmouseover="this.style.background='var(--mabb-blue)'; this.style.color='#fff';" onmouseout="this.style.background='#fff'; this.style.color='var(--mabb-blue)';">
 <i class="bi bi-bar-chart-line me-2"></i>Voir sur Scorenco</a></div></div></section>{# ENCADREMENT #}<section class="section section-gray"><div class="container"><div class="text-center mb-5"><h2 class="section-title">Encadrement
 <span>technique</span></h2><p class="section-subtitle">Des éducateurs formés et passionnés</p></div><div class="row g-4 mt-3">{% set coachs = [
                 {nom: 'COULPIED Ugo', titre: 'Responsable sportif', diplome: 'Diplômé d\'État', emoji: '🏀'},

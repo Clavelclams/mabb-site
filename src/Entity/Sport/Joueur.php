@@ -87,6 +87,16 @@ class Joueur implements ClubAwareInterface
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
 
+    /**
+     * Chemin relatif du fichier photo dans public/uploads/joueurs/.
+     * Null = pas de photo, fallback initiales colorées dans la vue.
+     *
+     * Format : "joueur_{id}_{uniqid}.{ext}" — uniqid évite path traversal et collisions.
+     * Le fichier physique est géré par JoueurPhotoUploader, pas par cette entité.
+     */
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $photoPath = null;
+
     /** Lien optionnel vers un compte User */
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -163,6 +173,10 @@ class Joueur implements ClubAwareInterface
 
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $notes): static { $this->notes = $notes; return $this; }
+
+    public function getPhotoPath(): ?string { return $this->photoPath; }
+    public function setPhotoPath(?string $photoPath): static { $this->photoPath = $photoPath; return $this; }
+
     public function getUser(): ?User { return $this->user; }
     public function setUser(?User $user): static { $this->user = $user; return $this; }
     public function isActive(): bool { return $this->isActive; }

@@ -59,10 +59,21 @@ class NumeriquePagesController extends AbstractController
         return $this->render('vitrine/construction/manager.html.twig');
     }
 
+    /**
+     * /pirb → redirect 301 vers https://pirb.mabb.fr
+     *
+     * Le sous-domaine PIRB est désormais en production. Toute requête sur
+     * vitrine.mabb.fr/pirb (anciens liens, partages, Google) est redirigée
+     * de manière permanente (301) vers le bon domaine.
+     *
+     * Le nom de route `vitrine_pirb_construction` est conservé pour ne pas
+     * casser les éventuels appels {{ path('vitrine_pirb_construction') }}
+     * qui traîneraient encore.
+     */
     #[Route('/pirb', name: 'vitrine_pirb_construction')]
     public function pirbConstruction(): Response
     {
-        return $this->render('vitrine/construction/pirb.html.twig');
+        return $this->redirect('https://pirb.mabb.fr', Response::HTTP_MOVED_PERMANENTLY);
     }
 
     #[Route('/nos-reseaux', name: 'vitrine_nos_reseaux')]

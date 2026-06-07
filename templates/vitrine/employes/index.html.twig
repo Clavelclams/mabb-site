@@ -1,0 +1,173 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{% block title %}Nos Employés — MABB Amiens Métropole Basket Ball{% endblock %}
+{% block meta_description %}L'équipe permanente de la MABB : salariés, alternants, services civiques. Une équipe pro qui fait vivre le club au quotidien.{% endblock %}
+
+{% block body %}
+
+{# ===== HEADER ===== #}
+<div class="page-header">
+    <div class="container text-center">
+        <span class="badge-label mb-3">
+            <i class="bi bi-people-fill me-1"></i>
+            Équipe permanente
+        </span>
+        <h1>Nos Employés</h1>
+        <p style="color:rgba(255,255,255,.75)">
+            L'équipe qui fait vivre la MABB au quotidien
+        </p>
+        <nav aria-label="breadcrumb" class="mt-3">
+            <ol class="breadcrumb justify-content-center">
+                <li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}" style="color:#fff">Accueil</a></li>
+                <li class="breadcrumb-item"><a href="{{ path('vitrine_club') }}" style="color:#fff">Le Club</a></li>
+                <li class="breadcrumb-item active" style="color:#fc702a;font-weight:600">
+                    <i class="bi bi-people-fill me-1"></i>Employés
+                </li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+{# ===== INTRO ===== #}
+<section class="section section-gray">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <h2 class="section-title">Une équipe <span>professionnelle</span></h2>
+                <p class="text-muted fs-5 mb-3">
+                    Derrière chaque entraînement, chaque match et chaque action de cité éducative,
+                    il y a une équipe de salariés engagés au quotidien.
+                </p>
+                <p class="text-muted">
+                    BPJEPS diplômés, alternants en formation, services civiques en mission : la MABB
+                    professionnalise son encadrement pour offrir le meilleur à ses joueuses et à la communauté.
+                </p>
+            </div>
+            <div class="col-lg-5">
+                <div class="row g-3">
+                    {# Chiffres clés #}
+                    {% for stat in [
+                        {chiffre: '8', label: 'Salariés permanents', color: 'var(--mabb-blue)'},
+                        {chiffre: '2', label: 'BPJEPS diplômés', color: '#fc702a'},
+                        {chiffre: '1', label: 'Alternance', color: '#16a34a'},
+                        {chiffre: '3+', label: 'Services civiques', color: '#8b5cf6'},
+                    ] %}
+                        <div class="col-6">
+                            <div class="card card-mabb text-center p-3">
+                                <div style="font-size:2.2rem; font-weight:800; color:{{ stat.color }};">{{ stat.chiffre }}</div>
+                                <div class="text-muted small">{{ stat.label }}</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ===== ÉQUIPE PERMANENTE - cards par catégorie ===== #}
+<section class="section">
+    <div class="container">
+
+        {# === DIRECTION === #}
+        <div class="mb-5">
+            <h3 class="section-title text-white mb-4">
+                <span class="text-mabb-orange">Direction</span> & coordination
+            </h3>
+            <div class="row g-4">
+                {% for emp in [
+                    {prenom: 'Willy', nom: 'Dufossé', poste: 'Président / Directeur Général', contrat: 'Bénévole élu', emoji: '🏀', color: '#fc702a'},
+                    {prenom: 'Moussa', nom: '', poste: 'Coordinateur', contrat: 'Salarié', emoji: '🎯', color: 'var(--mabb-blue)'},
+                    {prenom: 'Romy', nom: '', poste: 'Responsable Social', contrat: 'Salariée', emoji: '🤝', color: '#16a34a'},
+                ] %}
+                    {{ _self.empCard(emp) }}
+                {% endfor %}
+            </div>
+        </div>
+
+        {# === SPORTIF === #}
+        <div class="mb-5">
+            <h3 class="section-title text-white mb-4">
+                Pôle <span class="text-mabb-orange">sportif</span>
+            </h3>
+            <div class="row g-4">
+                {% for emp in [
+                    {prenom: 'Ugo', nom: 'Coulpied', poste: 'Responsable Sportif', contrat: 'Salarié — Diplômé d\'État', emoji: '🏀', color: 'var(--mabb-blue)'},
+                    {prenom: 'Larissa', nom: '', poste: 'Éducatrice sportive', contrat: 'Salariée — BPJEPS', emoji: '⛹️‍♀️', color: '#fc702a'},
+                    {prenom: 'Leny', nom: '', poste: 'Éducateur sportif', contrat: 'Salarié — BPJEPS', emoji: '⛹️‍♂️', color: '#fc702a'},
+                ] %}
+                    {{ _self.empCard(emp) }}
+                {% endfor %}
+            </div>
+        </div>
+
+        {# === COMMUNICATION & NUMÉRIQUE === #}
+        <div class="mb-5">
+            <h3 class="section-title text-white mb-4">
+                Communication & <span class="text-mabb-orange">Numérique</span>
+            </h3>
+            <div class="row g-4">
+                {% for emp in [
+                    {prenom: 'Clavel', nom: 'Ndema Moussa', poste: 'Communication & Développement Numérique', contrat: 'Alternance — CDA niveau 6', emoji: '💻', color: '#8b5cf6', link: path('vitrine_clavel')},
+                    {prenom: 'Tony', nom: '', poste: 'Alternance Communication', contrat: 'Alternance', emoji: '📱', color: 'var(--mabb-blue)'},
+                ] %}
+                    {{ _self.empCard(emp) }}
+                {% endfor %}
+            </div>
+        </div>
+
+        {# === SERVICES CIVIQUES & BÉNÉVOLES === #}
+        <div class="mb-3">
+            <h3 class="section-title text-white mb-4">
+                Services civiques & <span class="text-mabb-orange">soutien quotidien</span>
+            </h3>
+            <div class="card card-mabb p-4 text-center">
+                <div style="font-size:2.5rem; margin-bottom:8px">👥</div>
+                <h5 class="fw-bold" style="color:var(--mabb-dark)">Une équipe élargie</h5>
+                <p class="text-muted mb-0">
+                    Services civiques · Stagiaires · Bénévoles
+                    <br><small>Sans eux, la MABB ne pourrait pas accomplir sa mission éducative et sportive au quotidien.</small>
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{# ===== CTA ===== #}
+<section class="section section-gray">
+    <div class="container text-center">
+        <h3 class="section-title">Rejoindre <span>l'équipe</span></h3>
+        <p class="text-muted fs-5 mb-4">
+            Tu cherches un stage, une alternance, un poste de salarié ou un service civique ? La MABB recrute toute l'année.
+        </p>
+        <a href="{{ path('vitrine_contact') }}" class="btn btn-mabb rounded-pill px-4">
+            <i class="bi bi-envelope me-1"></i>Nous contacter
+        </a>
+    </div>
+</section>
+
+{% endblock %}
+
+{# ========================================================
+   MACRO : carte employé réutilisable
+   Couleur de la card et photo facultatives — placeholder emoji par défaut
+   ======================================================== #}
+{% macro empCard(emp) %}
+    {% set link = emp.link is defined ? emp.link : null %}
+    <div class="col-md-6 col-lg-4">
+        {% if link %}<a href="{{ link }}" class="text-decoration-none">{% endif %}
+        <div class="card card-mabb h-100 p-4 d-flex flex-column align-items-center text-center"
+             style="border-top:4px solid {{ emp.color }}; {% if link %}cursor:pointer; transition:transform .15s{% endif %}"
+             {% if link %}onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform='none'"{% endif %}>
+            <div style="font-size:3rem; margin-bottom:8px">{{ emp.emoji }}</div>
+            <h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">
+                {{ emp.prenom }}{% if emp.nom %} {{ emp.nom }}{% endif %}
+            </h5>
+            <p class="text-muted mb-2 fw-semibold" style="font-size:.92rem">{{ emp.poste }}</p>
+            <span class="badge rounded-pill px-3 py-1" style="background:{{ emp.color }}15; color:{{ emp.color }}; border:1px solid {{ emp.color }}30; font-size:.75rem; font-weight:600;">
+                {{ emp.contrat }}
+            </span>
+        </div>
+        {% if link %}</a>{% endif %}
+    </div>
+{% endmacro %}

@@ -15,11 +15,17 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AccueilController extends AbstractController
 {
     #[Route('/', name: 'vitrine_accueil')]
-    public function index(ArticleRepository $articleRepo, PageContenuRepository $pageRepo): Response
-    {
+    public function index(
+        ArticleRepository $articleRepo,
+        PageContenuRepository $pageRepo,
+        MediaRepository $mediaRepo,
+    ): Response {
         return $this->render('vitrine/accueil/index.html.twig', [
-            'dernieres_actus' => $articleRepo->findDerniersPublies(3),
-            'pageContenu'     => $pageRepo->findOneBy(['pageSlug' => 'accueil']),
+            'dernieres_actus'  => $articleRepo->findDerniersPublies(3),
+            // BLOC 4 V2 — 6 dernières photos pour la section "Dernières photos"
+            // (le template les disposera en grid 3x2 sur desktop, 2x3 sur tablette)
+            'dernieres_photos' => $mediaRepo->findImages(6),
+            'pageContenu'      => $pageRepo->findOneBy(['pageSlug' => 'accueil']),
         ]);
     }
 
