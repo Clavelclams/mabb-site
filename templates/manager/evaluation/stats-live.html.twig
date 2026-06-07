@@ -103,11 +103,9 @@
 
         /* ===== Chrono V2.1a ===== */
         .chrono-block {
-            background: linear-gradient(135deg, #ea580c, #c2410c);
             border-radius: 14px;
             padding: 12px 18px;
             text-align: center;
-            min-width: 280px;
             box-shadow: 0 4px 16px rgba(234,88,12,.3);
         }
         .chrono-period {
@@ -531,10 +529,7 @@
         }
         .court-svg-wrap.disabled { cursor: not-allowed; opacity: .55; }
         .court-svg {
-            width: 100%;
-            display: block;
             background: #c2410c;
-            border: 3px solid #fff;
             border-radius: 4px;
         }
         .court-line { stroke: #fff; stroke-width: 4; fill: none; }
@@ -561,12 +556,6 @@
         .actions-panel {
             background: #1e293b;
             border-radius: 10px;
-            padding: 10px;
-            overflow-y: auto;
-            max-height: calc(100vh - 200px);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
         }
         .actions-group { margin-bottom: 4px; }
         .actions-group-title {
@@ -665,7 +654,6 @@
             right: 24px;
             padding: 12px 18px;
             border-radius: 8px;
-            background: #16a34a;
             color: #fff;
             font-weight: 700;
             transform: translateY(120%);
@@ -878,12 +866,20 @@
             height: 100vh !important;
             overflow: hidden !important;
         }
-        {% if app.debug %}
-        /* En dev : la Symfony Web Dev Toolbar fait ~38px en bas et masquerait
-           le footer historique. On compense en réduisant la hauteur dispo.
-           Disparaît automatiquement en prod (pas de toolbar). */
-        main.container-app { height: calc(100vh - 38px) !important; }
-        {% endif %}
+        /* V2.1n — Override box-sizing global (demandé par tests inspecteur) */
+        .stats-live-wrapper,
+        .stats-live-wrapper *,
+        .stats-live-wrapper *::before,
+        .stats-live-wrapper *::after { box-sizing: content-box; }
+
+        /* V2.1n — Masque la Symfony Web Dev Toolbar sur cette page Stats Live.
+           Plus de conflit avec le footer historique. En prod pas de toolbar de
+           toute façon, en dev elle reste sur les AUTRES pages Manager. */
+        [id^="sfwdt"],
+        .sf-toolbar,
+        .sf-minitoolbar,
+        [class^="sf-toolbar"],
+        [class*=" sf-toolbar"] { display: none !important; }
         /* Force la couleur grise du "/ nbPeriodes" pour qu'il ne devienne pas rouge */
         .stats-header .chrono-period > span:last-child { color: #64748b !important; }
 
@@ -993,7 +989,7 @@
         /* HEADER ultra-mince (cible ~38px) — z-index élevé pour rester au-dessus du terrain */
         .stats-header {
             flex-shrink: 0;
-            padding: 3px 8px !important;
+            padding: 0 !important;
             min-height: 0;
             z-index: 50;
             position: relative;
@@ -1207,9 +1203,7 @@
         }
         #modeToggleWrapper .mode-toggle {
             background: rgba(15,23,42,.85);
-            border: 1px solid rgba(255,255,255,.12);
             border-radius: 999px;
-            padding: 4px;
             display: inline-flex;
             gap: 0;
             box-shadow: 0 4px 12px rgba(0,0,0,.3);
@@ -1444,12 +1438,10 @@
             /* V2.1l — Toggle Expert/Débutant centré AU-DESSUS du terrain (maquette).
                Plus de pill flottante : il est dans le flow normal entre la top bar et le terrain. */
 
-            /* V2.1j — Le header est INLINE désormais (pas fixed). Le wrapper
-               reprend son grid normal : header / grid / history-bar.
-               Pas de padding-top monstre, juste un padding-bottom pour ne pas
-               que la pill flottante mange le contenu du scroll interne. */
+            /* V2.1n — Plus de padding-bottom (la pill flottante n'existe plus).
+               Le wrapper utilise toute la hauteur dispo. */
             .stats-live-wrapper {
-                padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+                padding-bottom: 0 !important;
             }
             /* En drawer ouvert, on cache le mini-bar (le vrai header le remplace) */
             body.drawer-open .stats-mini-bar {
