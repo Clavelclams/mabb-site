@@ -32,6 +32,12 @@
                    title="Saisie live pendant le match (tablette / table de marque)">
                     <i class="bi bi-broadcast"></i> Stats LIVE
                 </a>
+                {# V2.1d — Lien vers la page de gestion des sessions de saisie #}
+                <a href="{{ path('manager_rencontre_sessions', {id: rencontre.id}) }}"
+                   class="btn-mabb-ghost"
+                   title="Voir les sessions de saisie et promouvoir l'officielle">
+                    <i class="bi bi-collection"></i> Sessions
+                </a>
                 <a href="{{ path('manager_rencontre_evals', {id: rencontre.id}) }}"
                    class="btn-mabb-orange"
                    title="Saisie rapide des compteurs FIBA après le match">
@@ -43,8 +49,50 @@
                     <i class="bi bi-pencil"></i> Modifier
                 </a>
             {% endif %}
+
+            {# === V2.1c — Archiver / Désarchiver === #}
+            {% if is_granted('CLUB_STAFF', rencontre) %}
+                {% if rencontre.isArchivee %}
+                    <form method="POST" action="{{ path('manager_rencontre_desarchiver', {id: rencontre.id}) }}" style="display:inline;">
+                        <input type="hidden" name="_token" value="{{ csrf_token('desarchiver_rencontre_' ~ rencontre.id) }}">
+                        <button type="submit" class="btn-mabb-ghost" title="Sortir des archives">
+                            <i class="bi bi-arrow-counterclockwise"></i> Désarchiver
+                        </button>
+                    </form>
+                {% else %}
+                    <form method="POST" action="{{ path('manager_rencontre_archiver', {id: rencontre.id}) }}" style="display:inline;"
+                          onsubmit="return confirm('Archiver cette rencontre ? Elle sera masquée des listes par défaut mais restera accessible via le filtre.');">
+                        <input type="hidden" name="_token" value="{{ csrf_token('archiver_rencontre_' ~ rencontre.id) }}">
+                        <button type="submit" class="btn-mabb-ghost" title="Archiver la rencontre">
+                            <i class="bi bi-archive"></i> Archiver
+                        </button>
+                    </form>
+                {% endif %}
+            {% endif %}
+
+            {# === V2.1c — Suppression définitive (DIRIGEANT only) === #}
+            {% if is_granted('CLUB_ADMIN', rencontre) %}
+                <form method="POST" action="{{ path('manager_rencontre_delete', {id: rencontre.id}) }}" style="display:inline;"
+                      onsubmit="return confirm('⚠️ Supprimer définitivement cette rencontre ?\n\nCette action est IRRÉVERSIBLE. Toutes les stats, présences, évaluations associées seront perdues.\n\nPréfère l\'archivage si tu veux juste la masquer.');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('delete_rencontre_' ~ rencontre.id) }}">
+                    <button type="submit" class="btn-mabb-ghost" style="color:#dc2626; border-color:#fecaca;" title="Supprimer définitivement (irréversible)">
+                        <i class="bi bi-trash"></i> Supprimer
+                    </button>
+                </form>
+            {% endif %}
         </div>
     </div>
+
+    {# === Badge "ARCHIVÉE" en bandeau si applicable === #}
+    {% if rencontre.isArchivee %}
+        <div style="background:#f3f4f6; border-left:4px solid #6b7280; padding:12px 16px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+            <i class="bi bi-archive-fill" style="color:#6b7280; font-size:1.2rem;"></i>
+            <div style="flex:1;">
+                <strong style="color:#374151;">Rencontre archivée</strong>
+                <div style="font-size:.82rem; color:#6b7280;">Masquée des listes par défaut. Cliquer "Désarchiver" pour la remettre en circulation.</div>
+            </div>
+        </div>
+    {% endif %}
 
     {# ========================================================
        Carte SCORE en gros — la donnée la plus importante

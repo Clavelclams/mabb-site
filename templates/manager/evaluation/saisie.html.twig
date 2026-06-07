@@ -3,6 +3,23 @@
 {% block title %}Saisie évals — {{ rencontre.equipe.nom }} vs {{ rencontre.adversaire }}{% endblock %}
 
 {% block body %}
+    {# === V2.1d.1 — Bandeau pédagogique : clarifier le rôle de cette page === #}
+    <div style="background:#eff6ff; border-left:4px solid #3b82f6; padding:14px 18px; border-radius:8px; margin-bottom:16px; display:flex; gap:12px; align-items:start;">
+        <i class="bi bi-info-circle-fill" style="color:#1e40af; font-size:1.4rem; flex-shrink:0; margin-top:2px;"></i>
+        <div style="flex:1; color:#1e3a8a; font-size:.88rem; line-height:1.55;">
+            <strong>Édition manuelle des évaluations.</strong>
+            Les stats sont normalement <strong>générées automatiquement</strong> depuis la session
+            Stats Live promue officielle. Utilise cette page pour :
+            <ul style="margin:6px 0 0 18px;">
+                <li><strong>Corriger</strong> une erreur après auto-génération</li>
+                <li><strong>Saisir depuis le PDF FFBB officiel</strong> si Stats Live n'a pas été utilisé</li>
+            </ul>
+            <small style="display:block; margin-top:8px; color:#1e3a8a;">
+                ⚠️ Toute modification ici <strong>écrase</strong> les stats auto-générées.
+            </small>
+        </div>
+    </div>
+
     <div class="page-header">
         <div>
             <h1>

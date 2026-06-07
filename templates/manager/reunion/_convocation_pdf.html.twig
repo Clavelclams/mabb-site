@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Convocation — {{ reunion.titre }}</title>
+    {# Style inline pour Dompdf (pas de CSS externe). Restreint au CSS supporté
+       par Dompdf : flexbox/grid pas géré, mais positionnement classique + tableaux OK. #}
+    <style>
+        * { box-sizing: border-box; }
+        @page { margin: 18mm 20mm; }
+        body {
+            font-family: 'DejaVu Sans', sans-serif;
+            color: #1f2937;
+            font-size: 11pt;
+            line-height: 1.5;
+        }
+        .header {
+            border-bottom: 3px solid #fc702a;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+        .header-table { width: 100%; }
+        .header-table td { vertical-align: middle; }
+        .header-table .club {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #0062a8;
+        }
+        .header-table .meta {
+            text-align: right;
+            font-size: 9pt;
+            color: #6b7280;
+        }
+        h1 {
+            font-size: 20pt;
+            color: #0062a8;
+            margin: 24px 0 4px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        h1 .type {
+            display: block;
+            font-size: 11pt;
+            color: #fc702a;
+            font-weight: 600;
+            letter-spacing: .08em;
+        }
+        .infos {
+            background: #f9fafb;
+            border-left: 4px solid #fc702a;
+            padding: 12px 16px;
+            margin: 24px 0;
+        }
+        .infos table { width: 100%; }
+        .infos td {
+            padding: 4px 8px 4px 0;
+            font-size: 11pt;
+        }
+        .infos td.label {
+            color: #6b7280;
+            font-weight: 600;
+            width: 120px;
+        }
+        h2 {
+            font-size: 12pt;
+            color: #0062a8;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 4px;
+            margin: 22px 0 10px;
+        }
+        .ordre-jour {
+            padding-left: 22px;
+        }
+        .ordre-jour li {
+            margin: 4px 0;
+        }
+        .convoques {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .convoques th, .convoques td {
+            border: 1px solid #e5e7eb;
+            padding: 6px 10px;
+            text-align: left;
+            font-size: 10pt;
+        }
+        .convoques th {
+            background: #f3f4f6;
+            font-weight: 700;
+            color: #374151;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 9pt;
+            color: #6b7280;
+        }
+        .signature {
+            margin-top: 30px;
+            width: 100%;
+        }
+        .signature td {
+            width: 50%;
+            vertical-align: top;
+            font-size: 10pt;
+        }
+        .signature .place {
+            text-align: right;
+        }
+        .important {
+            margin-top: 20px;
+            padding: 10px 14px;
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+<body>
+
+    {# ===== EN-TÊTE ===== #}
+    <div class="header">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="club">{{ reunion.club.nom }}</div>
+                    <small style="color:#6b7280;">Association sportive — Loi 1901</small>
+                </td>
+                <td class="meta">
+                    Émis le {{ "now"|date('d/m/Y') }}<br>
+                    Réf. réunion #{{ reunion.id }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    {# ===== TITRE ===== #}
+    <h1>
+        <span class="type">{{ {
+            'CA': 'Conseil d\'administration',
+            'AG_ORDINAIRE': 'Assemblée Générale Ordinaire',
+            'AG_EXTRAORDINAIRE': 'Assemblée Générale Extraordinaire',
+            'BUREAU': 'Réunion de bureau',
+            'AUTRE': 'Réunion'
+        }[reunion.type] ?? 'Réunion' }}</span>
+        Convocation officielle
+    </h1>
+
+    {# ===== INFOS PRATIQUES ===== #}
+    <div class="infos">
+        <table>
+            <tr>
+                <td class="label">Objet</td>
+                <td><strong>{{ reunion.titre }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label">Date</td>
+                <td>{{ reunion.date|date('l j F Y', 'Europe/Paris')|capitalize }}</td>
+            </tr>
+            <tr>
+                <td class="label">Heure</td>
+                <td>{{ reunion.date|date('H\\hi') }}</td>
+            </tr>
+            {% if reunion.lieu %}
+                <tr>
+                    <td class="label">Lieu</td>
+                    <td>{{ reunion.lieu }}</td>
+                </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    {# ===== ORDRE DU JOUR ===== #}
+    {% if reunion.ordreDuJour %}
+        <h2>Ordre du jour</h2>
+        {# L'ordre du jour est stocké en texte libre (peut-être avec retours ligne).
+           On le présente tel quel dans un bloc préformaté. #}
+        <div style="white-space:pre-wrap; padding:8px 12px; background:#f9fafb; border-left:3px solid #0062a8;">{{ reunion.ordreDuJour }}</div>
+    {% endif %}
+
+    {# ===== CONVOQUÉS ===== #}
+    <h2>Membres convoqués ({{ convocations|length }})</h2>
+    {% if convocations|length > 0 %}
+        <table class="convoques">
+            <thead>
+                <tr>
+                    <th style="width:60%;">Nom</th>
+                    <th style="width:40%;">Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in convocations %}
+                    {% set u = c.user %}
+                    <tr>
+                        <td>{{ u.prenom ?? '' }} {{ u.nom ?? '' }}</td>
+                        <td>{{ u.email ?? '—' }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color:#6b7280; font-style:italic;">Aucun convoqué enregistré.</p>
+    {% endif %}
+
+    {# ===== RAPPEL IMPORTANT ===== #}
+    <div class="important">
+        <strong>Confirmation de présence requise.</strong>
+        Merci de bien vouloir confirmer votre présence ou indiquer un éventuel motif d'absence avant la veille de la réunion.
+        Vous pouvez le faire directement sur <strong>manager.mabb.fr</strong> dans votre espace.
+    </div>
+
+    {# ===== SIGNATURE ===== #}
+    <table class="signature">
+        <tr>
+            <td>
+                Fait à <strong>Amiens</strong>,<br>
+                le {{ "now"|date('d/m/Y') }}.
+            </td>
+            <td class="place">
+                Le secrétariat du club,<br>
+                <strong>{{ reunion.club.nom }}</strong>
+            </td>
+        </tr>
+    </table>
+
+    {# ===== PIED ===== #}
+    <div class="footer">
+        Document généré automatiquement par MABB Manager — manager.mabb.fr
+    </div>
+
+</body>
+</html>

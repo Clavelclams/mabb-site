@@ -132,6 +132,15 @@ class ActionMatch implements ClubAwareInterface
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Rencontre $rencontre = null;
 
+    /**
+     * Session de saisie (V2.1d). Nullable pour permettre la coexistence avec
+     * les ActionMatch créées AVANT V2.1d (rattachées directement à la rencontre).
+     * À terme, toute nouvelle action sera rattachée à une session.
+     */
+    #[ORM\ManyToOne(targetEntity: SessionStatsLive::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
+    private ?SessionStatsLive $session = null;
+
     #[ORM\Column(length: 30)]
     #[Assert\Choice(choices: self::TYPES, message: 'Type d\'action invalide.')]
     private ?string $type = null;
@@ -254,6 +263,9 @@ class ActionMatch implements ClubAwareInterface
 
     public function getRencontre(): ?Rencontre { return $this->rencontre; }
     public function setRencontre(?Rencontre $r): static { $this->rencontre = $r; return $this; }
+
+    public function getSession(): ?SessionStatsLive { return $this->session; }
+    public function setSession(?SessionStatsLive $s): static { $this->session = $s; return $this; }
 
     public function getType(): ?string { return $this->type; }
     public function setType(string $type): static

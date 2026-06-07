@@ -114,15 +114,39 @@ class ActionMatchRepository extends ServiceEntityRepository
      */
     public function comptageActionsParType(Joueur $joueur, Rencontre $rencontre): array
     {
-        $rows = $this->createQueryBuilder('a')
+        // V2.1d Étape 2.3 — Filtrage par session OFFICIELLE.
+        //
+        // Stratégie source-de-vérité :
+        //   1. Cherche la session OFFICIELLE de la rencontre
+        //   2. Si trouvée : agrège UNIQUEMENT ses actions
+        //   3. Sinon : agrège les actions SANS session (données pre-V2.1d)
+        //
+        // Garantit que la fiche joueuse ne mélange JAMAIS les saisies de
+        // plusieurs bénévoles parallèles.
+        $sessionOfficielle = $this->getEntityManager()
+            ->getRepository(\App\Entity\Sport\SessionStatsLive::class)
+            ->findOneBy([
+                'rencontre' => $rencontre,
+                'statut'    => \App\Entity\Sport\SessionStatsLive::STATUT_OFFICIELLE,
+            ]);
+
+        $qb = $this->createQueryBuilder('a')
             ->select('a.type, COUNT(a.id) AS nb')
             ->where('a.joueur = :joueur')
             ->andWhere('a.rencontre = :rencontre')
             ->setParameter('joueur', $joueur)
             ->setParameter('rencontre', $rencontre)
-            ->groupBy('a.type')
-            ->getQuery()
-            ->getArrayResult();
+            ->groupBy('a.type');
+
+        if ($sessionOfficielle !== null) {
+            $qb->andWhere('a.session = :session')
+               ->setParameter('session', $sessionOfficielle);
+        } else {
+            // Compat ancienne : actions créées avant V2.1d (sans session)
+            $qb->andWhere('a.session IS NULL');
+        }
+
+        $rows = $qb->getQuery()->getArrayResult();
 
         // Transforme [{type: 'X', nb: 3}, ...] en ['X' => 3, ...]
         $resultat = [];

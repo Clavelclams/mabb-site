@@ -9,6 +9,7 @@ use App\Repository\Sport\EquipeRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -81,6 +82,24 @@ class RencontreType extends AbstractType
                 'label'    => 'Nom de l\'arbitre FFBB (si désigné)',
                 'required' => false,
                 'attr'     => ['maxlength' => 120, 'placeholder' => 'Optionnel — info de convocation FFBB'],
+            ])
+            // === Format match (Stats Live V2.1a) ===
+            // 2 champs : nombre de périodes + durée d'une période.
+            // Combinés ils donnent le format (4×10, 4×8, 2×20…).
+            ->add('nbPeriodes', ChoiceType::class, [
+                'label'    => 'Nombre de périodes',
+                'required' => true,
+                'choices'  => [
+                    '4 quart-temps' => 4,
+                    '2 mi-temps'    => 2,
+                ],
+                'help'     => 'Détermine la structure du chrono en Stats Live.',
+            ])
+            ->add('dureePeriodeMinutes', IntegerType::class, [
+                'label'    => 'Durée d\'une période (minutes)',
+                'required' => true,
+                'attr'     => ['min' => 1, 'max' => 30],
+                'help'     => 'Standard FFBB : 10 min (seniors/U18/U17), 8 min (U15/U13/U11), 6 min (U9/U7).',
             ])
             ->add('notes', TextareaType::class, [
                 'label'    => 'Notes',

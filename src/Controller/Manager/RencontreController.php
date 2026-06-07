@@ -84,6 +84,14 @@ class RencontreController extends AbstractController
                ->setParameter('equipe', $equipeFiltre);
         }
 
+        // V2.1c — Filtre archivées : par défaut on cache les archivées.
+        // Toggle "Voir aussi les archivées" via ?archive=1
+        $voirArchive = $request->query->getBoolean('archive');
+        if (!$voirArchive) {
+            $qb->andWhere('r.statut != :statut_archive')
+               ->setParameter('statut_archive', Rencontre::STATUT_ARCHIVE);
+        }
+
         switch ($periode) {
             case 'a_venir':
                 $qb->andWhere('r.date >= :now')
@@ -111,6 +119,7 @@ class RencontreController extends AbstractController
             'equipes'       => $equipes,
             'equipe_filtre' => $equipeFiltre,
             'periode'       => $periode,
+            'voir_archive'  => $voirArchive,
             'club'          => $club,
         ]);
     }
@@ -275,6 +284,130 @@ class RencontreController extends AbstractController
 
         $this->addFlash('success', 'Rencontre supprimée.');
         return $this->redirectToRoute('manager_rencontre_index');
+    }
+
+    /**
+     * ARCHIVER une rencontre (V2.1c).
+     * Réversible. La rencontre disparaît des listes par défaut mais reste en BDD.
+     * Permission CLUB_STAFF (moins strict que delete).
+     */
+    #[Route('/rencontres/{id}/archiver', name: 'manager_rencontre_archiver', methods: ['POST'])]
+    public function archiver(Request $request, Rencontre $rencontre): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('archiver_rencontre_' . $rencontre->getId(), $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        if ($rencontre->isArchivee()) {
+            $this->addFlash('info', 'Cette rencontre est déjà archivée.');
+        } else {
+            $rencontre->setStatut(Rencontre::STATUT_ARCHIVE);
+            $this->em->flush();
+            $this->addFlash('success', 'Rencontre archivée. Visible via "Voir les archivées".');
+        }
+
+        return $this->redirectToRoute('manager_rencontre_index');
+    }
+
+    /**
+     * Archivage GROUPÉ depuis la liste — sélection multiple.
+     * Body POST classique : { rencontres_ids: [3, 7, 12], _token: '...' }
+     *
+     * Action sûre : on ne touche QUE les rencontres du club actif (anti-IDOR).
+     * Les IDs hors club sont silencieusement ignorés.
+     */
+    #[Route('/rencontres/bulk-archiver', name: 'manager_rencontre_bulk_archiver', methods: ['POST'])]
+    public function bulkArchiver(Request $request): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        if (!$club) {
+            $this->addFlash('error', 'Aucun club actif.');
+            return $this->redirectToRoute('manager_rencontre_index');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('bulk_archiver_rencontres', $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_index');
+        }
+
+        $ids = (array) $request->request->all('rencontres_ids');
+        $ids = array_filter(array_map('intval', $ids));
+        if (empty($ids)) {
+            $this->addFlash('warning', 'Aucune rencontre sélectionnée.');
+            return $this->redirectToRoute('manager_rencontre_index');
+        }
+
+        $rencontres = $this->rencontreRepository->createQueryBuilder('r')
+            ->where('r.club = :club')
+            ->andWhere('r.id IN (:ids)')
+            ->setParameter('club', $club)
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+
+        $nbArchivees = 0;
+        $nbSkipped = 0;
+        foreach ($rencontres as $r) {
+            /** @var Rencontre $r */
+            if ($r->isArchivee()) {
+                $nbSkipped++;
+                continue;
+            }
+            $r->setStatut(Rencontre::STATUT_ARCHIVE);
+            $nbArchivees++;
+        }
+        $this->em->flush();
+
+        if ($nbArchivees > 0) {
+            $this->addFlash('success', sprintf(
+                '%d rencontre%s archivée%s.',
+                $nbArchivees,
+                $nbArchivees > 1 ? 's' : '',
+                $nbArchivees > 1 ? 's' : ''
+            ));
+        }
+        if ($nbSkipped > 0) {
+            $this->addFlash('info', sprintf(
+                '%d déjà archivée%s — ignorée%s.',
+                $nbSkipped,
+                $nbSkipped > 1 ? 's' : '',
+                $nbSkipped > 1 ? 's' : ''
+            ));
+        }
+
+        return $this->redirectToRoute('manager_rencontre_index');
+    }
+
+    /**
+     * DÉSARCHIVER : remet la rencontre en BROUILLON (statut neutre).
+     */
+    #[Route('/rencontres/{id}/desarchiver', name: 'manager_rencontre_desarchiver', methods: ['POST'])]
+    public function desarchiver(Request $request, Rencontre $rencontre): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('desarchiver_rencontre_' . $rencontre->getId(), $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        if (!$rencontre->isArchivee()) {
+            $this->addFlash('info', 'Cette rencontre n\'est pas archivée.');
+        } else {
+            // On la repasse en BROUILLON par défaut (l'user pourra la re-valider si besoin)
+            $rencontre->setStatut(Rencontre::STATUT_BROUILLON);
+            $this->em->flush();
+            $this->addFlash('success', 'Rencontre désarchivée (statut : Brouillon).');
+        }
+
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
     }
 
     // ════════════════════════════════════════════════════════════════════

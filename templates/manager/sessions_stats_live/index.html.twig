@@ -1,0 +1,133 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Sessions Stats — {{ rencontre.equipe.nom }} vs {{ rencontre.adversaire }}{% endblock %}
+
+{% block body %}
+    {% set statut_colors = {
+        'EN_COURS':   {'bg': '#fef3c7', 'fg': '#92400e', 'border': '#f59e0b', 'icon': 'bi-pencil-fill'},
+        'COMPLETE':   {'bg': '#dbeafe', 'fg': '#1e40af', 'border': '#3b82f6', 'icon': 'bi-check-circle'},
+        'OFFICIELLE': {'bg': '#dcfce7', 'fg': '#166534', 'border': '#16a34a', 'icon': 'bi-award-fill'},
+        'ARCHIVEE':   {'bg': '#f3f4f6', 'fg': '#4b5563', 'border': '#9ca3af', 'icon': 'bi-archive-fill'},
+    } %}
+
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-collection"></i> Sessions de saisie</h1>
+            <p class="subtitle">
+                {{ rencontre.equipe.nom }} vs <strong>{{ rencontre.adversaire }}</strong>
+                · {{ rencontre.date|date('d/m/Y H:i') }}
+                · <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    ← Retour rencontre
+                </a>
+            </p>
+        </div>
+        <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}" class="btn-mabb-orange">
+            <i class="bi bi-pencil-square"></i> Nouvelle saisie
+        </a>
+    </div>
+
+    {# Bandeau pédagogique pour expliquer le concept #}
+    <div class="card-mabb" style="border-left:4px solid #3b82f6; background:#eff6ff; margin-bottom:20px;">
+        <div class="card-body" style="padding:14px 18px; display:flex; gap:12px; align-items:start;">
+            <i class="bi bi-info-circle-fill" style="color:#1e40af; font-size:1.4rem; flex-shrink:0; margin-top:2px;"></i>
+            <div style="flex:1; color:#1e3a8a; font-size:.88rem; line-height:1.55;">
+                Plusieurs bénévoles peuvent saisir les stats du même match — chacun crée sa <strong>session</strong>.
+                Le staff compare et <strong>promeut la meilleure en "Officielle"</strong>. Cette session-là alimente
+                les stats de la fiche joueuse. Les autres restent visibles pour comparaison/formation.
+            </div>
+        </div>
+    </div>
+
+    {% if sessions is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:40px 20px;">
+                <i class="bi bi-pencil-square" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                <p style="margin-top:12px; color:var(--mabb-muted);">Aucune session de saisie pour ce match.</p>
+                <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}" class="btn-mabb-primary mt-2">
+                    Démarrer une saisie
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div class="row g-3">
+            {% for s in sessions %}
+                {% set c = statut_colors[s.statut] %}
+                {% set nbActions = nb_actions_par_session[s.id] ?? 0 %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card-mabb" style="height:100%; border-left:4px solid {{ c.border }};">
+                        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; background:{{ c.bg }};">
+                            <strong style="color:{{ c.fg }};">
+                                <i class="bi {{ c.icon }}"></i> {{ s.statutLabel }}
+                            </strong>
+                            {% if s.isOfficielle %}
+                                <span style="padding:2px 8px; background:white; color:{{ c.fg }}; border-radius:8px; font-size:.65rem; font-weight:800;">⭐ OFFICIELLE</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body" style="padding:16px;">
+                            <h4 style="margin:0 0 4px; font-size:1rem; color:var(--mabb-dark);">{{ s.nom }}</h4>
+                            <div style="font-size:.82rem; color:var(--mabb-muted);">
+                                Par <strong>{{ s.createdBy ? (s.createdBy.prenom ~ ' ' ~ s.createdBy.nom) : 'Anonyme' }}</strong>
+                            </div>
+
+                            <div style="margin-top:12px; padding:8px 12px; background:#f9fafb; border-radius:8px; display:flex; justify-content:space-between;">
+                                <span style="font-size:.78rem; color:var(--mabb-muted);">Actions saisies</span>
+                                <strong style="color:var(--mabb-blue); font-size:1.05rem;">{{ nbActions }}</strong>
+                            </div>
+
+                            <div style="margin-top:10px; font-size:.72rem; color:var(--mabb-muted);">
+                                Créée le {{ s.createdAt|date('d/m à H:i') }}
+                                {% if s.completedAt %}<br>Terminée le {{ s.completedAt|date('d/m à H:i') }}{% endif %}
+                                {% if s.promotedAt %}<br>Promue le {{ s.promotedAt|date('d/m à H:i') }}
+                                    {% if s.promotedBy %}par {{ s.promotedBy.prenom }}{% endif %}
+                                {% endif %}
+                            </div>
+
+                            {# === ACTIONS === #}
+                            <div style="margin-top:14px; display:flex; flex-direction:column; gap:6px;">
+                                {# Reprendre la saisie si c'est ma session EN_COURS #}
+                                {% if s.isEnCours and s.createdBy and app.user and s.createdBy.id == app.user.id %}
+                                    <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}" class="btn-mabb-orange btn-sm" style="text-align:center;">
+                                        <i class="bi bi-pencil"></i> Reprendre ma saisie
+                                    </a>
+                                {% endif %}
+
+                                {# Marquer complète (créateur ou staff) #}
+                                {% if s.isEnCours %}
+                                    <form method="POST" action="{{ path('manager_session_marquer_complete', {id: s.id}) }}"
+                                          onsubmit="return confirm('Marquer cette session comme terminée ? Tu ne pourras plus modifier les stats.');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('complete_session_' ~ s.id) }}">
+                                        <button type="submit" class="btn-mabb-ghost btn-sm" style="width:100%;">
+                                            <i class="bi bi-check2"></i> Marquer terminée
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {# Promouvoir officielle (staff) #}
+                                {% if is_granted('CLUB_STAFF', rencontre) and not s.isOfficielle and not s.isArchivee %}
+                                    <form method="POST" action="{{ path('manager_session_promouvoir', {id: s.id}) }}"
+                                          onsubmit="return confirm('Promouvoir cette session OFFICIELLE ?\n\nElle deviendra la source officielle des stats. Les autres officielles seront archivées automatiquement.');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('promouvoir_session_' ~ s.id) }}">
+                                        <button type="submit" class="btn-mabb-primary btn-sm" style="width:100%; background:#16a34a; border-color:#16a34a;">
+                                            <i class="bi bi-award"></i> Promouvoir officielle
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                {# Archiver (staff) #}
+                                {% if is_granted('CLUB_STAFF', rencontre) and not s.isArchivee %}
+                                    <form method="POST" action="{{ path('manager_session_archiver', {id: s.id}) }}"
+                                          onsubmit="return confirm('Archiver cette session ?');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('archiver_session_' ~ s.id) }}">
+                                        <button type="submit" class="btn-mabb-ghost btn-sm" style="width:100%; color:#6b7280;">
+                                            <i class="bi bi-archive"></i> Archiver
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

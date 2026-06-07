@@ -65,6 +65,13 @@ class ClubVoter extends Voter
             return false;
         }
 
+        // Court-circuit ROLE_SUPER_ADMIN — admin@mabb.fr a tous les droits
+        // sur tous les clubs, indépendamment de ses UserClubRole.
+        // Pattern aligné sur TresorerieVoter + NoteFraisVoter.
+        if (in_array('ROLE_SUPER_ADMIN', $user->getRoles(), true)) {
+            return true;
+        }
+
         // Extrait le Club du subject :
         //   - si Club directement → on l'utilise tel quel
         //   - si ClubAwareInterface → on appelle getClub() pour récupérer le Club

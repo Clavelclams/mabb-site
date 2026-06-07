@@ -27,7 +27,19 @@ class Rencontre implements ClubAwareInterface
     public const STATUT_BROUILLON  = 'brouillon';
     public const STATUT_VALIDE     = 'valide';
     public const STATUT_VERROUILLE = 'verrouille';
-    public const STATUTS = [self::STATUT_BROUILLON, self::STATUT_VALIDE, self::STATUT_VERROUILLE];
+    /**
+     * ARCHIVE (V2.1c) : la rencontre n'apparaît plus dans les listes courantes
+     * mais reste accessible en BDD et via filtre "Voir les archivées".
+     * Utile pour : matchs de test, doublons, anciennes saisies.
+     * Toggle réversible (admin peut désarchiver).
+     */
+    public const STATUT_ARCHIVE    = 'archive';
+    public const STATUTS = [
+        self::STATUT_BROUILLON,
+        self::STATUT_VALIDE,
+        self::STATUT_VERROUILLE,
+        self::STATUT_ARCHIVE,
+    ];
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -117,6 +129,46 @@ class Rencontre implements ClubAwareInterface
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $positionsTirsPath = null;
 
+    // ====================================================================
+    // FORMAT DE MATCH — Stats Live V2.1a
+    // ====================================================================
+    //
+    // Le format détermine le chrono affiché et le nombre de périodes côté UI.
+    // Valeurs typiques FFBB féminine :
+    //   - Seniors / U18 / U17 : 4 × 10 min (FIBA officiel)
+    //   - U15 / U13 / U11     : 4 × 8 min
+    //   - Mini-basket U9/U7   : périodes plus courtes (4×6 ou 2×8)
+    //   - Loisir              : 2 × 20 min (libre)
+    //
+    // On ne fige PAS une enum stricte : chaque catégorie a ses spécificités,
+    // on laisse 2 entiers libres. Le coach saisit ce que dit le règlement
+    // de son championnat.
+
+    /** Nombre de périodes (2 pour mi-temps, 4 pour quart-temps). Défaut : 4. */
+    #[ORM\Column(type: 'integer', options: ['default' => 4])]
+    private int $nbPeriodes = 4;
+
+    /** Durée d'UNE période en minutes. Défaut : 10. */
+    #[ORM\Column(type: 'integer', options: ['default' => 10])]
+    private int $dureePeriodeMinutes = 10;
+
+    /**
+     * IDs des joueuses NON convoquées au match (V2.1f).
+     * Stocké en JSON pour rester simple : pas d'entité dédiée car la donnée
+     * est strictement liée à UNE rencontre (pas d'historique multi-saison).
+     *
+     * Convention : array<int> — IDs des joueuses qui NE jouent PAS aujourd'hui.
+     * Les joueuses non listées ici sont par défaut "convoquées".
+     *
+     * Pourquoi cocher "non convoquée" plutôt que "convoquée" ?
+     *   - Par défaut, on convoque TOUT l'effectif actif → moins de clics
+     *   - On marque uniquement les exceptions (blessées, examens, etc.)
+     *
+     * @var int[]
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $joueursNonConvoques = [];
+
     /**
      * Rôles bénévoles internes (arbitres, marqueur, chrono, e-marque, stats…).
      * Voir entité RencontreRole pour le détail. Chaque rôle peut être pris
@@ -149,6 +201,7 @@ class Rencontre implements ClubAwareInterface
     public function onPreUpdate(): void { $this->updatedAt = new \DateTimeImmutable(); }
 
     public function isVerrouillee(): bool { return $this->statut === self::STATUT_VERROUILLE; }
+    public function isArchivee(): bool { return $this->statut === self::STATUT_ARCHIVE; }
     public function aResultat(): bool { return $this->scoreEquipe !== null && $this->scoreAdverse !== null; }
 
     public function getId(): ?int { return $this->id; }
@@ -159,7 +212,11 @@ class Rencontre implements ClubAwareInterface
     public function getAdversaire(): ?string { return $this->adversaire; }
     public function setAdversaire(string $adv): static { $this->adversaire = $adv; return $this; }
     public function getDate(): ?\DateTimeImmutable { return $this->date; }
-    public function setDate(\DateTimeImmutable $date): static { $this->date = $date; return $this; }
+    /**
+     * Accepte null pour ne pas crasher en TypeError quand Symfony Form soumet
+     * une date vide (l'erreur sera levée par la validation Form, pas par PHP).
+     */
+    public function setDate(?\DateTimeImmutable $date): static { $this->date = $date; return $this; }
     public function getLieu(): ?string { return $this->lieu; }
     public function setLieu(?string $lieu): static { $this->lieu = $lieu; return $this; }
     public function isDomicile(): bool { return $this->domicile; }
@@ -193,6 +250,70 @@ class Rencontre implements ClubAwareInterface
 
     public function getPositionsTirsPath(): ?string { return $this->positionsTirsPath; }
     public function setPositionsTirsPath(?string $path): static { $this->positionsTirsPath = $path; return $this; }
+
+    // === Format match (V2.1a) ===
+
+    public function getNbPeriodes(): int { return $this->nbPeriodes; }
+    public function setNbPeriodes(int $n): static
+    {
+        if (!in_array($n, [2, 4], true)) {
+            throw new \InvalidArgumentException('Nombre de périodes : 2 (mi-temps) ou 4 (quart-temps).');
+        }
+        $this->nbPeriodes = $n;
+        return $this;
+    }
+
+    public function getDureePeriodeMinutes(): int { return $this->dureePeriodeMinutes; }
+    public function setDureePeriodeMinutes(int $m): static
+    {
+        if ($m < 1 || $m > 30) {
+            throw new \InvalidArgumentException('Durée de période : entre 1 et 30 minutes.');
+        }
+        $this->dureePeriodeMinutes = $m;
+        return $this;
+    }
+
+    /**
+     * Libellé humain du format match — utilisé en UI.
+     * Ex : "4 × 10 min" ou "2 × 20 min".
+     */
+    public function getFormatMatchLabel(): string
+    {
+        return sprintf('%d × %d min', $this->nbPeriodes, $this->dureePeriodeMinutes);
+    }
+
+    /**
+     * Durée totale en secondes (pour le chrono final).
+     */
+    public function getDureeTotaleSecondes(): int
+    {
+        return $this->nbPeriodes * $this->dureePeriodeMinutes * 60;
+    }
+
+    /**
+     * @return int[]
+     */
+    public function getJoueursNonConvoques(): array
+    {
+        return $this->joueursNonConvoques ?? [];
+    }
+
+    /**
+     * @param int[] $ids
+     */
+    public function setJoueursNonConvoques(array $ids): self
+    {
+        // Force valeurs entières + dédoublonnage + tri pour cohérence
+        $clean = array_values(array_unique(array_map('intval', $ids)));
+        sort($clean);
+        $this->joueursNonConvoques = $clean;
+        return $this;
+    }
+
+    public function estConvoquee(int $joueurId): bool
+    {
+        return !in_array($joueurId, $this->getJoueursNonConvoques(), true);
+    }
 
     /**
      * Helper : récupère le path d'un PDF par son type ('resume', 'feuille', 'positions').

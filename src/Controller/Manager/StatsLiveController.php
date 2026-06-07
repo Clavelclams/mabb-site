@@ -53,6 +53,9 @@ class StatsLiveController extends AbstractController
         private readonly ActionMatchRepository $actionMatchRepository,
         private readonly JoueurRepository $joueurRepository,
         private readonly ActionMatchAggregator $aggregator,
+        private readonly \App\Repository\Sport\PresenceTerrainRepository $presenceTerrainRepository,
+        private readonly \App\Service\Stats\SessionStatsLivePromoteur $sessionPromoteur,
+        private readonly \App\Repository\Sport\SessionStatsLiveRepository $sessionRepository,
     ) {}
 
     /**
@@ -70,28 +73,81 @@ class StatsLiveController extends AbstractController
     {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
 
+        // V2.1d Étape 2 — Création/reprise automatique d'une session de saisie
+        // pour l'user. Si plusieurs bénévoles saisissent en parallèle, chacun
+        // a sa propre session. Les actions seront liées à CETTE session.
+        $user = $this->getUser();
+        $sessionCourante = null;
+        if ($user instanceof \App\Entity\Core\User) {
+            $sessionCourante = $this->sessionPromoteur->obtenirOuCreerSessionPourUser($rencontre, $user);
+        }
+
         // Joueuses actives de l'équipe — affichées dans la sidebar
-        $joueuses = $this->joueurRepository->findBy(
+        $joueusesActives = $this->joueurRepository->findBy(
             ['equipe' => $rencontre->getEquipe(), 'isActive' => true],
             ['numeroMaillot' => 'ASC', 'nom' => 'ASC']
         );
 
-        // Comptages par joueuse pour le compteur "X pts" sous chaque nom dans la sidebar
-        // (calculé côté serveur pour le 1er render, mis à jour en JS après chaque action)
+        // V2.1f — Filtre les joueuses non convoquées pour ce match
+        // (mais on garde la liste complète pour le modal "Effectif")
+        // Cast int explicite : Doctrine peut renvoyer le JSON avec des string
+        // selon la version BDD, et in_array(strict:true) casse silencieusement.
+        $idsNonConvoquees = array_map('intval', $rencontre->getJoueursNonConvoques());
+        $joueuses = array_values(array_filter(
+            $joueusesActives,
+            fn(Joueur $j) => !in_array((int) $j->getId(), $idsNonConvoquees, true)
+        ));
+
+        // Comptages par joueuse — FILTRÉ par session courante en V2.1d.
+        // Chaque bénévole voit SES propres comptages, pas ceux des autres sessions.
         $comptagesParJoueur = [];
         foreach ($joueuses as $j) {
-            $comptagesParJoueur[$j->getId()] = $this->actionMatchRepository->comptageActionsParType($j, $rencontre);
+            $qb = $this->actionMatchRepository->createQueryBuilder('a')
+                ->select('a.type AS type, COUNT(a.id) AS nb')
+                ->where('a.joueur = :joueur')
+                ->andWhere('a.rencontre = :rencontre')
+                ->setParameter('joueur', $j)
+                ->setParameter('rencontre', $rencontre)
+                ->groupBy('a.type');
+            if ($sessionCourante !== null) {
+                $qb->andWhere('a.session = :session')->setParameter('session', $sessionCourante);
+            }
+            $rows = $qb->getQuery()->getResult();
+            $comptages = [];
+            foreach ($rows as $r) { $comptages[$r['type']] = (int) $r['nb']; }
+            $comptagesParJoueur[$j->getId()] = $comptages;
         }
 
-        // Historique des 20 dernières actions du match (pour le footer)
-        $historique = $this->em->getRepository(ActionMatch::class)
+        // Historique des 20 dernières actions de la session courante (footer)
+        $historiqueQb = $this->em->getRepository(ActionMatch::class)
             ->createQueryBuilder('a')
             ->where('a.rencontre = :rencontre')
-            ->setParameter('rencontre', $rencontre)
+            ->setParameter('rencontre', $rencontre);
+        if ($sessionCourante !== null) {
+            $historiqueQb->andWhere('a.session = :session')->setParameter('session', $sessionCourante);
+        }
+        // (la suite du builder est définie juste après)
+        $historique = $historiqueQb
             ->orderBy('a.id', 'DESC')
             ->setMaxResults(20)
             ->getQuery()
             ->getResult();
+
+        // === V2.1b — IDs des joueuses ACTUELLEMENT sur le terrain ===
+        // V2.1d : filtré par session courante — chaque bénévole a son propre
+        // état du 5 sur terrain (sinon ils s'entrechoqueraient en formation).
+        $presencesQb = $this->em->getRepository(\App\Entity\Sport\PresenceTerrain::class)
+            ->createQueryBuilder('p')
+            ->where('p.rencontre = :rencontre')
+            ->andWhere('p.secondesSortie IS NULL')
+            ->setParameter('rencontre', $rencontre);
+        if ($sessionCourante !== null) {
+            $presencesQb->andWhere('p.session = :session')->setParameter('session', $sessionCourante);
+        }
+        $idsSurTerrain = array_map(
+            fn(\App\Entity\Sport\PresenceTerrain $p) => $p->getJoueur()?->getId(),
+            $presencesQb->getQuery()->getResult()
+        );
 
         return $this->render('manager/evaluation/stats-live.html.twig', [
             'rencontre'          => $rencontre,
@@ -102,6 +158,13 @@ class StatsLiveController extends AbstractController
             'types_actions'      => ActionMatch::TYPES,
             'types_avec_position' => ActionMatch::TYPES_AVEC_POSITION,
             'quarts_temps'       => ActionMatch::QUARTS_TEMPS,
+            // V2.1b
+            'ids_sur_terrain'    => array_filter($idsSurTerrain),
+            // V2.1f — liste complète + non convoquées pour le modal effectif
+            'joueuses_toutes'    => $joueusesActives,
+            'ids_non_convoquees' => $idsNonConvoquees,
+            // V2.1d Étape 2 — session courante du user
+            'session_courante'   => $sessionCourante,
         ]);
     }
 
@@ -170,10 +233,18 @@ class StatsLiveController extends AbstractController
             return $this->jsonError('Quart-temps invalide.', Response::HTTP_BAD_REQUEST);
         }
 
+        // V2.1d — Récupère la session courante du user (pour lier l'action)
+        $userConnecte = $this->getUser();
+        $sessionCourante = null;
+        if ($userConnecte instanceof \App\Entity\Core\User) {
+            $sessionCourante = $this->sessionPromoteur->obtenirOuCreerSessionPourUser($rencontre, $userConnecte);
+        }
+
         // === Création de l'action ===
         $action = new ActionMatch();
         $action->setJoueur($joueur);
         $action->setRencontre($rencontre);
+        $action->setSession($sessionCourante);
         $action->setType($type);
         $action->setQuartTemps($quartTemps);
         $action->setMinute($this->clampInt($data['minute'] ?? 0, 0, 15));
@@ -203,6 +274,7 @@ class StatsLiveController extends AbstractController
                 $passe = new ActionMatch();
                 $passe->setJoueur($assistJoueur);
                 $passe->setRencontre($rencontre);
+                $passe->setSession($sessionCourante); // V2.1d
                 $passe->setType(ActionMatch::TYPE_PASSE_DECISIVE);
                 $passe->setQuartTemps($quartTemps);
                 $passe->setMinute($action->getMinute());
@@ -269,6 +341,229 @@ class StatsLiveController extends AbstractController
             'joueurId'  => $joueurId,
             'comptages' => $comptages,
             'pointsTotal' => $this->calculerPointsJoueur($comptages),
+        ]);
+    }
+
+    // ====================================================================
+    // V2.1b — Entrée / Sortie sur le terrain
+    // ====================================================================
+
+    /**
+     * Faire ENTRER une joueuse sur le terrain.
+     * Body JSON : { "joueurId": int, "tempsAbsolu": int (secondes écoulées depuis Q1 0:00) }
+     */
+    #[Route(
+        '/rencontres/{id}/stats-live/entrer',
+        name: 'manager_rencontre_stats_live_entrer',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function entrerSurTerrain(Request $request, Rencontre $rencontre): JsonResponse
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        // CSRF nominatif (même pattern que createAction)
+        $token = (string) $request->headers->get('X-CSRF-Token', '');
+        if (!$this->isCsrfTokenValid('stats_live_' . $rencontre->getId(), $token)) {
+            return $this->jsonError('Jeton de sécurité invalide.', Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->jsonError('JSON invalide.', Response::HTTP_BAD_REQUEST);
+        }
+
+        $joueurId = (int) ($data['joueurId'] ?? 0);
+        $tempsAbsolu = $this->clampInt($data['tempsAbsolu'] ?? 0, 0, 99999);
+
+        $joueur = $this->joueurRepository->find($joueurId);
+        if (!$joueur instanceof Joueur) {
+            return $this->jsonError('Joueuse introuvable.', Response::HTTP_NOT_FOUND);
+        }
+        // Anti-IDOR : la joueuse doit être dans l'équipe de la rencontre
+        if ($joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
+            return $this->jsonError('Joueuse hors équipe.', Response::HTTP_FORBIDDEN);
+        }
+
+        // Idempotence : si elle est déjà sur le terrain, on renvoie OK sans rien créer
+        $deja = $this->presenceTerrainRepository->findEnCoursForJoueur($joueur, $rencontre);
+        if ($deja !== null) {
+            return new JsonResponse([
+                'success'    => true,
+                'presenceId' => $deja->getId(),
+                'joueurId'   => $joueur->getId(),
+                'note'       => 'Déjà sur le terrain.',
+            ]);
+        }
+
+        // V2.1d — Lie la présence à la session courante de l'user
+        $userConnecte = $this->getUser();
+        $sessionCourante = null;
+        if ($userConnecte instanceof \App\Entity\Core\User) {
+            $sessionCourante = $this->sessionPromoteur->obtenirOuCreerSessionPourUser($rencontre, $userConnecte);
+        }
+
+        $presence = new \App\Entity\Sport\PresenceTerrain();
+        $presence->setJoueur($joueur);
+        $presence->setRencontre($rencontre);
+        $presence->setSession($sessionCourante);
+        $presence->setSecondesEntree($tempsAbsolu);
+        $this->em->persist($presence);
+        $this->em->flush();
+
+        return new JsonResponse([
+            'success'    => true,
+            'presenceId' => $presence->getId(),
+            'joueurId'   => $joueur->getId(),
+        ]);
+    }
+
+    /**
+     * Faire SORTIR une joueuse du terrain.
+     * Body JSON : { "joueurId": int, "tempsAbsolu": int }
+     */
+    #[Route(
+        '/rencontres/{id}/stats-live/sortir',
+        name: 'manager_rencontre_stats_live_sortir',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function sortirDuTerrain(Request $request, Rencontre $rencontre): JsonResponse
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->headers->get('X-CSRF-Token', '');
+        if (!$this->isCsrfTokenValid('stats_live_' . $rencontre->getId(), $token)) {
+            return $this->jsonError('Jeton de sécurité invalide.', Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->jsonError('JSON invalide.', Response::HTTP_BAD_REQUEST);
+        }
+
+        $joueurId = (int) ($data['joueurId'] ?? 0);
+        $tempsAbsolu = $this->clampInt($data['tempsAbsolu'] ?? 0, 0, 99999);
+
+        $joueur = $this->joueurRepository->find($joueurId);
+        if (!$joueur instanceof Joueur) {
+            return $this->jsonError('Joueuse introuvable.', Response::HTTP_NOT_FOUND);
+        }
+
+        $presence = $this->presenceTerrainRepository->findEnCoursForJoueur($joueur, $rencontre);
+        if ($presence === null) {
+            return $this->jsonError('Cette joueuse n\'est pas sur le terrain.', Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $presence->setSecondesSortie($tempsAbsolu);
+            $this->em->flush();
+        } catch (\InvalidArgumentException $e) {
+            return $this->jsonError($e->getMessage(), Response::HTTP_BAD_REQUEST);
+        }
+
+        return new JsonResponse([
+            'success'   => true,
+            'joueurId'  => $joueur->getId(),
+            'dureeSec'  => $presence->getDureeSecondes() ?? 0,
+        ]);
+    }
+
+    // ====================================================================
+    // V2.1e — Score adverse en live
+    // ====================================================================
+
+    /**
+     * Ajoute (ou retire) des points au score adverse de la rencontre.
+     * Body JSON : { "delta": int } (peut être négatif pour corriger)
+     *
+     * Validation : delta dans [-99, +99] pour éviter les inputs sauvages.
+     * Le score adverse final est clampé dans [0, 300].
+     */
+    #[Route(
+        '/rencontres/{id}/stats-live/score-adverse',
+        name: 'manager_rencontre_stats_live_score_adverse',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function updateScoreAdverse(Request $request, Rencontre $rencontre): JsonResponse
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->headers->get('X-CSRF-Token', '');
+        if (!$this->isCsrfTokenValid('stats_live_' . $rencontre->getId(), $token)) {
+            return $this->jsonError('Jeton de sécurité invalide.', Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->jsonError('JSON invalide.', Response::HTTP_BAD_REQUEST);
+        }
+
+        $delta = (int) ($data['delta'] ?? 0);
+        if ($delta < -99 || $delta > 99) {
+            return $this->jsonError('Delta hors borne.', Response::HTTP_BAD_REQUEST);
+        }
+
+        $actuel = $rencontre->getScoreAdverse() ?? 0;
+        $nouveau = max(0, min(300, $actuel + $delta));
+        $rencontre->setScoreAdverse($nouveau);
+        $this->em->flush();
+
+        return new JsonResponse([
+            'success'      => true,
+            'scoreAdverse' => $nouveau,
+        ]);
+    }
+
+    // ====================================================================
+    // V2.1f — Effectif du match (qui joue / ne joue pas)
+    // ====================================================================
+
+    /**
+     * Met à jour la liste des joueuses NON convoquées pour ce match.
+     * Body JSON : { "joueursNonConvoques": int[] }
+     *
+     * Validation : tous les IDs doivent appartenir à l'équipe de la rencontre.
+     */
+    #[Route(
+        '/rencontres/{id}/stats-live/effectif',
+        name: 'manager_rencontre_stats_live_effectif',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function updateEffectif(Request $request, Rencontre $rencontre): JsonResponse
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->headers->get('X-CSRF-Token', '');
+        if (!$this->isCsrfTokenValid('stats_live_' . $rencontre->getId(), $token)) {
+            return $this->jsonError('Jeton de sécurité invalide.', Response::HTTP_FORBIDDEN);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->jsonError('JSON invalide.', Response::HTTP_BAD_REQUEST);
+        }
+
+        $idsNonConvoquees = $data['joueursNonConvoques'] ?? [];
+        if (!is_array($idsNonConvoquees)) {
+            return $this->jsonError('joueursNonConvoques doit être un tableau.', Response::HTTP_BAD_REQUEST);
+        }
+
+        // Validation : IDs ∈ effectif équipe
+        $idsEquipe = array_map(
+            fn(Joueur $j) => $j->getId(),
+            $this->joueurRepository->findBy(['equipe' => $rencontre->getEquipe(), 'isActive' => true])
+        );
+        $idsValides = array_intersect(array_map('intval', $idsNonConvoquees), $idsEquipe);
+
+        $rencontre->setJoueursNonConvoques($idsValides);
+        $this->em->flush();
+
+        return new JsonResponse([
+            'success' => true,
+            'joueursNonConvoques' => $rencontre->getJoueursNonConvoques(),
         ]);
     }
 

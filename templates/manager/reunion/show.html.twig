@@ -18,9 +18,37 @@
                 </span>
             </p>
         </div>
-        <a href="{{ path('manager_reunion_index') }}" class="btn-mabb-ghost">
-            <i class="bi bi-arrow-left"></i> Toutes les réunions
-        </a>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            {# === Actions Phase E — visibles uniquement staff === #}
+            {% if is_granted('CLUB_STAFF', reunion) and reunion.convocations|length > 0 %}
+                <a href="{{ path('manager_reunion_convocation_pdf', {id: reunion.id}) }}"
+                   target="_blank" rel="noopener"
+                   title="Voir / télécharger le PDF de convocation"
+                   style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; background:white; border:2px solid #e5e7eb; border-radius:10px; text-decoration:none; color:var(--mabb-dark); font-weight:600; font-size:.85rem; transition:all .15s;"
+                   onmouseover="this.style.borderColor='#dc2626'; this.style.background='#fef2f2';"
+                   onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white';">
+                    <i class="bi bi-file-earmark-pdf-fill" style="color:#dc2626;"></i>
+                    PDF
+                </a>
+
+                <form method="POST" action="{{ path('manager_reunion_envoyer_convocations', {id: reunion.id}) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Envoyer la convocation par mail à {{ reunion.convocations|length }} convoqué(s) ? Cette action est irréversible.');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('envoyer_convocations_' ~ reunion.id) }}">
+                    <button type="submit"
+                            style="display:inline-flex; align-items:center; gap:8px; padding:8px 14px; background:#fc702a; border:2px solid #fc702a; border-radius:10px; color:white; font-weight:600; font-size:.85rem; cursor:pointer; transition:all .15s;"
+                            onmouseover="this.style.background='#d65d1f'; this.style.borderColor='#d65d1f';"
+                            onmouseout="this.style.background='#fc702a'; this.style.borderColor='#fc702a';">
+                        <i class="bi bi-envelope-paper-fill"></i>
+                        Envoyer convocations
+                    </button>
+                </form>
+            {% endif %}
+
+            <a href="{{ path('manager_reunion_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Toutes les réunions
+            </a>
+        </div>
     </div>
 
     <div class="row g-3">

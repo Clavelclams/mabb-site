@@ -39,7 +39,16 @@
                     <option value="toutes"  {{ periode == 'toutes' ? 'selected' : '' }}>Toutes</option>
                 </select>
 
-                {% if equipe_filtre or periode != 'a_venir' %}
+                {# Toggle archive (V2.1c) — case à cocher qui auto-submit #}
+                <label style="display:inline-flex; align-items:center; gap:6px; margin-left:12px; cursor:pointer; font-weight:600; color:var(--mabb-muted);">
+                    <input type="checkbox" name="archive" value="1"
+                           {{ voir_archive ? 'checked' : '' }}
+                           onchange="this.form.submit()"
+                           style="cursor:pointer;">
+                    <i class="bi bi-archive"></i> Voir les archivées
+                </label>
+
+                {% if equipe_filtre or periode != 'a_venir' or voir_archive %}
                     <a href="{{ path('manager_rencontre_index') }}" class="btn-mabb-ghost btn-sm">
                         <i class="bi bi-x-lg"></i> Réinitialiser
                     </a>
@@ -56,9 +65,36 @@
                 <p>Planifie ta première rencontre pour démarrer la saison.</p>
             </div>
         {% else %}
+            {# === Bandeau bulk-action (V2 nettoyage) — visible si au moins 1 case cochée === #}
+            {% if is_granted('CLUB_STAFF', club) %}
+                <div id="bulkActionBar"
+                     style="display:none; padding:12px 18px; background:#fff7ed; border-bottom:1px solid #fed7aa; align-items:center; gap:14px;">
+                    <strong style="color:#9a3412;">
+                        <span id="bulkSelectedCount">0</span> rencontre<span id="bulkSelectedPlural"></span> sélectionnée<span id="bulkSelectedPlural2"></span>
+                    </strong>
+                    <button type="submit" form="bulkArchiverForm"
+                            class="btn-mabb-orange btn-sm"
+                            onclick="return confirm('Archiver les rencontres sélectionnées ?');"
+                            style="margin-left:auto;">
+                        <i class="bi bi-archive-fill"></i> Archiver la sélection
+                    </button>
+                    <button type="button" id="bulkUncheckAll"
+                            class="btn-mabb-ghost btn-sm">
+                        Tout décocher
+                    </button>
+                </div>
+            {% endif %}
+
+            <form method="POST" id="bulkArchiverForm" action="{{ path('manager_rencontre_bulk_archiver') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('bulk_archiver_rencontres') }}">
             <table class="table-mabb">
                 <thead>
                     <tr>
+                        {% if is_granted('CLUB_STAFF', club) %}
+                            <th style="width:30px;">
+                                <input type="checkbox" id="bulkCheckAll" title="Tout cocher / décocher" style="cursor:pointer;">
+                            </th>
+                        {% endif %}
                         <th>Date</th>
                         <th>Équipe</th>
                         <th>Match</th>
@@ -70,7 +106,17 @@
                 </thead>
                 <tbody>
                     {% for r in rencontres %}
-                        <tr>
+                        <tr {% if r.isArchivee %}style="opacity:.6; background:#fafafa;"{% endif %}>
+                            {% if is_granted('CLUB_STAFF', club) %}
+                                <td>
+                                    <input type="checkbox"
+                                           name="rencontres_ids[]"
+                                           value="{{ r.id }}"
+                                           class="bulkRowCheckbox"
+                                           {% if r.isArchivee %}disabled title="Déjà archivée"{% endif %}
+                                           style="cursor:pointer;">
+                                </td>
+                            {% endif %}
                             <td>
                                 <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="font-weight:700; color:var(--mabb-dark); text-decoration:none;">
                                     {{ r.date|date('d/m/Y H:i') }}
@@ -102,6 +148,8 @@
                                     <span class="badge-active"><i class="bi bi-check-circle"></i> Validée</span>
                                 {% elseif r.statut == 'verrouille' %}
                                     <span style="background:#ddd6fe; color:#5b21b6; padding:3px 10px; border-radius:12px; font-size:.75rem; font-weight:600;"><i class="bi bi-lock-fill"></i> Verrouillée</span>
+                                {% elseif r.statut == 'archive' %}
+                                    <span style="background:#f3f4f6; color:#4b5563; padding:3px 10px; border-radius:12px; font-size:.75rem; font-weight:600;"><i class="bi bi-archive-fill"></i> Archivée</span>
                                 {% endif %}
                             </td>
                             <td style="text-align:right;">
@@ -118,6 +166,45 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </form>{# fin bulkArchiverForm #}
         {% endif %}
     </div>
+
+    {# === JS pour gérer les checkboxes + bandeau bulk-action === #}
+    <script>
+    (function() {
+        const checkAll = document.getElementById('bulkCheckAll');
+        if (!checkAll) return; // pas staff → pas de bulk-action
+
+        const rowCheckboxes = document.querySelectorAll('.bulkRowCheckbox');
+        const actionBar = document.getElementById('bulkActionBar');
+        const countSpan = document.getElementById('bulkSelectedCount');
+        const pluralSpan1 = document.getElementById('bulkSelectedPlural');
+        const pluralSpan2 = document.getElementById('bulkSelectedPlural2');
+
+        function refresh() {
+            const checked = document.querySelectorAll('.bulkRowCheckbox:checked');
+            const n = checked.length;
+            countSpan.textContent = n;
+            pluralSpan1.textContent = n > 1 ? 's' : '';
+            pluralSpan2.textContent = n > 1 ? 's' : '';
+            actionBar.style.display = n > 0 ? 'flex' : 'none';
+        }
+
+        checkAll.addEventListener('change', () => {
+            rowCheckboxes.forEach(cb => {
+                if (!cb.disabled) cb.checked = checkAll.checked;
+            });
+            refresh();
+        });
+
+        rowCheckboxes.forEach(cb => cb.addEventListener('change', refresh));
+
+        document.getElementById('bulkUncheckAll').addEventListener('click', () => {
+            rowCheckboxes.forEach(cb => cb.checked = false);
+            checkAll.checked = false;
+            refresh();
+        });
+    })();
+    </script>
 {% endblock %}

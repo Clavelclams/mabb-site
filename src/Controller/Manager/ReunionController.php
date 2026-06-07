@@ -457,4 +457,101 @@ class ReunionController extends AbstractController
 
         return $this->redirectToRoute('manager_reunion_show', ['id' => $convocation->getReunion()->getId()]);
     }
+
+    // ====================================================================
+    // BUREAU PHASE E — Convocations PDF + envoi mail
+    // ====================================================================
+
+    /**
+     * Téléchargement du PDF de convocation pour une réunion.
+     * Visible par tout STAFF du club — utile pour archiver ou imprimer.
+     */
+    #[Route('/reunions/{id}/convocation.pdf', name: 'manager_reunion_convocation_pdf', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function telechargerConvocationPdf(
+        int $id,
+        \App\Service\ConvocationPdfGenerator $pdfGenerator,
+    ): Response {
+        $club = $this->tenantResolver->getCurrentClub();
+        if (!$club) {
+            throw $this->createNotFoundException('Aucun club actif.');
+        }
+        $reunion = $this->reunionRepository->find($id);
+        if (!$reunion || $reunion->getClub()?->getId() !== $club->getId()) {
+            throw $this->createNotFoundException('Réunion introuvable.');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $reunion);
+
+        try {
+            $pdf = $pdfGenerator->genererPourReunion($reunion);
+        } catch (\Exception $e) {
+            $this->logger->error('Échec génération PDF', ['error' => $e->getMessage()]);
+            throw $this->createNotFoundException('Erreur génération PDF : ' . $e->getMessage());
+        }
+
+        $response = new Response($pdf);
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set(
+            'Content-Disposition',
+            $response->headers->makeDisposition(
+                ResponseHeaderBag::DISPOSITION_INLINE,  // ouvre dans l'onglet
+                $pdfGenerator->nomFichier($reunion)
+            )
+        );
+        return $response;
+    }
+
+    /**
+     * Envoi des convocations par mail à tous les convoqués.
+     * Action lourde (peut être plusieurs mails) → POST avec CSRF.
+     *
+     * Le service ConvocationMailerService gère :
+     *   - Génération PDF (1 fois)
+     *   - Personnalisation mail par convoqué
+     *   - Try/catch par envoi (résilient)
+     *   - Log de chaque tentative
+     */
+    #[Route('/reunions/{id}/envoyer-convocations', name: 'manager_reunion_envoyer_convocations', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function envoyerConvocations(
+        int $id,
+        Request $request,
+        \App\Service\ConvocationMailerService $mailer,
+    ): Response {
+        $club = $this->tenantResolver->getCurrentClub();
+        if (!$club) {
+            throw $this->createNotFoundException('Aucun club actif.');
+        }
+        $reunion = $this->reunionRepository->find($id);
+        if (!$reunion || $reunion->getClub()?->getId() !== $club->getId()) {
+            throw $this->createNotFoundException();
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $reunion);
+
+        if (!$this->isCsrfTokenValid('envoyer_convocations_' . $reunion->getId(), (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        }
+
+        $resultat = $mailer->envoyerPourReunion($reunion);
+
+        if ($resultat['success'] === $resultat['total'] && $resultat['total'] > 0) {
+            $this->addFlash('success', sprintf(
+                '%d convocation%s envoyée%s par mail.',
+                $resultat['success'],
+                $resultat['success'] > 1 ? 's' : '',
+                $resultat['success'] > 1 ? 's' : ''
+            ));
+        } else {
+            if ($resultat['success'] > 0) {
+                $this->addFlash('warning', sprintf(
+                    '%d/%d convocations envoyées. Détail des erreurs ci-dessous.',
+                    $resultat['success'],
+                    $resultat['total']
+                ));
+            }
+            foreach ($resultat['errors'] as $err) {
+                $this->addFlash('error', $err);
+            }
+        }
+
+        return $this->redirectToRoute('manager_reunion_show', ['id' => $reunion->getId()]);
+    }
 }

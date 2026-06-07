@@ -609,6 +609,105 @@
                 padding: 14px 10px;
             }
         }
+
+        /* ═══════════════════════════════════════════════════════════════
+           V2.1h — Renforts responsive transversaux Manager
+           Compléments au bloc navbar existant, pour les pages avec :
+             - tableaux (rencontre, joueur, séance, cotisations…)
+             - groupes de boutons d'action (page-actions, table-actions)
+             - modals, formulaires, page-headers
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Tablette (768-1023px) : tables un peu plus compactes */
+        @media (max-width: 1023px) {
+            .table-mabb thead th,
+            .table-mabb tbody td {
+                padding: 10px 8px;
+                font-size: 0.88rem;
+            }
+            .page-header {
+                gap: 8px;
+            }
+        }
+
+        /* Mobile paysage / portrait (≤ 767px) : pas de wrap des actions, table scroll dédié */
+        @media (max-width: 767px) {
+            /* Le scroll horizontal est sur le PARENT direct de la table, pas la card entière.
+               Évite que le card-header (titre + filtres) scrolle aussi.
+               On entoure les tables par défaut avec un overflow géré sur card-body. */
+            .card-mabb .card-body {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            .card-mabb {
+                overflow-x: visible; /* override la règle précédente */
+            }
+            .table-mabb {
+                min-width: 600px;     /* force le scroll si vraiment trop large */
+            }
+            /* Boutons d'action min 36px (proche WCAG 44px sans casser le design) */
+            .btn-mabb-primary,
+            .btn-mabb-orange,
+            .btn-mabb-ghost {
+                min-height: 38px;
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+            .btn-mabb-primary.btn-sm,
+            .btn-mabb-orange.btn-sm,
+            .btn-mabb-ghost.btn-sm {
+                min-height: 34px;
+                padding: 6px 12px;
+                font-size: 0.78rem;
+            }
+            /* Page actions (groupe d'CTAs en haut) : passe en wrap */
+            .page-header {
+                flex-wrap: wrap;
+            }
+            .page-actions,
+            .toolbar,
+            .header-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                width: 100%;
+            }
+            /* Formulaires : labels au-dessus, inputs full width */
+            .form-mabb .form-row,
+            .form-mabb .row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            input[type="text"],
+            input[type="email"],
+            input[type="password"],
+            input[type="number"],
+            input[type="date"],
+            input[type="time"],
+            input[type="datetime-local"],
+            input[type="tel"],
+            input[type="url"],
+            input[type="search"],
+            select,
+            textarea {
+                font-size: 16px; /* évite le zoom auto iOS sur focus */
+            }
+            /* Modals (Bureau, etc.) */
+            .modal-dialog,
+            .modal-content,
+            .modal-mabb {
+                max-width: 100% !important;
+                margin: 8px !important;
+            }
+        }
+
+        /* Smartphone étroit (< 480px) : on agrandit encore les tap targets sur les rangs */
+        @media (max-width: 479px) {
+            .table-mabb tbody td {
+                padding: 12px 8px;
+            }
+            /* Tooltip si label nav caché : on lit aria-label / title (déjà géré par browser) */
+        }
     </style>
 
     {% block stylesheets %}{% endblock %}

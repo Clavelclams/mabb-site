@@ -50,3 +50,11 @@ services:
     App\Service\JustificatifNoteFraisUploader:
         arguments:
             $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/tresorerie'
+
+    # Service mailer des convocations (Bureau Phase E).
+    # L'email et le nom expéditeur sont injectés depuis .env / .env.local
+    # → JAMAIS de valeurs en clair ici (velito-credentials-policy).
+    App\Service\ConvocationMailerService:
+        arguments:
+            $expediteurEmail: '%env(EMAIL_EXPEDITEUR)%'
+            $expediteurNom:   '%env(EMAIL_NOM_EXPEDITEUR)%'

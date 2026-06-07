@@ -101,6 +101,349 @@
         }
         .qt-btn:hover { background: rgba(255,255,255,.3); }
 
+        /* ===== Chrono V2.1a ===== */
+        .chrono-block {
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            border-radius: 14px;
+            padding: 12px 18px;
+            text-align: center;
+            min-width: 280px;
+            box-shadow: 0 4px 16px rgba(234,88,12,.3);
+        }
+        .chrono-period {
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .chrono-period span:first-child {
+            font-size: 1.05rem;
+        }
+        .chrono-display {
+            font-family: 'Courier New', Consolas, monospace;
+            font-size: 2.6rem;
+            font-weight: 900;
+            color: #fff;
+            line-height: 1;
+            letter-spacing: 0.06em;
+            text-shadow: 0 2px 6px rgba(0,0,0,.25);
+            transition: color .15s;
+        }
+        .chrono-display.running {
+            color: #fef9c3; /* jaune clair quand le chrono tourne */
+        }
+        .chrono-display.warning {
+            color: #fecaca; /* rouge si < 1 min */
+            animation: chronoBlink 1s ease-in-out infinite;
+        }
+        @keyframes chronoBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+        .chrono-controls {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .chrono-btn {
+            background: rgba(255,255,255,.18);
+            border: 1px solid rgba(255,255,255,.35);
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .12s;
+            min-width: 42px;
+        }
+        .chrono-btn:hover { background: rgba(255,255,255,.32); }
+        .chrono-btn-main {
+            background: #fff;
+            color: #ea580c;
+            font-size: 1.05rem;
+            padding: 6px 18px;
+        }
+        .chrono-btn-main:hover { background: #fef3c7; }
+        .chrono-btn-main.is-running { background: #fbbf24; color: #78350f; }
+        .chrono-btn-adjust {
+            font-family: monospace;
+            font-size: 0.82rem;
+        }
+        .chrono-btn-danger:hover {
+            background: rgba(239,68,68,.45);
+            border-color: rgba(239,68,68,.6);
+        }
+
+        /* ===== Mode Débutant V2.1g ===== */
+        .mode-toggle {
+            display: flex;
+            gap: 4px;
+            background: rgba(255,255,255,.08);
+            padding: 4px;
+            border-radius: 8px;
+        }
+        .mode-toggle-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #cbd5e1;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        .mode-toggle-btn.active {
+            background: #fbbf24;
+            color: #78350f;
+        }
+        .mode-toggle-btn:hover:not(.active) {
+            background: rgba(255,255,255,.12);
+            color: #fff;
+        }
+
+        /* En mode Débutant : on masque le terrain + le chrono complet + les options de tir */
+        .stats-live-wrapper.mode-debutant .court-zone,
+        .stats-live-wrapper.mode-debutant .chrono-controls,
+        .stats-live-wrapper.mode-debutant #btnComposerCinq,
+        .stats-live-wrapper.mode-debutant .shoot-options,
+        .stats-live-wrapper.mode-debutant .history-bar {
+            display: none !important;
+        }
+        /* Sidebar prend toute la largeur en mode Débutant */
+        .stats-live-wrapper.mode-debutant .stats-grid {
+            grid-template-columns: 1fr !important;
+        }
+        /* V2.1g.2 — Modal action (mode Débutant) */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .action-btn {
+            background: #334155;
+            border: 2px solid transparent;
+            color: #fff;
+            padding: 14px 8px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all .12s;
+            text-align: center;
+        }
+        .action-btn:hover { background: #475569; }
+        .action-btn-success { background: #16a34a; }
+        .action-btn-success:hover { background: #15803d; }
+        .action-btn-danger { background: #dc2626; }
+        .action-btn-danger:hover { background: #b91c1c; }
+        .action-btn-warning { background: #d97706; }
+        .action-btn-warning:hover { background: #b45309; }
+        .action-btn-info { background: #2563eb; }
+        .action-btn-info:hover { background: #1d4ed8; }
+        .action-btn-purple { background: #7c3aed; }
+        .action-btn-purple:hover { background: #6d28d9; }
+        .action-btn .icon { font-size: 1.4rem; display: block; margin-bottom: 2px; }
+        .action-btn .lbl { font-size: 0.72rem; opacity: .9; }
+        /* Carte spéciale ADVERSAIRE en haut sidebar */
+        .joueuse-adversaire {
+            background: linear-gradient(135deg, #7f1d1d, #b91c1c);
+            color: #fff;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 800;
+            border: 2px solid transparent;
+            transition: all .12s;
+        }
+        .joueuse-adversaire:hover { background: linear-gradient(135deg, #b91c1c, #dc2626); }
+        .joueuse-adversaire .lbl { font-size: 0.7rem; opacity: .9; font-weight: 500; }
+        /* Cache la carte adversaire en mode expert (on l'affiche que débutant) */
+        .stats-live-wrapper:not(.mode-debutant) .joueuse-adversaire { display: none; }
+
+        /* ===== Boutons score adverse V2.1e ===== */
+        .adverse-btn {
+            background: rgba(239,68,68,.2);
+            border: 1px solid rgba(239,68,68,.4);
+            color: #fecaca;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all .12s;
+            min-width: 36px;
+        }
+        .adverse-btn:hover {
+            background: #ef4444;
+            color: #fff;
+            border-color: #fecaca;
+        }
+        .adverse-btn-undo {
+            background: rgba(148,163,184,.2);
+            border-color: rgba(148,163,184,.4);
+            color: #cbd5e1;
+        }
+        .adverse-btn-undo:hover { background: #64748b; }
+
+        /* ===== Badge ON/OFF terrain V2.1b ===== */
+        .joueuse-item {
+            position: relative;
+        }
+        .badge-terrain {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 4px 9px; /* +un peu pour faciliter le tap */
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            background: #475569;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all .15s;
+            z-index: 2;
+            user-select: none;
+        }
+        .badge-terrain:hover {
+            transform: scale(1.08);
+            background: #64748b;
+        }
+        .badge-terrain.on:hover {
+            background: #15803d;
+        }
+        .badge-terrain.on {
+            background: #16a34a;
+            color: #fff;
+            box-shadow: 0 0 0 2px rgba(22,163,74,.35);
+        }
+        .badge-terrain .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .joueuse-item.sur-terrain {
+            border-left: 4px solid #16a34a;
+            background: linear-gradient(90deg, rgba(22,163,74,.12) 0%, transparent 60%);
+        }
+        .temps-jeu {
+            font-family: 'Courier New', monospace;
+            font-size: 0.72rem;
+            color: #94a3b8;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+        .joueuse-item.sur-terrain .temps-jeu {
+            color: #22c55e;
+        }
+
+        /* ===== Modal Composer 5 ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal-box {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 540px;
+            max-height: 88vh;
+            overflow-y: auto;
+            box-shadow: 0 12px 48px rgba(0,0,0,.5);
+        }
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #fff;
+            margin: 0 0 6px;
+        }
+        .modal-subtitle {
+            color: #94a3b8;
+            font-size: 0.88rem;
+            margin: 0 0 18px;
+        }
+        .modal-counter {
+            background: #0f172a;
+            border: 2px solid #ea580c;
+            border-radius: 10px;
+            padding: 8px 14px;
+            text-align: center;
+            font-weight: 800;
+            color: #fbbf24;
+            font-size: 1rem;
+            margin-bottom: 14px;
+        }
+        .modal-counter.complete {
+            border-color: #16a34a;
+            color: #4ade80;
+        }
+        .modal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+        .modal-joueuse-btn {
+            background: #334155;
+            border: 2px solid transparent;
+            color: #fff;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all .15s;
+        }
+        .modal-joueuse-btn:hover { background: #475569; }
+        .modal-joueuse-btn.selected {
+            background: #16a34a;
+            border-color: #4ade80;
+            box-shadow: 0 0 0 2px rgba(22,163,74,.3);
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .modal-btn {
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.92rem;
+        }
+        .modal-btn-cancel { background: #475569; color: #fff; }
+        .modal-btn-validate { background: #ea580c; color: #fff; }
+        .modal-btn-validate:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+        }
+
         /* ===== Grid 3 colonnes ===== */
         .stats-grid {
             display: grid;
@@ -329,13 +672,392 @@
         }
         #toast.show { transform: translateY(0); }
         #toast.error { background: #dc2626; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           V2.1h — RESPONSIVE COMPLET Stats Live
+           Stratégie mobile-first override :
+             ≤ 1199px : tablette paysage / petit desktop — sidebar + récap réduits
+             ≤  899px : tablette portrait — passe en 1 colonne, modal plus compact
+             ≤  699px : mobile paysage — sidebar grid 2 cols, boutons agrandis
+             ≤  499px : mobile portrait — FORCE mode débutant (JS),
+                        masque toggle Expert, top bar empilée, modal full-screen
+           ═══════════════════════════════════════════════════════════════ */
+
+        @media (max-width: 1199px) {
+            .stats-grid { grid-template-columns: 200px 1fr 240px; }
+            .stats-header { padding: 8px 10px; gap: 8px; }
+            .score-value { font-size: 2rem; }
+            .joueuses-list { max-height: calc(100vh - 240px); }
+        }
+
+        @media (max-width: 899px) {
+            .stats-live-wrapper { padding: 6px; gap: 6px; min-height: calc(100vh - 50px); }
+            .stats-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto; gap: 6px; }
+
+            /* Header : score + chrono + score sur 1 ligne, mais compact */
+            .stats-header {
+                grid-template-columns: 1fr auto 1fr;
+                padding: 8px 10px;
+                gap: 6px;
+            }
+            .score-team { font-size: 0.7rem; }
+            .score-value { font-size: 1.7rem; line-height: 1; }
+            .chrono-display { font-size: 1.6rem; padding: 3px 10px; }
+            .chrono-period { font-size: 0.75rem; }
+            .qt-label { font-size: 0.7rem; }
+            .qt-btn { padding: 4px 8px; font-size: 0.78rem; min-width: 30px; }
+            .chrono-controls { gap: 4px; flex-wrap: wrap; justify-content: center; }
+            .chrono-btn { padding: 4px 8px; font-size: 0.75rem; }
+            .chrono-btn-main { padding: 5px 12px; font-size: 0.85rem; }
+
+            /* Sidebar prend toute la largeur, hauteur limitée scrollable */
+            .joueuses-list { max-height: 50vh; }
+
+            /* Mode débutant : action-grid 3 → 2 cols pour des boutons plus gros */
+            .action-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .action-btn { padding: 16px 8px; font-size: 0.95rem; }
+            .action-btn .icon { font-size: 1.6rem; }
+            .action-btn .lbl { font-size: 0.78rem; }
+
+            /* Modal plus compact */
+            .modal-overlay { padding: 10px; }
+            .modal-box { padding: 18px; max-height: 92vh; }
+            .modal-title { font-size: 1.1rem; }
+            .modal-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .modal-joueuse-btn { padding: 12px 8px; font-size: 0.9rem; }
+
+            /* Boutons score adverse plus grands au tap */
+            .adverse-btn { padding: 10px 14px; font-size: 0.95rem; min-width: 48px; }
+        }
+
+        @media (max-width: 699px) {
+            /* Mobile paysage : tap targets 44px+ partout (WCAG), sidebar 2 cols */
+            .stats-header {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+                row-gap: 6px;
+            }
+            .stats-header .score-block { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+            .stats-header .score-block .score-value { font-size: 1.4rem; }
+            .stats-header .score-block .score-team { font-size: 0.78rem; }
+            .chrono-display { font-size: 1.4rem; }
+
+            /* Toggle mode : labels masqués sous 700px (icônes only) */
+            .mode-toggle-btn { padding: 8px 10px; font-size: 0; }
+            .mode-toggle-btn::before { font-size: 1.2rem; }
+            #modeExpertBtn::before { content: '⚡'; }
+            #modeDebutantBtn::before { content: '👶'; }
+
+            /* Sidebar joueuses : grid 2 colonnes pour économiser de la verticale */
+            .joueuses-list {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+                max-height: 45vh;
+                padding: 6px;
+            }
+            .joueuse-item {
+                margin-bottom: 0;
+                padding: 8px;
+                position: relative;
+            }
+            .joueuse-name { font-size: 0.82rem; }
+            .joueuse-avatar { width: 32px; height: 32px; font-size: 0.78rem; }
+
+            /* Badge ON/OFF plus tactile, repositionné */
+            .badge-terrain {
+                top: 4px;
+                right: 4px;
+                padding: 5px 10px;
+                font-size: 0.65rem;
+                min-height: 24px;
+            }
+
+            /* Actions garder 2 cols mais boutons jumbo */
+            .action-btn { padding: 18px 6px; }
+            .action-btn .icon { font-size: 1.8rem; }
+
+            /* Modal joueuse 1 colonne lisible */
+            .modal-grid { grid-template-columns: 1fr; }
+            .modal-joueuse-btn { padding: 14px; font-size: 1rem; text-align: left; }
+
+            /* Carte ADVERSAIRE plus visible */
+            .joueuse-adversaire { padding: 14px; font-size: 1rem; }
+
+            /* Score adverse : layout horizontal compact */
+            .adverse-btn { padding: 12px 10px; font-size: 1rem; }
+        }
+
+        @media (max-width: 499px) {
+            /* Mobile portrait — FORCE mode débutant (JS) + hide toggle Expert */
+            .stats-live-wrapper { padding: 4px; }
+
+            /* Toggle Expert masqué (le JS rajoute disabled, on confirme visuellement) */
+            #modeExpertBtn {
+                opacity: 0.35;
+                pointer-events: none;
+                cursor: not-allowed;
+            }
+            #modeExpertBtn::after {
+                content: ' 📱';
+                font-size: 0.8rem;
+            }
+
+            /* Top bar : empilage maximal */
+            .stats-header { padding: 6px 8px; }
+            .stats-header .score-block {
+                gap: 6px;
+                font-size: 0.85rem;
+            }
+            .score-value { font-size: 1.3rem !important; }
+            .chrono-display { font-size: 1.2rem; padding: 2px 8px; }
+
+            /* Sidebar joueuses : reste en 2 cols mais cards plus compactes */
+            .joueuses-list { max-height: 42vh; gap: 4px; padding: 4px; }
+            .joueuse-item { padding: 6px 8px; gap: 6px; }
+            .joueuse-name { font-size: 0.78rem; }
+            .joueuse-stats { font-size: 0.65rem; }
+            .joueuse-avatar { width: 28px; height: 28px; font-size: 0.7rem; }
+
+            /* Mode débutant : action-grid garde 2 cols pour gros tap targets */
+            .action-grid { gap: 6px; }
+            .action-btn { padding: 14px 4px; }
+            .action-btn .icon { font-size: 1.6rem; }
+            .action-btn .lbl { font-size: 0.72rem; }
+
+            /* Modal full-screen sur smartphone portrait */
+            .modal-overlay { padding: 0; align-items: flex-end; }
+            .modal-box {
+                max-width: 100%;
+                max-height: 95vh;
+                border-radius: 16px 16px 0 0;
+                padding: 16px;
+                width: 100%;
+            }
+            .modal-title { font-size: 1rem; }
+            .modal-subtitle { font-size: 0.78rem; margin-bottom: 10px; }
+            .modal-counter { padding: 6px 10px; font-size: 0.85rem; }
+
+            /* Bandeau session : compacté */
+            #bandeauSession {
+                padding: 6px 8px !important;
+                font-size: 0.75rem !important;
+            }
+
+            /* Boutons score adverse en grille 2 cols compacte */
+            .adverse-buttons { gap: 4px !important; }
+            .adverse-btn { padding: 10px 6px; font-size: 0.85rem; }
+        }
+
+        /* Safe-area iOS (notch + barre Home) */
+        @supports (padding: env(safe-area-inset-bottom)) {
+            .stats-live-wrapper {
+                padding-bottom: max(8px, env(safe-area-inset-bottom));
+                padding-left: max(8px, env(safe-area-inset-left));
+                padding-right: max(8px, env(safe-area-inset-right));
+            }
+            .modal-box {
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           V2.1h — MODE APP MOBILE (≤ 699px)
+           Layout 100dvh fixed, pas de scroll body, bottom nav fixe,
+           sheets bottom pour les actions secondaires.
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Bottom nav cachée par défaut (desktop / tablette paysage) */
+        .stats-bottom-nav { display: none; }
+
+        @media (max-width: 699px) {
+            /* Lock le scroll body en mode app */
+            body.stats-live-app-mode {
+                overflow: hidden;
+                position: fixed;
+                inset: 0;
+                width: 100%;
+            }
+            /* On masque aussi la navbar Manager sur l'écran Stats Live mobile
+               pour gagner toute la hauteur. Le retour se fait via "Plus → Retour rencontre". */
+            body.stats-live-app-mode .topbar { display: none; }
+            body.stats-live-app-mode main.container-app {
+                padding: 0;
+                max-width: 100%;
+            }
+
+            /* Wrapper = écran complet, flex column */
+            .stats-live-wrapper {
+                position: fixed;
+                inset: 0;
+                height: 100dvh;
+                height: 100vh; /* fallback navigateurs sans dvh */
+                display: flex;
+                flex-direction: column;
+                padding: 0 !important;
+                gap: 0;
+                grid-template-rows: none;
+                overflow: hidden;
+            }
+
+            /* Top : header sticky, compact, non scrollable */
+            .stats-header {
+                flex-shrink: 0;
+                border-radius: 0;
+                padding: 8px 10px !important;
+                grid-template-columns: 1fr auto 1fr;
+                grid-template-rows: none;
+                row-gap: 0;
+                column-gap: 8px;
+            }
+            .stats-header .score-block {
+                display: flex !important;
+                align-items: baseline;
+                justify-content: center;
+                gap: 6px;
+                flex-direction: column;
+            }
+            .score-team { font-size: 0.65rem !important; line-height: 1; }
+            .score-value { font-size: 1.4rem !important; line-height: 1; }
+            .stats-header .score-block small { display: none; } /* MABB inutile, déjà dans score-team */
+            .chrono-display { font-size: 1.3rem; padding: 2px 8px; }
+            .chrono-period { font-size: 0.7rem; }
+            .qt-label { font-size: 0.65rem; }
+            .qt-buttons { gap: 2px; }
+            .qt-btn { padding: 3px 6px; font-size: 0.7rem; min-width: 26px; }
+            .chrono-controls { gap: 3px; margin-top: 4px; flex-wrap: wrap; }
+            .chrono-btn { padding: 3px 6px; font-size: 0.7rem; }
+
+            /* Effectif + Composer 5 inline déjà existants → on les masque
+               (remplacés par les boutons du bottom nav) */
+            .stats-header #btnEffectifMatch,
+            .stats-header #btnComposerCinq { display: none !important; }
+            /* Idem boutons score adverse inline (remplacés par sheet Adv.) */
+            .stats-header .adverse-controls { display: none !important; }
+
+            /* Toggle mode masqué (forcé débutant sur mobile portrait, et pas pertinent en paysage) */
+            .mode-toggle { display: none !important; }
+            body.stats-live-app-mode .mode-toggle,
+            body.stats-live-app-mode > div:has(.mode-toggle) { display: none !important; }
+
+            /* Stats grid : prend tout l'espace dispo, scroll interne sur la sidebar */
+            .stats-grid {
+                flex: 1;
+                min-height: 0;
+                grid-template-columns: 1fr !important;
+                grid-template-rows: 1fr !important;
+                gap: 0;
+                overflow: hidden;
+            }
+
+            /* Liste joueuses occupe l'écran central, scroll INTERNE seulement */
+            .joueuses-list {
+                max-height: none !important;
+                height: 100% !important;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 0;
+                padding: 8px;
+                /* On garde la grid 2 cols du breakpoint précédent en paysage,
+                   on passe à 1 col seulement en portrait étroit */
+            }
+
+            /* Historique bar : masqué (déjà fait en mode débutant) — on garantit */
+            .history-bar { display: none !important; }
+
+            /* ───── Bottom nav app ───── */
+            .stats-bottom-nav {
+                display: flex;
+                flex-shrink: 0;
+                background: #0f172a;
+                border-top: 1px solid #1e293b;
+                padding: 6px 4px;
+                padding-bottom: max(6px, env(safe-area-inset-bottom));
+                gap: 4px;
+                z-index: 100;
+            }
+            .stats-nav-btn {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                background: transparent;
+                border: none;
+                color: #cbd5e1;
+                padding: 8px 4px;
+                border-radius: 10px;
+                cursor: pointer;
+                min-height: 52px;
+                transition: background .15s;
+            }
+            .stats-nav-btn:active,
+            .stats-nav-btn:hover {
+                background: rgba(255,255,255,.08);
+                color: #fff;
+            }
+            .stats-nav-btn .nav-icon {
+                font-size: 1.4rem;
+                line-height: 1;
+            }
+            .stats-nav-btn .nav-label {
+                font-size: 0.68rem;
+                font-weight: 600;
+                letter-spacing: 0.02em;
+            }
+
+            /* Sheets bottom : slide depuis le bas */
+            .modal-box-sheet {
+                max-width: 100% !important;
+                max-height: 80vh !important;
+                border-radius: 18px 18px 0 0 !important;
+                margin-bottom: 0;
+                width: 100%;
+            }
+            .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+        }
+
+        /* Mobile portrait étroit < 500px : sidebar 1 col, encore plus compact */
+        @media (max-width: 499px) {
+            .joueuses-list {
+                grid-template-columns: 1fr !important;
+                display: flex !important;
+                flex-direction: column;
+            }
+            .joueuse-item { padding: 10px 12px; }
+            .stats-nav-btn .nav-label { font-size: 0.62rem; }
+            .stats-nav-btn .nav-icon { font-size: 1.3rem; }
+        }
     </style>
 {% endblock %}
 
 {% block body %}
 
+    {# === V2.1d — Bandeau session courante (qui saisit cette saisie) === #}
+    {% if session_courante is defined and session_courante %}
+        <div style="background:#1e293b; color:#fff; padding:8px 14px; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center; font-size:.82rem; border-bottom:2px solid #ea580c;">
+            <span>
+                <i class="bi bi-pencil-fill" style="color:#fbbf24;"></i>
+                <strong>Session : {{ session_courante.nom }}</strong>
+                <span style="color:#94a3b8; margin-left:8px;">par {{ session_courante.createdBy ? session_courante.createdBy.prenom : 'Anonyme' }}</span>
+            </span>
+            <span style="padding:2px 10px; border-radius:10px; background:#fbbf24; color:#78350f; font-weight:700; font-size:.7rem;">
+                {{ session_courante.statutLabel }}
+            </span>
+        </div>
+    {% endif %}
+
     {# ===== HEADER : score live + QT en cours ===== #}
-    <div class="stats-live-wrapper" id="liveWrapper">
+    {# V2.1g — Wrapper porte la classe "mode-debutant" ou non, contrôlée par le toggle.
+       V2.1g.5 — Mode DÉBUTANT par défaut (plus accessible aux bénévoles formation). #}
+    <div class="stats-live-wrapper mode-debutant" id="liveWrapper">
+        {# === V2.1g — Toggle Mode Expert / Mode Débutant === #}
+        <div style="display:flex; justify-content:center; padding:8px 12px 0; background:#0f172a;">
+            <div class="mode-toggle">
+                <button type="button" class="mode-toggle-btn" id="modeExpertBtn" data-mode="expert">⚡ Expert</button>
+                <button type="button" class="mode-toggle-btn active" id="modeDebutantBtn" data-mode="debutant">👶 Débutant</button>
+            </div>
+        </div>
         <div class="stats-header">
             <div class="score-block">
                 <div class="score-team">{{ rencontre.equipe.nom }}</div>
@@ -343,21 +1065,52 @@
                 <small style="color:#94a3b8;">MABB</small>
             </div>
 
-            <div class="qt-block">
-                <div class="qt-label">QUART-TEMPS</div>
-                <div class="qt-buttons" id="qtButtons">
-                    <button type="button" class="qt-btn active" data-qt="QT1">Q1</button>
-                    <button type="button" class="qt-btn" data-qt="QT2">Q2</button>
-                    <button type="button" class="qt-btn" data-qt="QT3">Q3</button>
-                    <button type="button" class="qt-btn" data-qt="QT4">Q4</button>
-                    <button type="button" class="qt-btn" data-qt="EXT1">P1</button>
+            {# ===== CHRONO + PÉRIODE (V2.1a) =====
+               Affiche la période courante + le temps restant en décompte.
+               Persiste en localStorage pour survivre à un refresh accidentel
+               de la tablette en plein match.
+               Format de match récupéré depuis rencontre.nbPeriodes + dureePeriodeMinutes. #}
+            <div class="chrono-block" id="chronoBlock">
+                <div class="chrono-period">
+                    <span id="periodLabel">Q1</span>
+                    <span style="color:#64748b; font-size:.78rem;">/ {{ rencontre.nbPeriodes }}</span>
+                </div>
+                <div class="chrono-display" id="chronoDisplay">
+                    {{ '%02d'|format(rencontre.dureePeriodeMinutes) }}:00
+                </div>
+                <div class="chrono-controls">
+                    <button type="button" class="chrono-btn chrono-btn-adjust" id="btnMinus1" title="-1 seconde">−1s</button>
+                    <button type="button" class="chrono-btn chrono-btn-main" id="btnStartPause" title="Démarrer / Pauser">
+                        <span id="btnStartPauseIcon">▶</span>
+                    </button>
+                    <button type="button" class="chrono-btn chrono-btn-adjust" id="btnPlus1" title="+1 seconde">+1s</button>
+                    <button type="button" class="chrono-btn chrono-btn-secondary" id="btnNextPeriod" title="Période suivante">→</button>
+                    <button type="button" class="chrono-btn chrono-btn-danger" id="btnResetChrono" title="Réinitialiser la période">⟲</button>
+                </div>
+                <div style="display:flex; gap:6px; margin-top:8px;">
+                    <button type="button"
+                            id="btnEffectifMatch"
+                            style="flex:1; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; padding:6px 10px; border-radius:8px; font-weight:700; font-size:.74rem; cursor:pointer;">
+                        📋 Effectif
+                    </button>
+                    <button type="button"
+                            id="btnComposerCinq"
+                            style="flex:2; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; padding:6px 10px; border-radius:8px; font-weight:700; font-size:.74rem; cursor:pointer;">
+                        👥 Composer le 5
+                    </button>
                 </div>
             </div>
 
             <div class="score-block">
                 <div class="score-team">{{ rencontre.adversaire }}</div>
-                <div class="score-value" style="color:#cbd5e1;">—</div>
-                <small style="color:#94a3b8;">Saisie manuelle</small>
+                <div class="score-value" id="scoreAdverseDisplay" style="color:#ef4444;">{{ rencontre.scoreAdverse ?? 0 }}</div>
+                {# === V2.1e — Boutons rapides score adverse === #}
+                <div class="adverse-controls" style="display:flex; gap:4px; justify-content:center; margin-top:4px;">
+                    <button type="button" class="adverse-btn" data-delta="1" title="+1 point">+1</button>
+                    <button type="button" class="adverse-btn" data-delta="2" title="+2 points (panier)">+2</button>
+                    <button type="button" class="adverse-btn" data-delta="3" title="+3 points (à 3 pts)">+3</button>
+                    <button type="button" class="adverse-btn adverse-btn-undo" data-delta="-1" title="Corriger (-1)">−1</button>
+                </div>
             </div>
         </div>
 
@@ -366,6 +1119,12 @@
 
             {# ===== COLONNE 1 : LISTE DES JOUEUSES ===== #}
             <div class="joueuses-list" id="joueusesList">
+                {# V2.1g.2 — Carte ADVERSAIRE (visible en mode Débutant uniquement) #}
+                <div class="joueuse-adversaire" id="cardAdversaire" data-adversaire="1">
+                    <i class="bi bi-shield-shaded"></i>
+                    {{ rencontre.adversaire }}
+                    <div class="lbl">Saisir une action adverse</div>
+                </div>
                 {% if joueuses is empty %}
                     <p style="color:#94a3b8; padding:12px; font-size:0.85rem;">
                         Aucune joueuse active dans cette équipe.<br>
@@ -378,7 +1137,15 @@
                         {% set pts = ((comptages.tir_2pt_int_reussi ?? 0) + (comptages.tir_2pt_ext_reussi ?? 0)) * 2
                                    + (comptages.tir_3pt_reussi ?? 0) * 3
                                    + (comptages.lancer_reussi ?? 0) %}
-                        <div class="joueuse-item" data-joueur-id="{{ j.id }}" data-pts="{{ pts }}">
+                        {% set est_sur_terrain = j.id in ids_sur_terrain %}
+                        <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
+                             data-joueur-id="{{ j.id }}"
+                             data-pts="{{ pts }}"
+                             data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}">
+                            <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
+                                <span class="dot"></span>
+                                <span class="badge-label">{{ est_sur_terrain ? 'ON' : 'OFF' }}</span>
+                            </span>
                             <div class="joueuse-avatar">
                                 {% if j.numeroMaillot is not null %}{{ j.numeroMaillot }}{% else %}{{ j.prenom|first|upper }}{% endif %}
                             </div>
@@ -386,7 +1153,7 @@
                                 <div class="joueuse-name">{{ j.prenom }} {{ j.nom }}</div>
                                 <div class="joueuse-stats">
                                     <span class="pts" data-joueur-pts="{{ j.id }}">{{ pts }}</span> pts
-                                    {% if j.poste %} · {{ j.poste }}{% endif %}
+                                    · <span class="temps-jeu" data-temps-jeu="{{ j.id }}">00:00</span>
                                 </div>
                             </div>
                         </div>
@@ -532,8 +1299,125 @@
         </div>
     </div>
 
+    {# ===== V2.1h — BOTTOM NAV mobile (mode app) =====
+       Visible uniquement sous 700px. Donne accès aux actions secondaires
+       sans avoir à scroller la page. Les 3 tabs ouvrent un sheet bottom. #}
+    <nav class="stats-bottom-nav" id="statsBottomNav" aria-label="Actions mobile">
+        <button type="button" class="stats-nav-btn" data-sheet="effectif" aria-label="Effectif du match">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">Effectif</span>
+        </button>
+        <button type="button" class="stats-nav-btn" data-sheet="adversaire" aria-label="Score adversaire">
+            <span class="nav-icon">🔴</span>
+            <span class="nav-label">Score adv.</span>
+        </button>
+        <button type="button" class="stats-nav-btn" data-sheet="plus" aria-label="Plus d'actions">
+            <span class="nav-icon">⋯</span>
+            <span class="nav-label">Plus</span>
+        </button>
+    </nav>
+
+    {# Sheet Score adversaire (déclenché par bottom nav) #}
+    <div class="modal-overlay" id="sheetAdversaire">
+        <div class="modal-box modal-box-sheet">
+            <h2 class="modal-title">Score adversaire</h2>
+            <p class="modal-subtitle">Tape sur les boutons pour ajuster le score live</p>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin:14px 0;">
+                <button type="button" class="adverse-btn sheet-adv-btn" data-delta="1" style="padding:18px; font-size:1.3rem;">+1</button>
+                <button type="button" class="adverse-btn sheet-adv-btn" data-delta="2" style="padding:18px; font-size:1.3rem;">+2 (panier)</button>
+                <button type="button" class="adverse-btn sheet-adv-btn" data-delta="3" style="padding:18px; font-size:1.3rem;">+3 (3pts)</button>
+                <button type="button" class="adverse-btn adverse-btn-undo sheet-adv-btn" data-delta="-1" style="padding:18px; font-size:1.3rem;">−1</button>
+            </div>
+            <div style="text-align:center; color:#94a3b8; margin:8px 0; font-size:.85rem;">
+                Score actuel : <strong style="color:#ef4444; font-size:1.2rem;" id="sheetAdvScoreLive">0</strong>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" data-close-sheet="adversaire">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    {# Sheet Plus (actions secondaires) #}
+    <div class="modal-overlay" id="sheetPlus">
+        <div class="modal-box modal-box-sheet">
+            <h2 class="modal-title">Plus d'actions</h2>
+            <div style="display:flex; flex-direction:column; gap:10px; margin:14px 0;">
+                <a href="{{ path('manager_session_stats_live_index', {id: rencontre.id}) }}"
+                   class="modal-btn modal-btn-cancel" style="text-align:left; padding:14px; text-decoration:none;">
+                    🗂️ Voir les sessions de saisie
+                </a>
+                <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}"
+                   class="modal-btn modal-btn-cancel" style="text-align:left; padding:14px; text-decoration:none;">
+                    📅 Retour à la rencontre
+                </a>
+                <button type="button" class="modal-btn modal-btn-cancel"
+                        id="sheetPlusCinq" style="text-align:left; padding:14px;">
+                    👥 Composer le 5
+                </button>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" data-close-sheet="plus">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     {# Toast feedback en bas à droite #}
     <div id="toast"></div>
+
+    {# ===== MODAL ACTION GUIDÉE V2.1g.2 (mode Débutant) =====
+       Workflow : click joueuse → choisir type d'action → sous-workflows selon type.
+       Le modal peut afficher plusieurs "écrans" en séquence (étapes). #}
+    <div class="modal-overlay" id="modalAction">
+        <div class="modal-box">
+            <h2 class="modal-title" id="modalActionTitle">Que veux-tu saisir ?</h2>
+            <p class="modal-subtitle" id="modalActionSubtitle"></p>
+            <div id="modalActionBody"></div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" id="modalActionCancel">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    {# ===== MODAL "Effectif du match" V2.1f =====
+       Logique INVERSÉE pour l'intuitivité :
+       - Joueuse cochée (vert) = ELLE JOUE
+       - Joueuse décochée (gris) = ABSENTE (blessée/examen)
+       Par défaut toutes cochées. L'user décoche celles qui n'y sont pas. #}
+    <div class="modal-overlay" id="modalEffectif">
+        <div class="modal-box">
+            <h2 class="modal-title">📋 Effectif du match</h2>
+            <p class="modal-subtitle">
+                Coche les joueuses qui jouent aujourd'hui. Décoche celles qui sont
+                absentes (blessées, examens). Par défaut, toutes sont cochées.
+            </p>
+            <div class="modal-counter" id="modalEffectifCounter">— qui jouent</div>
+            <div class="modal-grid" id="modalEffectifGrid">
+                {# Boutons générés à l'ouverture #}
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" id="modalEffectifCancel">Annuler</button>
+                <button type="button" class="modal-btn modal-btn-validate" id="modalEffectifValidate" style="background:#ea580c;">Enregistrer l'effectif</button>
+            </div>
+        </div>
+    </div>
+
+    {# ===== MODAL "Composer le 5" V2.1b ===== #}
+    <div class="modal-overlay" id="modalCinq">
+        <div class="modal-box">
+            <h2 class="modal-title">👥 Composer le 5 sur le terrain</h2>
+            <p class="modal-subtitle">
+                Sélectionne EXACTEMENT 5 joueuses. Les autres seront sur le banc et pourront entrer plus tard.
+            </p>
+            <div class="modal-counter" id="modalCinqCounter">0 / 5 sélectionnées</div>
+            <div class="modal-grid" id="modalCinqGrid">
+                {# Boutons générés à l'ouverture (voir openModalCinq) #}
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn modal-btn-cancel" id="modalCinqCancel">Annuler</button>
+                <button type="button" class="modal-btn modal-btn-validate" id="modalCinqValidate" disabled>Valider le 5</button>
+            </div>
+        </div>
+    </div>
 
 {% endblock %}
 
@@ -550,6 +1434,11 @@
         const URL_ACTION_CREATE = '{{ path('manager_rencontre_stats_live_action_create', {id: rencontre.id}) }}';
         const URL_ACTION_DELETE_BASE = '{{ path('manager_rencontre_stats_live_action_delete', {id: rencontre.id, actionId: 0}) }}'.replace(/\/0$/, '/');
 
+        // Format match V2.1a — venant de l'entité Rencontre
+        const NB_PERIODES = {{ rencontre.nbPeriodes }};
+        const DUREE_PERIODE_MIN = {{ rencontre.dureePeriodeMinutes }};
+        const STORAGE_KEY = 'mabb_chrono_' + RENCONTRE_ID;
+
         // ====================================================================
         // ÉTAT LOCAL
         // ====================================================================
@@ -558,10 +1447,957 @@
             tirX: null,              // position X normalisée 0-1 du tir en cours
             tirY: null,              // position Y normalisée 0-1 du tir en cours
             tirZone: null,           // zone détectée (3pt / 2pt int / 2pt ext)
-            quartTemps: 'QT1',
-            minute: 0,
-            secondes: 0,
+            quartTemps: 'QT1',       // libellé compat (sera dérivé du chrono)
+            minute: 0,               // minute du match (déduite du chrono)
+            secondes: 0,             // seconde du match
         };
+
+        // ====================================================================
+        // CHRONO (V2.1a)
+        // ====================================================================
+        // Le chrono est INDÉPENDANT de state : il a son propre objet pour
+        // pouvoir survivre à un refresh tablette via localStorage.
+        let chrono = {
+            periode: 1,                              // 1 à NB_PERIODES (ou +1 si prolongation)
+            tempsRestantSec: DUREE_PERIODE_MIN * 60, // décompte en secondes
+            running: false,                          // true = timer actif
+            lastTick: null,                          // timestamp du dernier tick (pour drift correction)
+            intervalId: null,                        // id du setInterval
+        };
+
+        // Restaure depuis localStorage si on a déjà commencé ce match
+        function restoreChrono() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                if (typeof saved.periode === 'number') chrono.periode = saved.periode;
+                if (typeof saved.tempsRestantSec === 'number') chrono.tempsRestantSec = saved.tempsRestantSec;
+                // On NE restore PAS running (sécurité : si tablette plantée, on redémarre en pause)
+            } catch (e) { /* corrupt storage : on ignore */ }
+        }
+
+        function persistChrono() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    periode: chrono.periode,
+                    tempsRestantSec: chrono.tempsRestantSec,
+                }));
+            } catch (e) {}
+        }
+
+        function formatChrono(secondesTotal) {
+            if (secondesTotal < 0) secondesTotal = 0;
+            const m = Math.floor(secondesTotal / 60);
+            const s = secondesTotal % 60;
+            return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        }
+
+        function updateChronoDisplay() {
+            const display = document.getElementById('chronoDisplay');
+            const periodLabel = document.getElementById('periodLabel');
+
+            display.textContent = formatChrono(chrono.tempsRestantSec);
+
+            // Style selon état
+            display.classList.toggle('running', chrono.running);
+            display.classList.toggle('warning', chrono.tempsRestantSec < 60 && chrono.tempsRestantSec > 0);
+
+            // Libellé période (Q1/Q2... pour quart-temps, M1/M2 pour mi-temps)
+            const prefix = NB_PERIODES === 4 ? 'Q' : 'M';
+            periodLabel.textContent = prefix + chrono.periode;
+
+            // Met à jour state.quartTemps pour compat avec saveAction()
+            state.quartTemps = (NB_PERIODES === 4 ? 'QT' : 'MT') + chrono.periode;
+            // state.minute / secondes = temps ÉCOULÉ dans la période (utile pour ActionMatch)
+            const ecoule = (DUREE_PERIODE_MIN * 60) - chrono.tempsRestantSec;
+            state.minute = Math.floor(ecoule / 60);
+            state.secondes = ecoule % 60;
+        }
+
+        function tick() {
+            if (!chrono.running) return;
+            const now = Date.now();
+            const elapsed = chrono.lastTick ? Math.floor((now - chrono.lastTick) / 1000) : 1;
+            chrono.lastTick = now;
+            chrono.tempsRestantSec -= elapsed;
+
+            if (chrono.tempsRestantSec <= 0) {
+                chrono.tempsRestantSec = 0;
+                pauseChrono();
+                toast('Fin de la période !');
+            }
+            updateChronoDisplay();
+            persistChrono();
+        }
+
+        function startChrono() {
+            if (chrono.tempsRestantSec <= 0) {
+                toast('Période terminée. Clique → pour la suivante.', true);
+                return;
+            }
+            chrono.running = true;
+            chrono.lastTick = Date.now();
+            chrono.intervalId = setInterval(tick, 1000);
+            document.getElementById('btnStartPauseIcon').textContent = '⏸';
+            document.getElementById('btnStartPause').classList.add('is-running');
+            updateChronoDisplay();
+        }
+
+        function pauseChrono() {
+            chrono.running = false;
+            if (chrono.intervalId) {
+                clearInterval(chrono.intervalId);
+                chrono.intervalId = null;
+            }
+            document.getElementById('btnStartPauseIcon').textContent = '▶';
+            document.getElementById('btnStartPause').classList.remove('is-running');
+            updateChronoDisplay();
+        }
+
+        function resetPeriode() {
+            if (!confirm('Réinitialiser la période ' + chrono.periode + ' à ' + DUREE_PERIODE_MIN + ':00 ?')) return;
+            pauseChrono();
+            chrono.tempsRestantSec = DUREE_PERIODE_MIN * 60;
+            updateChronoDisplay();
+            persistChrono();
+        }
+
+        function periodeNext() {
+            const nextNum = chrono.periode + 1;
+            const total = NB_PERIODES;
+            let msg;
+            if (nextNum <= total) {
+                msg = 'Passer à la période ' + nextNum + ' / ' + total + ' ?';
+            } else {
+                // Au-delà du nb prévu = prolongation
+                msg = 'Période ' + chrono.periode + ' terminée. Démarrer une PROLONGATION (' + DUREE_PERIODE_MIN + ' min) ?';
+            }
+            if (!confirm(msg)) return;
+            pauseChrono();
+            chrono.periode = nextNum;
+            chrono.tempsRestantSec = DUREE_PERIODE_MIN * 60;
+            updateChronoDisplay();
+            persistChrono();
+        }
+
+        function ajusterChrono(deltaSec) {
+            chrono.tempsRestantSec = Math.max(0, chrono.tempsRestantSec + deltaSec);
+            updateChronoDisplay();
+            persistChrono();
+        }
+
+        // === Init chrono au chargement ===
+        restoreChrono();
+        updateChronoDisplay();
+        document.getElementById('btnStartPause').addEventListener('click', () => {
+            chrono.running ? pauseChrono() : startChrono();
+        });
+        document.getElementById('btnResetChrono').addEventListener('click', resetPeriode);
+        document.getElementById('btnNextPeriod').addEventListener('click', periodeNext);
+        document.getElementById('btnMinus1').addEventListener('click', () => ajusterChrono(-1));
+        document.getElementById('btnPlus1').addEventListener('click', () => ajusterChrono(+1));
+
+        // ====================================================================
+        // V2.1b — Présence sur le terrain (5 + changements + temps de jeu)
+        // ====================================================================
+        // URLs API exposées via Twig pour rester centralisé
+        const URL_ENTRER = '{{ path('manager_rencontre_stats_live_entrer', {id: rencontre.id}) }}';
+        const URL_SORTIR = '{{ path('manager_rencontre_stats_live_sortir', {id: rencontre.id}) }}';
+
+        /**
+         * Temps absolu en secondes depuis Q1 0:00.
+         * Le serveur a besoin de ça pour calculer le temps de jeu réel.
+         * Calcul : (période_passées) * durée_période + temps_écoulé_dans_période_courante.
+         */
+        function getTempsAbsolu() {
+            const periodesPassees = chrono.periode - 1;
+            const ecouleDansPeriode = (DUREE_PERIODE_MIN * 60) - chrono.tempsRestantSec;
+            return periodesPassees * DUREE_PERIODE_MIN * 60 + ecouleDansPeriode;
+        }
+
+        /**
+         * État local des joueuses sur le terrain (Set d'IDs).
+         * Initialisé depuis ce que le serveur a envoyé (ids_sur_terrain).
+         * Pour chaque ID, on stocke aussi le temps d'entrée (secondes absolues)
+         * pour calculer le temps de jeu LIVE sans appel serveur.
+         */
+        const surTerrain = new Map(); // joueurId → secondesEntree
+        {% for jid in ids_sur_terrain %}
+            // Au reload de la page, on ne connaît PAS le temps d'entrée précis
+            // (le serveur le sait mais on ne le récupère pas dans la payload).
+            // Approximation : on considère qu'elle est entrée à l'instant courant.
+            // L'historique BDD reste précis, c'est juste l'affichage LIVE qui peut
+            // être sous-estimé après un reload.
+            surTerrain.set({{ jid }}, getTempsAbsolu());
+        {% endfor %}
+
+        /**
+         * Met à jour visuellement le badge ON/OFF + classe sur-terrain.
+         */
+        function updateBadge(joueurId, estSurTerrain) {
+            const item = document.querySelector('.joueuse-item[data-joueur-id="' + joueurId + '"]');
+            if (!item) return;
+            item.dataset.surTerrain = estSurTerrain ? '1' : '0';
+            item.classList.toggle('sur-terrain', estSurTerrain);
+            const badge = item.querySelector('.badge-terrain');
+            if (badge) {
+                badge.classList.toggle('on', estSurTerrain);
+                badge.querySelector('.badge-label').textContent = estSurTerrain ? 'ON' : 'OFF';
+            }
+        }
+
+        /**
+         * Format MM:SS pour l'affichage temps de jeu.
+         */
+        function formatTempsJeu(s) {
+            const m = Math.floor(s / 60);
+            const sec = s % 60;
+            return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+        }
+
+        /**
+         * Met à jour les compteurs de temps de jeu live pour TOUTES les joueuses
+         * sur le terrain. Appelé chaque seconde si le chrono tourne.
+         */
+        function refreshTempsJeu() {
+            const now = getTempsAbsolu();
+            surTerrain.forEach((tEntree, jid) => {
+                const dureeSec = Math.max(0, now - tEntree);
+                const el = document.querySelector('[data-temps-jeu="' + jid + '"]');
+                if (el) el.textContent = formatTempsJeu(dureeSec);
+            });
+        }
+
+        /**
+         * Appelle l'API /entrer pour faire entrer une joueuse + met à jour l'UI.
+         */
+        async function entrerJoueuse(joueurId) {
+            try {
+                const tempsAbsolu = getTempsAbsolu();
+                const res = await fetch(URL_ENTRER, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ joueurId: joueurId, tempsAbsolu: tempsAbsolu }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    toast(data.error || 'Entrée refusée', true);
+                    return false;
+                }
+                surTerrain.set(joueurId, tempsAbsolu);
+                updateBadge(joueurId, true);
+                return true;
+            } catch (e) {
+                toast('Erreur réseau (entrée)', true);
+                return false;
+            }
+        }
+
+        /**
+         * Appelle l'API /sortir pour faire sortir une joueuse + met à jour l'UI.
+         */
+        async function sortirJoueuse(joueurId) {
+            try {
+                const tempsAbsolu = getTempsAbsolu();
+                const res = await fetch(URL_SORTIR, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ joueurId: joueurId, tempsAbsolu: tempsAbsolu }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    toast(data.error || 'Sortie refusée', true);
+                    return false;
+                }
+                surTerrain.delete(joueurId);
+                updateBadge(joueurId, false);
+                return true;
+            } catch (e) {
+                toast('Erreur réseau (sortie)', true);
+                return false;
+            }
+        }
+
+        // === Modal "Composer le 5" ===
+        const modal = document.getElementById('modalCinq');
+        const modalGrid = document.getElementById('modalCinqGrid');
+        const modalCounter = document.getElementById('modalCinqCounter');
+        const modalValidate = document.getElementById('modalCinqValidate');
+
+        let modalSelection = new Set();
+
+        function openModalCinq() {
+            // Régénère la grille à chaque ouverture (joueuses + sélection = celles actuellement sur terrain)
+            modalSelection = new Set(surTerrain.keys());
+            modalGrid.innerHTML = '';
+            document.querySelectorAll('.joueuse-item').forEach(item => {
+                const jid = parseInt(item.dataset.joueurId, 10);
+                const nom = item.querySelector('.joueuse-name').textContent.trim();
+                const num = item.querySelector('.joueuse-avatar').textContent.trim();
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'modal-joueuse-btn' + (modalSelection.has(jid) ? ' selected' : '');
+                btn.dataset.joueurId = jid;
+                btn.innerHTML = '<strong>#' + num + '</strong> · ' + nom;
+                btn.addEventListener('click', () => {
+                    if (modalSelection.has(jid)) {
+                        modalSelection.delete(jid);
+                        btn.classList.remove('selected');
+                    } else {
+                        if (modalSelection.size >= 5) {
+                            toast('Maximum 5 joueuses sur le terrain.', true);
+                            return;
+                        }
+                        modalSelection.add(jid);
+                        btn.classList.add('selected');
+                    }
+                    refreshModalCounter();
+                });
+                modalGrid.appendChild(btn);
+            });
+            refreshModalCounter();
+            modal.classList.add('show');
+        }
+
+        function refreshModalCounter() {
+            const n = modalSelection.size;
+            modalCounter.textContent = n + ' / 5 sélectionnées';
+            modalCounter.classList.toggle('complete', n === 5);
+            modalValidate.disabled = (n !== 5);
+        }
+
+        function closeModalCinq() { modal.classList.remove('show'); }
+
+        /**
+         * Valide la sélection : diff avec la composition actuelle
+         * → entrées (nouvelles) + sorties (retirées).
+         */
+        async function validerCompositionCinq() {
+            const actuelles = new Set(surTerrain.keys());
+            const choisies = modalSelection;
+
+            const aSortir = [...actuelles].filter(j => !choisies.has(j));
+            const aEntrer = [...choisies].filter(j => !actuelles.has(j));
+
+            // Sorties d'abord (libère du temps de jeu), puis entrées
+            for (const jid of aSortir) await sortirJoueuse(jid);
+            for (const jid of aEntrer) await entrerJoueuse(jid);
+
+            closeModalCinq();
+            toast('5 sur le terrain : ' + choisies.size + ' joueuses');
+        }
+
+        document.getElementById('btnComposerCinq').addEventListener('click', openModalCinq);
+        document.getElementById('modalCinqCancel').addEventListener('click', closeModalCinq);
+        document.getElementById('modalCinqValidate').addEventListener('click', validerCompositionCinq);
+        // Click sur overlay (hors box) ferme le modal
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModalCinq(); });
+
+        // === Tick auto pour rafraîchir le temps de jeu live ===
+        // Indépendant du chrono : tourne dès qu'au moins 1 joueuse est sur le terrain
+        // ET que le chrono tourne. Sinon, valeurs figées.
+        setInterval(() => {
+            if (chrono.running && surTerrain.size > 0) refreshTempsJeu();
+        }, 1000);
+
+        // 1er render des temps de jeu à 00:00
+        refreshTempsJeu();
+
+        // ====================================================================
+        // V2.1e — Score adverse live
+        // ====================================================================
+        const URL_SCORE_ADVERSE = '{{ path('manager_rencontre_stats_live_score_adverse', {id: rencontre.id}) }}';
+        const scoreAdverseDisplay = document.getElementById('scoreAdverseDisplay');
+
+        async function updateScoreAdverse(delta) {
+            try {
+                const res = await fetch(URL_SCORE_ADVERSE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ delta: delta }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    toast(data.error || 'Échec mise à jour score adverse', true);
+                    return;
+                }
+                scoreAdverseDisplay.textContent = data.scoreAdverse;
+                // Petit flash visuel pour confirmer
+                scoreAdverseDisplay.style.transform = 'scale(1.15)';
+                setTimeout(() => { scoreAdverseDisplay.style.transform = ''; }, 200);
+                toast((delta > 0 ? '+' : '') + delta + ' adverse → ' + data.scoreAdverse);
+            } catch (e) {
+                toast('Erreur réseau (score adverse)', true);
+            }
+        }
+
+        document.querySelectorAll('.adverse-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const delta = parseInt(btn.dataset.delta, 10);
+                updateScoreAdverse(delta);
+            });
+        });
+
+        // ====================================================================
+        // V2.1f — Modal Effectif du match
+        // ====================================================================
+        const URL_EFFECTIF = '{{ path('manager_rencontre_stats_live_effectif', {id: rencontre.id}) }}';
+
+        // Liste COMPLÈTE de l'effectif équipe (utile car la sidebar n'a que les présentes)
+        // Format injecté : [{id, prenom, nom, num}, ...]
+        const EFFECTIF_COMPLET = [
+            {% for j in joueuses_toutes %}
+                { id: {{ j.id }}, prenom: {{ j.prenom|json_encode|raw }}, nom: {{ j.nom|json_encode|raw }}, num: {{ j.numeroMaillot ?? 'null' }} }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+        // IDs actuellement marquées NON convoquées (sur le banc des absentes)
+        let nonConvoqueesActuelles = new Set([{{ ids_non_convoquees|join(', ') }}]);
+
+        const modalEffectif = document.getElementById('modalEffectif');
+        const modalEffectifGrid = document.getElementById('modalEffectifGrid');
+        const modalEffectifCounter = document.getElementById('modalEffectifCounter');
+        // INVERSION V2.1f : la sélection représente maintenant les JOUEUSES QUI JOUENT
+        // (UX intuitive : "je coche les présentes" est plus naturel que "je coche les absentes")
+        let modalEffectifJouent = new Set();
+
+        function openModalEffectif() {
+            // Par défaut TOUTES les joueuses jouent SAUF celles dans nonConvoqueesActuelles
+            modalEffectifJouent = new Set(
+                EFFECTIF_COMPLET
+                    .map(j => j.id)
+                    .filter(id => !nonConvoqueesActuelles.has(id))
+            );
+            modalEffectifGrid.innerHTML = '';
+            EFFECTIF_COMPLET.forEach(j => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'modal-joueuse-btn' + (modalEffectifJouent.has(j.id) ? ' selected' : '');
+                btn.dataset.joueurId = j.id;
+                btn.innerHTML = '<strong>' + (j.num !== null ? '#' + j.num : '·') + '</strong> ' + j.prenom + ' ' + j.nom;
+                btn.addEventListener('click', () => {
+                    if (modalEffectifJouent.has(j.id)) {
+                        modalEffectifJouent.delete(j.id);
+                        btn.classList.remove('selected');
+                    } else {
+                        modalEffectifJouent.add(j.id);
+                        btn.classList.add('selected');
+                    }
+                    refreshEffectifCounter();
+                });
+                modalEffectifGrid.appendChild(btn);
+            });
+            refreshEffectifCounter();
+            modalEffectif.classList.add('show');
+        }
+
+        function refreshEffectifCounter() {
+            const nbJouent = modalEffectifJouent.size;
+            const total = EFFECTIF_COMPLET.length;
+            const nbAbsentes = total - nbJouent;
+            modalEffectifCounter.textContent = nbAbsentes === 0
+                ? '✓ Toutes les ' + total + ' joueuses jouent'
+                : nbJouent + ' jouent · ' + nbAbsentes + ' absente' + (nbAbsentes > 1 ? 's' : '');
+            modalEffectifCounter.classList.toggle('complete', nbAbsentes === 0);
+        }
+
+        function closeModalEffectif() { modalEffectif.classList.remove('show'); }
+
+        async function validerEffectif() {
+            // Calcule les NON convoquées = EFFECTIF_COMPLET MINUS celles qui jouent
+            const idsNonConvoquees = EFFECTIF_COMPLET
+                .map(j => j.id)
+                .filter(id => !modalEffectifJouent.has(id));
+            try {
+                const res = await fetch(URL_EFFECTIF, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
+                    body: JSON.stringify({ joueursNonConvoques: idsNonConvoquees }),
+                });
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    toast(data.error || 'Échec mise à jour effectif', true);
+                    return;
+                }
+                nonConvoqueesActuelles = new Set(data.joueursNonConvoques);
+                closeModalEffectif();
+                toast('Effectif enregistré — rechargement…');
+                // Rechargement auto pour appliquer le filtre sidebar côté serveur
+                setTimeout(() => location.reload(), 600);
+            } catch (e) {
+                toast('Erreur réseau (effectif)', true);
+            }
+        }
+
+        document.getElementById('btnEffectifMatch').addEventListener('click', openModalEffectif);
+        document.getElementById('modalEffectifCancel').addEventListener('click', closeModalEffectif);
+        document.getElementById('modalEffectifValidate').addEventListener('click', validerEffectif);
+        modalEffectif.addEventListener('click', (e) => { if (e.target === modalEffectif) closeModalEffectif(); });
+
+        // ====================================================================
+        // V2.1g — Mode Expert / Mode Débutant
+        // ====================================================================
+        const MODE_STORAGE_KEY = 'mabb_mode_' + RENCONTRE_ID;
+        const wrapper = document.getElementById('liveWrapper');
+        const btnExpert = document.getElementById('modeExpertBtn');
+        const btnDebutant = document.getElementById('modeDebutantBtn');
+
+        function appliquerMode(mode) {
+            if (mode === 'debutant') {
+                wrapper.classList.add('mode-debutant');
+                btnDebutant.classList.add('active');
+                btnExpert.classList.remove('active');
+            } else {
+                wrapper.classList.remove('mode-debutant');
+                btnExpert.classList.add('active');
+                btnDebutant.classList.remove('active');
+            }
+            try { localStorage.setItem(MODE_STORAGE_KEY, mode); } catch(e) {}
+        }
+
+        // V2.1g.5 — Mode Débutant par défaut (HTML déjà en mode-debutant).
+        // Restore depuis localStorage seulement si l'user a explicitement choisi
+        // Expert lors d'une session précédente. Sinon on reste en Débutant.
+        try {
+            const modeSauve = localStorage.getItem(MODE_STORAGE_KEY);
+            if (modeSauve === 'expert') appliquerMode('expert');
+        } catch(e) {}
+
+        btnExpert.addEventListener('click', () => appliquerMode('expert'));
+        btnDebutant.addEventListener('click', () => appliquerMode('debutant'));
+
+        // V2.1h — Sous 500px (mobile portrait), on FORCE le mode débutant.
+        // Le terrain SVG est inutilisable sur un écran si étroit ; le toggle
+        // Expert est masqué visuellement par CSS (opacity + pointer-events:none)
+        // et désactivé fonctionnellement ici. Si le user retourne en paysage
+        // (>= 500px), on lui rend la main : on restore le mode préféré du
+        // localStorage. matchMedia + listener = pas besoin de reload.
+        const mqlSmartphone = window.matchMedia('(max-width: 499px)');
+        function appliquerContrainteEcran(e) {
+            if (e.matches) {
+                // Trop petit → force débutant (sans toucher au localStorage,
+                // pour préserver le choix du user quand il reviendra en paysage)
+                if (!wrapper.classList.contains('mode-debutant')) {
+                    wrapper.classList.add('mode-debutant');
+                    btnDebutant.classList.add('active');
+                    btnExpert.classList.remove('active');
+                }
+                btnExpert.setAttribute('disabled', '');
+                btnExpert.title = 'Mode Expert indisponible en portrait smartphone — tourne ton écran ou utilise une tablette.';
+            } else {
+                // Retour à un écran assez large → on respecte le choix sauvegardé
+                btnExpert.removeAttribute('disabled');
+                btnExpert.title = '';
+                try {
+                    const modeSauve = localStorage.getItem(MODE_STORAGE_KEY);
+                    if (modeSauve === 'expert') appliquerMode('expert');
+                } catch(e) {}
+            }
+        }
+        // Run au chargement + à chaque rotation d'écran / resize
+        appliquerContrainteEcran(mqlSmartphone);
+        mqlSmartphone.addEventListener('change', appliquerContrainteEcran);
+
+        // ====================================================================
+        // V2.1g.2 — Workflow guidé Mode Débutant
+        // ====================================================================
+        // En mode Débutant :
+        //   - Click joueuse → ouvre modal "Que veux-tu saisir ?"
+        //   - Selon le type → sous-workflows (assist, rebond, zone interception…)
+        //   - Click carte "Adversaire" → modal actions adverses (tir raté → rebond pour nous)
+        //
+        // Le modal réutilise la structure du modalAction (titre + body + cancel).
+        // On change le contenu HTML du body selon l'étape.
+
+        const modalAction = document.getElementById('modalAction');
+        const modalActionTitle = document.getElementById('modalActionTitle');
+        const modalActionSubtitle = document.getElementById('modalActionSubtitle');
+        const modalActionBody = document.getElementById('modalActionBody');
+        document.getElementById('modalActionCancel').addEventListener('click', () => modalAction.classList.remove('show'));
+        modalAction.addEventListener('click', (e) => { if (e.target === modalAction) modalAction.classList.remove('show'); });
+
+        function openModalAction(titre, sousTitre, bodyHtml) {
+            modalActionTitle.textContent = titre;
+            modalActionSubtitle.textContent = sousTitre || '';
+            modalActionBody.innerHTML = bodyHtml;
+            modalAction.classList.add('show');
+        }
+        function closeModalAction() { modalAction.classList.remove('show'); }
+
+        // ─── Étape 1 : choix du type d'action pour UNE joueuse ───
+        function workflowJoueuse(joueurId, joueurNom) {
+            const btn = (type, color, icon, label) =>
+                `<button class="action-btn ${color}" data-type="${type}"><span class="icon">${icon}</span><span class="lbl">${label}</span></button>`;
+            const html = `
+                <div class="action-grid">
+                    ${btn('tir_2pt_int_reussi', 'action-btn-success', '🏀', 'Panier 2pts')}
+                    ${btn('tir_3pt_reussi', 'action-btn-success', '🎯', 'Panier 3pts')}
+                    ${btn('lancer_reussi', 'action-btn-success', '🤲', 'LF réussi')}
+                    ${btn('tir_2pt_int_rate', 'action-btn-danger', '❌', 'Tir 2pts raté')}
+                    ${btn('tir_3pt_rate', 'action-btn-danger', '❌', 'Tir 3pts raté')}
+                    ${btn('lancer_rate', 'action-btn-danger', '❌', 'LF raté')}
+                    ${btn('rebond_offensif', 'action-btn-warning', '🔄', 'Rebond Off')}
+                    ${btn('rebond_defensif', 'action-btn-warning', '🛡️', 'Rebond Déf')}
+                    ${btn('interception', 'action-btn-info', '✋', 'Interception')}
+                    ${btn('passe_decisive', 'action-btn-purple', '🎁', 'Passe D')}
+                    ${btn('faute_commise', 'action-btn-danger', '⚠️', 'Faute')}
+                    ${btn('perte_balle', 'action-btn-danger', '💥', 'Perte balle')}
+                </div>
+            `;
+            openModalAction(joueurNom, 'Choisis le type d\'action', html);
+            modalActionBody.querySelectorAll('.action-btn').forEach(b => {
+                b.addEventListener('click', () => handleActionChoisie(joueurId, joueurNom, b.dataset.type));
+            });
+        }
+
+        // ─── Étape 2 : selon le type, ouvre un sous-workflow ou enregistre direct ───
+        async function handleActionChoisie(joueurId, joueurNom, type) {
+            state.joueurActif = joueurId;
+
+            // Tir RÉUSSI → demande "avec assist ?"
+            if (['tir_2pt_int_reussi', 'tir_2pt_ext_reussi', 'tir_3pt_reussi'].includes(type)) {
+                workflowAssist(joueurId, joueurNom, type);
+                return;
+            }
+
+            // Tir RATÉ → demande "qui a eu le rebond ?"
+            if (['tir_2pt_int_rate', 'tir_2pt_ext_rate', 'tir_3pt_rate', 'lancer_rate'].includes(type)) {
+                // On enregistre d'abord le tir raté
+                await saveAction(type, { positionX: 0.5, positionY: 0.5 });
+                workflowRebondApresTirRate(joueurNom);
+                return;
+            }
+
+            // Interception → demande zone avant ou arrière (= info dans toast)
+            if (type === 'interception') {
+                workflowZoneInterception(joueurId, joueurNom);
+                return;
+            }
+
+            // Passe D → demande qui a marqué
+            if (type === 'passe_decisive') {
+                workflowPasseDecisive(joueurId, joueurNom);
+                return;
+            }
+
+            // Action simple → enregistré direct
+            const needsPosition = ['tir_2pt_int_reussi', 'tir_3pt_reussi', 'lancer_reussi'].includes(type);
+            await saveAction(type, needsPosition ? { positionX: 0.5, positionY: 0.5 } : {});
+            closeModalAction();
+        }
+
+        // ─── Sous-workflow : tir réussi avec assist ? ───
+        function workflowAssist(joueurId, joueurNom, typeTir) {
+            const html = `
+                <div class="action-grid" style="grid-template-columns:1fr 1fr;">
+                    <button class="action-btn action-btn-purple" data-choice="oui"><span class="icon">🎁</span><span class="lbl">OUI, avec passe D</span></button>
+                    <button class="action-btn" data-choice="non"><span class="icon">⛹️</span><span class="lbl">NON, seule</span></button>
+                </div>
+            `;
+            openModalAction(joueurNom + ' a marqué !', 'Avec une passe décisive ?', html);
+            modalActionBody.querySelectorAll('.action-btn').forEach(b => {
+                b.addEventListener('click', async () => {
+                    if (b.dataset.choice === 'non') {
+                        await saveAction(typeTir, { positionX: 0.5, positionY: 0.5 });
+                        closeModalAction();
+                    } else {
+                        // Demande qui a fait la passe
+                        showJoueurChoice('Qui a fait la passe ?', joueurId, async (passeurId) => {
+                            await saveAction(typeTir, { positionX: 0.5, positionY: 0.5, assistJoueurId: passeurId });
+                            closeModalAction();
+                        });
+                    }
+                });
+            });
+        }
+
+        // ─── Sous-workflow : rebond après tir raté ───
+        function workflowRebondApresTirRate(tireuse) {
+            const html = `
+                <div class="action-grid" style="grid-template-columns:1fr 1fr;">
+                    <button class="action-btn action-btn-warning" data-choice="nous"><span class="icon">🛡️</span><span class="lbl">Notre équipe</span></button>
+                    <button class="action-btn action-btn-danger" data-choice="adv"><span class="icon">🚫</span><span class="lbl">Adversaire</span></button>
+                </div>
+            `;
+            openModalAction('Tir raté — qui a eu le rebond ?', tireuse + ' a manqué', html);
+            modalActionBody.querySelectorAll('.action-btn').forEach(b => {
+                b.addEventListener('click', () => {
+                    if (b.dataset.choice === 'adv') {
+                        // Pas d'enregistrement spécifique côté adverse pour MVP
+                        toast('Rebond adverse noté');
+                        closeModalAction();
+                    } else {
+                        showJoueurChoice('Quelle joueuse a pris le rebond ?', null, async (joueurId) => {
+                            state.joueurActif = joueurId;
+                            await saveAction('rebond_defensif', {});
+                            closeModalAction();
+                        });
+                    }
+                });
+            });
+        }
+
+        // ─── Sous-workflow : zone interception (avant/arrière) ───
+        function workflowZoneInterception(joueurId, joueurNom) {
+            const html = `
+                <div class="action-grid" style="grid-template-columns:1fr 1fr;">
+                    <button class="action-btn action-btn-info" data-zone="avant"><span class="icon">⬆️</span><span class="lbl">Zone avant<br>(offensive)</span></button>
+                    <button class="action-btn action-btn-info" data-zone="arriere"><span class="icon">⬇️</span><span class="lbl">Zone arrière<br>(défensive)</span></button>
+                </div>
+            `;
+            openModalAction('Interception de ' + joueurNom, 'Dans quelle zone ?', html);
+            modalActionBody.querySelectorAll('.action-btn').forEach(b => {
+                b.addEventListener('click', async () => {
+                    // Position approximée : avant = haut terrain (Y=0.2), arrière = bas (Y=0.8)
+                    const posY = b.dataset.zone === 'avant' ? 0.2 : 0.8;
+                    state.joueurActif = joueurId;
+                    await saveAction('interception', { positionX: 0.5, positionY: posY });
+                    toast('Interception ' + b.dataset.zone);
+                    closeModalAction();
+                });
+            });
+        }
+
+        // ─── Sous-workflow : passe décisive (qui a marqué après ?) ───
+        function workflowPasseDecisive(passeurId, passeurNom) {
+            showJoueurChoice('Qui a marqué grâce à ' + passeurNom + ' ?', passeurId, async (marqueurId) => {
+                // On crée le tir réussi pour le marqueur + assist pour le passeur
+                state.joueurActif = marqueurId;
+                await saveAction('tir_2pt_int_reussi', { positionX: 0.5, positionY: 0.5, assistJoueurId: passeurId });
+                closeModalAction();
+            });
+        }
+
+        // ─── Sous-workflow : adversaire (tir raté → rebond pour nous) ───
+        function workflowAdversaire() {
+            const html = `
+                <div class="action-grid" style="grid-template-columns:1fr 1fr;">
+                    <button class="action-btn action-btn-danger" data-act="tir_rate"><span class="icon">❌</span><span class="lbl">Tir raté adverse</span></button>
+                    <button class="action-btn action-btn-success" data-act="tir_reussi"><span class="icon">🏀</span><span class="lbl">Tir réussi adverse</span></button>
+                </div>
+            `;
+            openModalAction('Action adversaire', 'Que vient-il de faire ?', html);
+            modalActionBody.querySelectorAll('.action-btn').forEach(b => {
+                b.addEventListener('click', async () => {
+                    if (b.dataset.act === 'tir_reussi') {
+                        // Le score adverse augmente — on demande le nombre de points
+                        const htmlPts = `
+                            <div class="action-grid" style="grid-template-columns:repeat(3,1fr);">
+                                <button class="action-btn" data-pts="1"><span class="icon">1️⃣</span><span class="lbl">+1 pt</span></button>
+                                <button class="action-btn" data-pts="2"><span class="icon">2️⃣</span><span class="lbl">+2 pts</span></button>
+                                <button class="action-btn" data-pts="3"><span class="icon">3️⃣</span><span class="lbl">+3 pts</span></button>
+                            </div>
+                        `;
+                        openModalAction('Combien de points ?', 'Score adverse à ajouter', htmlPts);
+                        modalActionBody.querySelectorAll('.action-btn').forEach(bp => {
+                            bp.addEventListener('click', async () => {
+                                const delta = parseInt(bp.dataset.pts, 10);
+                                await updateScoreAdverse(delta);
+                                closeModalAction();
+                            });
+                        });
+                    } else {
+                        // Tir raté adverse → on demande qui prend le rebond défensif
+                        closeModalAction();
+                        showJoueurChoice('Qui a pris le rebond défensif ?', null, async (rebondeurId) => {
+                            state.joueurActif = rebondeurId;
+                            await saveAction('rebond_defensif');
+                            closeModalAction();
+                        });
+                    }
+                });
+            });
+        }
+
+        // ====================================================================
+        // V2.1i — MODE APP MOBILE (bottom nav + sheets)
+        // ====================================================================
+        // Activé sous 700px : ajoute body.stats-live-app-mode, masque la navbar
+        // Manager, lock le scroll body, et branche les 3 tabs du bottom nav.
+        const mqlAppMode = window.matchMedia('(max-width: 699px)');
+
+        function syncAppModeClass(mql) {
+            if (mql.matches) {
+                document.body.classList.add('stats-live-app-mode');
+            } else {
+                document.body.classList.remove('stats-live-app-mode');
+                // En sortant du mode app, ferme tous les sheets éventuellement ouverts
+                document.querySelectorAll('.modal-overlay.show').forEach(m => {
+                    if (m.id === 'sheetAdversaire' || m.id === 'sheetPlus') {
+                        m.classList.remove('show');
+                    }
+                });
+            }
+        }
+        syncAppModeClass(mqlAppMode);
+        mqlAppMode.addEventListener('change', syncAppModeClass);
+
+        // ─── Bottom nav : ouvre la sheet correspondante ───
+        const sheetAdv = document.getElementById('sheetAdversaire');
+        const sheetPlus = document.getElementById('sheetPlus');
+        const sheetAdvScoreLive = document.getElementById('sheetAdvScoreLive');
+
+        function openSheet(name) {
+            if (name === 'effectif') {
+                // Réutilise le modal effectif existant (déjà géré par btnEffectifMatch)
+                document.getElementById('btnEffectifMatch')?.click();
+            } else if (name === 'adversaire') {
+                // Sync le score affiché dans la sheet
+                if (sheetAdvScoreLive) {
+                    sheetAdvScoreLive.textContent = document.getElementById('scoreAdverseDisplay')?.textContent || '0';
+                }
+                sheetAdv.classList.add('show');
+            } else if (name === 'plus') {
+                sheetPlus.classList.add('show');
+            }
+        }
+        function closeSheet(name) {
+            if (name === 'adversaire') sheetAdv.classList.remove('show');
+            if (name === 'plus') sheetPlus.classList.remove('show');
+        }
+
+        document.querySelectorAll('.stats-nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => openSheet(btn.dataset.sheet));
+        });
+        document.querySelectorAll('[data-close-sheet]').forEach(btn => {
+            btn.addEventListener('click', () => closeSheet(btn.dataset.closeSheet));
+        });
+
+        // Click hors de la box → ferme la sheet (UX bottom-sheet standard)
+        sheetAdv?.addEventListener('click', (e) => { if (e.target === sheetAdv) closeSheet('adversaire'); });
+        sheetPlus?.addEventListener('click', (e) => { if (e.target === sheetPlus) closeSheet('plus'); });
+
+        // Boutons score adverse INSIDE la sheet → réutilisent la même API
+        sheetAdv?.querySelectorAll('.sheet-adv-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const delta = parseInt(btn.dataset.delta, 10);
+                await updateScoreAdverse(delta);
+                // Refresh le score affiché dans la sheet sans la fermer
+                if (sheetAdvScoreLive) {
+                    sheetAdvScoreLive.textContent = document.getElementById('scoreAdverseDisplay')?.textContent || '0';
+                }
+            });
+        });
+
+        // Sheet "Plus" → Composer 5 délégué au modal existant
+        document.getElementById('sheetPlusCinq')?.addEventListener('click', () => {
+            closeSheet('plus');
+            document.getElementById('btnComposerCinq')?.click();
+        });
+
+    </script>
+{% endblock %}
+                        const html2 = `
+                            <div class="action-grid" style="grid-template-columns:1fr 1fr 1fr;">
+                                <button class="action-btn" data-pts="1">+1</button>
+                                <button class="action-btn" data-pts="2">+2</button>
+                                <button class="action-btn" data-pts="3">+3</button>
+                            </div>
+                        `;
+                        openModalAction('Points marqués par l\'adversaire', 'Combien ?', html2);
+                        modalActionBody.querySelectorAll('.action-btn').forEach(b2 => {
+                            b2.addEventListener('click', () => {
+                                updateScoreAdverse(parseInt(b2.dataset.pts, 10));
+                                closeModalAction();
+                            });
+                        });
+                    } else {
+                        // Tir raté adverse → demande rebond pour nous
+                        workflowRebondApresTirRate('Adversaire');
+                    }
+                });
+            });
+        }
+
+        // ─── Helper : modal de sélection d'une joueuse ───
+        // V2.1g.3 — On ne propose QUE les joueuses sur le terrain (le 5).
+        // Logique : seules celles qui jouent peuvent faire une action en cours.
+        // Si tu fais la passe à un fantôme du banc, c'est une erreur de saisie.
+        //
+        // excludeId : id à exclure (la joueuse qui a fait l'action principale).
+        function showJoueurChoice(titre, excludeId, callback) {
+            const items = document.querySelectorAll('.joueuse-item');
+            let html = '<div class="modal-grid">';
+            let nbAffichees = 0;
+            items.forEach(item => {
+                const jid = parseInt(item.dataset.joueurId, 10);
+                if (jid === excludeId) return;
+                // Filtre : seulement les joueuses ACTUELLEMENT sur le terrain
+                if (!surTerrain.has(jid)) return;
+                const nom = item.querySelector('.joueuse-name').textContent.trim();
+                const num = item.querySelector('.joueuse-avatar').textContent.trim();
+                html += `<button class="modal-joueuse-btn" data-jid="${jid}"><strong>#${num}</strong> ${nom}</button>`;
+                nbAffichees++;
+            });
+            html += '</div>';
+
+            // Cas dégradé : aucune joueuse éligible (pas de 5 composé, ou les 5 sont l'exclude)
+            if (nbAffichees === 0) {
+                html = `
+                    <div style="padding:16px; background:#7f1d1d; border-radius:10px; color:#fef2f2; text-align:center;">
+                        <strong>⚠️ Aucune joueuse disponible sur le terrain</strong>
+                        <div style="font-size:.82rem; margin-top:6px; opacity:.85;">
+                            Compose ton 5 via le bouton "👥 Composer le 5" en mode Expert, puis reviens.
+                        </div>
+                    </div>
+                `;
+            }
+
+            openModalAction(titre, nbAffichees > 0 ? 'Sur le terrain uniquement' : '', html);
+            modalActionBody.querySelectorAll('.modal-joueuse-btn').forEach(b => {
+                b.addEventListener('click', () => callback(parseInt(b.dataset.jid, 10)));
+            });
+        }
+
+        // ─── Bind : click joueuse en mode débutant → ouvre workflow ───
+        // V2.1g.6 — On skip si le click vient du badge ON/OFF (qui a son propre handler).
+        document.querySelectorAll('.joueuse-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                // Si l'utilisateur a cliqué sur le badge ou un de ses enfants → laisser le badge gérer
+                if (e.target.closest('.badge-terrain')) return;
+                if (!wrapper.classList.contains('mode-debutant')) return; // mode expert → comportement normal
+                e.stopImmediatePropagation();
+                const jid = parseInt(item.dataset.joueurId, 10);
+                const nom = item.querySelector('.joueuse-name').textContent.trim();
+                workflowJoueuse(jid, nom);
+            }, true); // useCapture: true pour intercepter AVANT le handler de sélection
+        });
+
+        // ─── Bind : click adversaire ───
+        document.getElementById('cardAdversaire').addEventListener('click', () => {
+            if (!wrapper.classList.contains('mode-debutant')) return;
+            workflowAdversaire();
+        });
+
+        // ─── V2.1g.7 — Click badge ON/OFF : event delegation au document ───
+        // Bind sur DOCUMENT en useCapture : s'exécute en TOUT PREMIER dans la
+        // chaîne capture (avant tout handler local sur .joueuse-item, .stats-grid,
+        // etc.). Approche plus robuste que de bind individuellement sur chaque
+        // badge avec useCapture, car le check closest() gère tous les cas
+        // (click sur le badge, sur .dot ou sur .badge-label enfant).
+        document.addEventListener('click', async (e) => {
+            const badge = e.target.closest('.badge-terrain');
+            if (!badge) return; // pas un click sur un badge → on laisse passer
+
+            // Bloque TOUS les autres handlers (workflowJoueuse + selectionnerJoueuse)
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            e.preventDefault();
+
+            const joueurId = parseInt(badge.dataset.badgeJoueur, 10);
+            if (!joueurId) return;
+
+            const estSurTerrain = surTerrain.has(joueurId);
+            if (estSurTerrain) {
+                await sortirJoueuse(joueurId);
+            } else {
+                if (surTerrain.size >= 5) {
+                    toast('Maximum 5 sur le terrain. Sors-en une d\'abord.', true);
+                    return;
+                }
+                await entrerJoueuse(joueurId);
+            }
+        }, true); // useCapture: true → first to fire de toute la chaîne
 
         // ====================================================================
         // HELPERS
@@ -702,8 +2538,15 @@
                     drawShotMarker(payload.positionX, payload.positionY, type.endsWith('_reussi'));
                 }
 
-                // === Reset mode tir ===
-                clearPendingTir();
+                // === Reset mode tir + désélection joueuse ===
+                // Désélection auto après chaque action : évite d'attribuer
+                // par erreur la prochaine action à la joueuse précédente.
+                // (validé par user le 2026-06-07)
+                if (typeof window.deselectionnerJoueuse === 'function') {
+                    window.deselectionnerJoueuse();
+                } else {
+                    clearPendingTir();
+                }
                 toast('Action enregistrée');
 
             } catch (e) {
@@ -764,14 +2607,51 @@
         // ====================================================================
 
         // --- Sélection joueuse ---
+        // Comportement TOGGLE : un clic sur la joueuse déjà sélectionnée la
+        // désélectionne. Évite d'avoir à cliquer sur une autre joueuse pour
+        // "annuler" sa sélection si on s'est trompé.
+        // V2.1g.6 — On skip si le click vient du badge ON/OFF.
         document.querySelectorAll('.joueuse-item').forEach(el => {
-            el.addEventListener('click', () => {
-                document.querySelectorAll('.joueuse-item').forEach(e => e.classList.remove('active'));
-                el.classList.add('active');
-                state.joueurActif = parseInt(el.dataset.joueurId, 10);
-                clearPendingTir();
+            el.addEventListener('click', (e) => {
+                if (e.target.closest('.badge-terrain')) return;
+                const idClique = parseInt(el.dataset.joueurId, 10);
+                const dejaSelectionnee = state.joueurActif === idClique;
+
+                if (dejaSelectionnee) {
+                    deselectionnerJoueuse();
+                } else {
+                    selectionnerJoueuse(el, idClique);
+                }
             });
         });
+
+        /**
+         * Sélectionne une joueuse — visuellement + en state.
+         * Toujours appelée à la place d'une logique éparpillée pour rester DRY.
+         */
+        function selectionnerJoueuse(el, joueurId) {
+            // Reset visuel des autres
+            document.querySelectorAll('.joueuse-item').forEach(e => e.classList.remove('active'));
+            el.classList.add('active');
+            state.joueurActif = joueurId;
+            clearPendingTir(); // toujours repartir d'un état tir vierge
+        }
+
+        /**
+         * Désélectionne la joueuse active — reset visuel + state.
+         * Appelée :
+         *   1. Quand on re-clique sur la joueuse déjà sélectionnée (toggle)
+         *   2. (Optionnel — voir constante) Après chaque action saisie pour
+         *      éviter d'attribuer la suivante par erreur à la même joueuse.
+         */
+        function deselectionnerJoueuse() {
+            document.querySelectorAll('.joueuse-item').forEach(e => e.classList.remove('active'));
+            state.joueurActif = null;
+            clearPendingTir();
+        }
+
+        // Expose au scope outer pour appel depuis saveAction si DESELECT_APRES_ACTION = true
+        window.deselectionnerJoueuse = deselectionnerJoueuse;
 
         // --- Clic sur le terrain ---
         document.getElementById('courtSvg').addEventListener('click', (e) => {
@@ -838,15 +2718,12 @@
             });
         });
 
-        // --- Quart-temps ---
-        document.querySelectorAll('#qtButtons .qt-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('#qtButtons .qt-btn').forEach(e => e.classList.remove('active'));
-                btn.classList.add('active');
-                state.quartTemps = btn.dataset.qt;
-                toast('Quart-temps : ' + state.quartTemps);
-            });
-        });
+        // --- Quart-temps : DÉPRÉCIÉ V2.1a ---
+        // La sélection manuelle est remplacée par le chrono qui gère
+        // automatiquement la période courante via le bouton "→". Le bloc
+        // qt-block du template a été remplacé par chrono-block. On garde
+        // ce commentaire pour rappel : state.quartTemps est mis à jour par
+        // updateChronoDisplay() chaque tick.
 
         // --- Annulation actions (délégation pour les items ajoutés dynamiquement) ---
         document.getElementById('historyItems').addEventListener('click', (e) => {
