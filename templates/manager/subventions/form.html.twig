@@ -1,0 +1,320 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ is_new ? 'Nouvelle subvention' : subvention.organisme ~ ' — ' ~ subvention.intitule }}{% endblock %}
+
+{% block body %}
+    {% set statut_color = {
+        'EN_PREPARATION': '#6b7280',
+        'DEPOSEE':        '#3b82f6',
+        'ACCORDEE':       '#10b981',
+        'TOUCHEE':        '#15803d',
+        'REJETEE':        '#dc2626',
+    } %}
+    {% set statut_bg = {
+        'EN_PREPARATION': '#f3f4f6',
+        'DEPOSEE':        '#dbeafe',
+        'ACCORDEE':       '#dcfce7',
+        'TOUCHEE':        '#bbf7d0',
+        'REJETEE':        '#fee2e2',
+    } %}
+
+    <div class="page-header">
+        <div>
+            <h1>
+                <i class="bi bi-bank"></i>
+                {{ is_new ? 'Nouvelle subvention' : (subvention.organisme ~ ' — ' ~ subvention.intitule|slice(0, 60)) }}
+            </h1>
+            <p class="subtitle">
+                <a href="{{ path('manager_subventions_index', {saison: subvention.saison}) }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    <i class="bi bi-arrow-left"></i> Retour à la liste
+                </a>
+            </p>
+        </div>
+        {% if not is_new %}
+            <span style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:{{ statut_bg[subvention.statut] }}; border:2px solid {{ statut_color[subvention.statut] }}; border-radius:20px;">
+                <strong style="color:{{ statut_color[subvention.statut] }};">{{ subvention.statutLabel }}</strong>
+            </span>
+        {% endif %}
+    </div>
+
+    {% if errors|length > 0 %}
+        <div class="card-mabb" style="border-left:4px solid #dc2626; background:#fef2f2; margin-bottom:16px;">
+            <div class="card-body" style="padding:14px 18px;">
+                <strong style="color:#991b1b;"><i class="bi bi-exclamation-triangle-fill"></i> Erreurs :</strong>
+                <ul style="margin:8px 0 0; padding-left:24px; color:#7f1d1d;">
+                    {% for err in errors %}<li>{{ err }}</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <form method="POST" action="{{ is_new ? path('manager_subvention_new') : path('manager_subvention_show', {id: subvention.id}) }}">
+                <div class="card-mabb" style="margin-bottom:16px;">
+                    <div class="card-header"><i class="bi bi-info-circle"></i> Informations</div>
+                    <div class="card-body" style="padding:24px;">
+                        {% set readonly = not is_new and subvention.isFinalisee %}
+
+                        <div class="row g-3" style="margin-bottom:16px;">
+                            <div class="col-md-6">
+                                <label for="organisme" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">Organisme financeur *</label>
+                                <input type="text" id="organisme" name="organisme" required maxlength="150"
+                                       value="{{ subvention.organisme }}"
+                                       placeholder="ex: Mairie d'Amiens"
+                                       {% if readonly %}readonly{% endif %}
+                                       style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; {% if readonly %}background:#f9fafb;{% endif %}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="saison" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">Saison *</label>
+                                <select id="saison" name="saison" {% if readonly %}disabled{% endif %}
+                                        style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; background:white;">
+                                    {% for s in ['2023-2024','2024-2025','2025-2026','2026-2027','2027-2028'] %}
+                                        <option value="{{ s }}" {% if s == subvention.saison %}selected{% endif %}>{{ s }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:16px;">
+                            <label for="intitule" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">Intitulé *</label>
+                            <input type="text" id="intitule" name="intitule" required maxlength="255"
+                                   value="{{ subvention.intitule }}"
+                                   placeholder="ex: Achat équipements jeunes saison 2025-2026"
+                                   {% if readonly %}readonly{% endif %}
+                                   style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; {% if readonly %}background:#f9fafb;{% endif %}">
+                        </div>
+
+                        <div class="row g-3" style="margin-bottom:16px;">
+                            <div class="col-md-6">
+                                <label for="reference_dossier" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">Référence dossier</label>
+                                <input type="text" id="reference_dossier" name="reference_dossier" maxlength="100"
+                                       value="{{ subvention.referenceDossier }}"
+                                       placeholder="ex: MEA-2025-0142"
+                                       {% if readonly %}readonly{% endif %}
+                                       style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="montant_demande" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">Montant demandé (€) *</label>
+                                <input type="text" id="montant_demande" name="montant_demande" required
+                                       value="{{ subvention.montantDemande != '0.00' ? subvention.montantDemande : '' }}"
+                                       placeholder="ex: 1500.00"
+                                       pattern="^\d+([.,]\d{1,2})?$"
+                                       {% if readonly %}readonly{% endif %}
+                                       style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; font-weight:600;">
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:16px;">
+                            <label for="lien_dossier" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">Lien vers le dossier (Google Drive, etc.)</label>
+                            <input type="url" id="lien_dossier" name="lien_dossier" maxlength="500"
+                                   value="{{ subvention.lienDossier }}"
+                                   placeholder="https://drive.google.com/..."
+                                   {% if readonly %}readonly{% endif %}
+                                   style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px;">
+                            <small style="color:var(--mabb-muted);">Optionnel — le dossier reste où il est, on garde juste le lien.</small>
+                        </div>
+
+                        <div>
+                            <label for="notes" style="display:block; font-weight:600; color:var(--mabb-dark); margin-bottom:6px;">Notes</label>
+                            <textarea id="notes" name="notes" rows="3"
+                                      placeholder="Contexte, interlocuteur, délais, etc."
+                                      {% if readonly %}readonly{% endif %}
+                                      style="width:100%; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; font-family:inherit; resize:vertical;">{{ subvention.notes }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                {% if not readonly %}
+                    <div style="display:flex; gap:10px; justify-content:flex-end;">
+                        <a href="{{ path('manager_subventions_index', {saison: subvention.saison}) }}" class="btn-mabb-secondary">Annuler</a>
+                        <button type="submit" class="btn-mabb-orange">
+                            <i class="bi bi-check-lg"></i> {{ is_new ? 'Créer' : 'Enregistrer' }}
+                        </button>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
+
+        {# ===== Colonne droite : workflow + actions ===== #}
+        {% if not is_new %}
+            <div class="col-lg-4">
+                {# Affichage des dates clés et montants par étape #}
+                <div class="card-mabb" style="margin-bottom:14px;">
+                    <div class="card-header"><i class="bi bi-clock-history"></i> Cycle de vie</div>
+                    <div class="card-body" style="padding:14px;">
+                        {% set etapes = [
+                            {key:'EN_PREPARATION', label:'En préparation', date:null,                  date_label:''},
+                            {key:'DEPOSEE',        label:'Déposée',        date:subvention.dateDepot,    date_label:'Dépôt'},
+                            {key:'ACCORDEE',       label:'Accordée',       date:subvention.dateDecision, date_label:'Décision'},
+                            {key:'TOUCHEE',        label:'Touchée',        date:subvention.dateTouche,   date_label:'Versement'}
+                        ] %}
+                        {% set ordre_courant = {
+                            'EN_PREPARATION': 0, 'DEPOSEE': 1, 'ACCORDEE': 2, 'TOUCHEE': 3, 'REJETEE': 99
+                        }[subvention.statut] %}
+
+                        {% for i, e in etapes %}
+                            {% set passee = i <= ordre_courant and subvention.statut != 'REJETEE' %}
+                            {% set is_current = i == ordre_courant %}
+                            <div style="display:flex; gap:10px; padding:8px 0; {% if not loop.last %}border-bottom:1px dashed #e5e7eb;{% endif %}">
+                                <div style="width:24px; height:24px; border-radius:50%; background:{{ passee ? '#10b981' : '#e5e7eb' }}; color:white; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:.72rem;">
+                                    {% if passee %}<i class="bi bi-check"></i>{% else %}{{ i + 1 }}{% endif %}
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:600; font-size:.88rem; color:{{ is_current ? 'var(--mabb-dark)' : 'var(--mabb-muted)' }};">
+                                        {{ e.label }}
+                                    </div>
+                                    {% if e.date %}
+                                        <small style="color:var(--mabb-muted);">{{ e.date_label }} : {{ e.date|date('d/m/Y') }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+
+                        {% if subvention.isRejetee %}
+                            <div style="margin-top:10px; padding:10px; background:#fef2f2; border-left:3px solid #dc2626; border-radius:6px;">
+                                <strong style="color:#991b1b; font-size:.82rem;"><i class="bi bi-x-circle"></i> Rejetée</strong>
+                                {% if subvention.motifRejet %}
+                                    <div style="font-size:.82rem; color:#7f1d1d; margin-top:4px;">{{ subvention.motifRejet }}</div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {# === ACTIONS de transition === #}
+                {% if not subvention.isFinalisee %}
+                    <div class="card-mabb" style="margin-bottom:14px; border-left:4px solid var(--mabb-orange);">
+                        <div class="card-header"><i class="bi bi-arrow-right-circle"></i> Faire avancer</div>
+                        <div class="card-body" style="padding:14px;">
+
+                            {# EN_PREPARATION → DEPOSEE #}
+                            {% if subvention.isEnPreparation %}
+                                <form method="POST" action="{{ path('manager_subvention_transition', {id: subvention.id}) }}"
+                                      onsubmit="return confirm('Marquer comme déposée ?');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('transition_sub_' ~ subvention.id) }}">
+                                    <input type="hidden" name="target_statut" value="DEPOSEE">
+                                    <label style="display:block; font-size:.82rem; font-weight:600; margin-bottom:4px;">Date de dépôt</label>
+                                    <input type="date" name="date_depot" required value="{{ 'now'|date('Y-m-d') }}"
+                                           style="width:100%; padding:6px 10px; border:2px solid #e5e7eb; border-radius:6px; margin-bottom:8px;">
+                                    <button type="submit" class="btn-mabb-orange" style="width:100%; background:#3b82f6; border-color:#3b82f6;">
+                                        <i class="bi bi-send"></i> Marquer déposée
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            {# DEPOSEE → ACCORDEE #}
+                            {% if subvention.isDeposee %}
+                                <details style="margin-bottom:10px;">
+                                    <summary style="cursor:pointer; padding:10px; background:#dcfce7; border-radius:6px; color:#166534; font-weight:600;">
+                                        <i class="bi bi-check2-circle"></i> Marquer accordée
+                                    </summary>
+                                    <form method="POST" action="{{ path('manager_subvention_transition', {id: subvention.id}) }}" style="margin-top:8px;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('transition_sub_' ~ subvention.id) }}">
+                                        <input type="hidden" name="target_statut" value="ACCORDEE">
+                                        <label style="display:block; font-size:.78rem; font-weight:600; margin-bottom:4px;">Montant accordé (€) *</label>
+                                        <input type="text" name="montant_accorde" required pattern="^\d+([.,]\d{1,2})?$"
+                                               value="{{ subvention.montantDemande }}"
+                                               style="width:100%; padding:6px 10px; border:2px solid #bbf7d0; border-radius:6px; margin-bottom:8px;">
+                                        <label style="display:block; font-size:.78rem; font-weight:600; margin-bottom:4px;">Date de décision</label>
+                                        <input type="date" name="date_decision" value="{{ 'now'|date('Y-m-d') }}"
+                                               style="width:100%; padding:6px 10px; border:2px solid #bbf7d0; border-radius:6px; margin-bottom:8px;">
+                                        <button type="submit" class="btn-mabb-orange" style="width:100%; background:#10b981; border-color:#10b981;">
+                                            Confirmer accord
+                                        </button>
+                                    </form>
+                                </details>
+
+                                <details>
+                                    <summary style="cursor:pointer; padding:10px; background:#fee2e2; border-radius:6px; color:#991b1b; font-weight:600;">
+                                        <i class="bi bi-x-circle"></i> Marquer rejetée
+                                    </summary>
+                                    <form method="POST" action="{{ path('manager_subvention_transition', {id: subvention.id}) }}" style="margin-top:8px;"
+                                          onsubmit="return confirm('Confirmer le rejet ? Action définitive.');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('transition_sub_' ~ subvention.id) }}">
+                                        <input type="hidden" name="target_statut" value="REJETEE">
+                                        <label style="display:block; font-size:.78rem; font-weight:600; margin-bottom:4px;">Motif (optionnel)</label>
+                                        <textarea name="motif_rejet" rows="2"
+                                                  placeholder="Raison du refus si connue"
+                                                  style="width:100%; padding:6px 10px; border:2px solid #fecaca; border-radius:6px; font-family:inherit; margin-bottom:8px;"></textarea>
+                                        <button type="submit" class="btn-mabb-danger" style="width:100%;">Confirmer rejet</button>
+                                    </form>
+                                </details>
+                            {% endif %}
+
+                            {# ACCORDEE → TOUCHEE #}
+                            {% if subvention.isAccordee %}
+                                <form method="POST" action="{{ path('manager_subvention_transition', {id: subvention.id}) }}"
+                                      onsubmit="return confirm('Confirmer la réception de la subvention ? Une recette sera automatiquement enregistrée en trésorerie.');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('transition_sub_' ~ subvention.id) }}">
+                                    <input type="hidden" name="target_statut" value="TOUCHEE">
+                                    <label style="display:block; font-size:.82rem; font-weight:600; margin-bottom:4px;">Montant reçu (€)</label>
+                                    <input type="text" name="montant_touche" required pattern="^\d+([.,]\d{1,2})?$"
+                                           value="{{ subvention.montantAccorde }}"
+                                           style="width:100%; padding:6px 10px; border:2px solid #e5e7eb; border-radius:6px; margin-bottom:8px;">
+                                    <label style="display:block; font-size:.82rem; font-weight:600; margin-bottom:4px;">Date du virement</label>
+                                    <input type="date" name="date_touche" value="{{ 'now'|date('Y-m-d') }}"
+                                           style="width:100%; padding:6px 10px; border:2px solid #e5e7eb; border-radius:6px; margin-bottom:10px;">
+                                    <button type="submit" class="btn-mabb-orange" style="width:100%; background:#15803d; border-color:#15803d;">
+                                        <i class="bi bi-cash"></i> Encaisser la subvention
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# Lien vers l'opération créée (si TOUCHEE) #}
+                {% if subvention.isTouchee and subvention.operationTresorerieId %}
+                    <div class="card-mabb" style="margin-bottom:14px; border-left:4px solid #15803d; background:#f0fdf4;">
+                        <div class="card-body" style="padding:14px;">
+                            <strong style="color:#166534; font-size:.88rem;"><i class="bi bi-check-circle-fill"></i> Recette enregistrée</strong>
+                            <div style="margin-top:6px;">
+                                <a href="{{ path('manager_tresorerie_operation_show', {id: subvention.operationTresorerieId}) }}" style="color:#15803d; font-weight:600;">
+                                    Voir l'opération #{{ subvention.operationTresorerieId }} <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {# Lien dossier externe #}
+                {% if subvention.lienDossier %}
+                    <a href="{{ subvention.lienDossier }}" target="_blank" rel="noopener"
+                       class="card-mabb" style="display:block; margin-bottom:14px; text-decoration:none; color:inherit; transition:transform .15s;"
+                       onmouseover="this.style.transform='translateY(-2px)'"
+                       onmouseout="this.style.transform='none'">
+                        <div class="card-body" style="padding:14px; display:flex; gap:10px; align-items:center;">
+                            <i class="bi bi-folder2-open" style="color:var(--mabb-blue); font-size:1.4rem;"></i>
+                            <div style="flex:1; min-width:0;">
+                                <strong style="font-size:.88rem;">Ouvrir le dossier</strong>
+                                <div style="font-size:.7rem; color:var(--mabb-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                    {{ subvention.lienDossier }}
+                                </div>
+                            </div>
+                            <i class="bi bi-box-arrow-up-right" style="color:var(--mabb-muted);"></i>
+                        </div>
+                    </a>
+                {% endif %}
+
+                {# === Suppression (pas si TOUCHEE) === #}
+                {% if not subvention.isTouchee %}
+                    <div class="card-mabb" style="border-left:4px solid #dc2626;">
+                        <div class="card-body" style="padding:14px;">
+                            <small style="color:var(--mabb-muted); display:block; margin-bottom:8px;">
+                                Supprimer cette subvention est irréversible.
+                            </small>
+                            <form method="POST" action="{{ path('manager_subvention_delete', {id: subvention.id}) }}"
+                                  onsubmit="return confirm('Supprimer définitivement « {{ subvention.intitule|e('js') }} » ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete_sub_' ~ subvention.id) }}">
+                                <button type="submit" class="btn-mabb-danger" style="width:100%;">
+                                    <i class="bi bi-trash"></i> Supprimer
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Subventions — {{ saison }}{% endblock %}
+
+{% block body %}
+    {% set statut_color = {
+        'EN_PREPARATION': '#6b7280',
+        'DEPOSEE':        '#3b82f6',
+        'ACCORDEE':       '#10b981',
+        'TOUCHEE':        '#15803d',
+        'REJETEE':        '#dc2626',
+    } %}
+    {% set statut_bg = {
+        'EN_PREPARATION': '#f3f4f6',
+        'DEPOSEE':        '#dbeafe',
+        'ACCORDEE':       '#dcfce7',
+        'TOUCHEE':        '#bbf7d0',
+        'REJETEE':        '#fee2e2',
+    } %}
+
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-bank"></i> Subventions</h1>
+            <p class="subtitle">
+                Saison <strong>{{ saison }}</strong> ·
+                <a href="{{ path('manager_tresorerie_dashboard') }}" style="color:var(--mabb-muted); text-decoration:none;">
+                    ← Retour trésorerie
+                </a>
+            </p>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <form method="GET" style="display:flex; gap:8px; align-items:center; padding:10px 14px; background:white; border:2px solid #e5e7eb; border-radius:10px;">
+                <i class="bi bi-calendar3" style="color:var(--mabb-muted); font-size:.9rem;"></i>
+                <label for="saison_sel" style="font-size:.8rem; color:var(--mabb-muted); font-weight:500;">Saison</label>
+                <select id="saison_sel" name="saison" onchange="this.form.submit()"
+                        style="padding:4px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#fafafa; font-weight:600; cursor:pointer;">
+                    {% for s in saisons %}
+                        <option value="{{ s }}" {% if s == saison %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <a href="{{ path('manager_subvention_new') }}" class="btn-mabb-orange">
+                <i class="bi bi-plus-lg"></i> Nouvelle subvention
+            </a>
+        </div>
+    </div>
+
+    {# === 3 KPI cards : demandé / accordé / touché === #}
+    <div class="row g-3" style="margin-bottom:20px;">
+        <div class="col-md-4">
+            <div class="card-mabb" style="border-top:4px solid #6b7280;">
+                <div class="card-body" style="padding:18px;">
+                    <div style="font-size:.72rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-file-earmark-text"></i> Total demandé
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-dark); margin-top:4px;">
+                        {{ totaux.demande|number_format(2, ',', ' ') }} €
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-mabb" style="border-top:4px solid #10b981;">
+                <div class="card-body" style="padding:18px;">
+                    <div style="font-size:.72rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-check2-circle"></i> Accordé
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:800; color:#10b981; margin-top:4px;">
+                        {{ totaux.accorde|number_format(2, ',', ' ') }} €
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-mabb" style="border-top:4px solid #15803d;">
+                <div class="card-body" style="padding:18px;">
+                    <div style="font-size:.72rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; font-weight:600;">
+                        <i class="bi bi-cash-stack"></i> Touché
+                    </div>
+                    <div style="font-size:1.8rem; font-weight:800; color:#15803d; margin-top:4px;">
+                        {{ totaux.touche|number_format(2, ',', ' ') }} €
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# === Liste === #}
+    {% if subventions is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:40px 20px;">
+                <i class="bi bi-bank" style="font-size:3rem; color:var(--mabb-muted);"></i>
+                <p style="margin-top:12px; color:var(--mabb-muted);">Aucune subvention pour cette saison.</p>
+                <a href="{{ path('manager_subvention_new') }}" class="btn-mabb-primary mt-2">Créer la première</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-list-ul"></i> Liste ({{ subventions|length }})</div>
+            <div class="card-body" style="padding:0;">
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#f9fafb; border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Organisme</th>
+                                <th style="padding:10px 14px; text-align:left; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Intitulé</th>
+                                <th style="padding:10px 14px; text-align:right; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Demandé</th>
+                                <th style="padding:10px 14px; text-align:right; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Accordé</th>
+                                <th style="padding:10px 14px; text-align:right; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Touché</th>
+                                <th style="padding:10px 14px; text-align:center; font-size:.75rem; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Statut</th>
+                                <th style="width:40px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in subventions %}
+                                <tr style="border-bottom:1px solid #f3f4f6;">
+                                    <td style="padding:10px 14px;">
+                                        <a href="{{ path('manager_subvention_show', {id: s.id}) }}" style="color:var(--mabb-dark); font-weight:600; text-decoration:none;">
+                                            {{ s.organisme }}
+                                        </a>
+                                    </td>
+                                    <td style="padding:10px 14px; font-size:.85rem; color:var(--mabb-muted); max-width:300px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                        {{ s.intitule }}
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right; font-weight:600; white-space:nowrap;">
+                                        {{ s.montantDemande|number_format(2, ',', ' ') }} €
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right; font-weight:600; color:#10b981; white-space:nowrap;">
+                                        {% if s.montantAccorde %}{{ s.montantAccorde|number_format(2, ',', ' ') }} €{% else %}—{% endif %}
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right; font-weight:700; color:#15803d; white-space:nowrap;">
+                                        {% if s.montantTouche %}{{ s.montantTouche|number_format(2, ',', ' ') }} €{% else %}—{% endif %}
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:center;">
+                                        <span style="padding:3px 10px; border-radius:10px; font-size:.7rem; font-weight:700; background:{{ statut_bg[s.statut] }}; color:{{ statut_color[s.statut] }};">
+                                            {{ s.statutLabel }}
+                                        </span>
+                                    </td>
+                                    <td style="padding:10px 14px; text-align:right;">
+                                        <a href="{{ path('manager_subvention_show', {id: s.id}) }}" style="color:var(--mabb-muted);">
+                                            <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -44,6 +44,19 @@
             </div>
         </a>
 
+        <a href="{{ path('manager_subventions_index') }}"
+           style="display:flex; align-items:center; gap:10px; padding:12px 18px; background:white; border:2px solid #e5e7eb; border-radius:12px; text-decoration:none; color:var(--mabb-dark); font-weight:600; font-size:.9rem; transition:all .15s;"
+           onmouseover="this.style.borderColor='#15803d'; this.style.background='#f0fdf4'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(21,128,61,.15)'"
+           onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'; this.style.transform='none'; this.style.boxShadow='none'">
+            <div style="width:36px; height:36px; border-radius:8px; background:#dcfce7; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-bank" style="color:#15803d; font-size:1.1rem;"></i>
+            </div>
+            <div>
+                <div>Subventions</div>
+                <small style="color:var(--mabb-muted); font-weight:500;">Suivi déposée → touchée</small>
+            </div>
+        </a>
+
         <a href="{{ path('manager_tresorerie_export') }}"
            style="display:flex; align-items:center; gap:10px; padding:12px 18px; background:white; border:2px solid #e5e7eb; border-radius:12px; text-decoration:none; color:var(--mabb-dark); font-weight:600; font-size:.9rem; transition:all .15s;"
            onmouseover="this.style.borderColor='#3b82f6'; this.style.background='#eff6ff'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(59,130,246,.15)'"
