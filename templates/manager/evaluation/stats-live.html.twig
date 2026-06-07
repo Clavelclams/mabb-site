@@ -206,18 +206,20 @@
             color: #fff;
         }
 
-        /* En mode Débutant : on masque le terrain + le chrono complet + les options de tir */
-        .stats-live-wrapper.mode-debutant .court-zone,
-        .stats-live-wrapper.mode-debutant .chrono-controls,
-        .stats-live-wrapper.mode-debutant #btnComposerCinq,
-        .stats-live-wrapper.mode-debutant .shoot-options,
-        .stats-live-wrapper.mode-debutant .history-bar {
+        /* V2.1l — DIFFÉRENCE Expert vs Débutant :
+             - Expert   : 3 colonnes — sidebar | TERRAIN cliquable | actions groupées
+             - Débutant : 2 colonnes — sidebar (avec carte adversaire) | actions groupées
+                          (terrain inutile car workflow = click joueuse → modal)
+           L'historique footer reste visible dans les 2 modes. */
+        .stats-live-wrapper.mode-debutant .court-zone {
             display: none !important;
         }
-        /* Sidebar prend toute la largeur en mode Débutant */
-        .stats-live-wrapper.mode-debutant .stats-grid {
-            grid-template-columns: 1fr !important;
+        .stats-live-wrapper.mode-debutant .shoot-options,
+        .stats-live-wrapper.mode-debutant #btnComposerCinq {
+            display: none !important;
         }
+        /* V2.1m — Carte adversaire masquée partout (doublon avec actions panel) */
+        .joueuse-adversaire { display: none !important; }
         /* V2.1g.2 — Modal action (mode Débutant) */
         .action-grid {
             display: grid;
@@ -674,6 +676,789 @@
         #toast.error { background: #dc2626; }
 
         /* ═══════════════════════════════════════════════════════════════
+           V2.1j — TOP BAR FIDÈLE MAQUETTE
+           Layout 5 colonnes : [☰] [ÉQUIPE/score] [TIMER/chrono] [ADV/score] [Session]
+           Hamburger inline (pas fixed). Drawer latéral nav méta.
+           ═══════════════════════════════════════════════════════════════ */
+
+        .stats-header {
+            grid-template-columns: auto 1fr auto 1fr auto !important;
+            gap: 12px !important;
+        }
+
+        /* Hamburger inline (remplace le fixed top-right de la V2.1i Phase 1) */
+        .header-hamburger {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.14);
+            border-radius: 10px;
+            cursor: pointer;
+            padding: 0;
+            transition: background .15s;
+        }
+        .header-hamburger:hover { background: rgba(255,255,255,.16); }
+        .header-hamburger .hamb-bar {
+            width: 20px;
+            height: 2.5px;
+            background: #f1f5f9;
+            border-radius: 2px;
+            transition: transform .25s, opacity .25s;
+        }
+        body.drawer-open .header-hamburger .hamb-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        body.drawer-open .header-hamburger .hamb-bar:nth-child(2) { opacity: 0; }
+        body.drawer-open .header-hamburger .hamb-bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+        /* Distinction visuelle des score-blocks selon équipe */
+        .score-block-mabb .score-value { color: #3b82f6; }
+        .score-block-adv  .score-value { color: #ef4444; }
+        .score-block .score-team {
+            font-size: 0.78rem;
+            color: #cbd5e1;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        /* TIMER label dans le chrono-period */
+        .chrono-period {
+            display: flex;
+            gap: 6px;
+            align-items: baseline;
+            justify-content: center;
+        }
+        .chrono-period > span:first-child {
+            color: #94a3b8;
+            font-size: 0.7rem;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+        .chrono-period .chrono-period-q {
+            color: #fbbf24;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        /* Session info à droite (pas d'icone) */
+        .session-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            justify-content: center;
+            text-align: right;
+            min-width: 110px;
+        }
+        .session-label {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .session-value {
+            font-size: 0.92rem;
+            color: #f1f5f9;
+            font-weight: 700;
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ═══ Nav drawer latéral (slide depuis la gauche) ═══ */
+        .nav-drawer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: min(320px, 85vw);
+            background: #0b1220;
+            z-index: 310;
+            transform: translateX(-100%);
+            transition: transform .3s cubic-bezier(.4,0,.2,1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 8px 0 32px rgba(0,0,0,.5);
+            padding-top: max(0px, env(safe-area-inset-top));
+            padding-bottom: max(0px, env(safe-area-inset-bottom));
+        }
+        body.drawer-open .nav-drawer { transform: translateX(0); }
+        .nav-drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 18px 12px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            color: #f1f5f9;
+            font-size: 1.05rem;
+        }
+        .nav-drawer-close {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.6rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px 8px;
+        }
+        .nav-drawer-close:hover { color: #fff; }
+        .nav-drawer-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .nav-drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: #cbd5e1;
+            text-decoration: none;
+            background: transparent;
+            border: none;
+            text-align: left;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: background .12s;
+            width: 100%;
+            font-family: inherit;
+        }
+        .nav-drawer-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+        .nav-drawer-item .nav-icon {
+            font-size: 1.2rem;
+            min-width: 24px;
+            text-align: center;
+        }
+        .nav-drawer-item.nav-item-danger { color: #fca5a5; }
+        .nav-drawer-item.nav-item-danger:hover { background: rgba(239,68,68,.12); color: #fecaca; }
+        .nav-drawer-divider {
+            height: 1px;
+            background: rgba(255,255,255,.08);
+            margin: 8px 18px;
+        }
+        .nav-drawer-footer {
+            padding: 12px 18px;
+            border-top: 1px solid rgba(255,255,255,.08);
+            color: #94a3b8;
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+        .nav-drawer-footer strong { color: #fbbf24; }
+
+        /* Anciens éléments V2.1i devenus inutiles (mini-bar + hamburger fixed) */
+        .stats-mini-bar,
+        .btn-hamburger { display: none !important; }
+
+        /* V2.1m — Compaction top bar : on cache les controls chrono inline
+           (déplacés dans le drawer). Affichage = TIMER + chrono seulement. */
+        .stats-header .chrono-controls,
+        .stats-header .adverse-controls,
+        .stats-header #btnEffectifMatch,
+        .stats-header #btnComposerCinq { display: none !important; }
+
+        /* V2.1m — App layout 100vh, ultra-compact pour tout faire rentrer */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+        }
+        body > .topbar { display: none !important; }
+        main.container-app {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+        }
+        {% if app.debug %}
+        /* En dev : la Symfony Web Dev Toolbar fait ~38px en bas et masquerait
+           le footer historique. On compense en réduisant la hauteur dispo.
+           Disparaît automatiquement en prod (pas de toolbar). */
+        main.container-app { height: calc(100vh - 38px) !important; }
+        {% endif %}
+        /* Force la couleur grise du "/ nbPeriodes" pour qu'il ne devienne pas rouge */
+        .stats-header .chrono-period > span:last-child { color: #64748b !important; }
+
+        /* V2.1n — Modal action guidée mode débutant : compaction pour tenir
+           dans le viewport sans scroll interne. Cible : modal-box ≤ 90vh,
+           contenu condensé, boutons d'action 2 lignes max. */
+        .modal-overlay {
+            padding: 8px !important;
+            align-items: center !important;
+        }
+        .modal-box {
+            padding: 14px !important;
+            max-width: 460px !important;
+            max-height: 92vh !important;
+            border-radius: 12px !important;
+        }
+        .modal-title {
+            font-size: 1.05rem !important;
+            margin: 0 0 3px 0 !important;
+            line-height: 1.2;
+        }
+        .modal-subtitle {
+            font-size: 0.75rem !important;
+            margin: 0 0 10px 0 !important;
+            line-height: 1.2;
+        }
+        .modal-counter {
+            padding: 5px 10px !important;
+            font-size: 0.78rem !important;
+            margin-bottom: 8px !important;
+        }
+        /* Grille d'actions (Tir réussi, Tir raté, Passe D, Rebond DEF, etc.) */
+        .modal-box .action-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 6px !important;
+            margin-bottom: 10px !important;
+        }
+        .modal-box .action-btn {
+            padding: 10px 4px !important;
+            font-size: 0.78rem !important;
+            border-radius: 8px !important;
+            min-height: 0;
+        }
+        .modal-box .action-btn .icon {
+            font-size: 1.3rem !important;
+            margin-bottom: 1px !important;
+        }
+        .modal-box .action-btn .lbl {
+            font-size: 0.68rem !important;
+            display: block;
+        }
+        /* Grille de choix joueuse (modal-joueuse-btn) */
+        .modal-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 6px !important;
+            margin-bottom: 8px !important;
+        }
+        .modal-joueuse-btn {
+            padding: 8px 6px !important;
+            font-size: 0.78rem !important;
+            min-height: 0;
+        }
+        .modal-joueuse-btn strong {
+            font-size: 0.82rem;
+        }
+        /* Boutons d'actions du modal (annuler / valider) */
+        .modal-actions {
+            margin-top: 8px !important;
+            gap: 6px !important;
+        }
+        .modal-btn {
+            padding: 8px 14px !important;
+            font-size: 0.85rem !important;
+            border-radius: 8px !important;
+        }
+
+        /* Petit écran (≤ 500px) — modal full screen bottom-sheet */
+        @media (max-height: 500px) {
+            .modal-overlay {
+                align-items: flex-end !important;
+                padding: 0 !important;
+            }
+            .modal-box {
+                max-width: 100% !important;
+                max-height: 100vh !important;
+                border-radius: 14px 14px 0 0 !important;
+                width: 100%;
+                padding: 10px !important;
+            }
+            .modal-title { font-size: 0.95rem !important; }
+            .modal-subtitle { font-size: 0.7rem !important; margin-bottom: 6px !important; }
+            .modal-box .action-btn { padding: 8px 4px !important; }
+            .modal-box .action-btn .icon { font-size: 1.1rem !important; }
+            .modal-box .action-btn .lbl { font-size: 0.62rem !important; }
+        }
+        .stats-live-wrapper {
+            display: flex !important;
+            flex-direction: column;
+            height: 100%;
+            min-height: 0 !important;
+            padding: 0 !important;
+            gap: 2px !important;
+            overflow: hidden;
+            background: #0f172a;
+        }
+
+        /* HEADER ultra-mince (cible ~38px) — z-index élevé pour rester au-dessus du terrain */
+        .stats-header {
+            flex-shrink: 0;
+            padding: 3px 8px !important;
+            min-height: 0;
+            z-index: 50;
+            position: relative;
+            border-radius: 0 !important;
+        }
+        .stats-header .score-team,
+        .stats-header .session-label {
+            font-size: 0.5rem !important;
+            line-height: 1;
+            margin: 0;
+        }
+        .stats-header .score-value {
+            font-size: 1.1rem !important;
+            line-height: 1;
+            margin: 0;
+        }
+        .stats-header .chrono-display {
+            font-size: 1.1rem !important;
+            padding: 0 4px !important;
+            line-height: 1;
+            margin: 0;
+        }
+        .stats-header .chrono-period {
+            font-size: 0.5rem !important;
+            margin: 0;
+            gap: 3px !important;
+        }
+        .stats-header .chrono-period .chrono-period-q {
+            font-size: 0.62rem !important;
+        }
+        .stats-header .session-value {
+            font-size: 0.66rem !important;
+            line-height: 1.1;
+        }
+        .stats-header .header-hamburger {
+            width: 26px;
+            height: 26px;
+            gap: 3px;
+        }
+        .stats-header .header-hamburger .hamb-bar {
+            width: 14px;
+            height: 2px;
+        }
+
+        /* Court zone : SVG doit rester dans sa colonne, pas déborder */
+        .court-zone {
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .court-zone svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* TOGGLE compact (cible ~34px) */
+        #modeToggleWrapper {
+            flex-shrink: 0;
+            padding: 2px 0 !important;
+        }
+        #modeToggleWrapper .mode-toggle-btn {
+            padding: 4px 14px !important;
+            font-size: 0.75rem !important;
+        }
+
+        /* GRID prend tout le reste */
+        .stats-grid {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* FOOTER ultra-compact (cible ~28px, collé en bas) */
+        .history-bar {
+            flex-shrink: 0;
+            max-height: 28px !important;
+            min-height: 0;
+            overflow: hidden;
+            padding: 3px 8px !important;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .history-bar .history-bar-title {
+            font-size: 0.6rem !important;
+            margin: 0 !important;
+            flex-shrink: 0;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .history-items {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .history-items .history-item {
+            font-size: 0.65rem;
+            flex-shrink: 0;
+            padding: 1px 6px;
+        }
+
+        /* COL 1 sidebar joueuses compacte */
+        .joueuses-list {
+            min-height: 0;
+            overflow-y: auto;
+            padding: 4px !important;
+        }
+        .joueuses-list .joueuse-item {
+            padding: 4px 6px !important;
+            margin-bottom: 3px !important;
+            gap: 6px;
+        }
+        .joueuses-list .joueuse-avatar {
+            width: 28px !important;
+            height: 28px !important;
+            font-size: 0.7rem !important;
+        }
+        .joueuses-list .joueuse-name {
+            font-size: 0.76rem !important;
+        }
+        .joueuses-list .joueuse-stats {
+            font-size: 0.62rem !important;
+        }
+
+        /* COL 3 actions panel compacte */
+        .actions-panel {
+            min-height: 0;
+            overflow-y: auto;
+            padding: 4px !important;
+        }
+        .actions-panel .actions-group {
+            margin-bottom: 4px;
+        }
+        .actions-panel .actions-group-title {
+            font-size: 0.62rem !important;
+            margin-bottom: 3px !important;
+            padding: 0 4px;
+        }
+        .actions-panel .action-btn {
+            padding: 6px 8px !important;
+            font-size: 0.74rem !important;
+            margin-bottom: 3px;
+            min-height: 0;
+        }
+        .actions-panel .action-btn .icon { display: none; }
+        .actions-panel .action-btn .lbl { font-size: 0.74rem; }
+        /* Sidebar joueuses + actions panel : scroll INTERNE seulement si déborde */
+        .joueuses-list {
+            min-height: 0;
+            overflow-y: auto;
+        }
+        .actions-panel {
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        /* Styles drawer chrono controls */
+        .nav-drawer-section-title {
+            padding: 8px 18px 4px;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .nav-drawer-chrono {
+            padding: 8px 18px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .chrono-control-btn {
+            background: rgba(255,255,255,.08);
+            border: 1px solid rgba(255,255,255,.14);
+            color: #f1f5f9;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .chrono-control-btn:hover { background: rgba(255,255,255,.18); }
+        .chrono-control-main {
+            background: #fbbf24;
+            color: #78350f;
+            border-color: transparent;
+        }
+        .chrono-control-main:hover { background: #f59e0b; }
+        .chrono-control-danger { background: rgba(239,68,68,.2); border-color: rgba(239,68,68,.4); color: #fecaca; }
+        .chrono-control-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        /* V2.1l — Toggle Expert/Débutant en pill centrée, AU-DESSUS du terrain */
+        #modeToggleWrapper {
+            display: flex;
+            justify-content: center;
+            padding: 8px 0 4px;
+            position: relative;
+            z-index: 5;
+        }
+        #modeToggleWrapper .mode-toggle {
+            background: rgba(15,23,42,.85);
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 999px;
+            padding: 4px;
+            display: inline-flex;
+            gap: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,.3);
+        }
+        #modeToggleWrapper .mode-toggle-btn {
+            border-radius: 999px;
+            padding: 8px 18px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            white-space: nowrap;
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all .15s;
+        }
+        #modeToggleWrapper .mode-toggle-btn.active {
+            background: #fbbf24;
+            color: #78350f;
+        }
+
+        /* V2.1l — Top bar STICKY en mobile, ne disparaît plus au scroll */
+        @media (max-width: 1023px) {
+            .stats-header {
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                /* Le wrapper a déjà un padding, on s'assure que le sticky tient au top */
+                margin-top: 0;
+            }
+            /* Les boutons score adverse inline (+1 +2 +3 -1) sortent de la top bar
+               (déplacés dans le score-block adverse cliquable / drawer) */
+            .stats-header .adverse-controls { display: none !important; }
+            /* Hamburger inline reste visible et bien aligné en top-left */
+            .stats-header .header-hamburger { order: -1; }
+        }
+
+        /* V2.1k — Force la maquette 3 colonnes à partir de 700px (iPhone XR
+           paysage 896px inclus). Override les blocs ≤ 1199px et ≤ 899px qui
+           voulaient compacter ou empiler. Sur < 700px on garde l'empilement
+           (1 colonne unique avec scroll vertical). */
+        @media (min-width: 700px) {
+            /* Expert = 3 colonnes (sidebar | terrain | actions) */
+            .stats-live-wrapper:not(.mode-debutant) .stats-grid {
+                grid-template-columns: minmax(180px, 220px) 1fr minmax(200px, 260px) !important;
+                grid-template-rows: 1fr !important;
+                gap: 8px !important;
+            }
+            /* Débutant = 2 colonnes équilibrées (sidebar | actions), terrain caché */
+            .stats-live-wrapper.mode-debutant .stats-grid {
+                grid-template-columns: 1fr 1fr !important;
+                grid-template-rows: 1fr !important;
+                gap: 12px !important;
+            }
+            .stats-grid {
+                /* fallback générique */
+                grid-template-columns: minmax(180px, 220px) 1fr minmax(200px, 260px);
+                grid-template-rows: 1fr !important;
+                gap: 8px !important;
+            }
+            /* La sidebar joueuses (EFFECTIF) reste haute mais scroll interne si déborde */
+            .joueuses-list {
+                max-height: none !important;
+                height: 100% !important;
+                overflow-y: auto;
+                display: block !important; /* override les grid 2 cols des breakpoints mobile */
+            }
+            .joueuses-list .joueuse-item { margin-bottom: 6px; }
+            /* V2.1m — Carte adversaire restée masquée partout */
+            /* Court zone toujours visible */
+            .court-zone { display: block !important; }
+            /* History bar toujours visible en bas */
+            .history-bar { display: block !important; }
+            /* Actions panel toujours visible */
+            .actions-panel { display: flex !important; flex-direction: column; gap: 12px; }
+        }
+
+        /* Desktop large (≥ 1280px) : on respire un peu */
+        @media (min-width: 1280px) {
+            .stats-header {
+                padding: 14px 22px !important;
+                gap: 20px !important;
+            }
+            .header-hamburger { width: 48px; height: 48px; }
+            .score-block .score-value { font-size: 2.4rem; }
+            .chrono-display { font-size: 2.2rem; padding: 5px 18px; }
+            .session-info { min-width: 140px; }
+            .session-value { font-size: 1rem; }
+        }
+
+        /* Tablette compacte (700-1023px) : ajustements pour que le 5 colonnes
+           tienne quand même en portrait iPad. Empile la session en mode compact. */
+        @media (max-width: 1023px) and (min-width: 700px) {
+            .stats-header {
+                padding: 10px 12px !important;
+                gap: 8px !important;
+            }
+            .session-info { min-width: 90px; }
+            .session-value { font-size: 0.82rem; max-width: 100px; }
+            .score-block .score-value { font-size: 1.9rem; }
+            .chrono-display { font-size: 1.8rem; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           V2.1i Phase 1 — Hamburger + drawer header
+           ≤ 1023px : header inline masqué, accessible via tap hamburger
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Hamburger fixed top-right — caché par défaut, visible ≤ 1023px */
+        .btn-hamburger {
+            display: none;
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            right: max(10px, env(safe-area-inset-right));
+            z-index: 300;
+            width: 44px;
+            height: 44px;
+            background: rgba(15,23,42,.92);
+            border: 1px solid rgba(255,255,255,.18);
+            border-radius: 12px;
+            cursor: pointer;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            padding: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,.4);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: transform .15s;
+        }
+        .btn-hamburger:active { transform: scale(0.94); }
+        .btn-hamburger .hamb-bar {
+            width: 22px;
+            height: 2.5px;
+            background: #f1f5f9;
+            border-radius: 2px;
+            transition: transform .25s, opacity .25s;
+        }
+        /* Animation hamburger → X quand drawer ouvert */
+        body.drawer-open .btn-hamburger .hamb-bar:nth-child(1) {
+            transform: translateY(8px) rotate(45deg);
+        }
+        body.drawer-open .btn-hamburger .hamb-bar:nth-child(2) {
+            opacity: 0;
+        }
+        body.drawer-open .btn-hamburger .hamb-bar:nth-child(3) {
+            transform: translateY(-7px) rotate(-45deg);
+        }
+
+        /* Overlay sombre derrière le drawer */
+        .drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            z-index: 250;
+            opacity: 0;
+            transition: opacity .25s;
+        }
+        body.drawer-open .drawer-overlay {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Mini bandeau toujours visible ≤ 1023px — score MABB | chrono Q | score ADV */
+        .stats-mini-bar {
+            display: none;
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            left: max(10px, env(safe-area-inset-left));
+            right: 64px; /* laisse la place au hamburger (44px + 10px + 10px gap) */
+            z-index: 280;
+            background: rgba(15,23,42,.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 12px;
+            padding: 6px 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.4);
+            cursor: pointer;
+            user-select: none;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            min-height: 44px;
+            transition: transform .15s;
+        }
+        .stats-mini-bar:active { transform: scale(0.98); }
+        .stats-mini-bar .mini-score {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+            min-width: 42px;
+        }
+        .stats-mini-bar .mini-score small {
+            font-size: 0.6rem;
+            color: #94a3b8;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+        .stats-mini-bar .mini-score-mabb strong { color: #fbbf24; font-size: 1.25rem; }
+        .stats-mini-bar .mini-score-adv strong { color: #ef4444; font-size: 1.25rem; }
+        .stats-mini-bar .mini-chrono-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1;
+            flex: 1;
+        }
+        .stats-mini-bar .mini-period {
+            font-size: 0.62rem;
+            color: #94a3b8;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .stats-mini-bar .mini-chrono {
+            font-family: 'Courier New', monospace;
+            font-size: 1.05rem;
+            color: #f1f5f9;
+            font-weight: 800;
+        }
+        .stats-mini-bar.chrono-running .mini-chrono { color: #22c55e; }
+        .stats-mini-bar.chrono-warning .mini-chrono { color: #fbbf24; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.45; } }
+
+        @media (max-width: 1023px) {
+            /* V2.1j — Header reste INLINE (pas fixed). On ne masque plus rien.
+               Le hamburger est inline dans la top bar (cf .header-hamburger). */
+
+            /* V2.1l — Toggle Expert/Débutant centré AU-DESSUS du terrain (maquette).
+               Plus de pill flottante : il est dans le flow normal entre la top bar et le terrain. */
+
+            /* V2.1j — Le header est INLINE désormais (pas fixed). Le wrapper
+               reprend son grid normal : header / grid / history-bar.
+               Pas de padding-top monstre, juste un padding-bottom pour ne pas
+               que la pill flottante mange le contenu du scroll interne. */
+            .stats-live-wrapper {
+                padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+            }
+            /* En drawer ouvert, on cache le mini-bar (le vrai header le remplace) */
+            body.drawer-open .stats-mini-bar {
+                opacity: 0;
+                pointer-events: none;
+            }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
            V2.1h — RESPONSIVE COMPLET Stats Live
            Stratégie mobile-first override :
              ≤ 1199px : tablette paysage / petit desktop — sidebar + récap réduits
@@ -742,11 +1527,8 @@
             .stats-header .score-block .score-team { font-size: 0.78rem; }
             .chrono-display { font-size: 1.4rem; }
 
-            /* Toggle mode : labels masqués sous 700px (icônes only) */
-            .mode-toggle-btn { padding: 8px 10px; font-size: 0; }
-            .mode-toggle-btn::before { font-size: 1.2rem; }
-            #modeExpertBtn::before { content: '⚡'; }
-            #modeDebutantBtn::before { content: '👶'; }
+            /* V2.1i — La pill flottante (#modeToggleWrapper) garde les labels
+               visibles, on n'applique plus le mode icônes-only ici. */
 
             /* Sidebar joueuses : grid 2 colonnes pour économiser de la verticale */
             .joueuses-list {
@@ -868,36 +1650,26 @@
            ═══════════════════════════════════════════════════════════════ */
 
         /* Bottom nav cachée par défaut (desktop / tablette paysage) */
-        .stats-bottom-nav { display: none; }
+        /* V2.1k — bottom-nav supprimée (remplacée par drawer nav méta + layout 3 colonnes maquette) */
+        .stats-bottom-nav { display: none !important; }
 
         @media (max-width: 699px) {
-            /* Lock le scroll body en mode app */
-            body.stats-live-app-mode {
-                overflow: hidden;
-                position: fixed;
-                inset: 0;
-                width: 100%;
-            }
-            /* On masque aussi la navbar Manager sur l'écran Stats Live mobile
-               pour gagner toute la hauteur. Le retour se fait via "Plus → Retour rencontre". */
-            body.stats-live-app-mode .topbar { display: none; }
-            body.stats-live-app-mode main.container-app {
-                padding: 0;
-                max-width: 100%;
-            }
+            /* V2.1k — On retire le mode app fullscreen (position:fixed, navbar cachée).
+               L'écran Stats Live mobile garde la navbar Manager + scroll naturel. */
 
-            /* Wrapper = écran complet, flex column */
+            /* V2.1k — En mobile portrait, on PERMET le scroll vertical naturel.
+               Stack : top bar / sidebar effectif / terrain / actions / historique.
+               Plus de position:fixed qui empêchait de voir le bas de la page. */
             .stats-live-wrapper {
-                position: fixed;
-                inset: 0;
-                height: 100dvh;
-                height: 100vh; /* fallback navigateurs sans dvh */
-                display: flex;
-                flex-direction: column;
-                padding: 0 !important;
-                gap: 0;
-                grid-template-rows: none;
-                overflow: hidden;
+                position: static;
+                height: auto;
+                min-height: 100dvh;
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto auto;
+                padding: 8px !important;
+                gap: 8px;
+                overflow: visible;
             }
 
             /* Top : header sticky, compact, non scrollable */
@@ -935,10 +1707,8 @@
             /* Idem boutons score adverse inline (remplacés par sheet Adv.) */
             .stats-header .adverse-controls { display: none !important; }
 
-            /* Toggle mode masqué (forcé débutant sur mobile portrait, et pas pertinent en paysage) */
-            .mode-toggle { display: none !important; }
-            body.stats-live-app-mode .mode-toggle,
-            body.stats-live-app-mode > div:has(.mode-toggle) { display: none !important; }
+            /* V2.1i — Le toggle reste visible en pill flottante (voir #modeToggleWrapper
+               dans le bloc 1023px). On NE le masque PAS ici. */
 
             /* Stats grid : prend tout l'espace dispo, scroll interne sur la sidebar */
             .stats-grid {
@@ -962,8 +1732,8 @@
                    on passe à 1 col seulement en portrait étroit */
             }
 
-            /* Historique bar : masqué (déjà fait en mode débutant) — on garantit */
-            .history-bar { display: none !important; }
+            /* V2.1k — Historique visible aussi en mobile portrait (scroll vertical) */
+            .history-bar { display: block !important; }
 
             /* ───── Bottom nav app ───── */
             .stats-bottom-nav {
@@ -1033,47 +1803,93 @@
 
 {% block body %}
 
-    {# === V2.1d — Bandeau session courante (qui saisit cette saisie) === #}
-    {% if session_courante is defined and session_courante %}
-        <div style="background:#1e293b; color:#fff; padding:8px 14px; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center; font-size:.82rem; border-bottom:2px solid #ea580c;">
-            <span>
-                <i class="bi bi-pencil-fill" style="color:#fbbf24;"></i>
-                <strong>Session : {{ session_courante.nom }}</strong>
-                <span style="color:#94a3b8; margin-left:8px;">par {{ session_courante.createdBy ? session_courante.createdBy.prenom : 'Anonyme' }}</span>
-            </span>
-            <span style="padding:2px 10px; border-radius:10px; background:#fbbf24; color:#78350f; font-weight:700; font-size:.7rem;">
-                {{ session_courante.statutLabel }}
-            </span>
+    {# V2.1k — Bandeau session supprimé (info "Session : Prénom" déjà dans la top bar à droite, statut dans le drawer footer) #}
+
+    {# V2.1j — Overlay seul (le hamburger est désormais inline dans la top bar) #}
+    <div id="drawerOverlay" class="drawer-overlay" aria-hidden="true"></div>
+
+    {# V2.1j — Drawer latéral nav méta (quitter, retour, clôturer match…) #}
+    <aside id="navDrawer" class="nav-drawer" aria-hidden="true">
+        <div class="nav-drawer-header">
+            <strong>Stats Live</strong>
+            <button type="button" id="btnCloseDrawer" class="nav-drawer-close" aria-label="Fermer">×</button>
         </div>
-    {% endif %}
+        <nav class="nav-drawer-body">
+            <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" class="nav-drawer-item">
+                <span class="nav-icon">↩️</span>
+                <span>Quitter — retour à la rencontre</span>
+            </a>
+            <a href="{{ path('manager_dashboard') }}" class="nav-drawer-item">
+                <span class="nav-icon">🏠</span>
+                <span>Manager — accueil</span>
+            </a>
+            <a href="{{ path('manager_rencontre_sessions', {id: rencontre.id}) }}" class="nav-drawer-item">
+                <span class="nav-icon">🗂️</span>
+                <span>Voir les sessions de saisie</span>
+            </a>
+            <div class="nav-drawer-divider"></div>
+
+            {# V2.1m — Contrôles chrono déplacés ici pour libérer la top bar #}
+            <div class="nav-drawer-section-title">CHRONO</div>
+            <div class="nav-drawer-chrono">
+                <button type="button" id="navBtnStartPause" class="chrono-control-btn chrono-control-main">
+                    <span id="navBtnStartPauseIcon">▶</span> Démarrer / Pause
+                </button>
+                <div class="chrono-control-row">
+                    <button type="button" id="navBtnMinus1" class="chrono-control-btn">−1s</button>
+                    <button type="button" id="navBtnPlus1" class="chrono-control-btn">+1s</button>
+                    <button type="button" id="navBtnNextPeriod" class="chrono-control-btn">Période →</button>
+                    <button type="button" id="navBtnResetChrono" class="chrono-control-btn chrono-control-danger">Reset</button>
+                </div>
+            </div>
+            <div class="nav-drawer-divider"></div>
+            <button type="button" class="nav-drawer-item" id="navBtnComposerCinq">
+                <span class="nav-icon">👥</span>
+                <span>Composer le 5</span>
+            </button>
+            <button type="button" class="nav-drawer-item" id="navBtnEffectif">
+                <span class="nav-icon">📋</span>
+                <span>Effectif du match</span>
+            </button>
+            <button type="button" class="nav-drawer-item nav-item-danger" id="navBtnCloturer">
+                <span class="nav-icon">🏁</span>
+                <span>Clôturer le match</span>
+            </button>
+        </nav>
+        {% if session_courante %}
+        <div class="nav-drawer-footer">
+            Session : <strong>{{ session_courante.nom }}</strong><br>
+            <small>Statut : {{ session_courante.statutLabel }}</small>
+        </div>
+        {% endif %}
+    </aside>
 
     {# ===== HEADER : score live + QT en cours ===== #}
     {# V2.1g — Wrapper porte la classe "mode-debutant" ou non, contrôlée par le toggle.
        V2.1g.5 — Mode DÉBUTANT par défaut (plus accessible aux bénévoles formation). #}
     <div class="stats-live-wrapper mode-debutant" id="liveWrapper">
-        {# === V2.1g — Toggle Mode Expert / Mode Débutant === #}
-        <div style="display:flex; justify-content:center; padding:8px 12px 0; background:#0f172a;">
-            <div class="mode-toggle">
-                <button type="button" class="mode-toggle-btn" id="modeExpertBtn" data-mode="expert">⚡ Expert</button>
-                <button type="button" class="mode-toggle-btn active" id="modeDebutantBtn" data-mode="debutant">👶 Débutant</button>
-            </div>
-        </div>
+        {# V2.1j — Top bar fidèle maquette : [☰] [ÉQUIPE/score] [TIMER/chrono] [ADV/score] [Session]
+           Hamburger inline (ouvre nav méta), score MABB+ÉQUIPE, TIMER+chrono+Q, ADV+score, "Session: …".
+           Les controls chrono (start/pause/+/-/next/reset) restent inline mais condensés. #}
         <div class="stats-header">
-            <div class="score-block">
+            {# Hamburger inline (remplace l'ancien fixed top-right) #}
+            <button type="button" id="btnHamburger" class="header-hamburger" aria-label="Ouvrir le menu" aria-expanded="false">
+                <span class="hamb-bar"></span>
+                <span class="hamb-bar"></span>
+                <span class="hamb-bar"></span>
+            </button>
+
+            <div class="score-block score-block-mabb">
                 <div class="score-team">{{ rencontre.equipe.nom }}</div>
                 <div class="score-value" id="scoreMabb">0</div>
-                <small style="color:#94a3b8;">MABB</small>
             </div>
 
-            {# ===== CHRONO + PÉRIODE (V2.1a) =====
-               Affiche la période courante + le temps restant en décompte.
-               Persiste en localStorage pour survivre à un refresh accidentel
-               de la tablette en plein match.
-               Format de match récupéré depuis rencontre.nbPeriodes + dureePeriodeMinutes. #}
+            {# ===== CHRONO + PÉRIODE (V2.1a) ===== #}
             <div class="chrono-block" id="chronoBlock">
                 <div class="chrono-period">
-                    <span id="periodLabel">Q1</span>
-                    <span style="color:#64748b; font-size:.78rem;">/ {{ rencontre.nbPeriodes }}</span>
+                    <span>TIMER</span>
+                    <span class="chrono-period-q" id="periodLabel">Q1</span>
+                    <span style="color:#64748b; font-size:.7rem;">/ {{ rencontre.nbPeriodes }}</span>
                 </div>
                 <div class="chrono-display" id="chronoDisplay">
                     {{ '%02d'|format(rencontre.dureePeriodeMinutes) }}:00
@@ -1087,30 +1903,44 @@
                     <button type="button" class="chrono-btn chrono-btn-secondary" id="btnNextPeriod" title="Période suivante">→</button>
                     <button type="button" class="chrono-btn chrono-btn-danger" id="btnResetChrono" title="Réinitialiser la période">⟲</button>
                 </div>
-                <div style="display:flex; gap:6px; margin-top:8px;">
-                    <button type="button"
-                            id="btnEffectifMatch"
-                            style="flex:1; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; padding:6px 10px; border-radius:8px; font-weight:700; font-size:.74rem; cursor:pointer;">
-                        📋 Effectif
-                    </button>
-                    <button type="button"
-                            id="btnComposerCinq"
-                            style="flex:2; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); color:#fff; padding:6px 10px; border-radius:8px; font-weight:700; font-size:.74rem; cursor:pointer;">
-                        👥 Composer le 5
-                    </button>
-                </div>
+                {# Boutons Composer 5 / Effectif déplacés dans le drawer (V2.1j).
+                   On garde des IDs cachés pour que le code JS existant continue
+                   de fonctionner via les boutons du drawer qui les déclenchent. #}
+                <button type="button" id="btnEffectifMatch" hidden></button>
+                <button type="button" id="btnComposerCinq" hidden></button>
             </div>
 
-            <div class="score-block">
+            <div class="score-block score-block-adv">
                 <div class="score-team">{{ rencontre.adversaire }}</div>
                 <div class="score-value" id="scoreAdverseDisplay" style="color:#ef4444;">{{ rencontre.scoreAdverse ?? 0 }}</div>
-                {# === V2.1e — Boutons rapides score adverse === #}
+                {# Boutons score adverse déplacés dans le drawer / pill, on cache inline #}
                 <div class="adverse-controls" style="display:flex; gap:4px; justify-content:center; margin-top:4px;">
                     <button type="button" class="adverse-btn" data-delta="1" title="+1 point">+1</button>
                     <button type="button" class="adverse-btn" data-delta="2" title="+2 points (panier)">+2</button>
                     <button type="button" class="adverse-btn" data-delta="3" title="+3 points (à 3 pts)">+3</button>
                     <button type="button" class="adverse-btn adverse-btn-undo" data-delta="-1" title="Corriger (-1)">−1</button>
                 </div>
+            </div>
+
+            {# V2.1j — Info session courante à droite (pas d'icone, juste texte) #}
+            <div class="session-info">
+                <div class="session-label">Session</div>
+                <div class="session-value">
+                    {% if session_courante and session_courante.createdBy %}
+                        {{ session_courante.createdBy.prenom }}
+                        {% if session_courante.createdBy.nom %}{{ session_courante.createdBy.nom|first|upper }}.{% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# V2.1l — Toggle Expert/Débutant centré, au-dessus du terrain comme maquette #}
+        <div id="modeToggleWrapper">
+            <div class="mode-toggle">
+                <button type="button" class="mode-toggle-btn" id="modeExpertBtn" data-mode="expert">⚡ Expert</button>
+                <button type="button" class="mode-toggle-btn active" id="modeDebutantBtn" data-mode="debutant">👶 Débutant</button>
             </div>
         </div>
 
@@ -1342,7 +2172,7 @@
         <div class="modal-box modal-box-sheet">
             <h2 class="modal-title">Plus d'actions</h2>
             <div style="display:flex; flex-direction:column; gap:10px; margin:14px 0;">
-                <a href="{{ path('manager_session_stats_live_index', {id: rencontre.id}) }}"
+                <a href="{{ path('manager_rencontre_sessions', {id: rencontre.id}) }}"
                    class="modal-btn modal-btn-cancel" style="text-align:left; padding:14px; text-decoration:none;">
                     🗂️ Voir les sessions de saisie
                 </a>
@@ -2285,29 +3115,86 @@
             document.getElementById('btnComposerCinq')?.click();
         });
 
-    </script>
-{% endblock %}
-                        const html2 = `
-                            <div class="action-grid" style="grid-template-columns:1fr 1fr 1fr;">
-                                <button class="action-btn" data-pts="1">+1</button>
-                                <button class="action-btn" data-pts="2">+2</button>
-                                <button class="action-btn" data-pts="3">+3</button>
-                            </div>
-                        `;
-                        openModalAction('Points marqués par l\'adversaire', 'Combien ?', html2);
-                        modalActionBody.querySelectorAll('.action-btn').forEach(b2 => {
-                            b2.addEventListener('click', () => {
-                                updateScoreAdverse(parseInt(b2.dataset.pts, 10));
-                                closeModalAction();
-                            });
-                        });
-                    } else {
-                        // Tir raté adverse → demande rebond pour nous
-                        workflowRebondApresTirRate('Adversaire');
-                    }
-                });
-            });
+        // ====================================================================
+        // V2.1i Phase 1 — Hamburger + drawer header
+        // ====================================================================
+        const btnHamburger = document.getElementById('btnHamburger');
+        const drawerOverlay = document.getElementById('drawerOverlay');
+
+        function toggleDrawer(force) {
+            const isOpen = document.body.classList.contains('drawer-open');
+            const shouldOpen = (force === undefined) ? !isOpen : force;
+            if (shouldOpen) {
+                document.body.classList.add('drawer-open');
+                btnHamburger?.setAttribute('aria-expanded', 'true');
+                drawerOverlay?.setAttribute('aria-hidden', 'false');
+            } else {
+                document.body.classList.remove('drawer-open');
+                btnHamburger?.setAttribute('aria-expanded', 'false');
+                drawerOverlay?.setAttribute('aria-hidden', 'true');
+            }
         }
+
+        btnHamburger?.addEventListener('click', () => toggleDrawer());
+        drawerOverlay?.addEventListener('click', () => toggleDrawer(false));
+        document.getElementById('btnCloseDrawer')?.addEventListener('click', () => toggleDrawer(false));
+
+        // V2.1j — Branche les boutons du drawer sur les actions correspondantes
+        // (les boutons d'origine sont maintenant cachés avec [hidden], on les
+        // déclenche par .click() pour réutiliser leur handler existant).
+        document.getElementById('navBtnComposerCinq')?.addEventListener('click', () => {
+            toggleDrawer(false);
+            document.getElementById('btnComposerCinq')?.click();
+        });
+        document.getElementById('navBtnEffectif')?.addEventListener('click', () => {
+            toggleDrawer(false);
+            document.getElementById('btnEffectifMatch')?.click();
+        });
+        // V2.1m — Boutons chrono du drawer → déclenchent les boutons cachés originaux
+        document.getElementById('navBtnStartPause')?.addEventListener('click', () => {
+            document.getElementById('btnStartPause')?.click();
+            // Sync l'icône play/pause du drawer
+            const icon = document.getElementById('btnStartPauseIcon')?.textContent || '▶';
+            const navIcon = document.getElementById('navBtnStartPauseIcon');
+            if (navIcon) navIcon.textContent = icon;
+        });
+        document.getElementById('navBtnMinus1')?.addEventListener('click', () => document.getElementById('btnMinus1')?.click());
+        document.getElementById('navBtnPlus1')?.addEventListener('click', () => document.getElementById('btnPlus1')?.click());
+        document.getElementById('navBtnNextPeriod')?.addEventListener('click', () => document.getElementById('btnNextPeriod')?.click());
+        document.getElementById('navBtnResetChrono')?.addEventListener('click', () => document.getElementById('btnResetChrono')?.click());
+
+        document.getElementById('navBtnCloturer')?.addEventListener('click', async () => {
+            if (!confirm('Clôturer le match ? La session courante sera marquée TERMINÉE. Un staff pourra ensuite la promouvoir officielle.')) return;
+            const sessionId = {{ session_courante ? session_courante.id : 'null' }};
+            if (!sessionId) {
+                toast('Aucune session en cours à clôturer.', true);
+                return;
+            }
+            try {
+                const fd = new FormData();
+                fd.append('_token', '{{ csrf_token('marquer_complete') }}');
+                const r = await fetch(`/sessions/${sessionId}/marquer-complete`, { method: 'POST', body: fd });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                toast('Match clôturé ✓');
+                setTimeout(() => location.href = '{{ path('manager_rencontre_show', {id: rencontre.id}) }}', 1200);
+            } catch (e) {
+                toast('Erreur lors de la clôture : ' + e.message, true);
+            }
+        });
+
+        // Échap = ferme le drawer
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.body.classList.contains('drawer-open')) {
+                toggleDrawer(false);
+            }
+        });
+
+        // Si l'écran repasse > 1023px (rotation tablette), force fermer le drawer
+        // (le header redevient inline, le drawer n'a plus de sens)
+        const mqlDrawerActive = window.matchMedia('(max-width: 1023px)');
+        mqlDrawerActive.addEventListener('change', (e) => {
+            if (!e.matches) toggleDrawer(false);
+        });
 
         // ─── Helper : modal de sélection d'une joueuse ───
         // V2.1g.3 — On ne propose QUE les joueuses sur le terrain (le 5).
