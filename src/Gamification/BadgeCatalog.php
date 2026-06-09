@@ -36,6 +36,18 @@ class BadgeCatalog
     public const C_AG_PRESENT     = 'C_AG_PRESENT';
 
     /**
+     * Sous-série SPECTATEUR (V1.4) — valorise ceux qui viennent soutenir
+     * sans tâche officielle (parents, copains de joueuses, ancien-licencié
+     * qui passe au club...). Chaque badge déclenché à N missions cumulées
+     * de type Mission::TYPE_SPECTATEUR (toutes saisons confondues).
+     */
+    public const C_SPECTATEUR_FIRST    = 'C_SPECTATEUR_FIRST';     // 1ère présence
+    public const C_SPECTATEUR_5        = 'C_SPECTATEUR_5';         // 5
+    public const C_SPECTATEUR_10       = 'C_SPECTATEUR_10';        // 10
+    public const C_SPECTATEUR_AGUERRI  = 'C_SPECTATEUR_AGUERRI';   // 20
+    public const C_SPECTATEUR_FIDELE   = 'C_SPECTATEUR_FIDELE';    // 50 — top fan
+
+    /**
      * Codes badges Axe D (performance employé / salarié / SC).
      * Compteur dédié au travail "dans le cadre du poste rémunéré".
      * Sert au président pour valoriser les employés sans polluer le
@@ -194,6 +206,43 @@ class BadgeCatalog
                 'icone' => 'bi-megaphone',
                 'axe' => self::AXE_BENEVOLAT,
                 'par_saison' => true,
+            ],
+
+            // ── Sous-série SPECTATEUR (V1.4) ──
+            self::C_SPECTATEUR_FIRST => [
+                'nom' => 'Premier supporter',
+                'description' => 'Première venue en spectateur(rice) au club.',
+                'icone' => 'bi-eye-fill',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => false,
+            ],
+            self::C_SPECTATEUR_5 => [
+                'nom' => 'Supporter régulier',
+                'description' => '5 venues en spectateur(rice) cumulées.',
+                'icone' => 'bi-emoji-smile',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => false,
+            ],
+            self::C_SPECTATEUR_10 => [
+                'nom' => 'Acte de présence',
+                'description' => '10 venues en spectateur(rice). On commence à te reconnaître.',
+                'icone' => 'bi-hand-thumbs-up-fill',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => false,
+            ],
+            self::C_SPECTATEUR_AGUERRI => [
+                'nom' => 'Spectateur aguerri',
+                'description' => '20 venues en spectateur(rice). Habitué(e) des tribunes.',
+                'icone' => 'bi-binoculars-fill',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => false,
+            ],
+            self::C_SPECTATEUR_FIDELE => [
+                'nom' => 'Top fan',
+                'description' => '50 venues en spectateur(rice). Une légende du club.',
+                'icone' => 'bi-trophy-fill',
+                'axe' => self::AXE_BENEVOLAT,
+                'par_saison' => false,
             ],
 
             // ============ AXE D — PERFORMANCE EMPLOYÉ ============

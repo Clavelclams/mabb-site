@@ -2,6 +2,13 @@
 
 namespace App\Controller\Pirb;
 
+use App\Entity\Core\User;
+use App\Entity\Sport\Presence;
+use App\Repository\Sport\CotisationJoueurRepository;
+use App\Repository\Sport\JoueurRepository;
+use App\Repository\Sport\PresenceRepository;
+use App\Repository\Sport\RencontreRepository;
+use App\Repository\Sport\SeanceRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -41,15 +48,97 @@ class PirbLoginController extends AbstractController
     /**
      * Dashboard joueur — pirb.mabb.fr/
      *
-     * Point d'entrée après connexion. Protégé par access_control (ROLE_USER).
-     * Sera enrichi en Phase 4 (stats perso, shot chart, timeline, feedback).
+     * V1 (PIRB MVP) : "Mon profil" lecture seule.
+     *   - Récupère le Joueur lié à l'User connecté (via Joueur.user).
+     *   - Affiche : prénom, nom, équipe, catégorie, numéro maillot, photo.
+     *   - Affiche : statut cotisation de la saison en cours (dernière entrée).
+     *   - Si pas de Joueur lié → message d'aide pour s'inscrire / contacter staff.
+     *
+     * Pas de denyAccessUnlessGranted ROLE_USER ici : le firewall PIRB
+     * exige déjà ROLE_USER via access_control (cf. security.yaml).
      */
     #[Route('/', name: 'pirb_dashboard')]
-    public function dashboard(): Response
-    {
-        $this->denyAccessUnlessGranted('ROLE_USER');
+    public function dashboard(
+        JoueurRepository $joueurRepo,
+        CotisationJoueurRepository $cotisationRepo,
+        SeanceRepository $seanceRepo,
+        RencontreRepository $rencontreRepo,
+        PresenceRepository $presenceRepo,
+    ): Response {
+        /** @var User $user */
+        $user = $this->getUser();
 
-        return $this->render('pirb/dashboard.html.twig');
+        // V1.0 — Le Joueur est lié à l'User via Joueur.user (auto-link à la 1ère
+        // connexion Manager/PIRB, cf. tâche #51). Si pas encore lié, le PIRB
+        // affiche un message de fallback (l'user a peut-être un compte mais
+        // pas encore de fiche joueuse créée par le staff).
+        $joueur = $joueurRepo->findOneBy(['user' => $user]);
+
+        $cotisation = null;
+        $prochaines_seances = [];
+        $prochaines_rencontres = [];
+        $stats_presences = null;
+
+        if ($joueur !== null) {
+            // Cotisation saison courante
+            $cotisation = $cotisationRepo->createQueryBuilder('c')
+                ->where('c.joueur = :j')
+                ->setParameter('j', $joueur)
+                ->orderBy('c.saison', 'DESC')
+                ->setMaxResults(1)
+                ->getQuery()
+                ->getOneOrNullResult();
+
+            // V1.5 — Prochaines séances de l'équipe du joueur (3 max)
+            if ($joueur->getEquipe() !== null) {
+                $now = new \DateTimeImmutable();
+
+                $prochaines_seances = $seanceRepo->createQueryBuilder('s')
+                    ->where('s.equipe = :equipe')
+                    ->andWhere('s.date >= :now')
+                    ->setParameter('equipe', $joueur->getEquipe())
+                    ->setParameter('now', $now)
+                    ->orderBy('s.date', 'ASC')
+                    ->setMaxResults(3)
+                    ->getQuery()
+                    ->getResult();
+
+                $prochaines_rencontres = $rencontreRepo->createQueryBuilder('r')
+                    ->where('r.equipe = :equipe')
+                    ->andWhere('r.date >= :now')
+                    ->setParameter('equipe', $joueur->getEquipe())
+                    ->setParameter('now', $now)
+                    ->orderBy('r.date', 'ASC')
+                    ->setMaxResults(3)
+                    ->getQuery()
+                    ->getResult();
+            }
+
+            // V1.5 — Récap présences saison
+            $presences = $presenceRepo->pourJoueur($joueur);
+            $total = count($presences);
+            $nbPresent = 0;
+            foreach ($presences as $p) {
+                /** @var Presence $p */
+                if ($p->isPresent()) {
+                    $nbPresent++;
+                }
+            }
+            $stats_presences = [
+                'total'     => $total,
+                'present'   => $nbPresent,
+                'absent'    => $total - $nbPresent,
+                'taux'      => $total > 0 ? round($nbPresent / $total * 100, 0) : null,
+            ];
+        }
+
+        return $this->render('pirb/dashboard.html.twig', [
+            'joueur'                => $joueur,
+            'cotisation'            => $cotisation,
+            'prochaines_seances'    => $prochaines_seances,
+            'prochaines_rencontres' => $prochaines_rencontres,
+            'stats_presences'       => $stats_presences,
+        ]);
     }
 
     /**

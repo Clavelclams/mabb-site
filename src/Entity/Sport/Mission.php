@@ -38,6 +38,7 @@ class Mission implements ClubAwareInterface
     public const TYPE_FORMATION       = 'formation';        // formation arbitre, coach, e-marque, etc.
     public const TYPE_COMMUNICATION   = 'communication';    // post insta, parrainage
     public const TYPE_DON             = 'don';              // soutien financier, goodies
+    public const TYPE_SPECTATEUR      = 'spectateur';       // V1.4 — vient voir un match, donne coup de main léger
     public const TYPE_AUTRE           = 'autre';
 
     public const TYPES = [
@@ -50,6 +51,7 @@ class Mission implements ClubAwareInterface
         self::TYPE_FORMATION,
         self::TYPE_COMMUNICATION,
         self::TYPE_DON,
+        self::TYPE_SPECTATEUR,
         self::TYPE_AUTRE,
     ];
 
@@ -63,6 +65,7 @@ class Mission implements ClubAwareInterface
         self::TYPE_FORMATION     => 'Formation suivie',
         self::TYPE_COMMUNICATION => 'Communication / parrainage',
         self::TYPE_DON           => 'Don / soutien',
+        self::TYPE_SPECTATEUR    => 'Présent en spectateur (coup de main)',
         self::TYPE_AUTRE         => 'Autre',
     ];
 

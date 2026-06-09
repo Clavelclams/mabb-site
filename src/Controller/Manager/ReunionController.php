@@ -141,6 +141,10 @@ class ReunionController extends AbstractController
                 $reunion->setOrdreDuJour(trim((string) $request->request->get('ordreDuJour', '')));
                 $reunion->setCreateur($this->getUser() instanceof User ? $this->getUser() : null);
 
+                // V2.1n — Réunion publique : visible par tous les CLUB_MEMBER dans
+                // le feed "Pour toi", même sans convocation nominative (AG ouvertes…)
+                $reunion->setVisiblePourTous((bool) $request->request->get('visiblePourTous'));
+
                 $this->em->persist($reunion);
 
                 // === Convocation par rôle (cases à cocher) ===

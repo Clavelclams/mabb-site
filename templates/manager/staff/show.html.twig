@@ -1,0 +1,94 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ user_membre.prenom }} {{ user_membre.nom }} — Staff{% endblock %}
+
+{% block body %}
+
+    <div class="page-header">
+        <div style="display:flex; align-items:center; gap:20px;">
+            <div style="width:90px; height:90px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:2rem;">
+                {{ user_membre.prenom|first|upper }}{{ user_membre.nom|first|upper }}
+            </div>
+            <div>
+                <h1 style="margin:0;">{{ user_membre.prenom }} {{ user_membre.nom }}</h1>
+                <p class="subtitle" style="margin-top:6px;">
+                    <i class="bi bi-envelope"></i> {{ user_membre.email }}
+                    {% if depuis %}
+                        <span style="margin-left:12px; color:var(--mabb-muted);">
+                            <i class="bi bi-clock"></i> Depuis le {{ depuis|date('d/m/Y') }}
+                        </span>
+                    {% endif %}
+                </p>
+                <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+                    {% for role in roles %}
+                        <span class="badge-categorie">{{ role }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ path('manager_staff_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Tout le staff
+            </a>
+            {% if joueur_lie %}
+                <a href="{{ path('manager_joueur_show', {id: joueur_lie.id}) }}" class="btn-mabb-primary">
+                    <i class="bi bi-person-badge"></i> Fiche joueuse
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-shield-fill-check"></i> Rôles actifs au club</div>
+                <div class="card-body">
+                    {% for ucr in ucrs %}
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #e5e7eb;">
+                            <div>
+                                <strong>{{ ucr.role }}</strong>
+                                {% if ucr.createdAt %}
+                                    <div style="color:var(--mabb-muted); font-size:.78rem;">
+                                        Depuis le {{ ucr.createdAt|date('d/m/Y') }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <span class="badge-active">Actif</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-info-circle"></i> Activité</div>
+                <div class="card-body">
+                    {% if joueur_lie %}
+                        <p style="margin:0 0 12px 0;">
+                            ✅ <strong>Profil joueur lié :</strong> {{ joueur_lie.prenom }} {{ joueur_lie.nom }}
+                            {% if joueur_lie.equipe %}
+                                <span style="color:var(--mabb-muted);">— {{ joueur_lie.equipe.nom }}</span>
+                            {% endif %}
+                        </p>
+                    {% endif %}
+
+                    <p style="margin:0; color:var(--mabb-muted); font-size:.88rem; line-height:1.5;">
+                        <i class="bi bi-info-circle"></i> La liste des équipes coachées et des séances animées sera disponible
+                        prochainement (lien Coach↔Équipe à venir en V2).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Lien vers gestion rôles pour les dirigeants #}
+    {% if is_granted('CLUB_ADMIN', club) %}
+        <div style="text-align:center; padding:20px;">
+            <a href="{{ path('manager_utilisateurs_index') }}" class="btn-mabb-ghost">
+                <i class="bi bi-gear"></i> Modifier les rôles de ce user
+            </a>
+        </div>
+    {% endif %}
+
+{% endblock %}

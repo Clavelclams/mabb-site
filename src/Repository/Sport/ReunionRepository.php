@@ -97,4 +97,33 @@ class ReunionRepository extends ServiceEntityRepository
 
         return null;
     }
+
+    /**
+     * Prochaine réunion à venir marquée PUBLIQUE (visiblePourTous = true)
+     * pour un club donné. Utilisé par FeedAggregator SOURCE 3.
+     *
+     * Critères :
+     *   - même club
+     *   - visible_pour_tous = 1
+     *   - statut = PLANIFIE (pas annulée)
+     *   - date >= maintenant
+     *
+     * Retourne la plus proche dans le temps, ou null si aucune.
+     */
+    public function findProchainePublique(Club $club): ?Reunion
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.club = :club')
+            ->andWhere('r.visiblePourTous = :vrai')
+            ->andWhere('r.statut = :planifie')
+            ->andWhere('r.date >= :now')
+            ->setParameter('club', $club)
+            ->setParameter('vrai', true)
+            ->setParameter('planifie', Reunion::STATUT_PLANIFIE)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->orderBy('r.date', 'ASC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

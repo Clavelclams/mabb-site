@@ -134,14 +134,24 @@ class JoueurController extends AbstractController
     #[Route('/joueuses/{id}', name: 'manager_joueur_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(
         Joueur $joueur,
+        Request $request,
         \App\Repository\Sport\PresenceRepository $presenceRepository,
         \App\Gamification\XpCalculator $xpCalculator,
         \App\Repository\Sport\JoueurBadgeRepository $badgeRepository,
         \App\Service\EvaluationCalculator $evaluationCalculator,
         \App\Repository\Sport\EvaluationMatchRepository $evaluationMatchRepository,
         \App\Repository\Sport\CotisationJoueurRepository $cotisationRepository,
+        \App\Repository\Sport\JoueurRepository $joueurRepository,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $joueur);
+
+        // V1.4a — Candidats au lien PIRB : Users du club non encore liés
+        // Affichés uniquement aux CLUB_STAFF (les autres ne voient même pas la section).
+        $candidatsLinkUser = [];
+        if ($this->isGranted(ClubVoter::CLUB_STAFF, $joueur)) {
+            $rechercheUser = trim((string) $request->query->get('q_user', ''));
+            $candidatsLinkUser = $joueurRepository->findCandidatsLinkUser($joueur, $rechercheUser ?: null);
+        }
 
         // ====================================================================
         // Bureau D.3.2 — Cotisation saison courante (visible joueur+staff+coach)
@@ -238,6 +248,9 @@ class JoueurController extends AbstractController
             'cotisation_courante' => $cotisationCourante,
             'is_self'             => $isSelf,
             'is_tresorier'        => $isTresorier,
+            // V1.4a — Section "Compte PIRB lié" (visible CLUB_STAFF)
+            'candidats_link_user' => $candidatsLinkUser,
+            'recherche_user'      => trim((string) $request->query->get('q_user', '')),
         ]);
     }
 
@@ -360,5 +373,80 @@ class JoueurController extends AbstractController
 
         $this->addFlash('success', sprintf('Joueuse "%s" réactivée.', $joueur->getNomComplet()));
         return $this->redirectToRoute('manager_joueur_index');
+    }
+
+    /**
+     * V1.4a — Lie un User PIRB à cette fiche Joueur.
+     * Accessible CLUB_STAFF (DIRIGEANT + COACH + STAFF).
+     * Vérifie que l'user n'est pas déjà lié à une autre fiche du même club.
+     */
+    #[Route('/joueuses/{id}/lier-user', name: 'manager_joueur_link_user', methods: ['POST'])]
+    public function linkUser(Request $request, Joueur $joueur): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $joueur);
+
+        if (!$this->isCsrfTokenValid('link_user_joueur_' . $joueur->getId(), (string) $request->request->get('_token', ''))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        $userId = (int) $request->request->get('user_id', 0);
+        if ($userId <= 0) {
+            $this->addFlash('error', 'Aucun utilisateur sélectionné.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        $user = $this->em->getRepository(\App\Entity\Core\User::class)->find($userId);
+        if ($user === null) {
+            $this->addFlash('error', 'Utilisateur introuvable.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        // Anti-doublon : vérifier que cet user n'est pas DÉJÀ lié à une autre
+        // fiche Joueur du même club (au cas où le filtre côté repo a foiré).
+        $autreJoueurLie = $this->em->getRepository(Joueur::class)->findOneBy([
+            'user' => $user,
+            'club' => $joueur->getClub(),
+        ]);
+        if ($autreJoueurLie !== null && $autreJoueurLie->getId() !== $joueur->getId()) {
+            $this->addFlash('error', sprintf(
+                '%s est déjà lié à la fiche de %s. Délie-le d\'abord ou choisis un autre user.',
+                $user->getPrenom() . ' ' . $user->getNom(),
+                $autreJoueurLie->getNomComplet()
+            ));
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        $joueur->setUser($user);
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf(
+            '✅ Compte PIRB lié : %s %s (%s).',
+            $user->getPrenom(),
+            $user->getNom(),
+            $user->getEmail()
+        ));
+        return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+    }
+
+    /**
+     * V1.4a — Délie le User PIRB de cette fiche Joueur.
+     * Utile en cas d'erreur de lien ou de départ du joueur.
+     */
+    #[Route('/joueuses/{id}/delier-user', name: 'manager_joueur_unlink_user', methods: ['POST'])]
+    public function unlinkUser(Request $request, Joueur $joueur): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $joueur);
+
+        if (!$this->isCsrfTokenValid('unlink_user_joueur_' . $joueur->getId(), (string) $request->request->get('_token', ''))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        $joueur->setUser(null);
+        $this->em->flush();
+
+        $this->addFlash('success', '🔓 Compte PIRB délié de cette fiche.');
+        return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
     }
 }

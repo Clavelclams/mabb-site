@@ -37,9 +37,16 @@
                 </p>
             </div>
         </div>
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost">
                 <i class="bi bi-arrow-left"></i> Toutes les joueuses
+            </a>
+            {# V1.2d — Lien vers le profil PIRB public de cette joueuse #}
+            <a href="{{ url('pirb_joueuse_public', {id: joueur.id}) }}"
+               target="_blank" rel="noopener"
+               class="btn-mabb-ghost"
+               title="Voir le profil PIRB (style réseau social)">
+                <i class="bi bi-person-vcard"></i> Profil PIRB
             </a>
             {% if is_granted('CLUB_STAFF', joueur) %}
                 <a href="{{ path('manager_joueur_edit', {id: joueur.id}) }}" class="btn-mabb-primary">
@@ -472,15 +479,133 @@
 
         {# ========================================================
            Section "Cotisation licence" — Bureau D.3.2
-           Visible par : joueur lui-même (is_self) + staff/coach/trésorier
-           (déjà filtré via CLUB_MEMBER plus haut + RGPD bloc 5).
-           cotisation_courante peut être null si pas générée pour la saison.
+           RGPD strict (07/06/2026) : visible uniquement pour
+             - le joueur lui-même (is_self)
+             - trésorier du club (is_tresorier)
+             - dirigeant du club (CLUB_ADMIN)
+             - staff/coach du club (CLUB_STAFF)
+           Un membre lambda (CLUB_MEMBER simple) ne doit JAMAIS voir la
+           cotisation d'une autre joueuse — info financière sensible.
            ======================================================== #}
-        {% include 'manager/joueur/_cotisation_section.html.twig' with {
-            joueur:       joueur,
-            cotisation:   cotisation_courante,
-            is_self:      is_self,
-            is_tresorier: is_tresorier
-        } only %}
+        {% if is_self or is_tresorier or is_granted('CLUB_ADMIN', club) or is_granted('CLUB_STAFF', club) %}
+            {% include 'manager/joueur/_cotisation_section.html.twig' with {
+                joueur:       joueur,
+                cotisation:   cotisation_courante,
+                is_self:      is_self,
+                is_tresorier: is_tresorier
+            } only %}
+        {% endif %}
+
+        {# ========================================================
+           V1.4a — Section "Compte PIRB lié"
+           Visible CLUB_STAFF (DIRIGEANT + COACH + STAFF).
+           Permet de lier un User PIRB existant à cette fiche Joueur.
+           ======================================================== #}
+        {% if is_granted('CLUB_STAFF', joueur) %}
+        <div class="card-mabb" style="margin-top:16px;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-person-vcard"></i> Compte PIRB</span>
+                {% if joueur.user %}
+                    <span class="pirb-badge" style="background:rgba(22,163,74,.15); color:#16a34a; padding:3px 10px; border-radius:999px; font-size:.72rem; font-weight:700;">
+                        <i class="bi bi-check-circle-fill"></i> Lié
+                    </span>
+                {% else %}
+                    <span style="color:var(--mabb-muted); font-size:.78rem;">Non lié</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+
+                {% if joueur.user %}
+                    {# === User déjà lié : affichage + bouton délier === #}
+                    <div style="display:flex; align-items:center; gap:14px; padding:10px; background:#f8fafc; border-radius:10px; margin-bottom:12px;">
+                        <div style="width:50px; height:50px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.2rem;">
+                            {{ joueur.user.prenom|first|upper }}{{ joueur.user.nom|first|upper }}
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:700;">{{ joueur.user.prenom }} {{ joueur.user.nom }}</div>
+                            <div style="color:var(--mabb-muted); font-size:.85rem;">{{ joueur.user.email }}</div>
+                        </div>
+                        <a href="{{ url('pirb_joueuse_public', {id: joueur.id}) }}"
+                           target="_blank" rel="noopener"
+                           class="btn-mabb-ghost btn-sm">
+                            <i class="bi bi-box-arrow-up-right"></i> Voir PIRB
+                        </a>
+                    </div>
+                    <form method="POST" action="{{ path('manager_joueur_unlink_user', {id: joueur.id}) }}"
+                          onsubmit="return confirm('Délier le compte PIRB de cette joueuse ? Le user existant ne sera pas supprimé, juste désassocié.');"
+                          style="display:flex; justify-content:flex-end;">
+                        <input type="hidden" name="_token" value="{{ csrf_token('unlink_user_joueur_' ~ joueur.id) }}">
+                        <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);">
+                            <i class="bi bi-unlink"></i> Délier
+                        </button>
+                    </form>
+
+                {% else %}
+                    {# === Pas lié : recherche + liste candidats === #}
+                    <p style="margin:0 0 14px 0; color:var(--mabb-muted); font-size:.85rem;">
+                        Lie un compte PIRB à cette fiche pour que la joueuse retrouve ses stats, photo et profil sur <strong>pirb.mabb.fr</strong>.
+                    </p>
+
+                    {# Recherche libre #}
+                    <form method="GET" action="{{ path('manager_joueur_show', {id: joueur.id}) }}" style="margin-bottom:12px;">
+                        <div style="display:flex; gap:8px;">
+                            <input type="text" name="q_user" value="{{ recherche_user|default('') }}"
+                                   placeholder="Rechercher par nom, prénom, email..."
+                                   style="flex:1; padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; font-size:.9rem;">
+                            <button type="submit" class="btn-mabb-primary btn-sm">
+                                <i class="bi bi-search"></i> Rechercher
+                            </button>
+                        </div>
+                    </form>
+
+                    {% if candidats_link_user is empty %}
+                        <p style="text-align:center; color:var(--mabb-muted); font-size:.85rem; padding:20px;">
+                            {% if recherche_user %}
+                                Aucun user trouvé pour "<strong>{{ recherche_user }}</strong>".
+                            {% else %}
+                                Aucun user disponible. Tous les users du club sont déjà liés ou il n'y a pas encore d'inscrit.
+                            {% endif %}
+                        </p>
+                    {% else %}
+                        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:8px;">
+                            {% for c in candidats_link_user %}
+                                {% set u = c.user %}
+                                <form method="POST" action="{{ path('manager_joueur_link_user', {id: joueur.id}) }}"
+                                      style="display:flex; align-items:center; gap:10px; padding:10px 12px;
+                                             background:{{ c.score >= 100 ? '#fef3c7' : (c.score >= 30 ? '#f0f9ff' : '#fff') }};
+                                             border:1px solid {{ c.score >= 100 ? '#fbbf24' : '#e5e7eb' }};
+                                             border-radius:8px;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('link_user_joueur_' ~ joueur.id) }}">
+                                    <input type="hidden" name="user_id" value="{{ u.id }}">
+
+                                    <div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.85rem; flex-shrink:0;">
+                                        {{ u.prenom|first|upper }}{{ u.nom|first|upper }}
+                                    </div>
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="font-weight:700; font-size:.88rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            {{ u.prenom }} {{ u.nom }}
+                                            {% if c.score >= 100 %}<span title="Email match" style="color:#d97706; font-size:.75rem;">⭐ Suggéré</span>{% endif %}
+                                            {% if c.score >= 30 and c.score < 100 %}<span title="Nom/prénom match" style="color:#0284c7; font-size:.7rem;">Possible</span>{% endif %}
+                                        </div>
+                                        <div style="color:var(--mabb-muted); font-size:.75rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ u.email }}</div>
+                                    </div>
+                                    <button type="submit" class="btn-mabb-primary btn-sm" style="flex-shrink:0;"
+                                            onclick="return confirm('Lier {{ u.prenom }} {{ u.nom }} à la fiche de {{ joueur.nomComplet }} ?');">
+                                        <i class="bi bi-link-45deg"></i> Lier
+                                    </button>
+                                </form>
+                            {% endfor %}
+                        </div>
+
+                        <p style="margin:14px 0 0 0; color:var(--mabb-muted); font-size:.72rem; text-align:center;">
+                            <i class="bi bi-info-circle"></i> Suggestions classées par pertinence (email match d'abord, puis nom/prénom).
+                        </p>
+                    {% endif %}
+
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 {% endblock %}

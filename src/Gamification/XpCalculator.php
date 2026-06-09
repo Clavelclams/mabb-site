@@ -49,6 +49,7 @@ class XpCalculator
         Mission::TYPE_COMMUNICATION   => 15,
         Mission::TYPE_EVENEMENT       => 10,
         Mission::TYPE_DON             => 10,
+        Mission::TYPE_SPECTATEUR      => 10, // V1.4 — vient soutenir, donne coup de main léger
         Mission::TYPE_AUTRE           => 10,
     ];
 

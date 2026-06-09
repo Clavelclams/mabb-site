@@ -110,7 +110,33 @@ final class FeedAggregator
         }
 
         // ====================================================================
-        // SOURCE 3 — Dernier PV non lu (notification)
+        // SOURCE 3 — Prochaine réunion PUBLIQUE du club (visiblePourTous = true)
+        // ====================================================================
+        // Annoncée à TOUS les CLUB_MEMBER même sans convocation nominative.
+        // On évite le doublon avec SOURCE 1 : si l'user est déjà convoqué à
+        // la même réunion, on n'affiche pas une 2e fois.
+        $reunionPublique = $this->reunionRepository->findProchainePublique($club);
+        if ($reunionPublique !== null
+            && ($prochaineConv === null || $prochaineConv->getReunion()?->getId() !== $reunionPublique->getId())
+        ) {
+            $items[] = new FeedItem(
+                type:      'reunion_publique',
+                date:      $reunionPublique->getDate(),
+                titre:     $reunionPublique->getTitre(),
+                sousTitre: sprintf(
+                    'Ouverte à tous — %s%s',
+                    $reunionPublique->getDate()->format('d/m à H:i'),
+                    $reunionPublique->getLieu() ? ' · ' . $reunionPublique->getLieu() : ''
+                ),
+                lien:      $this->urlGenerator->generate('manager_reunion_show', ['id' => $reunionPublique->getId()]),
+                icone:     'bi-megaphone-fill',
+                couleur:   '#ea580c', // orange — annonce publique
+                labelType: 'Annonce du club',
+            );
+        }
+
+        // ====================================================================
+        // SOURCE 4 — Dernier PV non lu (notification)
         // ====================================================================
         // findPvNonLus renvoie toutes les convocations avec PV non lu, on prend
         // la plus récente (= la première de la liste car triée par date desc).

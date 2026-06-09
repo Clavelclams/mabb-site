@@ -138,6 +138,19 @@ class Reunion implements ClubAwareInterface
     private string $statut = self::STATUT_PLANIFIE;
 
     /**
+     * Réunion visible par TOUS les membres du club (CLUB_MEMBER) dans le feed
+     * "Pour toi", même si l'user n'est pas convoqué.
+     *
+     * Cas d'usage : AG ordinaire ouverte à tous les licenciés, AG extraordinaire,
+     * annonce d'un événement public du bureau. La réunion apparaît dans le feed
+     * de tous les membres (info publique), même sans convocation nominative.
+     *
+     * Par défaut FALSE : réunion privée, visible uniquement aux convoqués + staff.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $visiblePourTous = false;
+
+    /**
      * Auteur de la création de la réunion (souvent secrétaire ou président).
      */
     #[ORM\ManyToOne(targetEntity: User::class)]
@@ -256,6 +269,9 @@ class Reunion implements ClubAwareInterface
     public function isPlanifiee(): bool { return $this->statut === self::STATUT_PLANIFIE; }
     public function isTenue(): bool { return $this->statut === self::STATUT_TENUE; }
     public function isAnnulee(): bool { return $this->statut === self::STATUT_ANNULEE; }
+
+    public function isVisiblePourTous(): bool { return $this->visiblePourTous; }
+    public function setVisiblePourTous(bool $v): static { $this->visiblePourTous = $v; return $this; }
 
     public function getCreateur(): ?User { return $this->createur; }
     public function setCreateur(?User $u): static { $this->createur = $u; return $this; }

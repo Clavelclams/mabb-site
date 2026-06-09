@@ -1,67 +1,494 @@
-{# templates/pirb/dashboard.html.twig — STUB Sprint 1 #}
-{# Ce template sera remplacé en Phase 4 par le vrai dashboard joueur #}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon Espace Joueur — MABB PIRB</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <style>
-        body { background: #0b1f3a; font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
-        .topbar {
-            background: rgba(255,140,0,.1);
-            border-bottom: 1px solid rgba(255,140,0,.3);
-            color: #fff;
-            padding: 14px 28px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .topbar .brand { font-weight: 800; font-size: 1.1rem; color: #ff8c00; }
-        .card-stub {
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            margin-top: 50px;
-        }
-        .card-stub .icon { font-size: 3rem; color: #ff8c00; margin-bottom: 16px; }
-        .card-stub h2 { font-weight: 800; color: #fff; }
-        .card-stub p { color: #94a3b8; font-size: .95rem; }
-        .badge-sprint {
-            display: inline-block;
-            background: rgba(255,140,0,.2);
-            color: #ff8c00;
-            border-radius: 20px;
-            font-size: .75rem;
-            font-weight: 700;
-            padding: 4px 14px;
-            margin-bottom: 12px;
-        }
-    </style>
-</head>
-<body>
-    <div class="topbar">
-        <span class="brand">🏀 PIRB — Mon Espace</span>
-        <a href="{{ path('pirb_logout') }}" class="btn btn-sm btn-outline-warning rounded-pill">
-            <i class="bi bi-box-arrow-right me-1"></i>Déconnexion
-        </a>
-    </div>
+{#
+   PIRB V1 — Dashboard "Mon profil" lecture seule
+   Affiche les infos du Joueur lié à l'User connecté + statut cotisation.
+   Si pas de Joueur lié → message d'aide pour contacter le staff.
+#}
+{% extends 'pirb/base.html.twig' %}
 
-    <div class="container">
-        <div class="card-stub">
-            <div class="icon"><i class="bi bi-graph-up-arrow"></i></div>
-            <div class="badge-sprint">Sprint 4 — en cours de développement</div>
-            <h2>Espace Joueur</h2>
-            <p>
-                Salut {{ app.user.prenom ?? 'Joueur' }} 👋<br>
-                Tes stats, ton shot chart et ta timeline arrivent bientôt.<br>
-                <strong style="color:#ff8c00;">Compte actif</strong> — connexion réussie ✅
+{% block title %}Mon profil — MABB PIRB{% endblock %}
+
+{% block stylesheets %}
+    /* V1.2b — Affichage badges épinglés en hero */
+    .badges-epingles-row {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+    }
+    .badge-pin {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 6px;
+        min-width: 70px;
+        background: rgba(234,88,12,.08);
+        border: 1px solid rgba(234,88,12,.25);
+        border-radius: 10px;
+    }
+    .badge-pin i {
+        font-size: 1.6rem;
+        color: var(--pirb-accent);
+        line-height: 1;
+    }
+    .badge-pin .pin-nom {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--pirb-text);
+        text-align: center;
+        line-height: 1.2;
+    }
+{% endblock %}
+
+{% block body %}
+
+    {# Flash messages (upload réussi / erreur) #}
+    {% for label, messages in app.flashes(['success', 'error', 'info']) %}
+        {% for message in messages %}
+            <div class="pirb-card" style="
+                padding: 12px 14px;
+                margin-bottom: 12px;
+                border-left: 4px solid {{ label == 'success' ? '#16a34a' : (label == 'error' ? '#ef4444' : '#3b82f6') }};
+                background: {{ label == 'success' ? 'rgba(22,163,74,.1)' : (label == 'error' ? 'rgba(239,68,68,.1)' : 'rgba(59,130,246,.1)') }};
+                font-size: 0.88rem;
+            ">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    {% if joueur is null %}
+
+        {# Cas : User connecté mais pas encore lié à une fiche Joueuse #}
+        <div class="pirb-card" style="text-align:center; padding:32px 20px;">
+            <div style="font-size:3rem; margin-bottom:8px;">🏀</div>
+            <h2 style="margin:0 0 8px 0; font-size:1.15rem;">Bienvenue sur le PIRB MABB</h2>
+            <p style="color:var(--pirb-text-muted); font-size:0.9rem; margin:0 0 18px 0;">
+                Ton compte est créé, mais aucune fiche joueuse n'est encore liée à ton email.
+                Contacte un membre du staff pour activer ton profil.
+            </p>
+            <p style="color:var(--pirb-text-muted); font-size:0.82rem;">
+                <strong>Ton email :</strong><br>
+                <code style="background:rgba(255,255,255,.06); padding:4px 10px; border-radius:6px;">{{ app.user.email }}</code>
             </p>
         </div>
-    </div>
-</body>
-</html>
+
+    {% else %}
+
+        {# === Hero : photo + nom + équipe === #}
+        <div class="pirb-card" style="text-align:center; padding:22px 16px;">
+            {# Avatar cliquable : photoPath si dispo, sinon initiales. Tap = ouvre file picker #}
+            <label for="pirbPhotoInput" style="
+                width:100px; height:100px; border-radius:50%; margin:0 auto 8px;
+                overflow:hidden; background:linear-gradient(135deg, var(--pirb-blue), #1e40af);
+                display:flex; align-items:center; justify-content:center;
+                font-weight:800; color:#fff; font-size:2.2rem;
+                border:3px solid var(--pirb-border);
+                cursor:pointer; position:relative;
+                transition: transform .15s, border-color .15s;
+            " onmouseover="this.style.borderColor='var(--pirb-accent)'; this.style.transform='scale(1.02)';"
+              onmouseout="this.style.borderColor='var(--pirb-border)'; this.style.transform='scale(1)';"
+              title="Changer ma photo">
+                {% if joueur.photoPath %}
+                    <img src="{{ asset(joueur.photoPath) }}" alt="Photo de {{ joueur.prenom }}" style="width:100%; height:100%; object-fit:cover;">
+                {% else %}
+                    {{ joueur.prenom|first|upper }}{{ joueur.nom|first|upper }}
+                {% endif %}
+                {# Overlay caméra discret au hover #}
+                <span style="
+                    position:absolute; bottom:0; left:0; right:0;
+                    background:rgba(0,0,0,.6); color:#fff;
+                    font-size:0.65rem; padding:3px 0;
+                    text-transform:uppercase; letter-spacing:.04em; font-weight:700;
+                "><i class="bi bi-camera"></i> Changer</span>
+            </label>
+
+            {# Form upload caché — le file picker submit auto au choix d'un fichier #}
+            <form method="POST" enctype="multipart/form-data"
+                  action="{{ path('pirb_profil_photo_upload') }}"
+                  id="pirbPhotoForm"
+                  style="display:none;">
+                <input type="hidden" name="_token" value="{{ csrf_token('pirb_photo_upload') }}">
+                <input type="file" name="photo" id="pirbPhotoInput"
+                       accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                       onchange="if(this.files.length) document.getElementById('pirbPhotoForm').submit();">
+            </form>
+            <small style="display:block; color:var(--pirb-text-muted); font-size:0.7rem; margin-bottom:8px;">
+                JPG, PNG, WebP, HEIC — 2 Mo max
+            </small>
+
+            <h1 style="margin:0; font-size:1.3rem; font-weight:800;">
+                {{ joueur.prenom }} {{ joueur.nom }}
+            </h1>
+
+            {% if joueur.equipe %}
+                <div style="color:var(--pirb-accent-soft); font-weight:700; margin-top:4px; font-size:0.9rem;">
+                    {{ joueur.equipe.nom }}
+                    {% if joueur.equipe.categorie %}
+                        <span style="color:var(--pirb-text-muted); font-weight:500;">— {{ joueur.equipe.categorie }}</span>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div style="color:var(--pirb-text-muted); font-size:0.82rem; margin-top:4px;">
+                    Aucune équipe assignée
+                </div>
+            {% endif %}
+
+            {% if joueur.numeroMaillot %}
+                <div style="margin-top:14px; display:inline-flex; align-items:center; gap:8px; background:rgba(234,88,12,.15); padding:6px 14px; border-radius:999px;">
+                    <span style="color:var(--pirb-text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700;">Maillot</span>
+                    <strong style="color:var(--pirb-accent); font-size:1.05rem;">#{{ joueur.numeroMaillot }}</strong>
+                </div>
+            {% endif %}
+
+            {# V1.2b — Badges épinglés en hero (3 max) #}
+            {% if joueur.badgesEpingles is not empty %}
+                {% set catalogue = pirb_badge_catalogue() %}
+                <div class="badges-epingles-row">
+                    {% for code in joueur.badgesEpingles %}
+                        {% if catalogue[code] is defined %}
+                            <div class="badge-pin" title="{{ catalogue[code].description }}">
+                                <i class="bi {{ catalogue[code].icone }}"></i>
+                                <div class="pin-nom">{{ catalogue[code].nom }}</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {# Liens gestion badges + highlights #}
+            <div style="margin-top:12px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+                <a href="{{ path('pirb_profil_badges') }}"
+                   style="display:inline-flex; align-items:center; gap:6px; color:var(--pirb-accent-soft); font-size:0.8rem; text-decoration:none; font-weight:600;">
+                    <i class="bi bi-trophy-fill"></i>
+                    {{ joueur.badgesEpingles is empty ? 'Choisir mes badges' : 'Modifier mes badges' }}
+                </a>
+                <a href="{{ path('pirb_profil_highlights') }}"
+                   style="display:inline-flex; align-items:center; gap:6px; color:var(--pirb-accent-soft); font-size:0.8rem; text-decoration:none; font-weight:600;">
+                    <i class="bi bi-play-circle-fill"></i>
+                    {{ joueur.highlights is empty ? 'Ajouter highlights' : 'Modifier highlights' }}
+                </a>
+            </div>
+        </div>
+
+        {# === V1.5 — Prochains événements (séances + rencontres) === #}
+        {% if prochaines_seances|length > 0 or prochaines_rencontres|length > 0 %}
+            <div class="pirb-card">
+                <div class="pirb-card-title">À venir</div>
+
+                {% for r in prochaines_rencontres %}
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--pirb-border);">
+                        <div style="width:42px; height:42px; flex-shrink:0; border-radius:10px; background:rgba(239,68,68,.15); color:#fca5a5; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800;">
+                            <span style="font-size:0.95rem; line-height:1;">{{ r.date|date('d') }}</span>
+                            <span style="font-size:0.6rem; opacity:.8;">{{ r.date|date('M')|upper }}</span>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:0.92rem;">🏆 vs {{ r.adversaire }}</div>
+                            <div style="color:var(--pirb-text-muted); font-size:0.78rem;">
+                                {{ r.date|date('H:i') }}{% if r.lieu %} · {{ r.lieu }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                {% for s in prochaines_seances %}
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--pirb-border);">
+                        <div style="width:42px; height:42px; flex-shrink:0; border-radius:10px; background:rgba(59,130,246,.15); color:#93c5fd; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800;">
+                            <span style="font-size:0.95rem; line-height:1;">{{ s.date|date('d') }}</span>
+                            <span style="font-size:0.6rem; opacity:.8;">{{ s.date|date('M')|upper }}</span>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:0.92rem;">
+                                {% if s.type == 'Entrainement' %}🏀{% elseif s.type == 'Stage' %}🎯{% else %}⚡{% endif %}
+                                {{ s.type }}
+                            </div>
+                            <div style="color:var(--pirb-text-muted); font-size:0.78rem;">
+                                {{ s.date|date('H:i') }}{% if s.dureeMinutes %} · {{ s.dureeMinutes }}min{% endif %}{% if s.lieu %} · {{ s.lieu }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# === V1.5 — Récap présences saison === #}
+        {% if stats_presences and stats_presences.total > 0 %}
+            <div class="pirb-card">
+                <div class="pirb-card-title">Mes présences</div>
+                <div style="display:flex; justify-content:space-around; padding:8px 0;">
+                    <div style="text-align:center;">
+                        <div style="font-size:1.6rem; font-weight:800; color:#86efac;">{{ stats_presences.present }}</div>
+                        <div style="color:var(--pirb-text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">Présent</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:1.6rem; font-weight:800; color:#fca5a5;">{{ stats_presences.absent }}</div>
+                        <div style="color:var(--pirb-text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">Absent</div>
+                    </div>
+                    <div style="text-align:center;">
+                        <div style="font-size:1.6rem; font-weight:800; color:var(--pirb-accent);">{{ stats_presences.taux }}%</div>
+                        <div style="color:var(--pirb-text-muted); font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em;">Taux</div>
+                    </div>
+                </div>
+                {# Mini-barre de progression #}
+                <div style="background:rgba(255,255,255,.05); border-radius:10px; height:6px; overflow:hidden; margin-top:8px;">
+                    <div style="background:linear-gradient(90deg, #16a34a, #86efac); height:100%; width:{{ stats_presences.taux }}%; transition:width .4s;"></div>
+                </div>
+                <div style="text-align:center; color:var(--pirb-text-muted); font-size:0.72rem; margin-top:8px;">
+                    {{ stats_presences.total }} événement{{ stats_presences.total > 1 ? 's' : '' }} cumulé{{ stats_presences.total > 1 ? 's' : '' }} cette saison
+                </div>
+            </div>
+        {% endif %}
+
+        {# === Statut cotisation === #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Cotisation</div>
+            {% if cotisation %}
+                <div class="pirb-stat">
+                    <span class="label">Saison</span>
+                    <span class="value">{{ cotisation.saison }}</span>
+                </div>
+                <div class="pirb-stat">
+                    <span class="label">Statut</span>
+                    <span>
+                        {% if cotisation.isPayee() %}
+                            <span class="pirb-badge pirb-badge-success">✓ Payée</span>
+                        {% elseif cotisation.isExemptee() %}
+                            <span class="pirb-badge pirb-badge-neutral">Exemptée</span>
+                        {% elseif cotisation.isEcheancier() %}
+                            <span class="pirb-badge pirb-badge-warning">Échéancier</span>
+                        {% else %}
+                            <span class="pirb-badge pirb-badge-danger">À payer</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="pirb-stat">
+                    <span class="label">Montant attendu</span>
+                    <span class="value">{{ cotisation.montantAttendu }} €</span>
+                </div>
+                {% if cotisation.montantPaye and cotisation.montantPaye > 0 %}
+                <div class="pirb-stat">
+                    <span class="label">Déjà versé</span>
+                    <span class="value" style="color:#86efac;">{{ cotisation.montantPaye }} €</span>
+                </div>
+                {% endif %}
+                {% if cotisation.datePaiement %}
+                <div class="pirb-stat">
+                    <span class="label">Date paiement</span>
+                    <span class="value">{{ cotisation.datePaiement|date('d/m/Y') }}</span>
+                </div>
+                {% endif %}
+            {% else %}
+                <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin:0; text-align:center; padding:8px 0;">
+                    Aucune cotisation enregistrée pour le moment.<br>
+                    <small>Contacte le trésorier si tu penses que c'est une erreur.</small>
+                </p>
+            {% endif %}
+        </div>
+
+        {# === Mes infos (V1.1 éditable) ===
+           Toggle entre vue lecture seule et form d'édition via une checkbox cachée
+           (CSS-only, pas de JS requis). Cliquer sur "Modifier" → check la box →
+           CSS bascule en mode édition. Recliquer "Annuler" → décoche. #}
+        <div class="pirb-card">
+            <input type="checkbox" id="pirbEditInfos" style="display:none;">
+
+            {# === Vue LECTURE === #}
+            <div class="pirb-infos-view">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span class="pirb-card-title" style="margin:0;">Mes infos</span>
+                    <label for="pirbEditInfos" style="
+                        background:rgba(234,88,12,.15); color:var(--pirb-accent);
+                        padding:5px 12px; border-radius:6px;
+                        font-size:0.75rem; font-weight:700; cursor:pointer;
+                        border:1px solid rgba(234,88,12,.3);
+                    ">
+                        <i class="bi bi-pencil"></i> Modifier
+                    </label>
+                </div>
+                <div class="pirb-stat">
+                    <span class="label">Email compte</span>
+                    <span class="value" style="font-size:0.82rem;">{{ app.user.email }}</span>
+                </div>
+                <div class="pirb-stat">
+                    <span class="label">Email perso</span>
+                    <span class="value" style="font-size:0.82rem;">
+                        {{ joueur.email ?: '—' }}
+                    </span>
+                </div>
+                <div class="pirb-stat">
+                    <span class="label">Téléphone</span>
+                    <span class="value" style="font-size:0.88rem;">
+                        {% if joueur.telephone %}
+                            {# Affichage formaté : 06 12 34 56 78 #}
+                            {{ joueur.telephone|slice(0,2) }} {{ joueur.telephone|slice(2,2) }} {{ joueur.telephone|slice(4,2) }} {{ joueur.telephone|slice(6,2) }} {{ joueur.telephone|slice(8,2) }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {# === Vue ÉDITION === #}
+            <form method="POST" action="{{ path('pirb_profil_infos_update') }}" class="pirb-infos-edit">
+                <input type="hidden" name="_token" value="{{ csrf_token('pirb_profil_infos') }}">
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span class="pirb-card-title" style="margin:0;">Modifier mes infos</span>
+                    <label for="pirbEditInfos" style="
+                        background:transparent; color:var(--pirb-text-muted);
+                        padding:5px 10px; border-radius:6px;
+                        font-size:0.72rem; cursor:pointer;
+                        border:1px solid var(--pirb-border);
+                    ">Annuler</label>
+                </div>
+
+                <div style="margin-bottom:10px;">
+                    <label style="display:block; color:var(--pirb-text-muted); font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
+                        Email perso (optionnel)
+                    </label>
+                    <input type="email" name="email" value="{{ joueur.email|default('') }}"
+                           placeholder="prenom.nom@example.com"
+                           style="
+                               width:100%; padding:10px 12px;
+                               background:rgba(255,255,255,.05);
+                               border:1px solid var(--pirb-border);
+                               border-radius:8px; color:var(--pirb-text);
+                               font-size:0.92rem; font-family:inherit;
+                               box-sizing:border-box;
+                           ">
+                </div>
+
+                <div style="margin-bottom:14px;">
+                    <label style="display:block; color:var(--pirb-text-muted); font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
+                        Téléphone (optionnel)
+                    </label>
+                    <input type="tel" name="telephone" value="{{ joueur.telephone|default('') }}"
+                           placeholder="06 12 34 56 78"
+                           style="
+                               width:100%; padding:10px 12px;
+                               background:rgba(255,255,255,.05);
+                               border:1px solid var(--pirb-border);
+                               border-radius:8px; color:var(--pirb-text);
+                               font-size:0.92rem; font-family:inherit;
+                               box-sizing:border-box;
+                           ">
+                    <small style="color:var(--pirb-text-muted); font-size:0.7rem; display:block; margin-top:4px;">
+                        Format : 06 12 34 56 78 ou +33 6 12 34 56 78
+                    </small>
+                </div>
+
+                {# === V1.2a — Bio scouting === #}
+                <div style="margin-bottom:14px;">
+                    <label style="display:block; color:var(--pirb-text-muted); font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
+                        Bio
+                    </label>
+                    <textarea name="bio" maxlength="500" rows="3"
+                              placeholder="Présente-toi en quelques lignes (poste, style de jeu, objectifs...)"
+                              style="
+                                  width:100%; padding:10px 12px;
+                                  background:rgba(255,255,255,.05);
+                                  border:1px solid var(--pirb-border);
+                                  border-radius:8px; color:var(--pirb-text);
+                                  font-size:0.9rem; font-family:inherit;
+                                  resize:vertical; box-sizing:border-box;
+                              ">{{ joueur.bio|default('') }}</textarea>
+                    <small style="color:var(--pirb-text-muted); font-size:0.7rem;">500 caractères max</small>
+                </div>
+
+                {# === V1.2a — Profil public (optionnel — utile pour scouting) === #}
+                <div style="margin-bottom:14px; padding:12px; background:rgba(234,88,12,.08); border:1px solid rgba(234,88,12,.25); border-radius:8px;">
+                    <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
+                        <input type="checkbox" name="profilPublic" value="1"
+                               {% if joueur.profilPublic %}checked{% endif %}
+                               style="margin-top:3px; width:18px; height:18px;">
+                        <span>
+                            <strong style="color:var(--pirb-accent);">📣 Rendre mon profil public</strong>
+                            <div style="color:var(--pirb-text-muted); font-size:0.78rem; margin-top:3px; line-height:1.4;">
+                                Coche pour que ton profil soit visible aux personnes extérieures (utile si tu veux être repéré par des scouts ou recruteurs). Décoche pour rester anonyme — visible seulement par toi et le staff MABB.
+                            </div>
+                        </span>
+                    </label>
+                </div>
+
+                {# === V1.2a — Liens sociaux === #}
+                <div style="margin-bottom:14px;">
+                    <label style="display:block; color:var(--pirb-text-muted); font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">
+                        Réseaux sociaux (optionnels)
+                    </label>
+                    {% set lien_style = "width:100%; padding:8px 12px; background:rgba(255,255,255,.05); border:1px solid var(--pirb-border); border-radius:6px; color:var(--pirb-text); font-size:0.85rem; font-family:inherit; box-sizing:border-box; margin-bottom:6px;" %}
+                    <input type="url" name="lien_instagram" value="{{ joueur.lienSocial('instagram')|default('') }}" placeholder="Instagram (https://instagram.com/...)" style="{{ lien_style }}">
+                    <input type="url" name="lien_tiktok" value="{{ joueur.lienSocial('tiktok')|default('') }}" placeholder="TikTok" style="{{ lien_style }}">
+                    <input type="url" name="lien_youtube" value="{{ joueur.lienSocial('youtube')|default('') }}" placeholder="YouTube" style="{{ lien_style }}">
+                    <input type="url" name="lien_twitter" value="{{ joueur.lienSocial('twitter')|default('') }}" placeholder="X / Twitter" style="{{ lien_style }}">
+                    <input type="url" name="lien_linkedin" value="{{ joueur.lienSocial('linkedin')|default('') }}" placeholder="LinkedIn" style="{{ lien_style }}">
+                </div>
+
+                <button type="submit" class="pirb-btn pirb-btn-primary" style="width:100%;">
+                    <i class="bi bi-check-lg"></i> Enregistrer
+                </button>
+            </form>
+        </div>
+
+        {# === V1.2a — Aperçu Bio (vue lecture) si remplie === #}
+        {% if joueur.bio %}
+            <div class="pirb-card">
+                <div class="pirb-card-title">À propos</div>
+                <p style="margin:0; line-height:1.5; color:var(--pirb-text); font-size:0.92rem; white-space:pre-line;">{{ joueur.bio }}</p>
+            </div>
+        {% endif %}
+
+        {# === V1.2a — Liens sociaux affichés === #}
+        {% if joueur.liensSociaux %}
+            <div class="pirb-card">
+                <div class="pirb-card-title">Mes réseaux</div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    {% set reseau_icons = {
+                        'instagram': 'bi-instagram',
+                        'tiktok':    'bi-tiktok',
+                        'youtube':   'bi-youtube',
+                        'twitter':   'bi-twitter-x',
+                        'linkedin':  'bi-linkedin'
+                    } %}
+                    {% set reseau_colors = {
+                        'instagram': '#e1306c',
+                        'tiktok':    '#fe2c55',
+                        'youtube':   '#ff0000',
+                        'twitter':   '#fff',
+                        'linkedin':  '#0a66c2'
+                    } %}
+                    {% for reseau, url in joueur.liensSociaux %}
+                        <a href="{{ url }}" target="_blank" rel="noopener"
+                           style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; background:rgba(255,255,255,.05); border:1px solid var(--pirb-border); border-radius:8px; color:{{ reseau_colors[reseau]|default('#f1f5f9') }}; text-decoration:none; font-size:0.85rem;">
+                            <i class="bi {{ reseau_icons[reseau]|default('bi-link') }}"></i> {{ reseau|capitalize }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {# === V1.2a — Badge Profil public/privé ===
+           Visible info pour la joueuse de savoir l'état actuel. #}
+        <div style="text-align:center; padding:10px;">
+            {% if joueur.profilPublic %}
+                <span class="pirb-badge pirb-badge-success">📣 Profil public</span>
+                <small style="display:block; color:var(--pirb-text-muted); font-size:0.72rem; margin-top:6px;">
+                    Ton profil est visible aux scouts/recruteurs
+                </small>
+            {% else %}
+                <span class="pirb-badge pirb-badge-neutral">🔒 Profil privé</span>
+                <small style="display:block; color:var(--pirb-text-muted); font-size:0.72rem; margin-top:6px;">
+                    Visible uniquement par toi et le staff MABB
+                </small>
+            {% endif %}
+        </div>
+
+        {# === Aide / FAQ rapide === #}
+        <div style="text-align:center; padding:12px; color:var(--pirb-text-muted); font-size:0.78rem;">
+            <p style="margin:0;">L'édition de profil et les stats perso arrivent bientôt.</p>
+            <p style="margin:4px 0 0 0;">Un souci ? Contacte le staff via le drawer (avatar en haut à droite).</p>
+        </div>
+
+    {% endif %}
+
+{% endblock %}

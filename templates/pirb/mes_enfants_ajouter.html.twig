@@ -1,0 +1,68 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Ajouter un enfant — PIRB MABB{% endblock %}
+
+{% block body %}
+
+    <div class="pirb-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h1 style="margin:0; font-size:1.15rem; font-weight:800;">Ajouter un enfant</h1>
+            <a href="{{ path('pirb_mes_enfants') }}" style="color:var(--pirb-text-muted); font-size:0.85rem; text-decoration:none;">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
+        </div>
+        <p style="margin:0; color:var(--pirb-text-muted); font-size:0.85rem; line-height:1.5;">
+            Recherche ton enfant par son nom. Une demande sera envoyée au staff pour validation.
+        </p>
+    </div>
+
+    <form method="GET" action="{{ path('pirb_mes_enfants_ajouter') }}" class="pirb-card">
+        <input type="text" name="q" value="{{ recherche }}"
+               placeholder="Tape le nom de ton enfant..."
+               autofocus
+               style="width:100%; padding:12px 14px;
+                      background:rgba(255,255,255,.05);
+                      border:1px solid var(--pirb-border);
+                      border-radius:8px; color:var(--pirb-text);
+                      font-size:0.95rem; font-family:inherit;
+                      box-sizing:border-box;">
+        <button type="submit" class="pirb-btn pirb-btn-primary" style="width:100%; margin-top:10px;">
+            <i class="bi bi-search"></i> Rechercher
+        </button>
+    </form>
+
+    {% if recherche and joueurs is empty %}
+        <div class="pirb-card" style="text-align:center; padding:18px;">
+            <p style="margin:0; color:var(--pirb-text-muted);">
+                Aucun joueur trouvé pour "<strong>{{ recherche }}</strong>".
+            </p>
+        </div>
+    {% endif %}
+
+    {% if joueurs is not empty %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Résultats ({{ joueurs|length }})</div>
+            {% for j in joueurs %}
+                <form method="POST" action="{{ path('pirb_mes_enfants_ajouter') }}"
+                      style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--pirb-border);"
+                      onsubmit="return confirm('Demander le lien pour {{ j.prenom }} {{ j.nom }} ? Le staff devra valider.');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('pirb_mes_enfants_ajouter') }}">
+                    <input type="hidden" name="joueur_id" value="{{ j.id }}">
+
+                    <div style="width:42px; height:42px; flex-shrink:0; border-radius:50%; background:linear-gradient(135deg, var(--pirb-blue), #1e40af); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800;">
+                        {{ j.prenom|first|upper }}{{ j.nom|first|upper }}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;">{{ j.prenom }} {{ j.nom }}</div>
+                        {% if j.equipe %}
+                            <div style="color:var(--pirb-text-muted); font-size:0.78rem;">{{ j.equipe.nom }}</div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="pirb-btn pirb-btn-primary" style="padding:6px 14px; font-size:0.85rem;">
+                        Demander
+                    </button>
+                </form>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+{% endblock %}

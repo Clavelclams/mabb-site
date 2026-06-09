@@ -51,6 +51,12 @@ services:
         arguments:
             $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/tresorerie'
 
+    # Service d'upload des photos de profil joueurs (PIRB Phase C — #58).
+    # Stockage dans public/uploads/joueurs/{joueurId}_{uniqid}.{ext}
+    App\Service\JoueurPhotoUploader:
+        arguments:
+            $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/joueurs'
+
     # Service mailer des convocations (Bureau Phase E).
     # L'email et le nom expéditeur sont injectés depuis .env / .env.local
     # → JAMAIS de valeurs en clair ici (velito-credentials-policy).

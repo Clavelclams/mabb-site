@@ -321,8 +321,12 @@
             </div>
         {% endif %}
 
-        {# Card Réunions — visible CLUB_MEMBER (tout membre voit, seul staff crée) #}
-        {% if club is defined and club and is_granted('CLUB_MEMBER', club) %}
+        {# Card Réunions — restreinte aux staff/dirigeant/trésorier (07/06/2026).
+           Les membres lambda voient leur(s) réunion(s) à venir UNIQUEMENT via
+           le feed "Pour toi" en haut, alimenté par FeedAggregator (convocations).
+           Les réunions publiques (AG ouverte à tous) remonteront aussi par là
+           quand le flag visiblePourTous sera ajouté sur Reunion. #}
+        {% if club is defined and club and (is_granted('CLUB_STAFF', club) or is_granted('CLUB_ADMIN', club)) %}
             <div class="col-md-6 col-lg-4">
                 <a href="{{ path('manager_reunion_index') }}" style="text-decoration:none;">
                     <div class="card-mabb" style="cursor:pointer; position:relative;">

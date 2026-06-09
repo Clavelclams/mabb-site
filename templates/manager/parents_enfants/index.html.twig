@@ -1,0 +1,90 @@
+{% extends 'manager/base.html.twig' %}
+{% block title %}Liens parents-enfants — {{ club.nom }}{% endblock %}
+
+{% block body %}
+
+    <div class="page-header">
+        <h1><i class="bi bi-people-fill"></i> Liens parents-enfants</h1>
+        <div style="color:var(--mabb-muted);">{{ demandes|length }} demande(s) en attente · {{ actifs|length }} actifs récents</div>
+    </div>
+
+    {% for label, messages in app.flashes(['success', 'warning', 'error']) %}
+        {% for message in messages %}
+            <div class="card-mabb" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid {{ label == 'success' ? '#16a34a' : (label == 'warning' ? '#d97706' : '#ef4444') }};">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    {# === Demandes en attente === #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-hourglass-split"></i> Demandes en attente</div>
+        <div class="card-body">
+            {% if demandes is empty %}
+                <p style="color:var(--mabb-muted); text-align:center; padding:20px;">
+                    Aucune demande en attente. Toutes les liens parent-enfant sont à jour ✓
+                </p>
+            {% else %}
+                <div style="display:grid; gap:10px;">
+                    {% for pj in demandes %}
+                        <div style="display:flex; align-items:center; gap:14px; padding:14px; background:#fef3c7; border:1px solid #fbbf24; border-radius:10px;">
+                            <i class="bi bi-arrow-left-right" style="font-size:1.4rem; color:#d97706;"></i>
+                            <div style="flex:1;">
+                                <div style="font-weight:700;">
+                                    {{ pj.parentUser.prenom }} {{ pj.parentUser.nom }}
+                                    <span style="color:var(--mabb-muted); font-weight:400;">se déclare parent de</span>
+                                    {{ pj.joueur.prenom }} {{ pj.joueur.nom }}
+                                </div>
+                                <div style="color:var(--mabb-muted); font-size:.82rem;">
+                                    <i class="bi bi-envelope"></i> {{ pj.parentUser.email }} · Demande du {{ pj.createdAt|date('d/m/Y H:i') }}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:6px;">
+                                <form method="POST" action="{{ path('manager_parents_enfants_valider', {id: pj.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('valider_pj_' ~ pj.id) }}">
+                                    <button type="submit" class="btn-mabb-primary btn-sm" onclick="return confirm('Valider ce lien parent-enfant ?');">
+                                        <i class="bi bi-check-lg"></i> Valider
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ path('manager_parents_enfants_refuser', {id: pj.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('refuser_pj_' ~ pj.id) }}">
+                                    <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red);" onclick="return confirm('Refuser ?');">
+                                        <i class="bi bi-x-lg"></i> Refuser
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# === Liens actifs récents === #}
+    {% if actifs is not empty %}
+        <div class="card-mabb" style="margin-top:16px;">
+            <div class="card-header"><i class="bi bi-check-circle-fill"></i> Liens validés (récents)</div>
+            <div class="card-body">
+                <table class="table-mabb" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>Parent</th>
+                            <th>Enfant</th>
+                            <th>Validé le</th>
+                            <th>Validé par</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pj in actifs %}
+                            <tr>
+                                <td>{{ pj.parentUser.prenom }} {{ pj.parentUser.nom }}</td>
+                                <td>{{ pj.joueur.prenom }} {{ pj.joueur.nom }}</td>
+                                <td>{{ pj.valideAt ? pj.valideAt|date('d/m/Y') : '—' }}</td>
+                                <td>{{ pj.validePar ? pj.validePar.prenom ~ ' ' ~ pj.validePar.nom : '—' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+
+{% endblock %}

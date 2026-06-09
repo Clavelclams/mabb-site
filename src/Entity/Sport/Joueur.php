@@ -59,7 +59,13 @@ class Joueur implements ClubAwareInterface
     #[Assert\Range(min: 0, max: 99)]
     private ?int $numeroMaillot = null;
 
-    #[ORM\Column(length: 20, nullable: true)]
+    /**
+     * Numéro de licence FFBB.
+     * UNIQUE depuis V1.3 (07/06/2026) — empêche les doublons et facilite
+     * le match auto User↔Joueur au signup PIRB. MySQL accepte plusieurs
+     * NULL donc les joueurs sans licence ne sont pas bloqués.
+     */
+    #[ORM\Column(length: 20, nullable: true, unique: true)]
     private ?string $licence = null;
 
     /**
@@ -96,6 +102,56 @@ class Joueur implements ClubAwareInterface
      */
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $photoPath = null;
+
+    /**
+     * Bio courte du joueur (style Instagram) — V1.2a PIRB Scouting.
+     * Affichée sur le profil public si profilPublic=true.
+     * Max ~500 caractères (texte libre).
+     */
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $bio = null;
+
+    /**
+     * Profil public scouting — V1.2a.
+     * Si true : le profil de la joueuse est visible aux scouts/recruteurs
+     * via route /pirb/joueuse/{id} (style Instagram, anonyme jusqu'à opt-in).
+     * Default : FALSE = anonyme par défaut, la joueuse doit opt-in.
+     *
+     * Hommage à @pirb_scouting (Pierre) — l'outil que MABB construit pour
+     * faciliter le scouting digital du basket français.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $profilPublic = false;
+
+    /**
+     * Liens vers les réseaux sociaux de la joueuse — V1.2a.
+     * Structure : {instagram, tiktok, youtube, twitter, linkedin}
+     * URL complète. Champ libre, null = pas de réseau.
+     *
+     * @var array<string, string>|null
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $liensSociaux = null;
+
+    /**
+     * Badges épinglés sur le profil PIRB — V1.2b.
+     * Max 3 codes badges choisis par la joueuse parmi ceux qu'elle a débloqués.
+     * Codes pointant vers BadgeCatalog (ex: 'A_STREAK_10').
+     *
+     * @var string[]|null
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $badgesEpingles = null;
+
+    /**
+     * Highlights vidéo — V1.2c. Max 5 liens vers YouTube/Instagram/TikTok.
+     * Structure : array de {url, titre, date}.
+     * URL validée (filter_var) côté setter.
+     *
+     * @var array<int, array{url: string, titre: string, date: string}>|null
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $highlights = null;
 
     /** Lien optionnel vers un compte User */
     #[ORM\ManyToOne(targetEntity: User::class)]
@@ -176,6 +232,97 @@ class Joueur implements ClubAwareInterface
 
     public function getPhotoPath(): ?string { return $this->photoPath; }
     public function setPhotoPath(?string $photoPath): static { $this->photoPath = $photoPath; return $this; }
+
+    public function getBio(): ?string { return $this->bio; }
+    public function setBio(?string $bio): static { $this->bio = $bio !== null ? trim($bio) : null; return $this; }
+
+    public function isProfilPublic(): bool { return $this->profilPublic; }
+    public function setProfilPublic(bool $v): static { $this->profilPublic = $v; return $this; }
+
+    /** @return array<string, string>|null */
+    public function getLiensSociaux(): ?array { return $this->liensSociaux; }
+    /** @param array<string, string>|null $liens */
+    public function setLiensSociaux(?array $liens): static
+    {
+        // Filtre : ne garde que les URL non vides + nettoie les clés
+        if ($liens === null) {
+            $this->liensSociaux = null;
+            return $this;
+        }
+        $clean = [];
+        foreach ($liens as $k => $url) {
+            $url = trim((string) $url);
+            if ($url !== '') {
+                $clean[strtolower((string) $k)] = $url;
+            }
+        }
+        $this->liensSociaux = $clean === [] ? null : $clean;
+        return $this;
+    }
+    public function getLienSocial(string $reseau): ?string
+    {
+        return $this->liensSociaux[strtolower($reseau)] ?? null;
+    }
+
+    /** @return array<int, array{url: string, titre: string, date: string}>|null */
+    public function getHighlights(): ?array { return $this->highlights; }
+
+    /**
+     * Set highlights — V1.2c. Filtre les URLs invalides, tronque à 5 max.
+     *
+     * @param array<int, array{url?: string, titre?: string, date?: string}>|null $items
+     */
+    public function setHighlights(?array $items): static
+    {
+        if ($items === null) {
+            $this->highlights = null;
+            return $this;
+        }
+        $clean = [];
+        foreach ($items as $i) {
+            $url = trim((string) ($i['url'] ?? ''));
+            if ($url === '' || !filter_var($url, FILTER_VALIDATE_URL)) {
+                continue;
+            }
+            $clean[] = [
+                'url'   => $url,
+                'titre' => trim((string) ($i['titre'] ?? '')) ?: 'Highlight',
+                'date'  => trim((string) ($i['date'] ?? '')) ?: '',
+            ];
+        }
+        $this->highlights = array_slice($clean, 0, 5);
+        if ($this->highlights === []) {
+            $this->highlights = null;
+        }
+        return $this;
+    }
+
+    /** @return string[]|null */
+    public function getBadgesEpingles(): ?array { return $this->badgesEpingles; }
+
+    /**
+     * Set badges épinglés — V1.2b.
+     * Garantit max 3, valeurs uniques, codes non vides.
+     *
+     * @param string[]|null $codes
+     */
+    public function setBadgesEpingles(?array $codes): static
+    {
+        if ($codes === null) {
+            $this->badgesEpingles = null;
+            return $this;
+        }
+        $clean = array_values(array_unique(array_filter(
+            $codes,
+            static fn($c) => is_string($c) && trim($c) !== ''
+        )));
+        // Tronque à 3 si plus (sécurité, en plus de la validation UI)
+        $this->badgesEpingles = array_slice($clean, 0, 3);
+        if ($this->badgesEpingles === []) {
+            $this->badgesEpingles = null;
+        }
+        return $this;
+    }
 
     public function getUser(): ?User { return $this->user; }
     public function setUser(?User $user): static { $this->user = $user; return $this; }

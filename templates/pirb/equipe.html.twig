@@ -1,0 +1,166 @@
+{#
+   PIRB V1.3 — Page "Mon équipe" : liste des coéquipiers du user connecté.
+   Click sur une card → profil PIRB public du coéquipier.
+#}
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}Mon équipe — PIRB MABB{% endblock %}
+
+{% block stylesheets %}
+    .equipe-hero {
+        text-align: center;
+        padding: 22px 16px;
+    }
+    .equipe-hero h1 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 800;
+    }
+    .equipe-hero .sub {
+        color: var(--pirb-accent-soft);
+        font-weight: 600;
+        font-size: 0.92rem;
+        margin-top: 4px;
+    }
+    .equipe-hero .counter {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 6px 14px;
+        background: rgba(234,88,12,.15);
+        border-radius: 999px;
+        font-size: 0.78rem;
+        color: var(--pirb-accent);
+        font-weight: 700;
+    }
+
+    .coequipier-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+    }
+    .coequipier-card {
+        background: var(--pirb-card);
+        border: 1px solid var(--pirb-border);
+        border-radius: 12px;
+        padding: 14px 10px;
+        text-align: center;
+        text-decoration: none;
+        color: var(--pirb-text);
+        transition: all .15s;
+        position: relative;
+        display: block;
+    }
+    .coequipier-card:hover {
+        border-color: var(--pirb-accent);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,.3);
+    }
+    .coequipier-avatar {
+        width: 70px; height: 70px;
+        border-radius: 50%;
+        margin: 0 auto 8px;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--pirb-blue), #1e40af);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; color: #fff; font-size: 1.4rem;
+        border: 2px solid var(--pirb-border);
+    }
+    .coequipier-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .coequipier-nom {
+        font-weight: 700;
+        font-size: 0.88rem;
+        line-height: 1.2;
+        margin-bottom: 3px;
+    }
+    .coequipier-num {
+        position: absolute;
+        top: 8px; right: 8px;
+        background: var(--pirb-accent);
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 800;
+        padding: 2px 8px;
+        border-radius: 999px;
+    }
+    .coequipier-poste {
+        color: var(--pirb-text-muted);
+        font-size: 0.7rem;
+        margin-top: 2px;
+    }
+    .coequipier-card .badge-prive {
+        position: absolute;
+        bottom: 6px; right: 6px;
+        font-size: 0.7rem;
+        color: var(--pirb-text-muted);
+    }
+{% endblock %}
+
+{% block body %}
+
+    {# Cas : pas de joueur lié OU pas d'équipe #}
+    {% if message %}
+        <div class="pirb-card" style="text-align:center; padding:32px 20px;">
+            <div style="font-size:3rem; margin-bottom:8px;">👥</div>
+            <h2 style="margin:0 0 8px 0; font-size:1.1rem;">Mon équipe</h2>
+            <p style="color:var(--pirb-text-muted); font-size:0.9rem; margin:0;">{{ message }}</p>
+        </div>
+
+    {% else %}
+
+        {# === Hero équipe === #}
+        <div class="pirb-card equipe-hero">
+            <div style="font-size:2.5rem; margin-bottom:4px;">🏀</div>
+            <h1>{{ equipe.nom }}</h1>
+            {% if equipe.categorie %}
+                <div class="sub">{{ equipe.categorie }}</div>
+            {% endif %}
+            <div class="counter">
+                {{ coequipiers|length + 1 }} joueur{{ coequipiers|length > 0 ? 's' : '' }} dans l'équipe
+            </div>
+        </div>
+
+        {# === Liste coéquipiers === #}
+        {% if coequipiers is empty %}
+            <div class="pirb-card" style="text-align:center; padding:24px;">
+                <p style="margin:0; color:var(--pirb-text-muted); font-size:0.9rem;">
+                    Tu es le seul joueur actif dans cette équipe pour l'instant.
+                </p>
+            </div>
+        {% else %}
+            <div class="pirb-card">
+                <div class="pirb-card-title">Mes coéquipiers</div>
+                <div class="coequipier-grid">
+                    {% for j in coequipiers %}
+                        <a href="{{ path('pirb_joueuse_public', {id: j.id}) }}" class="coequipier-card">
+                            {% if j.numeroMaillot is not null %}
+                                <span class="coequipier-num">#{{ j.numeroMaillot }}</span>
+                            {% endif %}
+
+                            <div class="coequipier-avatar">
+                                {% if j.photoPath %}
+                                    <img src="{{ asset(j.photoPath) }}" alt="{{ j.prenom }}">
+                                {% else %}
+                                    {{ j.prenom|first|upper }}{{ j.nom|first|upper }}
+                                {% endif %}
+                            </div>
+
+                            <div class="coequipier-nom">{{ j.prenom }} {{ j.nom }}</div>
+
+                            {% if j.poste %}
+                                <div class="coequipier-poste">{{ j.poste }}</div>
+                            {% endif %}
+
+                            {% if not j.profilPublic %}
+                                <span class="badge-prive" title="Profil privé — visible parce que tu es dans la même équipe">
+                                    <i class="bi bi-lock-fill"></i>
+                                </span>
+                            {% endif %}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+    {% endif %}
+
+{% endblock %}

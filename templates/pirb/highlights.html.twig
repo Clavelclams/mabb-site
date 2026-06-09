@@ -1,0 +1,136 @@
+{#
+   PIRB V1.2c — Édition des highlights vidéo (max 5).
+   Liste dynamique JS : ajouter / supprimer un highlight.
+   Validation URL côté serveur (controller).
+#}
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}Mes highlights — PIRB MABB{% endblock %}
+
+{% block stylesheets %}
+    .highlight-row {
+        background: var(--pirb-card);
+        border: 1px solid var(--pirb-border);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 10px;
+        position: relative;
+    }
+    .highlight-row input {
+        width: 100%;
+        padding: 8px 12px;
+        background: rgba(255,255,255,.05);
+        border: 1px solid var(--pirb-border);
+        border-radius: 8px;
+        color: var(--pirb-text);
+        font-family: inherit;
+        font-size: 0.88rem;
+        box-sizing: border-box;
+        margin-bottom: 6px;
+    }
+    .highlight-row .row-flex {
+        display: flex; gap: 6px;
+    }
+    .highlight-row .row-flex input { width: 50%; }
+    .highlight-row .btn-remove {
+        position: absolute;
+        top: 6px; right: 6px;
+        background: rgba(239,68,68,.15);
+        color: #fca5a5;
+        border: 1px solid rgba(239,68,68,.3);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 0.72rem;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .highlight-row .btn-remove:hover { background: rgba(239,68,68,.3); color: #fff; }
+{% endblock %}
+
+{% block body %}
+
+    {% for label, messages in app.flashes(['success', 'error']) %}
+        {% for message in messages %}
+            <div class="pirb-card" style="padding:12px 14px; margin-bottom:12px;
+                border-left: 4px solid {{ label == 'success' ? '#16a34a' : '#ef4444' }};
+                background: {{ label == 'success' ? 'rgba(22,163,74,.1)' : 'rgba(239,68,68,.1)' }};
+                font-size: 0.88rem;">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="pirb-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h1 style="margin:0; font-size:1.15rem; font-weight:800;">Mes highlights vidéo</h1>
+            <a href="{{ path('pirb_dashboard') }}" style="color:var(--pirb-text-muted); font-size:0.85rem; text-decoration:none;">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
+        </div>
+        <p style="margin:0; color:var(--pirb-text-muted); font-size:0.85rem; line-height:1.5;">
+            Ajoute jusqu'à <strong style="color:var(--pirb-accent);">{{ nb_max }} liens vidéo</strong> de tes meilleures actions (YouTube, Instagram, TikTok). Visibles sur ton profil PIRB.
+        </p>
+    </div>
+
+    <form method="POST" action="{{ path('pirb_profil_highlights') }}" id="highlightsForm">
+        <input type="hidden" name="_token" value="{{ csrf_token('pirb_profil_highlights') }}">
+
+        <div id="highlightsList">
+            {% if highlights is empty %}
+                {# Une ligne vide par défaut pour démarrer #}
+                <div class="highlight-row">
+                    <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+                    <input type="url" name="url[]" placeholder="https://youtu.be/... ou https://instagram.com/reel/..." required>
+                    <div class="row-flex">
+                        <input type="text" name="titre[]" placeholder="Titre (ex: 3pts contre Longueau)">
+                        <input type="date" name="date[]">
+                    </div>
+                </div>
+            {% else %}
+                {% for h in highlights %}
+                    <div class="highlight-row">
+                        <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+                        <input type="url" name="url[]" value="{{ h.url }}" placeholder="https://..." required>
+                        <div class="row-flex">
+                            <input type="text" name="titre[]" value="{{ h.titre|default('') }}" placeholder="Titre">
+                            <input type="date" name="date[]" value="{{ h.date|default('') }}">
+                        </div>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <button type="button" id="addBtn" onclick="addRow()" class="pirb-btn pirb-btn-ghost" style="width:100%; margin-bottom:12px;">
+            <i class="bi bi-plus-lg"></i> Ajouter un highlight
+        </button>
+
+        <button type="submit" class="pirb-btn pirb-btn-primary" style="width:100%;">
+            <i class="bi bi-check-lg"></i> Enregistrer
+        </button>
+    </form>
+
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        const MAX = {{ nb_max }};
+        function addRow() {
+            const list = document.getElementById('highlightsList');
+            if (list.children.length >= MAX) {
+                alert('Maximum ' + MAX + ' highlights atteint.');
+                return;
+            }
+            const row = document.createElement('div');
+            row.className = 'highlight-row';
+            row.innerHTML = `
+                <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+                <input type="url" name="url[]" placeholder="https://youtu.be/..." required>
+                <div class="row-flex">
+                    <input type="text" name="titre[]" placeholder="Titre">
+                    <input type="date" name="date[]">
+                </div>`;
+            list.appendChild(row);
+        }
+        function removeRow(btn) {
+            btn.closest('.highlight-row').remove();
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,455 @@
+{#
+   ╔═══════════════════════════════════════════════════════════════════╗
+   ║  base.html.twig — Layout PIRB (espace joueur MABB)                ║
+   ║  Mobile-first app : top bar fine + zone contenu + bottom nav      ║
+   ║                                                                   ║
+   ║  Design : dark theme #0f172a + accent orange #ea580c (MABB)       ║
+   ║  Hauteur : 100dvh (full mobile sans dépasser).                    ║
+   ║  Layout : header fixe / contenu scroll / bottom nav fixe.         ║
+   ╚═══════════════════════════════════════════════════════════════════╝
+#}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <title>{% block title %}Mon espace — MABB PIRB{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --pirb-bg: #0f172a;
+            --pirb-card: #1e293b;
+            --pirb-card-hover: #334155;
+            --pirb-text: #f1f5f9;
+            --pirb-text-muted: #94a3b8;
+            --pirb-border: rgba(255,255,255,.08);
+            --pirb-accent: #ea580c;       /* orange MABB */
+            --pirb-accent-soft: #fb923c;
+            --pirb-blue: #3b82f6;          /* bleu équipe */
+            --pirb-success: #16a34a;
+            --pirb-danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100dvh;
+            height: 100vh; /* fallback */
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--pirb-bg);
+            color: var(--pirb-text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* === LAYOUT 3 zones : header / contenu (scroll interne) / bottom nav === */
+        .pirb-app {
+            display: flex;
+            flex-direction: column;
+            height: 100dvh;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* === HEADER === */
+        .pirb-header {
+            flex-shrink: 0;
+            background: var(--pirb-card);
+            border-bottom: 1px solid var(--pirb-border);
+            padding: 10px 14px;
+            padding-top: max(10px, env(safe-area-inset-top));
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10;
+        }
+        .pirb-header .brand {
+            font-weight: 800;
+            color: var(--pirb-accent);
+            font-size: 1rem;
+            letter-spacing: 0.02em;
+            text-decoration: none;
+            flex: 1;
+        }
+        .pirb-header .brand .sub {
+            color: var(--pirb-text-muted);
+            font-weight: 500;
+            font-size: 0.72rem;
+            margin-left: 6px;
+        }
+        .pirb-header .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--pirb-blue), #1e40af);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 2px solid var(--pirb-border);
+            transition: border-color .15s;
+        }
+        .pirb-header .avatar:hover { border-color: var(--pirb-accent); }
+
+        /* === CONTENU (scroll interne) === */
+        .pirb-content {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px 14px;
+            padding-bottom: 80px; /* dégage la bottom nav */
+        }
+        @media (min-width: 700px) {
+            .pirb-content {
+                max-width: 720px;
+                margin: 0 auto;
+                width: 100%;
+            }
+        }
+
+        /* === BOTTOM NAV (4 tabs) === */
+        .pirb-bottom-nav {
+            flex-shrink: 0;
+            background: var(--pirb-card);
+            border-top: 1px solid var(--pirb-border);
+            padding: 6px 4px;
+            padding-bottom: max(6px, env(safe-area-inset-bottom));
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+        .pirb-nav-tab {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--pirb-text-muted);
+            text-decoration: none;
+            padding: 8px 4px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background .12s, color .12s;
+        }
+        .pirb-nav-tab:hover { background: rgba(255,255,255,.05); color: var(--pirb-text); }
+        .pirb-nav-tab i { font-size: 1.3rem; line-height: 1; }
+        .pirb-nav-tab.active {
+            color: var(--pirb-accent);
+            background: rgba(234,88,12,.08);
+        }
+        .pirb-nav-tab.disabled {
+            opacity: 0.35;
+            pointer-events: none;
+        }
+        .pirb-nav-tab .badge-soon {
+            font-size: 0.55rem;
+            color: var(--pirb-text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* === COMPOSANTS RÉUTILISABLES === */
+
+        /* Card générique */
+        .pirb-card {
+            background: var(--pirb-card);
+            border: 1px solid var(--pirb-border);
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .pirb-card-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--pirb-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 0 0 10px 0;
+        }
+
+        /* Stat (label + valeur) */
+        .pirb-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--pirb-border);
+        }
+        .pirb-stat:last-child { border-bottom: none; }
+        .pirb-stat .label { color: var(--pirb-text-muted); font-size: 0.88rem; }
+        .pirb-stat .value { font-weight: 700; color: var(--pirb-text); font-size: 0.95rem; }
+
+        /* Badge (statut) */
+        .pirb-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .pirb-badge-success { background: rgba(22,163,74,.18); color: #86efac; border: 1px solid rgba(22,163,74,.4); }
+        .pirb-badge-warning { background: rgba(234,88,12,.18); color: #fdba74; border: 1px solid rgba(234,88,12,.4); }
+        .pirb-badge-danger  { background: rgba(239,68,68,.18); color: #fca5a5; border: 1px solid rgba(239,68,68,.4); }
+        .pirb-badge-neutral { background: rgba(148,163,184,.18); color: #cbd5e1; border: 1px solid rgba(148,163,184,.4); }
+
+        /* Bouton CTA */
+        .pirb-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: background .15s;
+            font-family: inherit;
+        }
+        .pirb-btn-primary { background: var(--pirb-accent); color: #fff; }
+        .pirb-btn-primary:hover { background: #c2410c; color: #fff; }
+        .pirb-btn-ghost {
+            background: transparent;
+            color: var(--pirb-text);
+            border: 1px solid var(--pirb-border);
+        }
+        .pirb-btn-ghost:hover { background: rgba(255,255,255,.05); }
+
+        /* Drawer menu profil (slide depuis la droite au tap avatar) */
+        .pirb-drawer-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.6);
+            z-index: 90;
+        }
+        .pirb-drawer-overlay.open { display: block; }
+        .pirb-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: min(300px, 85vw);
+            background: var(--pirb-card);
+            z-index: 100;
+            transform: translateX(100%);
+            transition: transform .25s cubic-bezier(.4,0,.2,1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -8px 0 32px rgba(0,0,0,.5);
+        }
+        .pirb-drawer.open { transform: translateX(0); }
+        .pirb-drawer-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid var(--pirb-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pirb-drawer-body { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .pirb-drawer-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            color: var(--pirb-text);
+            text-decoration: none;
+            background: transparent;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 0.92rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background .12s;
+        }
+        .pirb-drawer-item:hover { background: rgba(255,255,255,.05); }
+        .pirb-drawer-item i { font-size: 1.2rem; min-width: 24px; color: var(--pirb-text-muted); }
+        .pirb-drawer-item.danger { color: #fca5a5; }
+        .pirb-drawer-item.danger i { color: #ef4444; }
+
+        /* V1.1 — Toggle CSS-only lecture/édition pour la card "Mes infos" */
+        .pirb-infos-edit { display: none; }
+        #pirbEditInfos:checked ~ .pirb-infos-view { display: none; }
+        #pirbEditInfos:checked ~ .pirb-infos-edit { display: block; }
+
+        /* V1.2a — Footer dédicace discret, COLLÉ au-dessus de la bottom-nav.
+           Sorti du <main> donc plus de margin-top ni border-top fluctuant —
+           ce footer flex-shrink:0 reste à sa place quelle que soit la hauteur
+           du contenu (pas de grand vide quand contenu court). */
+        .pirb-dedicace {
+            flex-shrink: 0;
+            text-align: center;
+            padding: 10px 16px 8px;
+            color: var(--pirb-text-muted);
+            font-size: 0.7rem;
+            line-height: 1.5;
+            background: var(--pirb-bg);
+            border-top: 1px solid var(--pirb-border);
+        }
+        .pirb-dedicace a {
+            color: var(--pirb-accent-soft);
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .pirb-dedicace a:hover { color: var(--pirb-accent); text-decoration: underline; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           V1.2a+ — Layout PC : masonry 2-3 colonnes auto sur grand écran.
+           Mobile/tablette inchangés. Les cards se répartissent automatique-
+           ment via CSS column-count, sans toucher au HTML. break-inside:avoid
+           empêche qu'une card soit coupée entre 2 colonnes.
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* Desktop 1024-1439px : 2 colonnes auto, max-width 1100px */
+        @media (min-width: 1024px) {
+            .pirb-content {
+                max-width: 1100px;
+                column-count: 2;
+                column-gap: 18px;
+                padding-top: 20px;
+                padding-bottom: 100px;
+            }
+            .pirb-content > .pirb-card,
+            .pirb-content > div,
+            .pirb-content > footer {
+                break-inside: avoid;
+                -webkit-column-break-inside: avoid;
+                page-break-inside: avoid;
+                display: block;
+                width: 100%;
+            }
+            /* Le footer dédicace prend les 2 colonnes (visuel mieux centré) */
+            .pirb-content .pirb-dedicace {
+                column-span: all;
+                -webkit-column-span: all;
+                margin-top: 24px;
+            }
+        }
+
+        /* Desktop XL 1440+ : 3 colonnes auto, max-width 1400px */
+        @media (min-width: 1440px) {
+            .pirb-content {
+                max-width: 1400px;
+                column-count: 3;
+                column-gap: 20px;
+            }
+        }
+
+        {% block stylesheets %}{% endblock %}
+    </style>
+</head>
+<body>
+<div class="pirb-app">
+    {% block header %}
+    <header class="pirb-header">
+        <a href="{{ path('pirb_dashboard') }}" class="brand">
+            🏀 MABB <span class="sub">PIRB</span>
+        </a>
+        <button type="button" class="avatar" id="pirbAvatar" aria-label="Mon menu" aria-expanded="false">
+            {% if app.user %}{{ app.user.prenom|default(app.user.email)|first|upper }}{% else %}?{% endif %}
+        </button>
+    </header>
+    {% endblock %}
+
+    <main class="pirb-content">
+        {% block body %}{% endblock %}
+    </main>
+
+    {# === V1.2a — Footer dédicace à @pirb_scouting ===
+       Sorti du <main> pour rester COLLÉ au-dessus de la bottom-nav,
+       même si le contenu est court. Évite le grand vide vertical. #}
+    <footer class="pirb-dedicace">
+        <strong style="color:var(--pirb-text);">PIRB</strong> — Ton espace joueur de basket · stats, profil, performances<br>
+        En hommage à <a href="https://www.instagram.com/pirb_scouting/" target="_blank" rel="noopener">@pirb_scouting</a>
+    </footer>
+
+    {% block bottom_nav %}
+    <nav class="pirb-bottom-nav" aria-label="Navigation principale">
+        {% set route = app.request.attributes.get('_route') %}
+        <a href="{{ path('pirb_dashboard') }}" class="pirb-nav-tab {{ route == 'pirb_dashboard' ? 'active' : '' }}">
+            <i class="bi bi-person-circle"></i> Profil
+        </a>
+        <a href="{{ path('pirb_equipe') }}" class="pirb-nav-tab {{ route == 'pirb_equipe' ? 'active' : '' }}">
+            <i class="bi bi-people"></i> Équipe
+        </a>
+        <button type="button" class="pirb-nav-tab disabled" title="Bientôt disponible">
+            <i class="bi bi-calendar-event"></i> Agenda
+            <span class="badge-soon">Soon</span>
+        </button>
+        <button type="button" class="pirb-nav-tab disabled" title="Bientôt disponible">
+            <i class="bi bi-bar-chart"></i> Stats
+            <span class="badge-soon">Soon</span>
+        </button>
+    </nav>
+    {% endblock %}
+</div>
+
+{# Drawer profil (slide depuis la droite au tap avatar) #}
+<div class="pirb-drawer-overlay" id="pirbDrawerOverlay"></div>
+<aside class="pirb-drawer" id="pirbDrawer" aria-hidden="true">
+    <div class="pirb-drawer-header">
+        <strong>Mon compte</strong>
+        <button type="button" id="pirbDrawerClose" class="pirb-btn pirb-btn-ghost" style="padding:4px 10px;">×</button>
+    </div>
+    <div class="pirb-drawer-body">
+        {% if app.user %}
+        <div style="padding:12px 18px; border-bottom:1px solid var(--pirb-border);">
+            <div style="color:var(--pirb-text-muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em;">Connecté en tant que</div>
+            <div style="font-weight:700; margin-top:2px;">{{ app.user.prenom|default('') }} {{ app.user.nom|default('') }}</div>
+            <div style="color:var(--pirb-text-muted); font-size:.78rem;">{{ app.user.email }}</div>
+        </div>
+        {% endif %}
+        <a href="{{ path('pirb_dashboard') }}" class="pirb-drawer-item">
+            <i class="bi bi-person"></i> Mon profil
+        </a>
+        <a href="{{ path('pirb_logout') }}" class="pirb-drawer-item danger">
+            <i class="bi bi-box-arrow-right"></i> Se déconnecter
+        </a>
+    </div>
+</aside>
+
+<script>
+    // Drawer toggle (avatar tap)
+    (function() {
+        const avatar = document.getElementById('pirbAvatar');
+        const drawer = document.getElementById('pirbDrawer');
+        const overlay = document.getElementById('pirbDrawerOverlay');
+        const closeBtn = document.getElementById('pirbDrawerClose');
+        function open() {
+            drawer.classList.add('open');
+            overlay.classList.add('open');
+            drawer.setAttribute('aria-hidden', 'false');
+            avatar.setAttribute('aria-expanded', 'true');
+        }
+        function close() {
+            drawer.classList.remove('open');
+            overlay.classList.remove('open');
+            drawer.setAttribute('aria-hidden', 'true');
+            avatar.setAttribute('aria-expanded', 'false');
+        }
+        avatar?.addEventListener('click', () => drawer.classList.contains('open') ? close() : open());
+        overlay?.addEventListener('click', close);
+        closeBtn?.addEventListener('click', close);
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    })();
+</script>
+
+{% block javascripts %}{% endblock %}
+</body>
+</html>

@@ -387,20 +387,25 @@
 
             {# ========================================================
                Documents officiels FFBB — résumé, feuille de match, positions tirs
-               3 cartes d'upload identiques (DRY via macro). Visible CLUB_MEMBER en
-               lecture, upload/suppression réservés CLUB_STAFF.
+               RGPD strict (07/06/2026) : visible UNIQUEMENT pour staff/coach/dirigeant.
+               Les joueuses lambda et parents ne voient PAS ces documents qui
+               contiennent les stats individuelles de toutes les joueuses.
+               TODO #105 : si une joueuse marque ses stats publiques, ses lignes
+               doivent rester visibles à tous (à implémenter avec visibilité 5 paliers).
                ======================================================== #}
-            <div class="card-mabb" style="margin-top:16px;">
-                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                    <span><i class="bi bi-file-earmark-pdf-fill" style="color:var(--mabb-red);"></i> Documents officiels FFBB</span>
-                    <small style="color:var(--mabb-muted); font-weight:500;">PDFs exportés depuis Easy Stats / e-marque</small>
+            {% if is_granted('CLUB_STAFF', rencontre) or is_granted('CLUB_ADMIN', rencontre) %}
+                <div class="card-mabb" style="margin-top:16px;">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span><i class="bi bi-file-earmark-pdf-fill" style="color:var(--mabb-red);"></i> Documents officiels FFBB</span>
+                        <small style="color:var(--mabb-muted); font-weight:500;">PDFs exportés depuis Easy Stats / e-marque</small>
+                    </div>
+                    <div class="card-body" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+                        {{ _self.pdfUploadCard(rencontre, 'resume',    'Résumé du match',   'bi-list-ol',          'Stats individuelles (points, tirs, LF, fautes)') }}
+                        {{ _self.pdfUploadCard(rencontre, 'feuille',   'Feuille de match',  'bi-file-earmark-text','Table de marque officielle action par action') }}
+                        {{ _self.pdfUploadCard(rencontre, 'positions', 'Positions des tirs','bi-bullseye',          'Shot chart — carte des tirs sur le terrain') }}
+                    </div>
                 </div>
-                <div class="card-body" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
-                    {{ _self.pdfUploadCard(rencontre, 'resume',    'Résumé du match',   'bi-list-ol',          'Stats individuelles (points, tirs, LF, fautes)') }}
-                    {{ _self.pdfUploadCard(rencontre, 'feuille',   'Feuille de match',  'bi-file-earmark-text','Table de marque officielle action par action') }}
-                    {{ _self.pdfUploadCard(rencontre, 'positions', 'Positions des tirs','bi-bullseye',          'Shot chart — carte des tirs sur le terrain') }}
-                </div>
-            </div>
+            {% endif %}
 
             {% if is_granted('CLUB_ADMIN', rencontre) %}
                 <div class="card-mabb" style="margin-top:16px; border-left:4px solid var(--mabb-red);">

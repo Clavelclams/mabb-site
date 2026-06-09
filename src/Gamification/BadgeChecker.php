@@ -110,6 +110,14 @@ class BadgeChecker
             BadgeCatalog::C_TABLE_5       => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_TENUE_TABLE, $saisonCourante) >= 5,
             BadgeCatalog::C_AG_PRESENT    => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_AG, $saisonCourante) >= 1,
 
+            // Sous-série SPECTATEUR (V1.4) — toutes saisons confondues (par_saison=false dans le catalog)
+            // Critère : N missions de type TYPE_SPECTATEUR estBenevole=true cumulées (toutes saisons)
+            BadgeCatalog::C_SPECTATEUR_FIRST   => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_SPECTATEUR, null) >= 1,
+            BadgeCatalog::C_SPECTATEUR_5      => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_SPECTATEUR, null) >= 5,
+            BadgeCatalog::C_SPECTATEUR_10     => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_SPECTATEUR, null) >= 10,
+            BadgeCatalog::C_SPECTATEUR_AGUERRI => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_SPECTATEUR, null) >= 20,
+            BadgeCatalog::C_SPECTATEUR_FIDELE  => $this->nbMissionsTypeBenevolat($missions, Mission::TYPE_SPECTATEUR, null) >= 50,
+
             // ===== AXE D : performance employé =====
             // Inverse de l'axe C : on compte uniquement les missions
             // estBenevole=false (job rémunéré).

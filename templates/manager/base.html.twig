@@ -727,6 +727,9 @@
         <li><a href="{{ path('manager_joueur_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_joueur' ? 'active' : '' }}">
             <i class="bi bi-person-badge"></i> Joueuses
         </a></li>
+        <li><a href="{{ path('manager_staff_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_staff' ? 'active' : '' }}">
+            <i class="bi bi-shield-fill-check"></i> Staff
+        </a></li>
         <li><a href="{{ path('manager_planning_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_planning' ? 'active' : '' }}">
             <i class="bi bi-grid-3x3-gap"></i> Planning
         </a></li>

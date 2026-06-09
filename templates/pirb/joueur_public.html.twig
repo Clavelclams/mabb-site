@@ -1,0 +1,209 @@
+{#
+   PIRB V1.2d — Profil public d'une joueuse (lecture seule).
+   Style "page profil Instagram" — photo + nom + bio + badges + réseaux.
+   Visible par : (1) tous si profilPublic=true, (2) staff du club.
+#}
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}{{ joueur.prenom }} {{ joueur.nom }} — PIRB MABB{% endblock %}
+
+{% block stylesheets %}
+    .public-hero-avatar {
+        width: 140px; height: 140px;
+        border-radius: 50%;
+        margin: 0 auto 14px;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--pirb-blue), #1e40af);
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 800; color: #fff; font-size: 3rem;
+        border: 4px solid var(--pirb-accent);
+        box-shadow: 0 8px 24px rgba(234,88,12,.3);
+    }
+    .public-hero-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .badges-row {
+        display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;
+        margin-top: 16px;
+    }
+    .badge-show {
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+        padding: 12px 8px; min-width: 80px;
+        background: rgba(234,88,12,.1);
+        border: 2px solid rgba(234,88,12,.3);
+        border-radius: 12px;
+    }
+    .badge-show i { font-size: 2rem; color: var(--pirb-accent); }
+    .badge-show .nom { font-size: 0.72rem; font-weight: 800; color: var(--pirb-text); text-align: center; }
+{% endblock %}
+
+{% block body %}
+
+    {# === Hero === #}
+    <div class="pirb-card" style="text-align:center; padding:26px 18px;">
+        <div class="public-hero-avatar">
+            {% if joueur.photoPath %}
+                <img src="{{ asset(joueur.photoPath) }}" alt="Photo de {{ joueur.prenom }}">
+            {% else %}
+                {{ joueur.prenom|first|upper }}{{ joueur.nom|first|upper }}
+            {% endif %}
+        </div>
+
+        <h1 style="margin:0; font-size:1.5rem; font-weight:900;">
+            {{ joueur.prenom }} {{ joueur.nom }}
+        </h1>
+
+        {% if joueur.equipe %}
+            <div style="color:var(--pirb-accent-soft); font-weight:700; margin-top:6px; font-size:0.95rem;">
+                {{ joueur.equipe.nom }}
+                {% if joueur.equipe.categorie %}
+                    <span style="color:var(--pirb-text-muted); font-weight:500;">— {{ joueur.equipe.categorie }}</span>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if joueur.numeroMaillot %}
+            <div style="margin-top:10px; display:inline-flex; align-items:center; gap:8px; background:rgba(234,88,12,.15); padding:6px 14px; border-radius:999px;">
+                <span style="color:var(--pirb-text-muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; font-weight:700;">Maillot</span>
+                <strong style="color:var(--pirb-accent); font-size:1.1rem;">#{{ joueur.numeroMaillot }}</strong>
+            </div>
+        {% endif %}
+
+        {# Badges épinglés en hero #}
+        {% if badges_epingles is not empty %}
+            <div class="badges-row">
+                {% for code in badges_epingles %}
+                    {% if catalogue[code] is defined %}
+                        <div class="badge-show" title="{{ catalogue[code].description }}">
+                            <i class="bi {{ catalogue[code].icone }}"></i>
+                            <div class="nom">{{ catalogue[code].nom }}</div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Indicateur badges total (engagement) #}
+        {% if nb_badges_total > 0 %}
+            <div style="margin-top:14px; color:var(--pirb-text-muted); font-size:0.78rem;">
+                <i class="bi bi-trophy-fill" style="color:var(--pirb-accent-soft);"></i>
+                {{ nb_badges_total }} badge{{ nb_badges_total > 1 ? 's' : '' }} débloqué{{ nb_badges_total > 1 ? 's' : '' }} au total
+            </div>
+        {% endif %}
+
+        {# Bouton retour si on consulte son propre profil #}
+        {% if est_soi_meme %}
+            <div style="margin-top:18px;">
+                <a href="{{ path('pirb_dashboard') }}" class="pirb-btn pirb-btn-ghost" style="font-size:0.85rem;">
+                    <i class="bi bi-pencil"></i> Modifier mon profil
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    {# === Bio === #}
+    {% if joueur.bio %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">À propos</div>
+            <p style="margin:0; line-height:1.6; color:var(--pirb-text); font-size:0.95rem; white-space:pre-line;">{{ joueur.bio }}</p>
+        </div>
+    {% endif %}
+
+    {# === V1.2c — Highlights vidéo === #}
+    {% if joueur.highlights %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Highlights</div>
+            <div style="display:flex; flex-direction:column; gap:14px;">
+                {% for h in joueur.highlights %}
+                    <div>
+                        {% if h.titre %}
+                            <div style="font-weight:700; margin-bottom:6px;">
+                                {{ h.titre }}
+                                {% if h.date %}<span style="color:var(--pirb-text-muted); font-size:0.78rem; font-weight:400;"> · {{ h.date }}</span>{% endif %}
+                            </div>
+                        {% endif %}
+                        {{ highlight_embed_html(h.url) }}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# === Réseaux sociaux === #}
+    {% if joueur.liensSociaux %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Réseaux</div>
+            {% set reseau_icons = {
+                'instagram': 'bi-instagram',
+                'tiktok':    'bi-tiktok',
+                'youtube':   'bi-youtube',
+                'twitter':   'bi-twitter-x',
+                'linkedin':  'bi-linkedin'
+            } %}
+            {% set reseau_colors = {
+                'instagram': '#e1306c',
+                'tiktok':    '#fe2c55',
+                'youtube':   '#ff0000',
+                'twitter':   '#fff',
+                'linkedin':  '#0a66c2'
+            } %}
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                {% for reseau, url in joueur.liensSociaux %}
+                    <a href="{{ url }}" target="_blank" rel="noopener"
+                       style="display:inline-flex; align-items:center; gap:6px; padding:10px 16px;
+                              background:rgba(255,255,255,.05); border:1px solid var(--pirb-border);
+                              border-radius:10px; color:{{ reseau_colors[reseau]|default('#f1f5f9') }};
+                              text-decoration:none; font-size:0.9rem; font-weight:600;">
+                        <i class="bi {{ reseau_icons[reseau]|default('bi-link') }}"></i> {{ reseau|capitalize }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# === Section RÉSERVÉE STAFF : cotisation === #}
+    {% if est_staff and cotisation %}
+        <div class="pirb-card" style="border-left:3px solid var(--pirb-accent);">
+            <div class="pirb-card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>Cotisation</span>
+                <span style="font-size:0.62rem; background:rgba(234,88,12,.18); color:var(--pirb-accent); padding:2px 8px; border-radius:999px; text-transform:none; letter-spacing:0;">Visible staff seulement</span>
+            </div>
+            <div class="pirb-stat">
+                <span class="label">Saison</span>
+                <span class="value">{{ cotisation.saison }}</span>
+            </div>
+            <div class="pirb-stat">
+                <span class="label">Statut</span>
+                <span>
+                    {% if cotisation.isPayee() %}
+                        <span class="pirb-badge pirb-badge-success">Payée</span>
+                    {% elseif cotisation.isExemptee() %}
+                        <span class="pirb-badge pirb-badge-neutral">Exemptée</span>
+                    {% elseif cotisation.isEcheancier() %}
+                        <span class="pirb-badge pirb-badge-warning">Échéancier</span>
+                    {% else %}
+                        <span class="pirb-badge pirb-badge-danger">À payer</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    {% endif %}
+
+    {# === Lien vers fiche Manager pour staff === #}
+    {% if est_staff %}
+        <div style="text-align:center; padding:10px;">
+            <a href="{{ url('manager_joueur_show', {id: joueur.id}, true) }}"
+               style="color:var(--pirb-text-muted); font-size:0.82rem; text-decoration:none;">
+                <i class="bi bi-gear"></i> Ouvrir la fiche Manager →
+            </a>
+        </div>
+    {% endif %}
+
+    {# === Status profil (info pour celui qui regarde) === #}
+    <div style="text-align:center; padding:8px; color:var(--pirb-text-muted); font-size:0.72rem;">
+        {% if joueur.profilPublic %}
+            <i class="bi bi-globe"></i> Profil public
+        {% else %}
+            <i class="bi bi-lock-fill"></i> Profil privé · Visible parce que tu es staff du club
+        {% endif %}
+    </div>
+
+{% endblock %}

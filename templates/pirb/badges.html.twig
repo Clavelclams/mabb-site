@@ -1,0 +1,180 @@
+{#
+   PIRB V1.2b — Page sélection des 3 badges épinglés.
+   Affiche les badges débloqués par la joueuse en grille, avec checkbox
+   pour sélectionner 3 max. JS basique pour empêcher cocher un 4e.
+#}
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}Mes badges — PIRB MABB{% endblock %}
+
+{% block stylesheets %}
+    .badge-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+    }
+    .badge-card {
+        position: relative;
+        background: var(--pirb-card);
+        border: 2px solid var(--pirb-border);
+        border-radius: 12px;
+        padding: 14px 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all .15s;
+        user-select: none;
+    }
+    .badge-card:hover { border-color: var(--pirb-accent-soft); transform: translateY(-2px); }
+    .badge-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .badge-card.selected {
+        background: rgba(234,88,12,.12);
+        border-color: var(--pirb-accent);
+        box-shadow: 0 0 0 2px rgba(234,88,12,.25);
+    }
+    .badge-card .badge-icon {
+        font-size: 2rem;
+        color: var(--pirb-accent-soft);
+        margin-bottom: 6px;
+    }
+    .badge-card.selected .badge-icon { color: var(--pirb-accent); }
+    .badge-card .badge-nom {
+        font-weight: 800;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        color: var(--pirb-text);
+        margin-bottom: 3px;
+    }
+    .badge-card .badge-desc {
+        font-size: 0.65rem;
+        color: var(--pirb-text-muted);
+        line-height: 1.3;
+    }
+    .badge-card .badge-check {
+        position: absolute;
+        top: 6px; right: 6px;
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        background: var(--pirb-accent);
+        color: #fff;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+    }
+    .badge-card.selected .badge-check { display: flex; }
+    .badge-card.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    .badge-card.disabled:hover { transform: none; border-color: var(--pirb-border); }
+{% endblock %}
+
+{% block body %}
+
+    {# Flash messages #}
+    {% for label, messages in app.flashes(['success', 'error', 'info']) %}
+        {% for message in messages %}
+            <div class="pirb-card" style="
+                padding: 12px 14px; margin-bottom: 12px;
+                border-left: 4px solid {{ label == 'success' ? '#16a34a' : (label == 'error' ? '#ef4444' : '#3b82f6') }};
+                background: {{ label == 'success' ? 'rgba(22,163,74,.1)' : (label == 'error' ? 'rgba(239,68,68,.1)' : 'rgba(59,130,246,.1)') }};
+                font-size: 0.88rem;
+            ">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="pirb-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h1 style="margin:0; font-size:1.15rem; font-weight:800;">Mes badges épinglés</h1>
+            <a href="{{ path('pirb_dashboard') }}" style="color:var(--pirb-text-muted); font-size:0.85rem; text-decoration:none;">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
+        </div>
+        <p style="margin:0 0 4px 0; color:var(--pirb-text-muted); font-size:0.85rem; line-height:1.5;">
+            Choisis <strong style="color:var(--pirb-accent);">jusqu'à {{ nb_max }} badges</strong> à afficher en avant sur ton profil. Ils seront visibles à tous ceux qui consultent ton profil.
+        </p>
+        <p style="margin:0; color:var(--pirb-text-muted); font-size:0.78rem;">
+            Sélection actuelle : <strong id="badgeCount" style="color:var(--pirb-accent);">{{ badges_epingles|length }}</strong> / {{ nb_max }}
+        </p>
+    </div>
+
+    {% if badges_debloque is empty %}
+        <div class="pirb-card" style="text-align:center; padding:32px 20px;">
+            <div style="font-size:3rem; margin-bottom:8px;">🏆</div>
+            <h2 style="margin:0 0 6px 0; font-size:1.05rem;">Aucun badge débloqué pour l'instant</h2>
+            <p style="color:var(--pirb-text-muted); font-size:0.88rem; margin:0;">
+                Les badges se débloquent automatiquement quand tu participes aux entraînements, matchs et événements du club. Reviens quand tu en auras débloqué !
+            </p>
+        </div>
+    {% else %}
+        <form method="POST" action="{{ path('pirb_profil_badges') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('pirb_profil_badges') }}">
+
+            <div class="pirb-card">
+                <div class="badge-grid">
+                    {% for code, badge in badges_debloque %}
+                        {% set is_selected = code in badges_epingles %}
+                        <label class="badge-card {{ is_selected ? 'selected' : '' }}" data-code="{{ code }}">
+                            <input type="checkbox" name="badges[]" value="{{ code }}" {{ is_selected ? 'checked' : '' }}>
+                            <span class="badge-check"><i class="bi bi-check-lg"></i></span>
+                            <div class="badge-icon"><i class="bi {{ badge.icone }}"></i></div>
+                            <div class="badge-nom">{{ badge.nom }}</div>
+                            <div class="badge-desc">{{ badge.description }}</div>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div style="position:sticky; bottom:0; padding:12px 0; background:linear-gradient(to top, var(--pirb-bg), transparent);">
+                <button type="submit" class="pirb-btn pirb-btn-primary" style="width:100%;">
+                    <i class="bi bi-check-lg"></i> Enregistrer mes badges
+                </button>
+            </div>
+        </form>
+    {% endif %}
+
+{% endblock %}
+
+{% block javascripts %}
+    <script>
+        // Limiter sélection à 3 max + UI feedback live
+        (function() {
+            const MAX = {{ nb_max }};
+            const cards = document.querySelectorAll('.badge-card');
+            const counter = document.getElementById('badgeCount');
+
+            function update() {
+                const selected = document.querySelectorAll('.badge-card input:checked').length;
+                if (counter) counter.textContent = selected;
+
+                // Désactive les non-cochés si on est au max
+                cards.forEach(card => {
+                    const input = card.querySelector('input');
+                    if (!input.checked && selected >= MAX) {
+                        card.classList.add('disabled');
+                    } else {
+                        card.classList.remove('disabled');
+                    }
+                });
+            }
+
+            cards.forEach(card => {
+                const input = card.querySelector('input');
+                card.addEventListener('click', (e) => {
+                    if (card.classList.contains('disabled') && !input.checked) {
+                        e.preventDefault();
+                        return;
+                    }
+                    // Toggle visuel (le label/input gère le check côté DOM)
+                    setTimeout(() => {
+                        card.classList.toggle('selected', input.checked);
+                        update();
+                    }, 0);
+                });
+            });
+
+            update(); // init
+        })();
+    </script>
+{% endblock %}
