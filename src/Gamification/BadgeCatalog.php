@@ -76,6 +76,22 @@ class BadgeCatalog
     public const A_SEASON_90      = 'A_SEASON_90';
 
     /**
+     * B18 — Codes badges Axe B (Performance basket).
+     * Déclenchés depuis les EvaluationMatch / SessionStatsLive promues.
+     * Permettent au PIRB d'avoir un bilan 4 axes complet (A/B/C/D).
+     */
+    public const B_FIRST_POINT       = 'B_FIRST_POINT';        // 1er point inscrit
+    public const B_DOUBLE_FIGURE     = 'B_DOUBLE_FIGURE';      // 10+ points sur un match
+    public const B_TRIPLE_DOUBLE     = 'B_TRIPLE_DOUBLE';      // 10+ dans 3 cat (pts/reb/passes)
+    public const B_REBOND_MAITRE     = 'B_REBOND_MAITRE';      // 50 rebonds saison
+    public const B_DISTRIBUTEUR      = 'B_DISTRIBUTEUR';       // 30 passes décisives saison
+    public const B_ADRESSE_3PTS      = 'B_ADRESSE_3PTS';       // 40%+ à 3pts (min 30 tentatives)
+    public const B_SNIPER_LF         = 'B_SNIPER_LF';          // 80%+ aux LF (min 20)
+    public const B_REGULARITE_MATCH  = 'B_REGULARITE_MATCH';   // joué 80%+ des matchs
+    public const B_TOP_SCOREUSE      = 'B_TOP_SCOREUSE';       // top scoreuse équipe sur un match
+    public const B_PERFORMANCE_SAISON = 'B_PERFORMANCE_SAISON';// MVP saison équipe (manuel)
+
+    /**
      * Définitions complètes des badges.
      *
      * @return array<string, array{
@@ -161,6 +177,78 @@ class BadgeCatalog
                 'description' => '90% de présence ou plus sur toute la saison.',
                 'icone' => 'bi-crown',
                 'axe' => self::AXE_REGULARITE,
+                'par_saison' => true,
+            ],
+
+            // ============ AXE B — PERFORMANCE BASKET (B18) ============
+            self::B_FIRST_POINT => [
+                'nom' => 'Premier panier',
+                'description' => 'Tu as inscrit ton premier point officiel. Bienvenue dans le club !',
+                'icone' => 'bi-1-circle-fill',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => false,
+            ],
+            self::B_DOUBLE_FIGURE => [
+                'nom' => 'Double figure',
+                'description' => '10 points ou plus sur un seul match.',
+                'icone' => 'bi-graph-up-arrow',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_TRIPLE_DOUBLE => [
+                'nom' => 'Triple-double',
+                'description' => '10+ dans 3 catégories sur un match (points, rebonds, passes…).',
+                'icone' => 'bi-gem',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_REBOND_MAITRE => [
+                'nom' => 'Maître du rebond',
+                'description' => '50 rebonds cumulés sur la saison.',
+                'icone' => 'bi-arrow-up-circle-fill',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_DISTRIBUTEUR => [
+                'nom' => 'Distributrice',
+                'description' => '30 passes décisives sur la saison.',
+                'icone' => 'bi-share',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_ADRESSE_3PTS => [
+                'nom' => 'Adresse longue distance',
+                'description' => '40 % ou plus à 3pts (minimum 30 tentatives).',
+                'icone' => 'bi-bullseye',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_SNIPER_LF => [
+                'nom' => 'Sniper aux lancers',
+                'description' => '80 % ou plus aux lancers francs (minimum 20 tentatives).',
+                'icone' => 'bi-crosshair',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_REGULARITE_MATCH => [
+                'nom' => 'Toujours là',
+                'description' => 'Joué au moins 80 % des matchs de la saison.',
+                'icone' => 'bi-calendar-check',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_TOP_SCOREUSE => [
+                'nom' => 'Top scoreuse',
+                'description' => 'Meilleure marqueuse de ton équipe sur un match.',
+                'icone' => 'bi-trophy-fill',
+                'axe' => self::AXE_PERFORMANCE,
+                'par_saison' => true,
+            ],
+            self::B_PERFORMANCE_SAISON => [
+                'nom' => 'MVP de la saison',
+                'description' => 'Meilleure performance globale de ton équipe sur la saison.',
+                'icone' => 'bi-award-fill',
+                'axe' => self::AXE_PERFORMANCE,
                 'par_saison' => true,
             ],
 

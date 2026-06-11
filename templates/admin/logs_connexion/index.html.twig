@@ -1,0 +1,131 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Logs de connexion — Admin MABB{% endblock %}
+
+{% block body %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+    <div>
+        <h1><i class="bi bi-shield-lock"></i> Logs de connexion</h1>
+        <div style="color:#64748b; font-size:.88rem;">{{ total }} entrée(s) au total — Conservation 12 mois (CNIL)</div>
+    </div>
+    <a href="{{ path('admin_dashboard') }}" class="btn-mabb-ghost">
+        <i class="bi bi-arrow-left"></i> Retour
+    </a>
+</div>
+
+{# === Filtres === #}
+<form method="GET" action="{{ path('admin_logs_connexion') }}" class="card-mabb" style="padding:16px 18px; margin-bottom:16px;">
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px;">
+        <div>
+            <label style="font-size:.78rem; color:#64748b; display:block;">Email</label>
+            <input type="text" name="email" value="{{ filters.email }}" placeholder="exemple@mabb.fr"
+                   style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:.88rem;">
+        </div>
+        <div>
+            <label style="font-size:.78rem; color:#64748b; display:block;">IP</label>
+            <input type="text" name="ip" value="{{ filters.ip }}" placeholder="192.168.1.1"
+                   style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:.88rem;">
+        </div>
+        <div>
+            <label style="font-size:.78rem; color:#64748b; display:block;">Statut</label>
+            <select name="succes" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:.88rem;">
+                <option value="">Tous</option>
+                <option value="1" {% if filters.succes == '1' %}selected{% endif %}>Succès</option>
+                <option value="0" {% if filters.succes == '0' %}selected{% endif %}>Échecs</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:.78rem; color:#64748b; display:block;">Contexte</label>
+            <select name="contexte" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:.88rem;">
+                <option value="">Tous</option>
+                <option value="manager" {% if filters.contexte == 'manager' %}selected{% endif %}>Manager</option>
+                <option value="pirb" {% if filters.contexte == 'pirb' %}selected{% endif %}>PIRB</option>
+                <option value="admin" {% if filters.contexte == 'admin' %}selected{% endif %}>Admin</option>
+            </select>
+        </div>
+    </div>
+    <div style="margin-top:12px; display:flex; gap:8px;">
+        <button type="submit" class="btn-mabb-primary">
+            <i class="bi bi-funnel"></i> Filtrer
+        </button>
+        <a href="{{ path('admin_logs_connexion') }}" class="btn-mabb-ghost">Réinitialiser</a>
+    </div>
+</form>
+
+{# === Tableau === #}
+<div class="card-mabb">
+    <div class="card-body" style="padding:0; overflow-x:auto;">
+        <table class="table-mabb" style="width:100%; font-size:.85rem;">
+            <thead>
+                <tr style="background:#f8fafc;">
+                    <th>Date</th>
+                    <th>Statut</th>
+                    <th>Email</th>
+                    <th>User</th>
+                    <th>IP</th>
+                    <th>Contexte</th>
+                    <th>Raison</th>
+                    <th>User-Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                    <tr style="border-top:1px solid #e2e8f0;">
+                        <td style="white-space:nowrap; color:#64748b;">{{ log.createdAt|date('d/m/Y H:i:s') }}</td>
+                        <td>
+                            {% if log.succes %}
+                                <span style="display:inline-block; padding:3px 10px; background:#d1fae5; color:#065f46; border-radius:12px; font-size:.75rem; font-weight:700;">
+                                    <i class="bi bi-check-circle"></i> Succès
+                                </span>
+                            {% else %}
+                                <span style="display:inline-block; padding:3px 10px; background:#fee2e2; color:#991b1b; border-radius:12px; font-size:.75rem; font-weight:700;">
+                                    <i class="bi bi-x-circle"></i> Échec
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td><code style="font-size:.78rem;">{{ log.emailTente|default('—') }}</code></td>
+                        <td>
+                            {% if log.user %}
+                                <span style="color:#1d4ed8;">{{ log.user.prenom }} {{ log.user.nom }}</span>
+                            {% else %}
+                                <span style="color:#94a3b8;">inconnu</span>
+                            {% endif %}
+                        </td>
+                        <td><code style="font-size:.78rem;">{{ log.ip|default('—') }}</code></td>
+                        <td>
+                            {% if log.contexte %}
+                                <span style="padding:2px 8px; background:#eff6ff; color:#1d4ed8; border-radius:8px; font-size:.72rem; font-weight:600;">{{ log.contexte }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="color:#dc2626; font-size:.75rem;">{{ log.raisonEchec|default('—') }}</td>
+                        <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.72rem; color:#94a3b8;"
+                            title="{{ log.userAgent }}">{{ log.userAgent|default('—') }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="8" style="text-align:center; padding:30px; color:#94a3b8;">Aucun log pour ces filtres.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# === Pagination === #}
+{% if total_pages > 1 %}
+    <div style="text-align:center; margin-top:16px; display:flex; justify-content:center; gap:6px; align-items:center;">
+        {% set qparams = filters|filter(v => v) %}
+        {% if page > 1 %}
+            <a href="{{ path('admin_logs_connexion', qparams|merge({page: page - 1})) }}" class="btn-mabb-ghost btn-sm">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        {% endif %}
+        <span style="color:#64748b; padding:0 14px; font-size:.88rem;">Page {{ page }} / {{ total_pages }}</span>
+        {% if page < total_pages %}
+            <a href="{{ path('admin_logs_connexion', qparams|merge({page: page + 1})) }}" class="btn-mabb-ghost btn-sm">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% endblock %}

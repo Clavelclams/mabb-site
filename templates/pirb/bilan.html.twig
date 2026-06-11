@@ -1,0 +1,71 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Mon bilan 4 axes — PIRB MABB{% endblock %}
+
+{% block body %}
+
+    <div class="pirb-card" style="text-align:center; padding:22px 16px;">
+        <div style="font-size:2.4rem; margin-bottom:6px;">🏅</div>
+        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Mon bilan</h1>
+        <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin-top:6px;">
+            <strong>{{ total_debloques }}</strong> / {{ total_disponibles }} badges débloqués
+        </p>
+    </div>
+
+    {% for axeKey, axe in axes %}
+        <div class="pirb-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div>
+                    <div style="font-size:1rem; font-weight:800;">{{ axe.emoji }} {{ axe.label }}</div>
+                    <div style="color:var(--pirb-text-muted); font-size:0.78rem;">
+                        {{ axe.debloques }} / {{ axe.total }} badges
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:1.4rem; font-weight:800; color:{{ axe.color }};">{{ axe.percent }}%</div>
+                </div>
+            </div>
+
+            {# Barre de progression #}
+            <div style="height:8px; background:rgba(255,255,255,.08); border-radius:4px; overflow:hidden; margin-bottom:14px;">
+                <div style="height:100%; width:{{ axe.percent }}%; background:{{ axe.color }}; transition:width .3s;"></div>
+            </div>
+
+            {# Grille badges #}
+            <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
+                {% for badge in axe.badges %}
+                    <div title="{{ badge.nom }} — {{ badge.description }}"
+                         style="text-align:center; padding:10px 4px; border-radius:10px;
+                                background:{% if badge.debloque %}{{ axe.color }}{% else %}rgba(255,255,255,.04){% endif %};
+                                opacity:{% if badge.debloque %}1{% else %}0.35{% endif %};">
+                        <i class="bi {{ badge.icone }}" style="font-size:1.4rem; color:{% if badge.debloque %}#fff{% else %}var(--pirb-text-muted){% endif %};"></i>
+                        <div style="font-size:0.65rem; margin-top:4px; color:{% if badge.debloque %}#fff{% else %}var(--pirb-text-muted){% endif %}; line-height:1.1;">
+                            {{ badge.nom|slice(0, 14) }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            {# Détail liste badges débloqués #}
+            {% set deb = axe.badges|filter(b => b.debloque) %}
+            {% if deb|length > 0 %}
+                <details style="margin-top:10px;">
+                    <summary style="cursor:pointer; color:var(--pirb-text-muted); font-size:0.78rem;">
+                        Voir détail badges débloqués
+                    </summary>
+                    <div style="margin-top:8px;">
+                        {% for b in deb %}
+                            <div style="display:flex; gap:10px; padding:6px 0; border-bottom:1px solid var(--pirb-border);">
+                                <i class="bi {{ b.icone }}" style="color:{{ axe.color }}; font-size:1.1rem;"></i>
+                                <div style="flex:1;">
+                                    <div style="font-weight:600; font-size:0.84rem;">{{ b.nom }}</div>
+                                    <div style="color:var(--pirb-text-muted); font-size:0.74rem;">{{ b.description }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </details>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+{% endblock %}

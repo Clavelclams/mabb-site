@@ -1,0 +1,146 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Mes convocations — PIRB MABB{% endblock %}
+
+{% block body %}
+
+    {% for label, messages in app.flashes(['success', 'warning', 'error']) %}
+        {% for message in messages %}
+            <div class="pirb-card" style="padding:12px 14px; margin-bottom:12px;
+                border-left:4px solid {{ label == 'success' ? '#16a34a' : (label == 'error' ? '#ef4444' : '#f59e0b') }};
+                font-size:0.88rem;">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="pirb-card" style="text-align:center; padding:22px 16px;">
+        <div style="font-size:2.6rem; margin-bottom:4px;">🏀</div>
+        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Mes convocations</h1>
+        <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin-top:6px;">
+            {{ a_venir|length }} à venir
+            {% set sans_reponse = a_venir|filter(c => c.reponse is null)|length %}
+            {% if sans_reponse > 0 %}
+                · <span style="color:var(--pirb-accent);">{{ sans_reponse }} en attente de ta réponse</span>
+            {% endif %}
+        </p>
+    </div>
+
+    {# === À venir === #}
+    {% if a_venir is empty %}
+        <div class="pirb-card" style="text-align:center; padding:24px;">
+            <p style="margin:0; color:var(--pirb-text-muted); font-size:0.9rem;">
+                Aucune convocation à venir pour l'instant.<br>
+                Reviens après la prochaine convocation du coach.
+            </p>
+        </div>
+    {% else %}
+        {% for c in a_venir %}
+            {% set r = c.rencontre %}
+            <div class="pirb-card">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                    <div style="flex:1;">
+                        <div style="font-weight:800; font-size:1rem;">
+                            {% if r.equipe %}{{ r.equipe.nom }}{% endif %}
+                            {% if r.adversaire %} vs {{ r.adversaire }}{% endif %}
+                        </div>
+                        <div style="color:var(--pirb-text-muted); font-size:0.82rem; margin-top:4px;">
+                            <i class="bi bi-calendar3"></i> {{ r.date|date('D d/m à H:i') }}
+                            {% if r.lieu %} · <i class="bi bi-geo-alt"></i> {{ r.lieu }}{% endif %}
+                        </div>
+                    </div>
+
+                    {# Badge statut réponse #}
+                    {% if c.reponse == 'present' %}
+                        <span class="pirb-badge" style="background:rgba(22,163,74,.15); color:#16a34a; border:1px solid #16a34a;">
+                            ✅ Présent·e
+                        </span>
+                    {% elseif c.reponse == 'absent' %}
+                        <span class="pirb-badge" style="background:rgba(239,68,68,.15); color:#ef4444; border:1px solid #ef4444;">
+                            ❌ Absent·e
+                        </span>
+                    {% elseif c.reponse == 'incertain' %}
+                        <span class="pirb-badge" style="background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid #f59e0b;">
+                            🤔 Incertain·e
+                        </span>
+                    {% else %}
+                        <span class="pirb-badge pirb-badge-warning">En attente</span>
+                    {% endif %}
+                </div>
+
+                {# === Boutons réponse + motif === #}
+                <form method="POST" action="{{ path('pirb_convocations_repondre', {id: c.id}) }}"
+                      style="margin-top:14px; display:flex; flex-direction:column; gap:8px;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('pirb_conv_' ~ c.id) }}">
+
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:6px;">
+                        <button type="submit" name="reponse" value="present"
+                                class="pirb-btn"
+                                style="background:#16a34a; color:#fff; border:none; font-size:0.82rem; padding:8px 4px;">
+                            ✅ Présent
+                        </button>
+                        <button type="submit" name="reponse" value="absent"
+                                class="pirb-btn"
+                                style="background:#ef4444; color:#fff; border:none; font-size:0.82rem; padding:8px 4px;">
+                            ❌ Absent
+                        </button>
+                        <button type="submit" name="reponse" value="incertain"
+                                class="pirb-btn"
+                                style="background:#f59e0b; color:#fff; border:none; font-size:0.82rem; padding:8px 4px;">
+                            🤔 Incertain
+                        </button>
+                    </div>
+
+                    {% if c.reponse %}
+                        <details>
+                            <summary style="cursor:pointer; color:var(--pirb-text-muted); font-size:0.78rem;">
+                                Modifier mon motif (optionnel)
+                            </summary>
+                            <textarea name="motif" rows="2"
+                                      placeholder="Ex: Examen ce jour-là / Blessure / Travail..."
+                                      style="width:100%; margin-top:6px; padding:8px;
+                                             background:rgba(255,255,255,0.05);
+                                             border:1px solid var(--pirb-border);
+                                             border-radius:6px; color:var(--pirb-text);
+                                             font-family:inherit; font-size:0.82rem; box-sizing:border-box;">{{ c.motif }}</textarea>
+                        </details>
+                    {% endif %}
+                </form>
+
+                {% if c.motif %}
+                    <div style="margin-top:10px; padding:8px 10px; background:rgba(255,255,255,0.04);
+                                border-radius:6px; font-size:0.78rem; color:var(--pirb-text-muted);">
+                        <strong>Motif :</strong> {{ c.motif }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {# === Passées === #}
+    {% if passees is not empty %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Convocations passées</div>
+            {% for c in passees %}
+                {% set r = c.rencontre %}
+                <div style="display:flex; align-items:center; gap:12px; padding:8px 0;
+                            border-bottom:1px solid var(--pirb-border);">
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:0.9rem;">
+                            {% if r.equipe %}{{ r.equipe.nom }}{% endif %}
+                            {% if r.adversaire %} vs {{ r.adversaire }}{% endif %}
+                        </div>
+                        <div style="color:var(--pirb-text-muted); font-size:0.74rem;">
+                            {{ r.date|date('d/m/Y') }}
+                        </div>
+                    </div>
+                    {% if c.reponse %}
+                        <span style="font-size:0.78rem; color:var(--pirb-text-muted);">
+                            {{ c.reponse == 'present' ? '✅' : (c.reponse == 'absent' ? '❌' : '🤔') }}
+                        </span>
+                    {% else %}
+                        <span style="font-size:0.74rem; color:#94a3b8;">—</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Noter cette séance — PIRB MABB{% endblock %}
+
+{% block body %}
+
+    {% for label, messages in app.flashes(['success', 'warning', 'error']) %}
+        {% for message in messages %}
+            <div class="pirb-card" style="padding:12px 14px; margin-bottom:12px;
+                border-left:4px solid {{ label == 'success' ? '#16a34a' : (label == 'error' ? '#ef4444' : '#f59e0b') }};
+                font-size:0.88rem;">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="pirb-card" style="text-align:center; padding:22px;">
+        <div style="font-size:2.4rem; margin-bottom:6px;">⭐</div>
+        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Note ta séance</h1>
+        <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin-top:6px;">
+            {{ seance.date|date('D d/m à H:i') }}
+            {% if seance.equipe %} · {{ seance.equipe.nom }}{% endif %}
+        </p>
+    </div>
+
+    {% if deja %}
+        <div class="pirb-card" style="text-align:center;">
+            <p style="color:var(--pirb-text-muted);">
+                Tu as déjà noté cette séance ({{ deja.note }}/5).<br>
+                <small>Note enregistrée le {{ deja.createdAt|date('d/m/Y') }}</small>
+            </p>
+            <a href="{{ path('pirb_dashboard') }}" class="pirb-btn pirb-btn-primary" style="margin-top:10px;">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
+        </div>
+    {% else %}
+        <form method="POST" action="{{ path('pirb_feedback_form', {id: seance.id}) }}" class="pirb-card">
+            <input type="hidden" name="_token" value="{{ csrf_token('pirb_feedback_' ~ seance.id) }}">
+
+            {# === Étoiles 0-5 === #}
+            <div style="text-align:center; margin-bottom:14px;">
+                <div style="color:var(--pirb-text-muted); font-size:0.85rem; margin-bottom:8px;">
+                    Ta note globale
+                </div>
+                <div style="display:flex; justify-content:center; gap:4px; font-size:1.8rem;">
+                    {% for n in 1..5 %}
+                        <label style="cursor:pointer;">
+                            <input type="radio" name="note" value="{{ n }}" {% if n == 3 %}checked{% endif %}
+                                   style="display:none;" class="pirb-star-radio">
+                            <span class="pirb-star" data-n="{{ n }}" style="opacity:0.4; transition:opacity 0.15s;">⭐</span>
+                        </label>
+                    {% endfor %}
+                </div>
+                <div style="color:var(--pirb-text-muted); font-size:0.75rem; margin-top:4px;">
+                    1 = bof · 5 = top
+                </div>
+            </div>
+
+            {# === Commentaire === #}
+            <label style="display:block; color:var(--pirb-text-muted); font-size:0.85rem; margin-bottom:6px;">
+                Commentaire (optionnel)
+            </label>
+            <textarea name="commentaire" rows="3" maxlength="1000"
+                      placeholder="Ce qui t'a plu / déplu, ce qu'on pourrait améliorer..."
+                      style="width:100%; padding:10px;
+                             background:rgba(255,255,255,0.05);
+                             border:1px solid var(--pirb-border);
+                             border-radius:8px; color:var(--pirb-text);
+                             font-family:inherit; font-size:0.88rem;
+                             box-sizing:border-box; margin-bottom:14px;"></textarea>
+
+            {# === Mode anonyme === #}
+            <label style="display:flex; align-items:center; gap:10px; padding:10px;
+                          background:rgba(234,88,12,0.08); border-radius:8px;
+                          cursor:pointer; font-size:0.88rem; margin-bottom:14px;">
+                <input type="checkbox" name="est_anonyme" value="1"
+                       style="width:18px; height:18px; cursor:pointer;">
+                <span style="flex:1;">
+                    <strong>Note anonyme</strong>
+                    <div style="color:var(--pirb-text-muted); font-size:0.78rem; margin-top:2px;">
+                        Le coach verra ta note + commentaire, mais pas qui c'est.
+                    </div>
+                </span>
+            </label>
+
+            <button type="submit" class="pirb-btn pirb-btn-primary" style="width:100%;">
+                <i class="bi bi-send"></i> Envoyer ma note
+            </button>
+
+            <a href="{{ path('pirb_dashboard') }}" style="display:block; text-align:center;
+                margin-top:10px; color:var(--pirb-text-muted); text-decoration:none; font-size:0.82rem;">
+                Annuler
+            </a>
+        </form>
+
+        <script>
+            // Étoiles interactives — visuel uniquement, vraie valeur dans <input type=radio>
+            const stars = document.querySelectorAll('.pirb-star');
+            const updateStars = (selectedN) => stars.forEach(s => {
+                s.style.opacity = parseInt(s.dataset.n, 10) <= selectedN ? '1' : '0.3';
+            });
+            stars.forEach(s => {
+                s.addEventListener('click', () => {
+                    const n = parseInt(s.dataset.n, 10);
+                    s.parentElement.querySelector('input').checked = true;
+                    updateStars(n);
+                });
+            });
+            updateStars(3); // default note=3
+        </script>
+    {% endif %}
+
+{% endblock %}

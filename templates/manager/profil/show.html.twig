@@ -157,22 +157,84 @@
         } only %}
 
         {# ========================================================
-           Sécurité & RGPD — actions placeholders (modules à venir)
+           B2 — Sécurité & RGPD (livré 10/06/2026)
+           - Dernière connexion (depuis ConnexionLog)
+           - Mot de passe oublié (lien vers reset password)
+           - Export RGPD (Art. 15 — self-service JSON)
+           - Demande d'effacement (Art. 17 — workflow admin)
            ======================================================== #}
         <div class="col-12">
-            <div class="card-mabb" style="opacity: .65;">
+            <div class="card-mabb">
                 <div class="card-header"><i class="bi bi-shield-lock"></i> Sécurité & confidentialité</div>
-                <div class="card-body" style="display:flex; gap:12px; flex-wrap:wrap;">
-                    <button class="btn-mabb-ghost" disabled>
-                        <i class="bi bi-key"></i> Changer mon mot de passe
-                    </button>
-                    <button class="btn-mabb-ghost" disabled>
-                        <i class="bi bi-download"></i> Télécharger mes données (RGPD)
-                    </button>
-                    <button class="btn-mabb-ghost" disabled style="color:var(--mabb-red); border-color:var(--mabb-red);">
-                        <i class="bi bi-trash"></i> Supprimer mon compte
-                    </button>
-                    <span style="color:var(--mabb-muted); font-size:.85rem; align-self:center;">Modules à venir</span>
+                <div class="card-body">
+
+                    {# === Dernière connexion === #}
+                    {% if derniere_connexion %}
+                        <div style="background: #f8fafc; border-left: 4px solid #1d4ed8; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: .85rem; color: #475569;">
+                            <i class="bi bi-clock-history"></i>
+                            <strong>Dernière connexion réussie</strong> :
+                            {{ derniere_connexion.createdAt|date('d/m/Y à H:i') }}
+                            {% if derniere_connexion.ip %}
+                                — IP : <code style="background:#fff; padding:2px 6px; border-radius:4px;">{{ derniere_connexion.ip }}</code>
+                            {% endif %}
+                            <div style="color: #94a3b8; font-size: .78rem; margin-top: 4px;">
+                                Si tu ne reconnais pas cette connexion, change ton mot de passe immédiatement.
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% for label, messages in app.flashes(['success', 'warning', 'error']) %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ label == 'error' ? 'danger' : label }}" style="font-size:.88rem;">{{ message }}</div>
+                        {% endfor %}
+                    {% endfor %}
+
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 18px;">
+                        {# Reset password : on envoie le user vers le workflow B1 #}
+                        <a href="{{ path('manager_reset_password_request') }}" class="btn-mabb-ghost">
+                            <i class="bi bi-key"></i> Changer mon mot de passe
+                        </a>
+                        {# Export RGPD self-service (téléchargement JSON immédiat) #}
+                        <a href="{{ path('manager_profil_rgpd_export') }}" class="btn-mabb-ghost">
+                            <i class="bi bi-download"></i> Télécharger mes données (RGPD)
+                        </a>
+                    </div>
+
+                    {# === Effacement compte === #}
+                    <details style="border: 1px solid #fecaca; border-radius: 10px; background: #fff5f5; padding: 14px 16px;">
+                        <summary style="cursor: pointer; font-weight: 700; color: #991b1b;">
+                            <i class="bi bi-trash"></i> Demander la suppression de mon compte
+                        </summary>
+                        <div style="margin-top: 14px; font-size: .88rem; color: #475569; line-height: 1.6;">
+                            <p>
+                                <strong>Important :</strong> ton compte sera <strong>anonymisé</strong> (nom, email,
+                                téléphone, photo effacés), pas supprimé. Cela préserve l'historique du club
+                                (présences, scores) sans qu'aucune donnée perso ne reste exploitable.
+                            </p>
+                            <p>
+                                <strong>Délai légal :</strong> un admin traitera ta demande sous 30 jours
+                                (RGPD Art. 12 §3). Ta demande peut être refusée si tu as des obligations
+                                en cours (litige, comptabilité non clôturée).
+                            </p>
+
+                            {% if rgpd_pending %}
+                                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 8px; color: #92400e;">
+                                    <i class="bi bi-hourglass-split"></i> Tu as déjà une demande en cours
+                                    (créée le {{ rgpd_pending.requestedAt|date('d/m/Y') }}).
+                                </div>
+                            {% else %}
+                                <form method="POST" action="{{ path('manager_profil_rgpd_effacement') }}"
+                                      onsubmit="return confirm('Tu es sûr·e ? Cette action est irréversible une fois validée par un admin.');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('rgpd_effacement_' ~ user.id) }}">
+                                    <textarea name="motif_user" rows="2" placeholder="Motif (optionnel) : pourquoi veux-tu quitter MABB ?"
+                                              style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:.88rem; margin-bottom:10px;"></textarea>
+                                    <button type="submit" class="btn-mabb-ghost" style="background:#991b1b; color:#fff; border-color:#991b1b;">
+                                        <i class="bi bi-send"></i> Envoyer la demande d'effacement
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </details>
                 </div>
             </div>
         </div>

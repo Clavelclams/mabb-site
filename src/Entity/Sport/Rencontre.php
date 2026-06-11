@@ -41,6 +41,31 @@ class Rencontre implements ClubAwareInterface
         self::STATUT_ARCHIVE,
     ];
 
+    /**
+     * B19 : champs FFBB import.
+     * - numeroMatch : "5", "10", "33" (n° dans la division FFBB)
+     * - codeEMarque : "KQ7B388D" (code feuille de match e-Marque V2)
+     * - saison      : "2025-2026"
+     * - division    : "PRF", "PRM", "U18F", etc.
+     */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $numeroMatch = null;
+
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $codeEMarque = null;
+
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $saison = null;
+
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $division = null;
+
+    #[ORM\Column]
+    private bool $forfaitEquipe = false;
+
+    #[ORM\Column]
+    private bool $forfaitAdverse = false;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -366,4 +391,19 @@ class Rencontre implements ClubAwareInterface
     {
         return !$this->arbitreExterneDesigne;
     }
+
+    // === B19 : Getters/Setters FFBB import ===
+
+    public function getNumeroMatch(): ?string { return $this->numeroMatch; }
+    public function setNumeroMatch(?string $n): self { $this->numeroMatch = $n; return $this; }
+    public function getCodeEMarque(): ?string { return $this->codeEMarque; }
+    public function setCodeEMarque(?string $c): self { $this->codeEMarque = $c; return $this; }
+    public function getSaison(): ?string { return $this->saison; }
+    public function setSaison(?string $s): self { $this->saison = $s; return $this; }
+    public function getDivision(): ?string { return $this->division; }
+    public function setDivision(?string $d): self { $this->division = $d; return $this; }
+    public function isForfaitEquipe(): bool { return $this->forfaitEquipe; }
+    public function setForfaitEquipe(bool $f): self { $this->forfaitEquipe = $f; return $this; }
+    public function isForfaitAdverse(): bool { return $this->forfaitAdverse; }
+    public function setForfaitAdverse(bool $f): self { $this->forfaitAdverse = $f; return $this; }
 }

@@ -1,0 +1,68 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Match vs {{ rencontre.adversaire|default('?') }} — PIRB{% endblock %}
+
+{% block body %}
+
+    <div class="pirb-card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <a href="{{ path('pirb_stats') }}" style="color:var(--pirb-text-muted); text-decoration:none; font-size:0.85rem;">
+                <i class="bi bi-arrow-left"></i> Retour stats
+            </a>
+            <div style="color:var(--pirb-text-muted); font-size:0.78rem;">
+                {{ rencontre.date|date('d/m/Y') }}
+            </div>
+        </div>
+        <h1 style="margin:8px 0 0; font-size:1.15rem; font-weight:800;">
+            {% if rencontre.equipe %}{{ rencontre.equipe.nom }}{% endif %}
+            {% if rencontre.adversaire %} vs {{ rencontre.adversaire }}{% endif %}
+        </h1>
+    </div>
+
+    {% if not eval %}
+        <div class="pirb-card" style="text-align:center; padding:24px;">
+            <p style="margin:0; color:var(--pirb-text-muted);">
+                Pas d'évaluation enregistrée pour toi sur ce match.<br>
+                <small>Le coach n'a pas encore saisi tes stats individuelles.</small>
+            </p>
+        </div>
+    {% else %}
+        {# === Bloc points + éval === #}
+        <div class="pirb-card">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div style="text-align:center; padding:16px; background:rgba(234,88,12,.12); border-radius:12px;">
+                    <div style="font-size:2.2rem; font-weight:800; color:var(--pirb-accent);">{{ eval.points }}</div>
+                    <div style="font-size:0.78rem; color:var(--pirb-text-muted); text-transform:uppercase;">Points</div>
+                </div>
+                <div style="text-align:center; padding:16px; background:rgba(245,158,11,.12); border-radius:12px;">
+                    <div style="font-size:2.2rem; font-weight:800; color:#fbbf24;">{{ eval.eval }}</div>
+                    <div style="font-size:0.78rem; color:var(--pirb-text-muted); text-transform:uppercase;">Éval</div>
+                </div>
+            </div>
+        </div>
+
+        {# === Détail === #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Détail</div>
+            <table style="width:100%; font-size:0.88rem;">
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Tirs 2pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs2ptsReussis }}/{{ eval.tirs2ptsTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Tirs 3pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs3ptsReussis }}/{{ eval.tirs3ptsTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Lancers francs</td><td style="text-align:right; font-weight:600;">{{ eval.lancersReussis }}/{{ eval.lancersTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Rebonds (O/D)</td><td style="text-align:right; font-weight:600;">{{ eval.rebondsOffensifs }}/{{ eval.rebondsDefensifs }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Passes décisives</td><td style="text-align:right; font-weight:600;">{{ eval.passesDecisives }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Interceptions</td><td style="text-align:right; font-weight:600;">{{ eval.interceptions }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Contres</td><td style="text-align:right; font-weight:600;">{{ eval.contres }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Fautes</td><td style="text-align:right; font-weight:600;">{{ eval.fautesCommises }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Pertes de balle</td><td style="text-align:right; font-weight:600;">{{ eval.pertesBalle }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Minutes jouées</td><td style="text-align:right; font-weight:600;">{{ eval.minutesJouees }}'</td></tr>
+            </table>
+        </div>
+
+        {% if eval.notesCoach %}
+            <div class="pirb-card" style="background:rgba(34,197,94,.06); border-left:4px solid #22c55e;">
+                <div class="pirb-card-title">Note du coach</div>
+                <p style="margin:0; font-size:0.88rem; line-height:1.5;">{{ eval.notesCoach }}</p>
+            </div>
+        {% endif %}
+    {% endif %}
+
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Mes stats — PIRB MABB{% endblock %}
+
+{% block body %}
+
+    <div class="pirb-card" style="text-align:center; padding:22px 16px;">
+        <div style="font-size:2.4rem; margin-bottom:6px;">📊</div>
+        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Mes stats saison</h1>
+        <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin-top:6px;">
+            {{ stats.nb_matchs }} match{{ stats.nb_matchs > 1 ? 's' : '' }} joué{{ stats.nb_matchs > 1 ? 's' : '' }}
+            {% if stats.titulaire > 0 %} · {{ stats.titulaire }} titularisation{{ stats.titulaire > 1 ? 's' : '' }}{% endif %}
+        </p>
+    </div>
+
+    {% if stats.nb_matchs == 0 %}
+        <div class="pirb-card" style="text-align:center; padding:24px;">
+            <p style="margin:0; color:var(--pirb-text-muted); font-size:0.9rem;">
+                Aucune évaluation de match enregistrée pour l'instant.<br>
+                Tes stats apparaîtront après que le coach ait saisi ton premier match.
+            </p>
+        </div>
+    {% else %}
+
+        {# === Indicateurs clés === #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Moyennes par match</div>
+            <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
+                <div style="background:rgba(234,88,12,0.1); padding:12px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:800; color:var(--pirb-accent);">{{ stats.moyennes.points }}</div>
+                    <div style="font-size:0.74rem; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.5px;">Points</div>
+                </div>
+                <div style="background:rgba(29,78,216,0.1); padding:12px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:800; color:#60a5fa;">{{ stats.moyennes.rebonds }}</div>
+                    <div style="font-size:0.74rem; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.5px;">Rebonds</div>
+                </div>
+                <div style="background:rgba(16,185,129,0.1); padding:12px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:800; color:#34d399;">{{ stats.moyennes.passes }}</div>
+                    <div style="font-size:0.74rem; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.5px;">Passes déc.</div>
+                </div>
+                <div style="background:rgba(245,158,11,0.1); padding:12px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.6rem; font-weight:800; color:#fbbf24;">{{ stats.moyennes.eval }}</div>
+                    <div style="font-size:0.74rem; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.5px;">Éval</div>
+                </div>
+            </div>
+        </div>
+
+        {# === Pourcentages tirs === #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">% Tirs</div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                <div style="text-align:center;">
+                    <div style="font-size:1.3rem; font-weight:800;">{{ stats.pourcentages.tirs2 ?? '—' }}{% if stats.pourcentages.tirs2 %}%{% endif %}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted);">2pts ({{ stats.reussites.tirs2 }}/{{ stats.tentatives.tirs2 }})</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:1.3rem; font-weight:800;">{{ stats.pourcentages.tirs3 ?? '—' }}{% if stats.pourcentages.tirs3 %}%{% endif %}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted);">3pts ({{ stats.reussites.tirs3 }}/{{ stats.tentatives.tirs3 }})</div>
+                </div>
+                <div style="text-align:center;">
+                    <div style="font-size:1.3rem; font-weight:800;">{{ stats.pourcentages.lf ?? '—' }}{% if stats.pourcentages.lf %}%{% endif %}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted);">LF ({{ stats.reussites.lf }}/{{ stats.tentatives.lf }})</div>
+                </div>
+            </div>
+        </div>
+
+        {# === Graph progression Chart.js (10 derniers) === #}
+        {% if stats.graph_progression|length > 1 %}
+            <div class="pirb-card">
+                <div class="pirb-card-title">Progression — 10 derniers matchs</div>
+                <canvas id="progChart" height="220"></canvas>
+                <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+                <script>
+                    const ctx = document.getElementById('progChart');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: {{ stats.graph_progression|map(p => p.date)|json_encode|raw }},
+                            datasets: [
+                                {
+                                    label: 'Points',
+                                    data: {{ stats.graph_progression|map(p => p.points)|json_encode|raw }},
+                                    borderColor: '#ea580c', backgroundColor: 'rgba(234,88,12,.15)',
+                                    tension: 0.3, fill: true,
+                                },
+                                {
+                                    label: 'Éval',
+                                    data: {{ stats.graph_progression|map(p => p.eval)|json_encode|raw }},
+                                    borderColor: '#fbbf24', borderDash: [4,4], tension: 0.3, fill: false,
+                                }
+                            ]
+                        },
+                        options: {
+                            plugins: { legend: { labels: { color: '#cbd5e1' }}},
+                            scales: {
+                                x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,.06)' }},
+                                y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,.06)' }, beginAtZero: true }
+                            }
+                        }
+                    });
+                </script>
+            </div>
+        {% endif %}
+
+        {# === Liste matchs cliquables === #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Détail par match</div>
+            {% for e in stats.evaluations|slice(0, 15) %}
+                {% set r = e.rencontre %}
+                {% if r %}
+                    <a href="{{ path('pirb_stats_match', {id: r.id}) }}"
+                       style="display:flex; align-items:center; gap:12px; padding:10px 0;
+                              border-bottom:1px solid var(--pirb-border); text-decoration:none; color:inherit;">
+                        <div style="flex:1;">
+                            <div style="font-weight:600; font-size:0.9rem;">
+                                {% if r.adversaire %}vs {{ r.adversaire }}{% endif %}
+                            </div>
+                            <div style="color:var(--pirb-text-muted); font-size:0.74rem;">
+                                {{ r.date|date('d/m/Y') }}
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:800; color:var(--pirb-accent);">{{ e.points }} pts</div>
+                            <div style="font-size:0.7rem; color:var(--pirb-text-muted);">éval {{ e.eval }}</div>
+                        </div>
+                        <i class="bi bi-chevron-right" style="color:var(--pirb-text-muted);"></i>
+                    </a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+{% endblock %}

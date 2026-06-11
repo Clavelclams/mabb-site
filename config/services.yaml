@@ -64,3 +64,22 @@ services:
         arguments:
             $expediteurEmail: '%env(EMAIL_EXPEDITEUR)%'
             $expediteurNom:   '%env(EMAIL_NOM_EXPEDITEUR)%'
+
+    # B1 — Reset password : injecte l'expéditeur admin@mabb.fr (MAILER_FROM).
+    # Convention : tout ce qui est administratif passe par admin@mabb.fr,
+    # tout ce qui est contact public vitrine par contact@mabb.fr.
+    App\Service\Security\ResetPasswordTokenManager:
+        arguments:
+            $mailerFrom: '%env(MAILER_FROM)%'
+
+    # B2 — RGPD anonymizer : doit savoir où sont les uploads pour supprimer
+    # physiquement les photos lors de l'anonymisation.
+    App\Service\Rgpd\RgpdAnonymizer:
+        arguments:
+            $uploadsRoot: '%kernel.project_dir%/public'
+
+    # B20 — Import PDFs FFBB : a besoin du project_dir pour stocker
+    # les fichiers dans public/uploads/rencontres/{id}/
+    App\Command\ImportPdfsFfbbCommand:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
