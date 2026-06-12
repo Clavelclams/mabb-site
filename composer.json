@@ -56,7 +56,11 @@
             "symfony/runtime": true
         },
         "bump-after-update": true,
-        "sort-packages": true
+        "sort-packages": true,
+        "platform": {
+            "php": "8.3.23",
+            "ext-redis": "5.3.7"
+        }
     },
     "autoload": {
         "psr-4": {

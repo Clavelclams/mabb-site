@@ -35,15 +35,11 @@ final class Version20260610120000 extends AbstractMigration
             ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB
         SQL);
 
-        // UNIQUE partial : un joueur n'a qu'un seul feedback NON-anonyme par séance
-        // (l'anonyme peut être multiple — pour ne pas révéler par déduction)
-        $this->addSql(<<<'SQL'
-            CREATE UNIQUE INDEX UNQ_FS_SEANCE_JOUEUR_NON_ANON
-            ON feedback_seance (seance_id, joueur_id)
-            WHERE joueur_id IS NOT NULL AND est_anonyme = 0
-        SQL);
-        // Note : MariaDB ne supporte pas les UNIQUE WHERE — la contrainte
-        // est doublée côté service (anti-doublon vérifié dans le controller)
+        // [fix 11/06/2026] : MariaDB/MySQL ne supportent pas les UNIQUE WHERE
+        // (partial index PostgreSQL-only). L'anti-doublon "1 seul feedback
+        // non-anonyme par joueur par séance" est délégué à l'application :
+        // cf. PirbFeedbackController + FeedbackSeanceRepository::findExistantForJoueurSeance().
+        // L'INDEX IDX_FS_SEANCE + IDX_FS_JOUEUR créés ci-dessus suffisent côté perf.
 
         $this->addSql(<<<'SQL'
             ALTER TABLE feedback_seance
