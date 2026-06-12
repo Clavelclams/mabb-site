@@ -27,7 +27,7 @@ final class Version20260610140000 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql('ALTER TABLE rencontre ADD numero_match VARCHAR(20) DEFAULT NULL');
-        $this->addSql('ALTER TABLE rencontre ADD code_e_marque VARCHAR(30) DEFAULT NULL');
+        $this->addSql('ALTER TABLE rencontre ADD code_emarque VARCHAR(30) DEFAULT NULL');
         $this->addSql('ALTER TABLE rencontre ADD saison VARCHAR(20) DEFAULT NULL');
         $this->addSql('ALTER TABLE rencontre ADD division VARCHAR(30) DEFAULT NULL');
         $this->addSql('ALTER TABLE rencontre ADD forfait_equipe TINYINT(1) DEFAULT 0 NOT NULL');
@@ -42,7 +42,7 @@ final class Version20260610140000 extends AbstractMigration
     {
         $this->addSql('DROP INDEX UNQ_R_CLUB_NUMERO_SAISON ON rencontre');
         $this->addSql('ALTER TABLE rencontre DROP numero_match');
-        $this->addSql('ALTER TABLE rencontre DROP code_e_marque');
+        $this->addSql('ALTER TABLE rencontre DROP code_emarque');
         $this->addSql('ALTER TABLE rencontre DROP saison');
         $this->addSql('ALTER TABLE rencontre DROP division');
         $this->addSql('ALTER TABLE rencontre DROP forfait_equipe');
