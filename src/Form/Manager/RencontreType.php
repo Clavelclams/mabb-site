@@ -15,6 +15,8 @@ use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
@@ -56,8 +58,13 @@ class RencontreType extends AbstractType
                 'help'          => 'Si amical/entraînement, c\'est l\'équipe "hôte". D\'autres joueuses peuvent être ajoutées en plus.',
             ])
             ->add('adversaire', TextType::class, [
-                'label' => 'Adversaire',
-                'attr'  => ['maxlength' => 150, 'placeholder' => 'Ex: Eagles Basketball, Longueau BC'],
+                'label'    => 'Adversaire',
+                // [B31 fix 15/06/2026] Pour entraînement interne, l'adversaire est auto-rempli
+                // "Entraînement interne" par le PRE_SUBMIT listener si l'user laisse vide.
+                // required=false pour ne pas bloquer l'UI, mais l'entité garde Assert\NotBlank
+                // (le listener garantit qu'on a toujours une valeur avant validate).
+                'required' => false,
+                'attr'     => ['maxlength' => 150, 'placeholder' => 'Ex: Eagles Basketball, Longueau BC (laisser vide si entraînement interne)'],
             ])
             ->add('date', DateTimeType::class, [
                 'label'  => 'Date et heure du match',
@@ -131,6 +138,35 @@ class RencontreType extends AbstractType
             ],
             'help'     => 'Pour matchs amicaux / entraînements internes. Personnes sans licence FFBB qui jouent ou participent (maman, dirigeant, sparring partner). Apparaissent sur la feuille de match interne et utilisables en Stats Live.',
         ]);
+
+        // [B31 fix 15/06/2026] PRE_SUBMIT : auto-remplit adversaire pour entraînement interne.
+        //
+        // Pourquoi PRE_SUBMIT et pas POST_SUBMIT :
+        //   PRE_SUBMIT s'exécute AVANT le validate Symfony. C'est ce qu'il faut car
+        //   l'entité Rencontre a #[Assert\NotBlank] sur adversaire — si on attend
+        //   POST_SUBMIT, la validation a déjà échoué.
+        //
+        // Pourquoi pas dans le controller :
+        //   Mettre la logique dans le form la rend réutilisable partout où le form
+        //   est instancié (création + édition). DRY.
+        //
+        // Pourquoi pas en JS côté template :
+        //   JS peut être contourné (curl, désactivation), la sécurité métier doit être
+        //   server-side. Pattern défensif.
+        $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) {
+            $data = $event->getData();
+            if (!is_array($data)) {
+                return;
+            }
+            $type = $data['typeRencontre'] ?? null;
+            $adversaire = trim($data['adversaire'] ?? '');
+
+            // Pour entraînement interne, on s'en fout du nom adversaire — auto-rempli
+            if ($type === Rencontre::TYPE_ENTRAINEMENT_INTERNE && $adversaire === '') {
+                $data['adversaire'] = 'Entraînement interne';
+                $event->setData($data);
+            }
+        });
     }
 
     public function configureOptions(OptionsResolver $resolver): void
