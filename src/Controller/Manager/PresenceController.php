@@ -9,6 +9,7 @@ use App\Gamification\BadgeChecker;
 use App\Repository\Sport\PresenceRepository;
 use App\Security\Voter\ClubVoter;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,6 +38,7 @@ class PresenceController extends AbstractController
         private readonly EntityManagerInterface $em,
         private readonly PresenceRepository $presenceRepository,
         private readonly BadgeChecker $badgeChecker,
+        private readonly LoggerInterface $logger,
     ) {}
 
     /**
@@ -44,15 +46,44 @@ class PresenceController extends AbstractController
      * Appelée après chaque pointage pour débloquer les badges qui viennent
      * de devenir éligibles (ex: 5e séance consécutive).
      *
+     * [B21 14/06/2026] FIX 500 : isolation try/catch par joueur.
+     *   Avant : si BadgeChecker plantait sur 1 joueur, tout le pointage retournait 500
+     *   APRÈS le flush en base → utilisateur voyait "Oops" mais les présences étaient
+     *   bien enregistrées. C'est exactement l'anti-pattern "side-effect après commit
+     *   qui casse la réponse HTTP".
+     *   Maintenant : on capture l'exception PAR JOUEUR, on log la stack trace dans
+     *   Monolog, et on continue le sync pour les autres joueurs. La réponse HTTP
+     *   garde son code 302 redirect succès.
+     *
      * @param \App\Entity\Sport\Joueur[] $joueurs
      * @return int nombre total de badges nouvellement débloqués
      */
     private function syncBadgesPourJoueurs(array $joueurs): int
     {
         $totalNouveaux = 0;
+        $totalErreurs  = 0;
         foreach ($joueurs as $joueur) {
-            $nouveaux = $this->badgeChecker->syncBadges($joueur);
-            $totalNouveaux += count($nouveaux);
+            try {
+                $nouveaux = $this->badgeChecker->syncBadges($joueur);
+                $totalNouveaux += count($nouveaux);
+            } catch (\Throwable $e) {
+                $totalErreurs++;
+                $this->logger->error('BadgeChecker::syncBadges a planté pour le joueur', [
+                    'joueur_id'   => $joueur->getId(),
+                    'joueur_nom'  => $joueur->getNom() . ' ' . $joueur->getPrenom(),
+                    'exception'   => $e::class,
+                    'message'     => $e->getMessage(),
+                    'file'        => $e->getFile() . ':' . $e->getLine(),
+                    'trace'       => $e->getTraceAsString(),
+                ]);
+            }
+        }
+        if ($totalErreurs > 0) {
+            $this->logger->warning(sprintf(
+                'syncBadgesPourJoueurs : %d erreur(s) sur %d joueur(s) — voir logs error précédents',
+                $totalErreurs,
+                count($joueurs)
+            ));
         }
         return $totalNouveaux;
     }
