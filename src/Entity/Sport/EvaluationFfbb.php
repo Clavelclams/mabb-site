@@ -55,13 +55,17 @@ class EvaluationFfbb
     #[ORM\Column]
     private int $points = 0;
 
-    #[ORM\Column]
+    // [FIX 14/06/2026] Force le mapping snake_case lisible (tirs_2pt_*) car la
+    // convention par défaut Doctrine génère "tirs2pt_*" (chiffre collé au mot
+    // précédent), incompatible avec la migration Version20260612120000 qui a
+    // créé les colonnes "tirs_2pt_*". Même problème déjà rencontré sur code_emarque.
+    #[ORM\Column(name: 'tirs_2pt_reussis')]
     private int $tirs2ptReussis = 0;
-    #[ORM\Column]
+    #[ORM\Column(name: 'tirs_2pt_tentes')]
     private int $tirs2ptTentes = 0;
-    #[ORM\Column]
+    #[ORM\Column(name: 'tirs_3pt_reussis')]
     private int $tirs3ptReussis = 0;
-    #[ORM\Column]
+    #[ORM\Column(name: 'tirs_3pt_tentes')]
     private int $tirs3ptTentes = 0;
     #[ORM\Column]
     private int $lancersReussis = 0;
