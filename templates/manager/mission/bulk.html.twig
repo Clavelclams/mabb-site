@@ -1,0 +1,106 @@
+{% extends 'manager/base.html.twig' %}
+{% block title %}Attribution multiple — Missions — MABB{% endblock %}
+
+{% block body %}
+
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-people-fill"></i> Attribution multiple de missions</h1>
+            <p class="subtitle">1 type de mission + N joueuses sélectionnées = N missions créées en 1 clic.</p>
+        </div>
+        <a href="{{ path('manager_dashboard') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    {% for label, messages in app.flashes(['success', 'warning', 'error']) %}
+        {% for message in messages %}
+            <div class="card-mabb" style="padding:12px 16px; margin-bottom:14px; border-left:4px solid {{ label == 'success' ? '#16a34a' : (label == 'warning' ? '#d97706' : '#ef4444') }};">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    <form method="POST" action="{{ path('manager_mission_bulk') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('mission_bulk') }}">
+
+        {# Section : choix mission #}
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-tag"></i> Mission à attribuer</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Type de mission</label>
+                        <select name="type" required class="form-select">
+                            <option value="">— Choisir —</option>
+                            {% for code, libelle in types %}
+                                <option value="{{ code }}">{{ libelle }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Date</label>
+                        <input type="date" name="date" value="{{ "now"|date('Y-m-d') }}" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="form-check form-switch" style="margin-top:8px;">
+                            <input type="checkbox" name="est_benevole" value="1" checked id="estBen" class="form-check-input">
+                            <label class="form-check-label" for="estBen">Bénévolat (XP axe C)</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label">Description (optionnel)</label>
+                    <input type="text" name="description" maxlength="200" class="form-control" placeholder="Ex: Tournoi 3x3 du 15/06 — tenue table de marque">
+                </div>
+            </div>
+        </div>
+
+        {# Section : sélection joueuses #}
+        <div class="card-mabb" style="margin-top:16px;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-check2-square"></i> Sélectionner les joueuses ({{ joueurs|length }} actives)</span>
+                <div>
+                    <button type="button" onclick="toggleAll(true)" class="btn-mabb-ghost btn-sm">Tout cocher</button>
+                    <button type="button" onclick="toggleAll(false)" class="btn-mabb-ghost btn-sm">Tout décocher</button>
+                </div>
+            </div>
+            <div class="card-body" style="max-height:480px; overflow-y:auto;">
+                <input type="text" id="filtreJoueuses" placeholder="🔍 Filtrer par nom..." class="form-control mb-3" oninput="filtrer(this.value)">
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:8px;">
+                    {% for j in joueurs %}
+                        <label class="joueur-card" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; transition:background .15s;">
+                            <input type="checkbox" name="joueur_ids[]" value="{{ j.id }}" class="form-check-input">
+                            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.78rem; flex-shrink:0;">
+                                {{ j.prenom|first|upper }}{{ j.nom|first|upper }}
+                            </div>
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="font-weight:600; font-size:.88rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">{{ j.prenom }} {{ j.nom }}</div>
+                                <div style="font-size:.72rem; color:var(--mabb-muted);">{{ j.equipe ? j.equipe.nom : '—' }}</div>
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:16px; display:flex; justify-content:flex-end;">
+            <button type="submit" class="btn-mabb-primary">
+                <i class="bi bi-send"></i> Créer les missions
+            </button>
+        </div>
+    </form>
+
+    <script>
+        function toggleAll(state) {
+            document.querySelectorAll('input[name="joueur_ids[]"]').forEach(c => c.checked = state);
+        }
+        function filtrer(q) {
+            q = q.toLowerCase().trim();
+            document.querySelectorAll('.joueur-card').forEach(card => {
+                const visible = card.innerText.toLowerCase().includes(q);
+                card.style.display = visible ? '' : 'none';
+            });
+        }
+    </script>
+
+{% endblock %}

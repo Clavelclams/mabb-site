@@ -32,6 +32,17 @@ class RencontreType extends AbstractType
         $club = $options['club'];
 
         $builder
+            // [B31 12/06/2026] Type de rencontre — détermine UI et règles
+            ->add('typeRencontre', ChoiceType::class, [
+                'label'    => 'Type de rencontre',
+                'required' => true,
+                'choices'  => [
+                    'Officiel (championnat/coupe)'        => Rencontre::TYPE_OFFICIEL,
+                    'Amical (multi-catégorie possible)'   => Rencontre::TYPE_AMICAL,
+                    'Entraînement interne (avec éphémères)' => Rencontre::TYPE_ENTRAINEMENT_INTERNE,
+                ],
+                'help'     => 'Officiel = championnat FFBB. Amical = inter-clubs hors compet. Entraînement = sparring avec joueuses éphémères possibles.',
+            ])
             ->add('equipe', EntityType::class, [
                 'label'         => 'Équipe',
                 'class'         => Equipe::class,
@@ -41,7 +52,8 @@ class RencontreType extends AbstractType
                     ->andWhere('e.isActive = true')
                     ->setParameter('club', $club)
                     ->orderBy('e.categorie', 'ASC'),
-                'placeholder'   => 'Choisir une équipe...',
+                'placeholder'   => 'Choisir une équipe principale...',
+                'help'          => 'Si amical/entraînement, c\'est l\'équipe "hôte". D\'autres joueuses peuvent être ajoutées en plus.',
             ])
             ->add('adversaire', TextType::class, [
                 'label' => 'Adversaire',
@@ -106,6 +118,19 @@ class RencontreType extends AbstractType
                 'required' => false,
                 'attr'     => ['rows' => 3, 'placeholder' => 'Observations, points clés du match, commentaires arbitrage...'],
             ]);
+
+        // [B31] Si amical/entraînement : champ pour joueuses éphémères (texte libre, parsé en JSON côté controller)
+        // On l'affiche aussi pour officiel mais c'est rarement utilisé.
+        $builder->add('joueursEphemeresTexte', TextareaType::class, [
+            'label'    => 'Joueuses éphémères (1 par ligne)',
+            'required' => false,
+            'mapped'   => false,
+            'attr'     => [
+                'rows' => 4,
+                'placeholder' => "Format : Prénom Nom (rôle optionnel)\nEx :\nFatou MAMAN (sparring)\nClément DIRIGEANT\nMarie BENEVOLE (formation OTM)",
+            ],
+            'help'     => 'Pour matchs amicaux / entraînements internes. Personnes sans licence FFBB qui jouent ou participent (maman, dirigeant, sparring partner). Apparaissent sur la feuille de match interne et utilisables en Stats Live.',
+        ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

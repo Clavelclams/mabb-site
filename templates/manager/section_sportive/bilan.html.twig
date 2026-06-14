@@ -1,0 +1,123 @@
+{% extends 'manager/base.html.twig' %}
+{% block title %}Bilan scolaire — {{ joueur.prenom }} {{ joueur.nom }} — MABB{% endblock %}
+
+{% block body %}
+
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-mortarboard"></i> Bilan scolaire — {{ joueur.prenom }} {{ joueur.nom }}</h1>
+            <p class="subtitle">
+                Section Sportive ·
+                {% if joueur.classeScolaire %}{{ joueur.classeScolaire }} ·{% endif %}
+                {{ bulletins|length }} bulletin(s) enregistré(s)
+            </p>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <a href="{{ path('manager_section_sportive_upload', {id: joueur.id}) }}" class="btn-mabb-primary">
+                <i class="bi bi-upload"></i> Ajouter un bulletin
+            </a>
+            <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}" class="btn-mabb-ghost">
+                <i class="bi bi-arrow-left"></i> Fiche joueuse
+            </a>
+        </div>
+    </div>
+
+    {% if bulletins is empty %}
+        <div class="card-mabb" style="padding:30px; text-align:center;">
+            <p>Aucun bulletin enregistré pour l'instant.</p>
+            <a href="{{ path('manager_section_sportive_upload', {id: joueur.id}) }}" class="btn-mabb-primary">
+                <i class="bi bi-upload"></i> Ajouter le premier bulletin
+            </a>
+        </div>
+    {% else %}
+
+        {# Fromage de stats : radar par matière (dernière année) #}
+        {% if radar_data|length >= 3 %}
+            <div class="card-mabb">
+                <div class="card-header"><i class="bi bi-pie-chart"></i> Fromage des matières (dernière année)</div>
+                <div class="card-body">
+                    <canvas id="radarChart" height="350"></canvas>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Suivi progression : courbe moyenne par trimestre #}
+        {% if progression|length >= 2 %}
+            <div class="card-mabb" style="margin-top:16px;">
+                <div class="card-header"><i class="bi bi-graph-up"></i> Progression — moyenne générale par trimestre</div>
+                <div class="card-body">
+                    <canvas id="lineChart" height="240"></canvas>
+                </div>
+            </div>
+        {% endif %}
+
+        {# Liste détaillée des bulletins #}
+        <div class="card-mabb" style="margin-top:16px;">
+            <div class="card-header"><i class="bi bi-list-check"></i> Bulletins enregistrés</div>
+            <div class="card-body" style="padding:0;">
+                <table class="table-mabb" style="width:100%; font-size:.88rem;">
+                    <thead style="background:#f8fafc;">
+                        <tr>
+                            <th>Année</th>
+                            <th>Trim</th>
+                            <th>Moy gén</th>
+                            <th>Nb notes</th>
+                            <th>Source</th>
+                            <th>Uploadé</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in bulletins %}
+                            <tr>
+                                <td>{{ b.anneeScolaire }}</td>
+                                <td><strong>{{ b.trimestre }}</strong></td>
+                                <td>{% if b.moyenneGenerale %}{{ b.moyenneGenerale }}/20{% else %}—{% endif %}</td>
+                                <td>{{ b.notes|length }}</td>
+                                <td><span style="background:#eff6ff; color:#1d4ed8; padding:2px 8px; border-radius:8px; font-size:.72rem;">{{ b.source }}</span></td>
+                                <td style="color:#64748b;">{{ b.uploadedAt|date('d/m/Y') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+        <script>
+            {% if radar_data|length >= 3 %}
+            new Chart(document.getElementById('radarChart'), {
+                type: 'radar',
+                data: {
+                    labels: {{ radar_data|map(r => r.matiere)|json_encode|raw }},
+                    datasets: [{
+                        label: 'Moyenne /20',
+                        data: {{ radar_data|map(r => r.moyenne)|json_encode|raw }},
+                        backgroundColor: 'rgba(29,78,216,.2)',
+                        borderColor: '#1d4ed8',
+                        pointBackgroundColor: '#1d4ed8',
+                    }]
+                },
+                options: { scales: { r: { suggestedMin: 0, suggestedMax: 20 }}}
+            });
+            {% endif %}
+
+            {% if progression|length >= 2 %}
+            new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: {
+                    labels: {{ progression|map(p => p.label)|json_encode|raw }},
+                    datasets: [{
+                        label: 'Moyenne générale',
+                        data: {{ progression|map(p => p.moyenne)|json_encode|raw }},
+                        borderColor: '#ea580c',
+                        backgroundColor: 'rgba(234,88,12,.15)',
+                        tension: 0.3, fill: true,
+                    }]
+                },
+                options: { scales: { y: { suggestedMin: 0, suggestedMax: 20 }}}
+            });
+            {% endif %}
+        </script>
+    {% endif %}
+
+{% endblock %}

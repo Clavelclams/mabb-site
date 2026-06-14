@@ -40,8 +40,12 @@ when@prod:
                 channels: ["!deprecation"]
                 buffer_size: 50 # How many messages should be saved? Prevent memory leaks
             nested:
-                type: stream
-                path: php://stderr
+                # [11/06/2026] OVH cluster102 : php://stderr est perdu dans
+                # le néant sur mutu. On écrit dans var/log/prod.log pour
+                # pouvoir debugger les 500 en prod (tail/grep).
+                type: rotating_file
+                path: "%kernel.logs_dir%/prod.log"
+                max_files: 7
                 level: debug
                 formatter: monolog.formatter.json
             console:
@@ -51,5 +55,5 @@ when@prod:
             deprecation:
                 type: stream
                 channels: [deprecation]
-                path: php://stderr
+                path: "%kernel.logs_dir%/deprecation.log"
                 formatter: monolog.formatter.json

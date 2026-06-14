@@ -161,6 +161,14 @@ class Joueur implements ClubAwareInterface
     #[ORM\Column]
     private bool $isActive = true;
 
+    /** [B33 12/06/2026] Tag Section Sportive — débloque module bulletins scolaires. */
+    #[ORM\Column]
+    private bool $estSectionSportive = false;
+
+    /** [B33] Classe scolaire en cours (ex: "6e A", "5e B"). */
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $classeScolaire = null;
+
     #[ORM\Column]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -328,6 +336,12 @@ class Joueur implements ClubAwareInterface
     public function setUser(?User $user): static { $this->user = $user; return $this; }
     public function isActive(): bool { return $this->isActive; }
     public function setIsActive(bool $isActive): static { $this->isActive = $isActive; return $this; }
+
+    // [B33] Section Sportive
+    public function isEstSectionSportive(): bool { return $this->estSectionSportive; }
+    public function setEstSectionSportive(bool $s): static { $this->estSectionSportive = $s; return $this; }
+    public function getClasseScolaire(): ?string { return $this->classeScolaire; }
+    public function setClasseScolaire(?string $c): static { $this->classeScolaire = $c; return $this; }
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
     public function getPresences(): Collection { return $this->presences; }
     public function getConvocations(): Collection { return $this->convocations; }

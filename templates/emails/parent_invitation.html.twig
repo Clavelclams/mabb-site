@@ -1,0 +1,48 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Invitation parent MABB</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f1f5f9; font-family:Arial, sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#f1f5f9;">
+        <tr><td align="center" style="padding:30px 16px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:560px; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.08);">
+                <tr><td style="background:linear-gradient(135deg, #063a55 0%, #0b4fa3 100%); padding:32px 30px; text-align:center;">
+                    <div style="color:#fff; font-size:26px; font-weight:800;">🏀 MABB Manager</div>
+                    <div style="color:#cbd5e1; font-size:12px; margin-top:4px; text-transform:uppercase; letter-spacing:1.5px;">Métropole Amiénoise Basket-Ball</div>
+                </td></tr>
+                <tr><td style="padding:36px 36px 20px;">
+                    <h1 style="margin:0 0 16px; font-size:22px; color:#0b1f3a; font-weight:700;">Tu es invité·e à rejoindre MABB</h1>
+                    <p style="margin:0 0 14px; font-size:15px; line-height:1.6; color:#475569;">
+                        Bonjour, <br><br>
+                        Le club MABB t'invite à créer ton compte parent pour suivre les activités sportives de <strong>{{ joueur.prenom }} {{ joueur.nom }}</strong>.
+                    </p>
+                    <p style="margin:0 0 20px; font-size:15px; line-height:1.6; color:#475569;">
+                        Avec ton compte, tu pourras :<br>
+                        ✅ Voir les prochaines convocations<br>
+                        ✅ Suivre les présences aux entraînements et matchs<br>
+                        ✅ Recevoir les notifications du club<br>
+                        ✅ Communiquer avec les coachs
+                    </p>
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr><td align="center" style="padding:12px 0 24px;">
+                            <a href="{{ url }}" style="background:linear-gradient(135deg, #1d4ed8, #2563eb); color:#fff; text-decoration:none; padding:14px 32px; border-radius:10px; font-weight:700; font-size:15px; display:inline-block;">
+                                Créer mon compte parent
+                            </a>
+                        </td></tr>
+                    </table>
+                    <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:12px 14px; border-radius:6px; font-size:13px; color:#92400e; margin:0 0 24px;">
+                        ⏱️ <strong>Ce lien expire dans {{ ttl_days }} jours.</strong>
+                    </div>
+                    <p style="margin:0 0 8px; font-size:12px; color:#94a3b8;">Si le bouton ne fonctionne pas :</p>
+                    <p style="margin:0 0 24px; font-size:11px; color:#475569; word-break:break-all; background:#f8fafc; padding:10px; border-radius:6px; font-family:monospace;">{{ url }}</p>
+                </td></tr>
+                <tr><td style="background:#0b1f3a; padding:18px 30px; text-align:center;">
+                    <p style="margin:0; color:#94a3b8; font-size:11px;">Envoyé automatiquement, ne pas répondre.</p>
+                </td></tr>
+            </table>
+        </td></tr>
+    </table>
+</body>
+</html>

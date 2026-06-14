@@ -362,8 +362,22 @@
                                     <span style="background:#f1f5f9; color:var(--mabb-muted); padding:5px 10px; border-radius:6px; font-size:.75rem; font-weight:600;">
                                         <i class="bi bi-lock"></i> Verrouillé FFBB
                                     </span>
+                                {% elseif rencontre.passee %}
+                                    {# [B22 12/06/2026] Match terminé : inscriptions closes (sauf STAFF qui peut corriger après) #}
+                                    {% if is_granted('CLUB_STAFF', rencontre) %}
+                                        <form method="post" action="{{ path('manager_rencontre_role_sinscrire', {id: rencontre.id, role: code}) }}" style="display:inline;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('role_' ~ rencontre.id ~ '_' ~ code) }}">
+                                            <button type="submit" class="btn-mabb-ghost btn-sm" title="Match terminé — inscription staff possible pour corriger">
+                                                <i class="bi bi-clock-history"></i> Inscrire (post-match)
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span style="background:#f1f5f9; color:var(--mabb-muted); padding:5px 10px; border-radius:6px; font-size:.75rem; font-weight:600;" title="Match terminé, inscription close">
+                                            <i class="bi bi-clock-history"></i> Inscriptions closes
+                                        </span>
+                                    {% endif %}
                                 {% else %}
-                                    {# Libre : bouton "Je m'inscris" #}
+                                    {# Libre : bouton "Je m'inscris" (match à venir) #}
                                     <form method="post" action="{{ path('manager_rencontre_role_sinscrire', {id: rencontre.id, role: code}) }}" style="display:inline;">
                                         <input type="hidden" name="_token" value="{{ csrf_token('role_' ~ rencontre.id ~ '_' ~ code) }}">
                                         <button type="submit" class="btn-mabb-orange btn-sm">

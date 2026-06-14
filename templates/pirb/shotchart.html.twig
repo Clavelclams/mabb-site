@@ -1,0 +1,137 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Mon shot chart — PIRB MABB{% endblock %}
+
+{% block body %}
+
+    <div class="pirb-card" style="text-align:center; padding:22px 16px;">
+        <div style="font-size:2.4rem; margin-bottom:6px;">🎯</div>
+        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Mon shot chart</h1>
+        <p style="color:var(--pirb-text-muted); font-size:0.82rem; margin-top:6px;">
+            <strong>{{ total }}</strong> tir(s) réussi(s) cumulé(s) sur la saison
+        </p>
+        <a href="{{ path('pirb_stats') }}" style="color:var(--pirb-text-muted); font-size:0.85rem; text-decoration:none;">
+            <i class="bi bi-arrow-left"></i> Retour stats
+        </a>
+    </div>
+
+    {% if total == 0 %}
+        <div class="pirb-card" style="text-align:center; padding:24px;">
+            <p style="margin:0; color:var(--pirb-text-muted);">
+                Aucun tir réussi enregistré pour l'instant.<br>
+                <small>Les tirs sont extraits du PDF positions FFBB après chaque match.</small>
+            </p>
+        </div>
+    {% else %}
+
+        {# Décompte par type #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Décompte par type</div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+                <div style="text-align:center; padding:12px; background:rgba(16,185,129,.12); border-radius:10px;">
+                    <div style="font-size:1.6rem; font-weight:800; color:#10b981;">{{ count_by_type['2pt_int'] ?? 0 }}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted); text-transform:uppercase;">2pts INT</div>
+                </div>
+                <div style="text-align:center; padding:12px; background:rgba(59,130,246,.12); border-radius:10px;">
+                    <div style="font-size:1.6rem; font-weight:800; color:#3b82f6;">{{ count_by_type['2pt_ext'] ?? 0 }}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted); text-transform:uppercase;">2pts EXT</div>
+                </div>
+                <div style="text-align:center; padding:12px; background:rgba(234,88,12,.12); border-radius:10px;">
+                    <div style="font-size:1.6rem; font-weight:800; color:var(--pirb-accent);">{{ count_by_type['3pt'] ?? 0 }}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted); text-transform:uppercase;">3pts</div>
+                </div>
+            </div>
+        </div>
+
+        {# Terrain SVG avec tirs (V1 : positions approximatives) #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Terrain (saison)</div>
+            {% if count_with_pos == 0 %}
+                <div style="background:rgba(245,158,11,.1); padding:10px 12px; border-radius:8px; font-size:0.78rem; color:#f59e0b; margin-bottom:10px;">
+                    ⚠️ Position des tirs pas encore extraite du PDF (V1). On affiche les tirs en zones approximatives selon le type.
+                </div>
+            {% endif %}
+
+            <div style="position:relative; width:100%; aspect-ratio:1.87/1; background:#2a5e3d; border:2px solid #fff; border-radius:8px; overflow:hidden;">
+                {# Terrain SVG : demi-court horizontal avec panier à gauche #}
+                <svg viewBox="0 0 280 150" xmlns="http://www.w3.org/2000/svg" style="position:absolute; top:0; left:0; width:100%; height:100%;">
+                    {# Demi-terrain offensif (vu de côté) #}
+                    <!-- Ligne de touche -->
+                    <rect x="0" y="0" width="280" height="150" fill="none" stroke="#fff" stroke-width="1"/>
+                    <!-- Médiane -->
+                    <line x1="140" y1="0" x2="140" y2="150" stroke="#fff" stroke-width="1"/>
+                    <circle cx="140" cy="75" r="20" fill="none" stroke="#fff" stroke-width="1"/>
+                    <!-- Raquette gauche -->
+                    <rect x="0" y="45" width="60" height="60" fill="none" stroke="#fff" stroke-width="1"/>
+                    <circle cx="60" cy="75" r="18" fill="none" stroke="#fff" stroke-width="1"/>
+                    <!-- Ligne 3pts gauche -->
+                    <path d="M 0,15 A 75,75 0 0 1 75,75 A 75,75 0 0 1 0,135" fill="none" stroke="#fff" stroke-width="1"/>
+                    <!-- Panier gauche -->
+                    <circle cx="10" cy="75" r="3" fill="#ea580c"/>
+
+                    {# Tirs FFBB V1 : positions pseudo-aléatoires par zone (en attendant V2 vraies coords) #}
+                    {% for tir in tirs %}
+                        {% if tir.positionX and tir.positionY %}
+                            <circle cx="{{ tir.positionX * 2.8 }}" cy="{{ tir.positionY * 1.5 }}" r="3" fill="#fbbf24" stroke="#fff" stroke-width="0.5"/>
+                        {% else %}
+                            {% set seed = (tir.id * 31) % 100 %}
+                            {% if tir.typeTir == '3pt' %}
+                                <circle cx="{{ 90 + (seed % 30) }}" cy="{{ 20 + (seed % 110) }}" r="3" fill="#ea580c" fill-opacity="0.5" stroke="#fff" stroke-width="0.5"/>
+                            {% elseif tir.typeTir == '2pt_int' %}
+                                <circle cx="{{ 25 + (seed % 30) }}" cy="{{ 55 + (seed % 40) }}" r="3" fill="#10b981" fill-opacity="0.5" stroke="#fff" stroke-width="0.5"/>
+                            {% else %}
+                                <circle cx="{{ 65 + (seed % 30) }}" cy="{{ 35 + (seed % 80) }}" r="3" fill="#3b82f6" fill-opacity="0.5" stroke="#fff" stroke-width="0.5"/>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {# [B22d] Tirs Stats Live : VRAIES coordonnées X/Y % 0-100 → terrain 280×150 #}
+                    {% for tir in tirs_live %}
+                        {% if tir.positionX is not null and tir.positionY is not null %}
+                            {% set color = tir.type == 'tir_3pt_reussi' ? '#ea580c' : (tir.type == 'tir_2pt_int_reussi' ? '#10b981' : '#3b82f6') %}
+                            <circle cx="{{ tir.positionX * 2.8 }}" cy="{{ tir.positionY * 1.5 }}" r="4" fill="{{ color }}" stroke="#fff" stroke-width="1"/>
+                        {% endif %}
+                    {% endfor %}
+                </svg>
+            </div>
+            <div style="display:flex; gap:14px; justify-content:center; margin-top:10px; font-size:0.74rem; color:var(--pirb-text-muted);">
+                <div><span style="color:#10b981;">●</span> 2pts INT</div>
+                <div><span style="color:#3b82f6;">●</span> 2pts EXT</div>
+                <div><span style="color:#ea580c;">●</span> 3pts</div>
+            </div>
+        </div>
+
+        {# Liste détaillée par match #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Tirs par match</div>
+            {% set tirsByMatch = {} %}
+            {% for tir in tirs %}
+                {% set mid = tir.rencontre.id %}
+                {% if tirsByMatch[mid] is not defined %}
+                    {% set tirsByMatch = tirsByMatch|merge({(mid): {rencontre: tir.rencontre, tirs: []}}) %}
+                {% endif %}
+                {% set existing = tirsByMatch[mid] %}
+                {% set newTirs = existing.tirs|merge([tir]) %}
+                {% set tirsByMatch = tirsByMatch|merge({(mid): {rencontre: existing.rencontre, tirs: newTirs}}) %}
+            {% endfor %}
+
+            {% for group in tirsByMatch %}
+                {% set r = group.rencontre %}
+                <a href="{{ path('pirb_stats_match', {id: r.id}) }}"
+                   style="display:flex; align-items:center; gap:12px; padding:10px 0;
+                          border-bottom:1px solid var(--pirb-border); text-decoration:none; color:inherit;">
+                    <div style="flex:1;">
+                        <div style="font-weight:600; font-size:0.88rem;">vs {{ r.adversaire }}</div>
+                        <div style="color:var(--pirb-text-muted); font-size:0.74rem;">
+                            {{ r.date|date('d/m/Y') }}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:800; color:var(--pirb-accent);">{{ group.tirs|length }} tir(s)</div>
+                    </div>
+                    <i class="bi bi-chevron-right" style="color:var(--pirb-text-muted);"></i>
+                </a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+{% endblock %}

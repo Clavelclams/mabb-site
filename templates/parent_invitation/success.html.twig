@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Compte créé — MABB</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg, #063a55, #0b4fa3); font-family:'Segoe UI', sans-serif; padding:20px; }
+        .card-s { background:#fff; border-radius:16px; padding:40px; max-width:460px; width:100%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+        .icon-ok { width:80px; height:80px; margin:0 auto 18px; border-radius:50%; background:linear-gradient(135deg, #10b981, #059669); color:#fff; display:flex; align-items:center; justify-content:center; font-size:2.5rem; }
+    </style>
+</head>
+<body>
+    <div class="card-s">
+        <div class="icon-ok"><i class="bi bi-check-lg"></i></div>
+        <h1 style="font-weight:800; color:#0b1f3a;">Compte créé !</h1>
+        <p style="color:#475569;">
+            Tu es maintenant lié·e à <strong>{{ joueur.prenom }} {{ joueur.nom }}</strong> dans le club MABB.<br><br>
+            Connecte-toi pour découvrir ton espace.
+        </p>
+        <a href="{{ path('manager_login') }}" class="btn btn-primary mt-3" style="background:#1d4ed8; border:none; padding:12px 28px; border-radius:10px; font-weight:700;">
+            <i class="bi bi-box-arrow-in-right"></i> Se connecter
+        </a>
+    </div>
+</body>
+</html>

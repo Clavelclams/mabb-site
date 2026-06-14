@@ -42,6 +42,29 @@ class Rencontre implements ClubAwareInterface
     ];
 
     /**
+     * [B23 12/06/2026] Type de rencontre :
+     * - OFFICIEL : championnat, coupe (par défaut)
+     * - AMICAL : match d'opposition contre un autre club hors compétition
+     * - ENTRAINEMENT_INTERNE : match d'entraînement entre joueuses du club
+     *   (multi-catégorie possible — ex U15+U18+Sénior mélangées)
+     */
+    public const TYPE_OFFICIEL              = 'OFFICIEL';
+    public const TYPE_AMICAL                = 'AMICAL';
+    public const TYPE_ENTRAINEMENT_INTERNE  = 'ENTRAINEMENT_INTERNE';
+    public const TYPES_RENCONTRE = [self::TYPE_OFFICIEL, self::TYPE_AMICAL, self::TYPE_ENTRAINEMENT_INTERNE];
+
+    #[ORM\Column(length: 30)]
+    private string $typeRencontre = self::TYPE_OFFICIEL;
+
+    /**
+     * [B23 12/06/2026] Joueuses externes à l'équipe officielle (hors effectif équipe).
+     * Stockées en JSON array d'IDs : [12, 47, 89]. Permet match multi-catégorie
+     * sans changer l'effectif officiel des équipes.
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $joueursExternes = null;
+
+    /**
      * B19 : champs FFBB import.
      * - numeroMatch : "5", "10", "33" (n° dans la division FFBB)
      * - codeEMarque : "KQ7B388D" (code feuille de match e-Marque V2)
@@ -392,6 +415,24 @@ class Rencontre implements ClubAwareInterface
         return !$this->arbitreExterneDesigne;
     }
 
+    /**
+     * [B22 — 12/06/2026] True si le match est déjà passé (date du coup d'envoi < maintenant).
+     * Sert à bloquer les inscriptions/désinscriptions aux rôles officiels et les
+     * réponses aux convocations une fois le match terminé.
+     *
+     * On ajoute volontairement une marge de 4h après le début du match pour couvrir
+     * la durée du match + le post-match (rangement, douches, table de marque).
+     * Au-delà, plus aucune inscription "Je m'inscris" n'a de sens.
+     */
+    public function isPassee(): bool
+    {
+        if ($this->date === null) {
+            return false;
+        }
+        $finEstimee = $this->date->modify('+4 hours');
+        return $finEstimee < new \DateTimeImmutable();
+    }
+
     // === B19 : Getters/Setters FFBB import ===
 
     public function getNumeroMatch(): ?string { return $this->numeroMatch; }
@@ -406,4 +447,13 @@ class Rencontre implements ClubAwareInterface
     public function setForfaitEquipe(bool $f): self { $this->forfaitEquipe = $f; return $this; }
     public function isForfaitAdverse(): bool { return $this->forfaitAdverse; }
     public function setForfaitAdverse(bool $f): self { $this->forfaitAdverse = $f; return $this; }
+
+    // === B23 : type rencontre + joueuses externes ===
+    public function getTypeRencontre(): string { return $this->typeRencontre; }
+    public function setTypeRencontre(string $t): self { $this->typeRencontre = $t; return $this; }
+    public function getJoueursExternes(): ?array { return $this->joueursExternes; }
+    public function setJoueursExternes(?array $j): self { $this->joueursExternes = $j; return $this; }
+    public function isEntrainementInterne(): bool { return $this->typeRencontre === self::TYPE_ENTRAINEMENT_INTERNE; }
+    public function isAmical(): bool { return $this->typeRencontre === self::TYPE_AMICAL; }
+    public function isOfficiel(): bool { return $this->typeRencontre === self::TYPE_OFFICIEL; }
 }

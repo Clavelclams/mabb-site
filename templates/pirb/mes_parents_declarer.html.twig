@@ -1,0 +1,67 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Déclarer un parent — PIRB MABB{% endblock %}
+
+{% block body %}
+
+    <div class="pirb-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h1 style="margin:0; font-size:1.15rem; font-weight:800;">Déclarer un parent</h1>
+            <a href="{{ path('pirb_mes_parents') }}" style="color:var(--pirb-text-muted); font-size:0.85rem; text-decoration:none;">
+                <i class="bi bi-arrow-left"></i> Retour
+            </a>
+        </div>
+        <p style="margin:0; color:var(--pirb-text-muted); font-size:0.82rem; line-height:1.5;">
+            Recherche le nom ou l'email de ton parent. Une demande sera envoyée au staff pour validation.
+        </p>
+    </div>
+
+    <form method="GET" action="{{ path('pirb_mes_parents_declarer') }}" class="pirb-card">
+        <input type="text" name="q" value="{{ recherche }}"
+               placeholder="Tape le nom ou l'email de ton parent..."
+               autofocus
+               style="width:100%; padding:12px 14px;
+                      background:rgba(255,255,255,.05);
+                      border:1px solid var(--pirb-border);
+                      border-radius:8px; color:var(--pirb-text);
+                      font-size:0.95rem; font-family:inherit;
+                      box-sizing:border-box;">
+        <button type="submit" class="pirb-btn pirb-btn-primary" style="width:100%; margin-top:10px;">
+            <i class="bi bi-search"></i> Rechercher
+        </button>
+    </form>
+
+    {% if recherche and candidats is empty %}
+        <div class="pirb-card" style="text-align:center; padding:18px;">
+            <p style="margin:0; color:var(--pirb-text-muted);">
+                Personne trouvé pour "<strong>{{ recherche }}</strong>".<br>
+                <small>Si ton parent n'a pas de compte, demande-lui de s'inscrire d'abord ou contacte le staff.</small>
+            </p>
+        </div>
+    {% endif %}
+
+    {% if candidats is not empty %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Résultats ({{ candidats|length }})</div>
+            {% for c in candidats %}
+                <form method="POST" action="{{ path('pirb_mes_parents_declarer') }}"
+                      style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--pirb-border);"
+                      onsubmit="return confirm('Déclarer {{ c.prenom }} {{ c.nom }} comme parent ? Le staff devra valider.');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('pirb_declarer_parent') }}">
+                    <input type="hidden" name="user_parent_id" value="{{ c.id }}">
+
+                    <div style="width:42px; height:42px; flex-shrink:0; border-radius:50%; background:linear-gradient(135deg, var(--pirb-blue), #1e40af); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800;">
+                        {{ c.prenom|first|upper }}{{ c.nom|first|upper }}
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700;">{{ c.prenom }} {{ c.nom }}</div>
+                        <div style="color:var(--pirb-text-muted); font-size:0.78rem;">{{ c.email }}</div>
+                    </div>
+                    <button type="submit" class="pirb-btn pirb-btn-primary" style="padding:6px 14px; font-size:0.85rem;">
+                        Déclarer
+                    </button>
+                </form>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+{% endblock %}

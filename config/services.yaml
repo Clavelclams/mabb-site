@@ -83,3 +83,23 @@ services:
     App\Command\ImportPdfsFfbbCommand:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    # B22a — Téléchargement PDF FFBB côté PIRB joueuse
+    App\Controller\Pirb\PirbStatsController:
+        bind:
+            string $projectDir: '%kernel.project_dir%'
+
+    # B30c — Invitation parent par mail
+    App\Service\Security\ParentInvitationManager:
+        arguments:
+            $mailerFrom: '%env(MAILER_FROM)%'
+
+    # B22b — Parser PDF resume FFBB
+    App\Service\Ffbb\FfbbResumeParser:
+        arguments:
+            $projectDir: '%kernel.project_dir%'
+
+    # B22c — Parser PDF positiontir FFBB (V1 sans coordonnées graphiques)
+    App\Service\Ffbb\FfbbPositionTirParser:
+        arguments:
+            $projectDir: '%kernel.project_dir%'

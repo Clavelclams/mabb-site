@@ -165,6 +165,10 @@ class RencontreController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // [B31 12/06/2026] Parse les joueuses éphémères saisies en texte libre
+            $ephemeresTexte = (string) $form->get('joueursEphemeresTexte')->getData();
+            $rencontre->setJoueursExternes($this->parseJoueursEphemeres($ephemeresTexte));
+
             $this->em->persist($rencontre);
             $this->em->flush();
             $this->addFlash('success', sprintf('Rencontre contre %s créée.', $rencontre->getAdversaire()));
@@ -176,6 +180,43 @@ class RencontreController extends AbstractController
             'rencontre' => $rencontre,
             'club'      => $club,
         ]);
+    }
+
+    /**
+     * [B31 12/06/2026] Parse le texte libre des joueuses éphémères en JSON.
+     * Chaque ligne devient un objet {prenom, nom, role}.
+     * Format toléré :
+     *   "Fatou MAMAN (sparring)"  → {prenom: "Fatou", nom: "MAMAN", role: "sparring"}
+     *   "Clément DIRIGEANT"        → {prenom: "Clément", nom: "DIRIGEANT", role: null}
+     */
+    private function parseJoueursEphemeres(string $texte): ?array
+    {
+        $texte = trim($texte);
+        if ($texte === '') return null;
+
+        $result = [];
+        $lignes = preg_split('/\r\n|\r|\n/', $texte) ?: [];
+
+        foreach ($lignes as $ligne) {
+            $ligne = trim($ligne);
+            if ($ligne === '') continue;
+
+            $role = null;
+            if (preg_match('/^(.*?)\s*\(([^)]+)\)\s*$/', $ligne, $m)) {
+                $ligne = trim($m[1]);
+                $role = trim($m[2]);
+            }
+
+            $parts = preg_split('/\s+/', $ligne, 2) ?: [];
+            if (count($parts) < 2) {
+                // 1 seul mot = pseudo
+                $result[] = ['prenom' => $parts[0] ?? '', 'nom' => '', 'role' => $role, 'pseudo' => true];
+            } else {
+                $result[] = ['prenom' => $parts[0], 'nom' => $parts[1], 'role' => $role, 'pseudo' => false];
+            }
+        }
+
+        return empty($result) ? null : $result;
     }
 
     /**
@@ -439,6 +480,13 @@ class RencontreController extends AbstractController
             return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
         }
 
+        // [B22 — 12/06/2026] Inscriptions closes une fois le match passé (date + 4h).
+        // Un STAFF peut quand même corriger après-coup pour régulariser une oubli (ex: mission gamif).
+        if ($rencontre->isPassee() && !$this->isGranted(ClubVoter::CLUB_STAFF, $rencontre)) {
+            $this->addFlash('warning', 'Match terminé : les inscriptions aux rôles officiels sont closes.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
         // Blocage des rôles ARBITRE_x si la FFBB a désigné un officiel
         $estArbitre = in_array($role, [RencontreRole::ROLE_ARBITRE_1, RencontreRole::ROLE_ARBITRE_2], true);
         if ($estArbitre && !$rencontre->peutRecevoirArbitreBenevole()) {
@@ -496,6 +544,13 @@ class RencontreController extends AbstractController
         $estLeUser = $rr->getUser() && $rr->getUser()->getId() === $user->getId();
         if (!$estStaff && !$estLeUser) {
             $this->addFlash('error', 'Action non autorisée.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        // [B22 — 12/06/2026] Désinscription bloquée post-match sauf STAFF
+        // (qui peut corriger en cas d'erreur — ex: remplacer un nom)
+        if ($rencontre->isPassee() && !$estStaff) {
+            $this->addFlash('warning', 'Match terminé : seul un staff peut modifier les rôles maintenant.');
             return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
         }
 

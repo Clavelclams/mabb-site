@@ -1,0 +1,58 @@
+{% extends 'manager/base.html.twig' %}
+{% block title %}Ajouter bulletin — {{ joueur.prenom }} {{ joueur.nom }}{% endblock %}
+
+{% block body %}
+
+    <div class="page-header">
+        <h1><i class="bi bi-upload"></i> Ajouter un bulletin — {{ joueur.prenom }} {{ joueur.nom }}</h1>
+        <a href="{{ path('manager_section_sportive_bilan', {id: joueur.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour bilan
+        </a>
+    </div>
+
+    <form method="POST" action="{{ path('manager_section_sportive_upload', {id: joueur.id}) }}" class="card-mabb">
+        <input type="hidden" name="_token" value="{{ csrf_token('upload_bulletin_' ~ joueur.id) }}">
+
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Année scolaire</label>
+                    <input type="text" name="annee_scolaire" pattern="\d{4}-\d{4}" placeholder="2026-2027" required class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Trimestre</label>
+                    <select name="trimestre" required class="form-select">
+                        <option value="T1">T1</option>
+                        <option value="T2">T2</option>
+                        <option value="T3">T3</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Moyenne générale</label>
+                    <input type="number" name="moyenne_generale" min="0" max="20" step="0.01" class="form-control">
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Appréciation globale</label>
+                <textarea name="appreciation" rows="2" class="form-control"></textarea>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Notes par matière (1 par ligne)</label>
+                <textarea name="notes_texte" rows="10" class="form-control" placeholder="Format : Matière | Moyenne | Coef
+Ex :
+Maths | 15.5 | 4
+Français | 13 | 4
+Anglais | 16.2 | 3
+EPS | 18 | 2"></textarea>
+                <small class="text-muted">Format : Matière | Moyenne | Coefficient</small>
+            </div>
+
+            <button type="submit" class="btn-mabb-primary mt-3">
+                <i class="bi bi-check-circle"></i> Enregistrer le bulletin
+            </button>
+        </div>
+    </form>
+
+{% endblock %}
