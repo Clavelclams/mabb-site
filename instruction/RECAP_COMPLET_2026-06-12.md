@@ -711,3 +711,121 @@ Avant que MABB pompe Ball.ia : fournir aux joueuses MABB un module de tracking d
 ---
 
 *Maj 12/06/2026 fin de soirée — ajout B34 + B35 + 11 blocs livrés marathon.*
+
+---
+
+# 👥 B36 — Parrainage gamifié style Strava (décidé 12/06 minuit)
+
+## Choix Clavel (brainstorm 7 questions)
+- **Q1** Qui peut inviter ? → **TOUT LE MONDE** (joueuses, parents, coachs, dirigeants, bénévoles). Admin valide et trace.
+- **Q2** Invitation à quoi ? → **Compte PIRB visiteur** d'abord. Si devient joueuse → demande club via Manager + validation admin.
+- **Q3** Récompense → **Mix XP + Badges paliers, 50 XP modeste** par recrue validée
+- **Q4** Cap → **Pas de limite** (anti-spam naturel via "XP seulement si admin valide")
+- **Q5** Trigger XP → À la **validation admin** dans Manager
+- **Q6** Partage → **Les 3** : QR code (IRL) + lien copiable + Web Share API native
+- **Q7** Multi-niveau → **NON** (V1 simple)
+
+## Workflow
+
+1. Parrain (n'importe qui) clique "Inviter" depuis profil PIRB → génère lien + QR
+2. Invité reçoit (WhatsApp/Insta/SMS/IRL) → clique
+3. Page publique "Bienvenue MABB" → crée compte **PIRB visiteur**
+4. (Optionnel) si invité veut rejoindre club → demande accès via Manager
+5. Admin valide → UserClubRole créé
+6. **HOOK** : `InvitationManager::attribuerXpSiValide()` → +50 XP au parrain (axe C) + check badges paliers
+7. Notif badge sur profil PIRB du parrain
+
+## Architecture
+- Entité `Invitation` : token sha256, parrain_id, parrain_role enum (joueuse/parent/coach/dirigeant/benevole), accepted_user_id, accepted_user_pirb_at, accepted_user_club_at, xp_attribue (bool)
+- Service `InvitationManager` : `genererLien()` + `accepterInvitation()` + `attribuerXpSiValide()`
+- Badges paliers ajoutés à BadgeCatalog axe C : Première recrue (1) / Recruteur (5) / Pilier (10) / Ambassadeur MABB (25)
+
+## 4 sous-blocs (effort 7-11h total)
+- **B36a** entité Invitation + service + migration (2-3h)
+- **B36b** UI génération lien + QR + Web Share API (2-3h)
+- **B36c** hook validation admin → trigger XP parrain (2-3h)
+- **B36d** page "Mes recrues" + badges paliers + intégration profil PIRB (1-2h)
+
+## Cible
+**Automne 2026 (V2)** — après B29 ENT base.
+
+## Pourquoi 50 XP modeste et pas plus
+Si récompense au clic ou au compte PIRB visiteur → spam massif (1000 mails → 1000 XP). En attendant la validation admin (qui exige un vrai engagement), on garantit que les XP correspondent à du **vrai recrutement utile au club**. 50 XP par recrue, c'est mieux que les 25 XP d'une mission bénévolat classique, mais ça reste cumulable raisonnablement (10 recrues = 500 XP = 1 niveau gagné = badge "Pilier du recrutement").
+
+---
+
+*Final maj 12/06/2026 minuit — backlog stable, 12 blocs codés en attente de push, B34/B35/B36 documentés pour V2/V5.*
+
+---
+
+# 🔄 B22b-bis (14/06/2026) — Pivot critique : Validation manuelle Stats FFBB
+
+## Le constat
+
+Après push des 12 blocs en prod le 14/06, lancement du command `app:parse-resumes-ffbb --saison=2025-2026` qui parcourt 14 rencontres → **0 lignes extraites** sur les 14.
+
+Diagnostic SQL : ✅ les PDFs sont bien sur OVH (`find ~/mabb-site/public -name "resume*.pdf"` retourne 14 fichiers), ✅ les `resume_path` sont bien renseignés en base.
+
+Diagnostic PHP :
+```bash
+php -r "..." # smalot/pdfparser sur public/uploads/rencontres/5/resume.pdf
+=== LONGUEUR TOTALE : 0 caracteres ===
+```
+
+**Verdict** : les PDFs FFBB exportés depuis Easy Stats / e-marque V2 sont des rendus **visuels SCANNÉS** (image, pas de texte). smalot/pdfparser sort 0 caractère car il n'y a aucun texte vectoriel dans le PDF — c'est essentiellement une suite d'images.
+
+## Leçon retenue (à intégrer dans le dossier pro CDA)
+
+> *"AVANT d'écrire un parser sur une source externe (PDF, API, fichier), je dois TOUJOURS dumper la source d'abord pour vérifier qu'elle contient le format que je crois. Trois lignes (`PdfParser->parseFile()` + `strlen($texte)`) suffisent en 30 secondes. Sans cette validation, j'ai perdu ~2h à coder un parser regex (B22b + B22c) qui ne pouvait pas fonctionner."*
+
+C'est un retex pédagogique typique que le jury CDA recherche : montrer qu'on apprend de ses erreurs et qu'on adapte sa méthode.
+
+## Options envisagées
+
+| Option | Description | Verdict |
+|---|---|---|
+| **A** Désactiver et basculer 100% sur EvaluationMatch + SessionStatsLive | Plus simple, mais perd la "source officielle FFBB" | Acceptable |
+| **B** OCR Tesseract / Google Vision API | Coût + complexité OVH mutu + qualité OCR sur tableaux médiocre | Refusé |
+| **C** ✅ **Validation manuelle par le coach** | Bouton "✓ J'ai vérifié les stats FFBB" sur fiche rencontre Manager → badge ✓ côté PIRB joueuse | **Retenu** |
+
+## Architecture B22b-bis
+
+**3 colonnes ajoutées à `rencontre`** (migration `Version20260614000000`) :
+- `ffbb_stats_validated_at` DATETIME nullable
+- `ffbb_stats_validated_by_id` FK User nullable (ON DELETE SET NULL)
+- `ffbb_stats_validation_note` LONGTEXT nullable (commentaire optionnel coach)
+
+**Routes nouvelles** (`/manager/rencontres/{id}/...`) :
+- `POST /valider-stats-ffbb` — CSRF + CLUB_STAFF + `isPassee()` + `resumePath !== null`
+- `POST /invalider-stats-ffbb` — annulation (réversible)
+
+**UI Manager** (`templates/manager/rencontre/show.html.twig`) :
+- Si match passé + PDF resume uploadé + pas encore validé → carte jaune "Validation Stats FFBB" avec textarea + bouton
+- Si validé → carte verte "Stats FFBB validées" avec qui+quand + commentaire éventuel + bouton "Annuler"
+
+**UI PIRB** (`templates/pirb/stats_match.html.twig`) :
+- Si `rencontre.isFfbbStatsValidated()` → badge ✓ vert "Stats officielles FFBB validées" avec lien vers le PDF officiel téléchargeable
+
+**Command `app:parse-resumes-ffbb`** :
+- Garde-fou : refuse de tourner sans `--force` et affiche un warning explicite expliquant le pivot B22b-bis
+- Code dormant gardé : le jour où on intègre Google Vision API ou Tesseract, on aura une base prête
+
+## Code dormant conservé
+
+- Entité `EvaluationFfbb` — reste en base, non utilisée tant que pas d'OCR
+- Entité `TirFfbb` — pareil pour shotchart depuis PDF positions
+- Service `FfbbResumeParser` — utilisable avec `--force` pour POC futur
+- Service `FfbbPositionTirParser` — idem
+
+## Cible OCR (V3+)
+
+Si VEA gagne des subventions ou MABB obtient un budget, on pourra :
+- Soit louer un VPS OVH avec Tesseract (5-10€/mois)
+- Soit utiliser Google Vision API à la demande (~0.0015 $ par appel)
+- Soit attendre que FFBB publie une API officielle (peu probable court terme)
+
+Aucun de ces 3 choix n'est urgent. Le check humain de B22b-bis couvre 100% du besoin métier (un coach qui valide est de toute façon plus fiable qu'un OCR qui parse mal un tableau).
+
+---
+
+*Maj 14/06/2026 — B22b-bis livré, parser FFBB désactivé proprement, leçon retenue.*

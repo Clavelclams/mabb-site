@@ -212,6 +212,36 @@
         </div>
     {% endif %}
 
+    {# [B22b-bis 14/06/2026] Badge validation Stats FFBB par le coach.
+       Quand le coach a explicitement déclaré que sa saisie EvaluationMatch
+       correspond au PDF officiel FFBB, on affiche un badge officiel à la joueuse.
+       Cf. B22b initial (parser PDF) abandonné car PDFs FFBB scannés. #}
+    {% if rencontre.isFfbbStatsValidated() %}
+        <div class="pirb-card" style="border-left:4px solid #10b981;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <div style="font-size:1.8rem;">✓</div>
+                <div>
+                    <div style="font-weight:800; font-size:1rem; color:#10b981;">Stats officielles FFBB validées</div>
+                    <div style="font-size:0.78rem; color:var(--pirb-text-muted);">
+                        Vérifiées par <strong>{{ rencontre.ffbbStatsValidatedBy.prenom }}</strong>
+                        le {{ rencontre.ffbbStatsValidatedAt|date('d/m/Y') }}
+                    </div>
+                </div>
+            </div>
+            {% if rencontre.ffbbStatsValidationNote %}
+                <div style="margin-top:8px; padding:8px 10px; background:rgba(16,185,129,.08); border-radius:6px; font-size:0.8rem; font-style:italic;">
+                    « {{ rencontre.ffbbStatsValidationNote }} »
+                </div>
+            {% endif %}
+            {% if rencontre.resumePath %}
+                <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'resume'}) }}"
+                   style="display:inline-block; margin-top:10px; color:var(--pirb-accent); font-size:0.85rem; text-decoration:none; font-weight:600;">
+                    <i class="bi bi-file-earmark-pdf"></i> Télécharger le PDF officiel →
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
     {# [B22a 12/06/2026] Documents FFBB officiels téléchargeables par la joueuse #}
     {% set has_pdfs = rencontre.feuilleMatchPath or rencontre.resumePath or rencontre.positionsTirsPath %}
     {% if has_pdfs %}

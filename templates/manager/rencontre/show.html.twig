@@ -419,6 +419,61 @@
                         {{ _self.pdfUploadCard(rencontre, 'positions', 'Positions des tirs','bi-bullseye',          'Shot chart — carte des tirs sur le terrain') }}
                     </div>
                 </div>
+
+                {# ========================================================
+                   [B22b-bis 14/06/2026] Validation manuelle Stats FFBB
+                   Le coach déclare avoir comparé sa saisie EvaluationMatch
+                   avec le PDF officiel. Affiché ensuite côté PIRB comme
+                   un badge ✓ "Stats officielles validées".
+                   Visible uniquement si match passé + PDF resume uploadé.
+                   ======================================================== #}
+                {% if rencontre.isPassee() and rencontre.resumePath is not null %}
+                    <div class="card-mabb" style="margin-top:16px; {% if rencontre.isFfbbStatsValidated() %}border-left:4px solid var(--mabb-success, #10b981);{% else %}border-left:4px solid var(--mabb-warning, #f59e0b);{% endif %}">
+                        <div class="card-header">
+                            {% if rencontre.isFfbbStatsValidated() %}
+                                <i class="bi bi-check-circle-fill" style="color:#10b981;"></i> Stats FFBB validées
+                            {% else %}
+                                <i class="bi bi-clipboard-check" style="color:#f59e0b;"></i> Validation Stats FFBB
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            {% if rencontre.isFfbbStatsValidated() %}
+                                <p style="margin:0 0 10px 0; color:var(--mabb-text);">
+                                    Validé par <strong>{{ rencontre.ffbbStatsValidatedBy.prenom }} {{ rencontre.ffbbStatsValidatedBy.nom }}</strong>
+                                    le <strong>{{ rencontre.ffbbStatsValidatedAt|date('d/m/Y à H:i') }}</strong>.
+                                </p>
+                                {% if rencontre.ffbbStatsValidationNote %}
+                                    <div style="padding:10px; background:rgba(0,0,0,.04); border-radius:6px; margin-bottom:10px; font-style:italic;">
+                                        « {{ rencontre.ffbbStatsValidationNote }} »
+                                    </div>
+                                {% endif %}
+                                <p style="font-size:0.85rem; color:var(--mabb-muted); margin:0 0 10px 0;">
+                                    Les joueuses voient le badge ✓ sur leur page stats du match.
+                                </p>
+                                <form method="post" action="{{ path('manager_rencontre_invalider_stats_ffbb', {id: rencontre.id}) }}" onsubmit="return confirm('Annuler la validation des stats FFBB pour ce match ?');" style="margin:0;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('invalider_stats_ffbb_' ~ rencontre.id) }}">
+                                    <button type="submit" class="btn-mabb-ghost" style="color:var(--mabb-red, #ef4444); border-color:var(--mabb-red, #ef4444);">
+                                        <i class="bi bi-x-circle"></i> Annuler la validation
+                                    </button>
+                                </form>
+                            {% else %}
+                                <p style="margin:0 0 12px 0; color:var(--mabb-text);">
+                                    En cliquant ci-dessous, tu déclares avoir <strong>comparé ta saisie EvaluationMatch avec le PDF resume FFBB officiel</strong> et que les stats correspondent (ou bien que tu as documenté un écart ci-dessous).
+                                </p>
+                                <form method="post" action="{{ path('manager_rencontre_valider_stats_ffbb', {id: rencontre.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('valider_stats_ffbb_' ~ rencontre.id) }}">
+                                    <div style="margin-bottom:10px;">
+                                        <label for="validation_note" style="display:block; font-size:0.85rem; color:var(--mabb-muted); margin-bottom:4px;">Commentaire (optionnel) — ex : "Écart 2pts pour Jody, table mal saisie, ma saisie est bonne"</label>
+                                        <textarea name="validation_note" id="validation_note" rows="2" placeholder="Aucun écart. Stats conformes au PDF officiel." style="width:100%; padding:8px; border:1px solid var(--mabb-border); border-radius:6px; font-family:inherit;"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn-mabb-primary">
+                                        <i class="bi bi-check-circle"></i> J'ai vérifié, je valide les Stats FFBB
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
             {% endif %}
 
             {% if is_granted('CLUB_ADMIN', rencontre) %}

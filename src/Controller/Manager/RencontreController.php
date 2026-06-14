@@ -784,4 +784,91 @@ class RencontreController extends AbstractController
         );
         return $response;
     }
+
+    /**
+     * [B22b-bis 14/06/2026] Validation manuelle Stats FFBB par le coach/staff.
+     *
+     * Le coach déclare avoir comparé sa saisie EvaluationMatch avec le PDF
+     * resume FFBB officiel. Trace tracée pour affichage côté PIRB joueuse.
+     *
+     * Pourquoi pas un parser PDF :
+     *   Constat 14/06 : les PDFs FFBB sont des rendus VISUELS scannés
+     *   (smalot/pdfparser sort 0 caractère). OCR sur OVH mutu non viable.
+     *   Pivot vers check humain qui est de toute façon plus fiable (le coach
+     *   sait reconnaître une erreur de saisie FFBB du marqueur).
+     *
+     * Sécurité : CLUB_STAFF requis (Coach, Dirigeant, Staff, Trésorier).
+     * Idempotent : re-validation possible (mise à jour validatedAt + note).
+     */
+    #[Route(
+        '/rencontres/{id}/valider-stats-ffbb',
+        name: 'manager_rencontre_valider_stats_ffbb',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function validerStatsFfbb(Rencontre $rencontre, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        // CSRF protection
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('valider_stats_ffbb_' . $rencontre->getId(), $token)) {
+            $this->addFlash('danger', 'Token CSRF invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        // Pré-requis : un PDF resume FFBB doit être uploadé
+        if ($rencontre->getResumePath() === null) {
+            $this->addFlash('warning', 'Aucun PDF FFBB resume uploadé. Upload-le d\'abord.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        // Pré-requis : le match doit être passé (cohérence métier)
+        if (!$rencontre->isPassee()) {
+            $this->addFlash('warning', 'Tu ne peux valider les stats FFBB que pour un match déjà joué.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        /** @var User $user */
+        $user = $this->getUser();
+        $note = trim((string) $request->request->get('validation_note', ''));
+
+        $rencontre->setFfbbStatsValidatedAt(new \DateTimeImmutable());
+        $rencontre->setFfbbStatsValidatedBy($user);
+        $rencontre->setFfbbStatsValidationNote($note !== '' ? $note : null);
+
+        $this->em->flush();
+
+        $this->addFlash('success', '✓ Stats FFBB validées. Les joueuses verront le badge officiel.');
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
+
+    /**
+     * [B22b-bis 14/06/2026] Annulation de la validation (correction si erreur).
+     * Même permission CLUB_STAFF — réversible.
+     */
+    #[Route(
+        '/rencontres/{id}/invalider-stats-ffbb',
+        name: 'manager_rencontre_invalider_stats_ffbb',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function invaliderStatsFfbb(Rencontre $rencontre, Request $request): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = $request->request->get('_token');
+        if (!$this->isCsrfTokenValid('invalider_stats_ffbb_' . $rencontre->getId(), $token)) {
+            $this->addFlash('danger', 'Token CSRF invalide.');
+            return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+        }
+
+        $rencontre->setFfbbStatsValidatedAt(null);
+        $rencontre->setFfbbStatsValidatedBy(null);
+        $rencontre->setFfbbStatsValidationNote(null);
+        $this->em->flush();
+
+        $this->addFlash('info', 'Validation Stats FFBB annulée.');
+        return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
 }

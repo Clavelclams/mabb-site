@@ -178,6 +178,31 @@ class Rencontre implements ClubAwareInterface
     private ?string $positionsTirsPath = null;
 
     // ====================================================================
+    // [B22b-bis 14/06/2026] VALIDATION MANUELLE STATS FFBB
+    // ====================================================================
+    //
+    // Les PDFs FFBB sont des rendus visuels SCANNÉS (image, pas de texte
+    // extractible sans OCR). Au lieu de parser, le coach/staff confirme
+    // manuellement après le match : "J'ai comparé ma saisie EvaluationMatch
+    // avec le PDF FFBB officiel, c'est cohérent". Trace tracée pour le PIRB.
+    //
+    // Pourquoi pas une table dédiée :
+    //   - 1 seule validation par rencontre (pas de 1-N à modéliser)
+    //   - Cas typique : nullable au début, rempli quand coach valide
+    //   - Évite jointure inutile sur la page rencontre PIRB
+    // ====================================================================
+
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $ffbbStatsValidatedAt = null;
+
+    #[ORM\ManyToOne(targetEntity: \App\Entity\Core\User::class)]
+    #[ORM\JoinColumn(name: 'ffbb_stats_validated_by_id', nullable: true, onDelete: 'SET NULL')]
+    private ?\App\Entity\Core\User $ffbbStatsValidatedBy = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $ffbbStatsValidationNote = null;
+
+    // ====================================================================
     // FORMAT DE MATCH — Stats Live V2.1a
     // ====================================================================
     //
@@ -298,6 +323,25 @@ class Rencontre implements ClubAwareInterface
 
     public function getPositionsTirsPath(): ?string { return $this->positionsTirsPath; }
     public function setPositionsTirsPath(?string $path): static { $this->positionsTirsPath = $path; return $this; }
+
+    // ====== [B22b-bis 14/06/2026] Validation manuelle Stats FFBB ======
+    public function getFfbbStatsValidatedAt(): ?\DateTimeImmutable { return $this->ffbbStatsValidatedAt; }
+    public function setFfbbStatsValidatedAt(?\DateTimeImmutable $d): static { $this->ffbbStatsValidatedAt = $d; return $this; }
+
+    public function getFfbbStatsValidatedBy(): ?\App\Entity\Core\User { return $this->ffbbStatsValidatedBy; }
+    public function setFfbbStatsValidatedBy(?\App\Entity\Core\User $u): static { $this->ffbbStatsValidatedBy = $u; return $this; }
+
+    public function getFfbbStatsValidationNote(): ?string { return $this->ffbbStatsValidationNote; }
+    public function setFfbbStatsValidationNote(?string $note): static { $this->ffbbStatsValidationNote = $note; return $this; }
+
+    /**
+     * Helper : True si le coach a explicitement validé les stats FFBB.
+     * Utilisé côté PIRB pour afficher le badge "✓ Stats officielles validées".
+     */
+    public function isFfbbStatsValidated(): bool
+    {
+        return $this->ffbbStatsValidatedAt !== null;
+    }
 
     // === Format match (V2.1a) ===
 
