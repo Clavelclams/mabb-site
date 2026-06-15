@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Pirb;
 
 use App\Entity\Core\User;
+use App\Entity\Sport\JoueurEquipe;
 use App\Repository\Sport\JoueurRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -66,11 +67,33 @@ class PirbEquipeController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        // V1.6.1 — Autres équipes où la joueuse joue (doublage / surclassement / réserve)
+        // On filtre sur saison courante + actif=true + type != principale.
+        $autresEquipes = [];
+        $now = new \DateTimeImmutable();
+        $moisNum = (int) $now->format('n');
+        $anneeDebut = $moisNum >= 9 ? (int) $now->format('Y') : (int) $now->format('Y') - 1;
+        $saisonCourante = $anneeDebut . '-' . ($anneeDebut + 1);
+
+        foreach ($monJoueur->getAffectations() as $aff) {
+            if (!$aff->isActif()) continue;
+            if ($aff->getSaison() !== $saisonCourante) continue;
+            if ($aff->isPrincipale()) continue;
+            $autresEquipes[] = [
+                'equipe'      => $aff->getEquipe(),
+                'type'        => $aff->getType(),
+                'type_label'  => JoueurEquipe::TYPE_LABELS[$aff->getType()] ?? $aff->getType(),
+                'type_couleur'=> JoueurEquipe::TYPE_COULEURS[$aff->getType()] ?? 'gray',
+                'notes'       => $aff->getNotes(),
+            ];
+        }
+
         return $this->render('pirb/equipe.html.twig', [
-            'mon_joueur'  => $monJoueur,
-            'equipe'      => $equipe,
-            'coequipiers' => $coequipiers,
-            'message'     => null,
+            'mon_joueur'      => $monJoueur,
+            'equipe'          => $equipe,
+            'coequipiers'     => $coequipiers,
+            'autres_equipes'  => $autresEquipes,
+            'message'         => null,
         ]);
     }
 }

@@ -93,6 +93,53 @@
         font-size: 0.7rem;
         color: var(--pirb-text-muted);
     }
+
+    /* V1.6.1 — Autres équipes (multi-affectation) */
+    .autres-equipes-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--pirb-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0 0 10px 0;
+    }
+    .autre-equipe-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        background: var(--pirb-card);
+        border: 1px solid var(--pirb-border);
+        border-radius: 10px;
+        margin-bottom: 8px;
+    }
+    .autre-equipe-card .icon {
+        font-size: 1.4rem;
+        opacity: 0.7;
+    }
+    .autre-equipe-card .info { flex: 1; }
+    .autre-equipe-card .nom {
+        font-weight: 700;
+        font-size: 0.92rem;
+        margin-bottom: 2px;
+    }
+    .autre-equipe-card .meta {
+        color: var(--pirb-text-muted);
+        font-size: 0.72rem;
+    }
+    .autre-equipe-badge {
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 0.66rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+    .autre-equipe-badge.orange { background: rgba(234,88,12,.18); color: #fdba74; border: 1px solid rgba(234,88,12,.4); }
+    .autre-equipe-badge.purple { background: rgba(168,85,247,.18); color: #d8b4fe; border: 1px solid rgba(168,85,247,.4); }
+    .autre-equipe-badge.green  { background: rgba(22,163,74,.18); color: #86efac; border: 1px solid rgba(22,163,74,.4); }
+    .autre-equipe-badge.gray   { background: rgba(148,163,184,.18); color: #cbd5e1; border: 1px solid rgba(148,163,184,.4); }
 {% endblock %}
 
 {% block body %}
@@ -107,9 +154,14 @@
 
     {% else %}
 
-        {# === Hero équipe === #}
+        {# === Hero équipe principale === #}
         <div class="pirb-card equipe-hero">
             <div style="font-size:2.5rem; margin-bottom:4px;">🏀</div>
+            {% if autres_equipes is defined and autres_equipes|length > 0 %}
+                <div style="font-size:0.7rem; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">
+                    Mon équipe de référence
+                </div>
+            {% endif %}
             <h1>{{ equipe.nom }}</h1>
             {% if equipe.categorie %}
                 <div class="sub">{{ equipe.categorie }}</div>
@@ -118,6 +170,28 @@
                 {{ coequipiers|length + 1 }} joueur{{ coequipiers|length > 0 ? 's' : '' }} dans l'équipe
             </div>
         </div>
+
+        {# === V1.6.1 — Autres équipes où je joue (doublage / surclassement / réserve) === #}
+        {% if autres_equipes is defined and autres_equipes|length > 0 %}
+            <div class="pirb-card">
+                <div class="autres-equipes-title">
+                    <i class="bi bi-plus-circle"></i> Je joue également dans
+                </div>
+                {% for ae in autres_equipes %}
+                    <div class="autre-equipe-card">
+                        <div class="icon">🏀</div>
+                        <div class="info">
+                            <div class="nom">{{ ae.equipe.nom }}</div>
+                            <div class="meta">
+                                {{ ae.equipe.categorie }}{% if ae.equipe.niveau %} · {{ ae.equipe.niveau }}{% endif %}
+                                {% if ae.notes %}<br><em style="opacity:.85;">{{ ae.notes }}</em>{% endif %}
+                            </div>
+                        </div>
+                        <span class="autre-equipe-badge {{ ae.type_couleur }}">{{ ae.type_label }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
 
         {# === Liste coéquipiers === #}
         {% if coequipiers is empty %}
