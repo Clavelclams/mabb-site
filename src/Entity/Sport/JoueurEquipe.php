@@ -52,10 +52,37 @@ class JoueurEquipe
     /** Affectation type : équipe de référence du joueur. */
     public const TYPE_PRINCIPALE = 'principale';
 
-    /** Surclassement : joueur autorisé à jouer aussi dans une autre équipe (catégorie supérieure typiquement). */
+    /** Surclassement : catégorie d'âge inférieure qui joue dans une catégorie supérieure (ex: U15 → U18). */
     public const TYPE_SURCLASSEMENT = 'surclassement';
 
-    public const TYPES = [self::TYPE_PRINCIPALE, self::TYPE_SURCLASSEMENT];
+    /** Doublage : même catégorie d'âge mais autre niveau (ex: U15 dép → U15 région). */
+    public const TYPE_DOUBLAGE = 'doublage';
+
+    /** Réserve / descente : joueuse pas brûlée en équipe A qui peut jouer en équipe B (ex: senior A → senior B). */
+    public const TYPE_RESERVE = 'reserve';
+
+    public const TYPES = [
+        self::TYPE_PRINCIPALE,
+        self::TYPE_SURCLASSEMENT,
+        self::TYPE_DOUBLAGE,
+        self::TYPE_RESERVE,
+    ];
+
+    /** Labels lisibles pour affichage UI. */
+    public const TYPE_LABELS = [
+        self::TYPE_PRINCIPALE    => 'Équipe principale',
+        self::TYPE_SURCLASSEMENT => 'Surclassement',
+        self::TYPE_DOUBLAGE      => 'Doublage (même âge, autre niveau)',
+        self::TYPE_RESERVE       => 'Réserve / descente équipe B',
+    ];
+
+    /** Couleurs pour badges UI — convention Tailwind. */
+    public const TYPE_COULEURS = [
+        self::TYPE_PRINCIPALE    => 'blue',
+        self::TYPE_SURCLASSEMENT => 'orange',
+        self::TYPE_DOUBLAGE      => 'purple',
+        self::TYPE_RESERVE       => 'green',
+    ];
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
