@@ -180,10 +180,26 @@ class Joueur implements ClubAwareInterface
     #[ORM\OneToMany(targetEntity: Convocation::class, mappedBy: 'joueur', cascade: ['remove'])]
     private Collection $convocations;
 
+    /**
+     * [V1.6 — 15/06/2026] Affectations multi-équipes (surclassement FFBB).
+     *
+     * Joueur peut être affecté à plusieurs équipes via JoueurEquipe : 1
+     * affectation "principale" + 0..N "surclassement" par saison.
+     *
+     * IMPORTANT : Joueur.equipe reste l'équipe principale par défaut pour
+     * la rétrocompat du code existant. Les nouvelles features (bilan saison
+     * multi-équipes, convocations cross-équipes) utilisent affectations.
+     *
+     * @var Collection<int, JoueurEquipe>
+     */
+    #[ORM\OneToMany(targetEntity: JoueurEquipe::class, mappedBy: 'joueur', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $affectations;
+
     public function __construct()
     {
         $this->presences = new ArrayCollection();
         $this->convocations = new ArrayCollection();
+        $this->affectations = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -345,6 +361,62 @@ class Joueur implements ClubAwareInterface
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
     public function getPresences(): Collection { return $this->presences; }
     public function getConvocations(): Collection { return $this->convocations; }
+
+    /** @return Collection<int, JoueurEquipe> */
+    public function getAffectations(): Collection { return $this->affectations; }
+
+    /**
+     * Ajoute une affectation (en évitant les doublons par référence).
+     * Met à jour la relation inverse pour cohérence Doctrine.
+     */
+    public function addAffectation(JoueurEquipe $affectation): static
+    {
+        if (!$this->affectations->contains($affectation)) {
+            $this->affectations->add($affectation);
+            $affectation->setJoueur($this);
+        }
+        return $this;
+    }
+
+    public function removeAffectation(JoueurEquipe $affectation): static
+    {
+        if ($this->affectations->removeElement($affectation)) {
+            if ($affectation->getJoueur() === $this) {
+                $affectation->setJoueur(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * Helper métier : la joueuse est-elle affectée à cette équipe (peu importe
+     * que ce soit son équipe principale ou un surclassement) ?
+     */
+    public function estAffecteeA(Equipe $equipe, ?string $saison = null): bool
+    {
+        foreach ($this->affectations as $aff) {
+            if (!$aff->isActif()) continue;
+            if ($aff->getEquipe() !== $equipe) continue;
+            if ($saison !== null && $aff->getSaison() !== $saison) continue;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Helper métier : la joueuse est-elle surclassée dans cette équipe
+     * (par opposition à son équipe principale) ?
+     */
+    public function estSurclasseeDans(Equipe $equipe, ?string $saison = null): bool
+    {
+        foreach ($this->affectations as $aff) {
+            if (!$aff->isActif()) continue;
+            if ($aff->getEquipe() !== $equipe) continue;
+            if ($saison !== null && $aff->getSaison() !== $saison) continue;
+            return $aff->isSurclassement();
+        }
+        return false;
+    }
 
     public function getNomComplet(): string
     {

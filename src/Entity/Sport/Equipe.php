@@ -70,11 +70,29 @@ class Equipe implements ClubAwareInterface
     #[ORM\OneToMany(targetEntity: Rencontre::class, mappedBy: 'equipe', cascade: ['remove'])]
     private Collection $rencontres;
 
+    /**
+     * [V1.6 — 15/06/2026] Affectations multi-équipes (surclassement FFBB).
+     *
+     * Inclut TOUTES les joueuses affectées à cette équipe : celles dont c'est
+     * l'équipe principale + celles qui surclassent depuis une autre équipe.
+     *
+     * Différence avec $joueurs : $joueurs ne contient QUE les joueuses dont
+     * Joueur.equipe pointe vers cette équipe (= équipe principale uniquement).
+     *
+     * Pour avoir le roster COMPLET d'une équipe (incluant surclassements),
+     * utiliser $affectations (filtrer par actif=true).
+     *
+     * @var Collection<int, JoueurEquipe>
+     */
+    #[ORM\OneToMany(targetEntity: JoueurEquipe::class, mappedBy: 'equipe', cascade: ['remove'])]
+    private Collection $affectations;
+
     public function __construct()
     {
         $this->joueurs = new ArrayCollection();
         $this->seances = new ArrayCollection();
         $this->rencontres = new ArrayCollection();
+        $this->affectations = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -100,4 +118,30 @@ class Equipe implements ClubAwareInterface
     public function getJoueurs(): Collection { return $this->joueurs; }
     public function getSeances(): Collection { return $this->seances; }
     public function getRencontres(): Collection { return $this->rencontres; }
+
+    /** @return Collection<int, JoueurEquipe> */
+    public function getAffectations(): Collection { return $this->affectations; }
+
+    /**
+     * Helper métier : roster complet (Joueur[]) de l'équipe sur la saison de
+     * référence (Equipe.saison), incluant les surclassements.
+     *
+     * Pour des cas avancés (saison différente, filtres custom), utiliser
+     * directement JoueurEquipeRepository::joueusesParEquipeSaison().
+     *
+     * @return Joueur[]
+     */
+    public function getJoueusesRosterComplet(): array
+    {
+        $joueuses = [];
+        foreach ($this->affectations as $aff) {
+            if (!$aff->isActif()) continue;
+            if ($aff->getSaison() !== $this->saison) continue;
+            $j = $aff->getJoueur();
+            if ($j !== null) {
+                $joueuses[$j->getId()] = $j; // dédoublonnage par id
+            }
+        }
+        return array_values($joueuses);
+    }
 }
