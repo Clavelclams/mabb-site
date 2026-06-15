@@ -42,11 +42,67 @@
                     <i class="bi bi-file-earmark-pdf"></i> Résumé FFBB
                 </button>
             {% endif %}
+
+            {# [B22b-bis V2 — 15/06/2026] Import Excel pour saisie en masse depuis PC #}
+            <a href="{{ path('manager_rencontre_evals_template', {id: rencontre.id}) }}"
+               class="btn-mabb-ghost"
+               title="Télécharger un template Excel pré-rempli avec les joueuses">
+                <i class="bi bi-file-earmark-excel"></i> Template Excel
+            </a>
+            <button type="button"
+                    id="open-import-xlsx-modal"
+                    class="btn-mabb-primary"
+                    title="Importer un fichier Excel rempli">
+                <i class="bi bi-upload"></i> Importer Excel
+            </button>
+
             <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" class="btn-mabb-ghost">
                 <i class="bi bi-arrow-left"></i> Retour à la rencontre
             </a>
         </div>
     </div>
+
+    {# [B22b-bis V2] Modal upload Excel — caché par défaut, ouvert par le bouton ci-dessus #}
+    <div id="import-xlsx-modal"
+         style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; padding:24px; border-radius:12px; max-width:520px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,.3);">
+            <h3 style="margin-top:0;"><i class="bi bi-upload"></i> Importer évaluations depuis Excel</h3>
+            <p style="color:var(--mabb-muted); font-size:.9rem;">
+                Le fichier doit être au format <code>.xlsx</code>, basé sur le template téléchargé ci-dessus.
+                L'import est <strong>incrémental</strong> : les évals existantes sont mises à jour, les nouvelles sont créées.
+            </p>
+            <form method="post"
+                  action="{{ path('manager_rencontre_evals_import_xlsx', {id: rencontre.id}) }}"
+                  enctype="multipart/form-data">
+                <input type="hidden" name="_token" value="{{ csrf_token('import_xlsx_evals_' ~ rencontre.id) }}">
+                <input type="file" name="xlsx_file" accept=".xlsx" required class="form-control mb-3">
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button type="button" id="close-import-xlsx-modal" class="btn-mabb-ghost">Annuler</button>
+                    <button type="submit" class="btn-mabb-primary">
+                        <i class="bi bi-check-circle"></i> Importer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var modal = document.getElementById('import-xlsx-modal');
+            var btnOpen = document.getElementById('open-import-xlsx-modal');
+            var btnClose = document.getElementById('close-import-xlsx-modal');
+            if (btnOpen && modal) {
+                btnOpen.addEventListener('click', function() { modal.style.display = 'flex'; });
+            }
+            if (btnClose && modal) {
+                btnClose.addEventListener('click', function() { modal.style.display = 'none'; });
+            }
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) modal.style.display = 'none';
+                });
+            }
+        });
+    </script>
 
     {# Panneau latéral PDF — fixed à droite, toggle au clic du bouton ci-dessus.
        Affiche le résumé FFBB en iframe pour saisie assistée (le coach lit ici, tape à gauche).

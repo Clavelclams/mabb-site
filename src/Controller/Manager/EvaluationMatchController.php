@@ -10,10 +10,15 @@ use App\Entity\Sport\Rencontre;
 use App\Repository\Sport\EvaluationMatchRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Security\Voter\ClubVoter;
+use App\Service\Import\EvaluationMatchXlsxExporter;
+use App\Service\Import\EvaluationMatchXlsxImporter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -210,5 +215,109 @@ class EvaluationMatchController extends AbstractController
             && $e->getFautesProvoquees() === 0
             && $e->getPertesBalle() === 0
             && $e->getNotesCoach() === null;
+    }
+
+    /**
+     * [B22b-bis V2 — 15/06/2026] Téléchargement du template Excel pré-rempli.
+     *
+     *   GET /rencontres/{id}/evals/template.xlsx
+     *
+     * Le coach utilise ce template pour saisir les stats sur son PC (workflow
+     * rapide avec copier-coller depuis le PDF FFBB visualisé à côté), puis
+     * uploade le fichier rempli via importXlsx().
+     */
+    #[Route(
+        '/rencontres/{id}/evals/template.xlsx',
+        name: 'manager_rencontre_evals_template',
+        methods: ['GET'],
+        requirements: ['id' => '\d+']
+    )]
+    public function downloadTemplate(Rencontre $rencontre, EvaluationMatchXlsxExporter $exporter): BinaryFileResponse
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $filePath = $exporter->exportToTempFile($rencontre);
+
+        $response = new BinaryFileResponse($filePath);
+        $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        $response->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+            $exporter->suggestedFilename($rencontre),
+        );
+        // Le fichier temp sera supprimé par le serveur après envoi
+        $response->deleteFileAfterSend(true);
+
+        return $response;
+    }
+
+    /**
+     * [B22b-bis V2 — 15/06/2026] Upload + parsing du fichier Excel rempli.
+     *
+     *   POST /rencontres/{id}/evals/import-xlsx  (avec file=...)
+     *
+     * Sécurité :
+     *   - CLUB_STAFF requis (même niveau que la saisie manuelle)
+     *   - CSRF nominatif
+     *   - Validation MIME du fichier (.xlsx uniquement)
+     *   - Toutes les erreurs ligne par ligne sont affichées dans la flash
+     *
+     * Idempotent : ré-importer le même fichier UPDATE les EvaluationMatch existants.
+     */
+    #[Route(
+        '/rencontres/{id}/evals/import-xlsx',
+        name: 'manager_rencontre_evals_import_xlsx',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function importXlsx(
+        Request $request,
+        Rencontre $rencontre,
+        EvaluationMatchXlsxImporter $importer,
+    ): Response {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('import_xlsx_evals_' . $rencontre->getId(), $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_evals', ['id' => $rencontre->getId()]);
+        }
+
+        /** @var UploadedFile|null $file */
+        $file = $request->files->get('xlsx_file');
+        if ($file === null || !$file->isValid()) {
+            $this->addFlash('error', 'Aucun fichier reçu ou fichier invalide.');
+            return $this->redirectToRoute('manager_rencontre_evals', ['id' => $rencontre->getId()]);
+        }
+
+        // Vérif extension
+        $ext = strtolower($file->getClientOriginalExtension());
+        if ($ext !== 'xlsx') {
+            $this->addFlash('error', sprintf('Format non supporté (.%s). Utilise un fichier .xlsx (Excel/LibreOffice).', $ext));
+            return $this->redirectToRoute('manager_rencontre_evals', ['id' => $rencontre->getId()]);
+        }
+
+        // Vérif taille (max 5 Mo, large mais raisonnable)
+        if ($file->getSize() > 5 * 1024 * 1024) {
+            $this->addFlash('error', 'Fichier trop volumineux (max 5 Mo).');
+            return $this->redirectToRoute('manager_rencontre_evals', ['id' => $rencontre->getId()]);
+        }
+
+        $result = $importer->importFromFile($file->getRealPath(), $rencontre);
+
+        // Récap visuel
+        $msg = sprintf(
+            '✓ Import terminé : %d créée(s), %d mise(s) à jour, %d ignorée(s).',
+            $result['created'],
+            $result['updated'],
+            $result['skipped'],
+        );
+        $this->addFlash('success', $msg);
+
+        // Erreurs ligne par ligne
+        foreach ($result['errors'] as $err) {
+            $this->addFlash('warning', $err);
+        }
+
+        return $this->redirectToRoute('manager_rencontre_evals', ['id' => $rencontre->getId()]);
     }
 }

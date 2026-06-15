@@ -40,21 +40,46 @@
             </div>
         </div>
 
-        {# === Détail === #}
-        <div class="pirb-card">
-            <div class="pirb-card-title">Détail</div>
+        {# === 📋 Stats officielles FFBB (toujours dispo après import Excel) === #}
+        <div class="pirb-card" style="border-left:4px solid #3b82f6;">
+            <div class="pirb-card-title">📋 Stats officielles FFBB</div>
+            <p style="font-size:0.74rem; color:var(--pirb-text-muted); margin:0 0 10px;">
+                Issues du PDF resume FFBB officiel — capturées et validées par le coach.
+            </p>
             <table style="width:100%; font-size:0.88rem;">
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Tirs 2pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs2ptsReussis }}/{{ eval.tirs2ptsTentes }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Tirs 3pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs3ptsReussis }}/{{ eval.tirs3ptsTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">⏱️ Minutes jouées</td><td style="text-align:right; font-weight:600;">{{ eval.minutesJouees }}'</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">🏀 Points</td><td style="text-align:right; font-weight:600;">{{ eval.points }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">2pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs2ptsReussis }}/{{ eval.tirs2ptsTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">3pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs3ptsReussis }}/{{ eval.tirs3ptsTentes }}</td></tr>
                 <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Lancers francs</td><td style="text-align:right; font-weight:600;">{{ eval.lancersReussis }}/{{ eval.lancersTentes }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Rebonds (O/D)</td><td style="text-align:right; font-weight:600;">{{ eval.rebondsOffensifs }}/{{ eval.rebondsDefensifs }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Passes décisives</td><td style="text-align:right; font-weight:600;">{{ eval.passesDecisives }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Interceptions</td><td style="text-align:right; font-weight:600;">{{ eval.interceptions }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Contres</td><td style="text-align:right; font-weight:600;">{{ eval.contres }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Fautes</td><td style="text-align:right; font-weight:600;">{{ eval.fautesCommises }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Pertes de balle</td><td style="text-align:right; font-weight:600;">{{ eval.pertesBalle }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Minutes jouées</td><td style="text-align:right; font-weight:600;">{{ eval.minutesJouees }}'</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Fautes commises</td><td style="text-align:right; font-weight:600;">{{ eval.fautesCommises }}</td></tr>
             </table>
+        </div>
+
+        {# === ⚡ Stats avancées MABB (Stats Live seulement) ===
+           Affiché si AU MOINS UNE des stats avancées est > 0 (donc provient de Stats Live).
+           Sinon : message "non capturées" pour ce match (la FFBB ne les donne pas). #}
+        {% set hasAdvanced = (eval.rebondsOffensifs + eval.rebondsDefensifs + eval.passesDecisives + eval.interceptions + eval.contres + eval.pertesBalle) > 0 %}
+        <div class="pirb-card" style="border-left:4px solid {{ hasAdvanced ? '#16a34a' : 'var(--pirb-border)' }};">
+            <div class="pirb-card-title">⚡ Stats avancées MABB</div>
+            {% if hasAdvanced %}
+                <p style="font-size:0.74rem; color:var(--pirb-text-muted); margin:0 0 10px;">
+                    Capturées en direct via Stats Live MABB pendant le match (la FFBB ne fournit pas ces stats).
+                </p>
+                <table style="width:100%; font-size:0.88rem;">
+                    <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Rebonds offensifs</td><td style="text-align:right; font-weight:600;">{{ eval.rebondsOffensifs }}</td></tr>
+                    <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Rebonds défensifs</td><td style="text-align:right; font-weight:600;">{{ eval.rebondsDefensifs }}</td></tr>
+                    <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Passes décisives</td><td style="text-align:right; font-weight:600;">{{ eval.passesDecisives }}</td></tr>
+                    <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Interceptions</td><td style="text-align:right; font-weight:600;">{{ eval.interceptions }}</td></tr>
+                    <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Contres</td><td style="text-align:right; font-weight:600;">{{ eval.contres }}</td></tr>
+                    <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Pertes de balle</td><td style="text-align:right; font-weight:600;">{{ eval.pertesBalle }}</td></tr>
+                </table>
+            {% else %}
+                <p style="margin:0; color:var(--pirb-text-muted); font-size:0.85rem; line-height:1.55;">
+                    Pas de Stats Live capturée pour ce match.<br>
+                    <small>Les passes décisives, interceptions, rebonds détaillés et pertes ne sont disponibles que si un membre du staff a utilisé Stats Live en direct. La FFBB ne fournit pas ces stats.</small>
+                </p>
+            {% endif %}
         </div>
 
         {% if eval.notesCoach %}
