@@ -231,8 +231,11 @@ class PirbStatsController extends AbstractController
      *   GET /stats/match/{id}/pdf/positions
      */
     #[Route('/stats/match/{id}/pdf/{type}', name: 'pirb_stats_match_pdf', methods: ['GET'], requirements: ['type' => 'feuille|resume|positions'])]
-    public function downloadPdf(Rencontre $rencontre, string $type, string $projectDir): \Symfony\Component\HttpFoundation\BinaryFileResponse
-    {
+    public function downloadPdf(
+        Rencontre $rencontre,
+        string $type,
+        \App\Service\RencontrePdfUploader $pdfUploader,
+    ): \Symfony\Component\HttpFoundation\BinaryFileResponse {
         /** @var User $user */
         $user = $this->getUser();
         $joueur = $this->joueurRepo->findOneBy(['user' => $user]);
@@ -246,14 +249,13 @@ class PirbStatsController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        $relativePath = $rencontre->getPdfPath($type);
-        if ($relativePath === null) {
+        // [15/06/2026] Utilise RencontrePdfUploader::getAbsolutePath qui gère
+        // les 2 conventions de stockage (filename simple vs path complet).
+        // Avant : duplication de code qui ne gérait QUE le cas path complet,
+        // d'où le 404 sur les rencontres uploadées via UI Manager.
+        $absolutePath = $pdfUploader->getAbsolutePath($rencontre, $type);
+        if ($absolutePath === null) {
             throw $this->createNotFoundException('PDF non disponible pour ce match.');
-        }
-
-        $absolutePath = rtrim($projectDir, '/') . '/public/' . ltrim($relativePath, '/');
-        if (!is_file($absolutePath)) {
-            throw $this->createNotFoundException('Fichier introuvable sur le serveur.');
         }
 
         $labels = ['feuille' => 'feuille-match', 'resume' => 'resume-stats', 'positions' => 'positions-tirs'];
