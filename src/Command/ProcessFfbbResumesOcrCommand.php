@@ -134,11 +134,14 @@ class ProcessFfbbResumesOcrCommand extends Command
                 $parseResult = $this->parser->parseEtPersister($rencontre, $ocrText);
 
                 $io->writeln(sprintf(
-                    ' ✓ Parsées : %d | Matchées : %d | Créées : %d | Maj : %d | Warnings : %d',
+                    ' ✓ Parsées:%d | Matchées:%d | Évals créées:%d/majées:%d | Présences créées:%d/majées:%d | Absences:%d | Warnings:%d',
                     $parseResult['joueuses_parsees'],
                     $parseResult['joueuses_matchees'],
                     $parseResult['evals_creees'],
                     $parseResult['evals_majees'],
+                    $parseResult['presences_creees'] ?? 0,
+                    $parseResult['presences_majees'] ?? 0,
+                    $parseResult['absences_marquees'] ?? 0,
                     count($parseResult['warnings']),
                 ));
 

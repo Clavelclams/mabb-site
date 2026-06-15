@@ -6,9 +6,11 @@ namespace App\Service\Ffbb;
 
 use App\Entity\Sport\EvaluationMatch;
 use App\Entity\Sport\Joueur;
+use App\Entity\Sport\Presence;
 use App\Entity\Sport\Rencontre;
 use App\Repository\Sport\EvaluationMatchRepository;
 use App\Repository\Sport\JoueurRepository;
+use App\Repository\Sport\PresenceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -70,6 +72,7 @@ class FfbbResumeOcrParser
         private readonly EntityManagerInterface $em,
         private readonly EvaluationMatchRepository $evalRepo,
         private readonly JoueurRepository $joueurRepo,
+        private readonly PresenceRepository $presenceRepo,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -85,6 +88,9 @@ class FfbbResumeOcrParser
             'joueuses_matchees' => 0,
             'evals_creees' => 0,
             'evals_majees' => 0,
+            'presences_creees' => 0,
+            'presences_majees' => 0,
+            'absences_marquees' => 0,
             'warnings' => [],
         ];
 
@@ -126,7 +132,16 @@ class FfbbResumeOcrParser
             $evalsParJoueur[$e->getJoueur()->getId()] = $e;
         }
 
-        // === 5. Pour chaque ligne, matcher la joueuse + créer/maj EvaluationMatch ===
+        // === 4.5 Pré-charge les Presence existantes (pour idempotence) ===
+        $presencesExistantes = $this->presenceRepo->findBy(['rencontre' => $rencontre]);
+        $presencesParJoueur = [];
+        foreach ($presencesExistantes as $p) {
+            $presencesParJoueur[$p->getJoueur()->getId()] = $p;
+        }
+
+        // === 5. Pour chaque ligne, matcher la joueuse + créer/maj EvaluationMatch + Presence ===
+        $joueursPresentsIds = [];  // pour distinguer ensuite les absents
+
         foreach ($lignesJoueuses as $ligne) {
             $joueur = $this->matchJoueurParNom($ligne['nom'], $joueuses);
             if ($joueur === null) {
@@ -138,6 +153,28 @@ class FfbbResumeOcrParser
                 continue;
             }
             $result['joueuses_matchees']++;
+            $joueursPresentsIds[] = $joueur->getId();
+
+            // === Presence : marquer comme présente (source SCAN) ===
+            // Idempotence : on respecte les Presence saisies manuellement par le coach
+            $presence = $presencesParJoueur[$joueur->getId()] ?? null;
+            if ($presence !== null && $presence->getSource() === Presence::SOURCE_MANUEL) {
+                // Coach a déjà pointé manuellement → on ne touche pas
+            } elseif ($presence !== null) {
+                // Presence SCAN existante → on UPDATE
+                $presence->setPresent(true);
+                $presence->setMotifAbsence(null);
+                $result['presences_majees']++;
+            } else {
+                // Pas de Presence → CREATE
+                $presence = new Presence();
+                $presence->setJoueur($joueur);
+                $presence->setRencontre($rencontre);
+                $presence->setPresent(true);
+                $presence->setSource(Presence::SOURCE_SCAN);
+                $this->em->persist($presence);
+                $result['presences_creees']++;
+            }
 
             $eval = $evalsParJoueur[$joueur->getId()] ?? null;
             $isNew = ($eval === null);
@@ -176,14 +213,46 @@ class FfbbResumeOcrParser
             }
         }
 
+        // === 6. Marquer les joueuses ABSENTES du PDF comme absentes
+        // (= toutes les joueuses de l'équipe MABB qui n'ont pas été détectées dans le tableau)
+        // Idempotence : on respecte les Presence MANUELLES, on n'écrase que les SCAN ou rien
+        foreach ($joueuses as $joueur) {
+            if (in_array($joueur->getId(), $joueursPresentsIds, true)) {
+                continue; // déjà marquée présente
+            }
+            $presence = $presencesParJoueur[$joueur->getId()] ?? null;
+            if ($presence !== null && $presence->getSource() === Presence::SOURCE_MANUEL) {
+                continue; // coach a pointé manuellement → respect
+            }
+            if ($presence !== null) {
+                // Presence SCAN existante → on UPDATE en absente
+                $presence->setPresent(false);
+                $presence->setMotifAbsence($presence->getMotifAbsence() ?? 'Non détectée sur la feuille FFBB');
+                $result['absences_marquees']++;
+            } else {
+                // Pas de Presence → CREATE absente
+                $presence = new Presence();
+                $presence->setJoueur($joueur);
+                $presence->setRencontre($rencontre);
+                $presence->setPresent(false);
+                $presence->setMotifAbsence('Non détectée sur la feuille FFBB');
+                $presence->setSource(Presence::SOURCE_SCAN);
+                $this->em->persist($presence);
+                $result['absences_marquees']++;
+            }
+        }
+
         $this->em->flush();
 
         $this->logger->info('OCR Parser : terminé', [
             'rencontre_id' => $rencontre->getId(),
             'parsées' => $result['joueuses_parsees'],
             'matchées' => $result['joueuses_matchees'],
-            'créées' => $result['evals_creees'],
-            'majées' => $result['evals_majees'],
+            'evals_créées' => $result['evals_creees'],
+            'evals_majées' => $result['evals_majees'],
+            'présences_créées' => $result['presences_creees'],
+            'présences_majées' => $result['presences_majees'],
+            'absences_marquées' => $result['absences_marquees'],
             'warnings' => count($result['warnings']),
         ]);
 
