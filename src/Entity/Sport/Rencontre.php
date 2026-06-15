@@ -278,23 +278,6 @@ class Rencontre implements ClubAwareInterface
     public function aResultat(): bool { return $this->scoreEquipe !== null && $this->scoreAdverse !== null; }
 
     public function getId(): ?int { return $this->id; }
-
-    // ====== Type rencontre / champs FFBB B19 ======
-    public function getTypeRencontre(): string { return $this->typeRencontre; }
-    public function setTypeRencontre(string $t): static { $this->typeRencontre = $t; return $this; }
-
-    public function getNumeroMatch(): ?string { return $this->numeroMatch; }
-    public function setNumeroMatch(?string $n): static { $this->numeroMatch = $n; return $this; }
-
-    public function getCodeEMarque(): ?string { return $this->codeEMarque; }
-    public function setCodeEMarque(?string $c): static { $this->codeEMarque = $c; return $this; }
-
-    public function getSaison(): ?string { return $this->saison; }
-    public function setSaison(?string $s): static { $this->saison = $s; return $this; }
-
-    public function getDivision(): ?string { return $this->division; }
-    public function setDivision(?string $d): static { $this->division = $d; return $this; }
-
     public function getClub(): ?Club { return $this->club; }
     public function setClub(?Club $club): static { $this->club = $club; return $this; }
     public function getEquipe(): ?Equipe { return $this->equipe; }
@@ -426,4 +409,95 @@ class Rencontre implements ClubAwareInterface
 
     /**
      * Helper : récupère le path d'un PDF par son type ('resume', 'feuille', 'positions').
-     * Évite des if/else dans le controller. Renvoie null si type invalid
+     * Évite des if/else dans le controller. Renvoie null si type invalide.
+     */
+    public function getPdfPath(string $type): ?string
+    {
+        return match($type) {
+            'resume'    => $this->resumePath,
+            'feuille'   => $this->feuilleMatchPath,
+            'positions' => $this->positionsTirsPath,
+            default     => null,
+        };
+    }
+
+    /**
+     * Helper : assigne un path par type. Source de vérité unique pour les types valides.
+     */
+    public function setPdfPath(string $type, ?string $path): static
+    {
+        match($type) {
+            'resume'    => $this->resumePath = $path,
+            'feuille'   => $this->feuilleMatchPath = $path,
+            'positions' => $this->positionsTirsPath = $path,
+            default     => throw new \InvalidArgumentException("Type de PDF invalide : $type"),
+        };
+        return $this;
+    }
+
+    /** @return Collection<int, RencontreRole> */
+    public function getRoles(): Collection { return $this->roles; }
+
+    /**
+     * Récupère le RencontreRole pour un rôle donné (ARBITRE_1, MARQUEUR, etc.),
+     * ou null si personne n'est inscrit sur ce rôle.
+     */
+    public function getRoleParCode(string $codeRole): ?RencontreRole
+    {
+        foreach ($this->roles as $r) {
+            if ($r->getRole() === $codeRole) return $r;
+        }
+        return null;
+    }
+
+    /**
+     * True si les rôles d'arbitrage interne peuvent être pris par des bénévoles.
+     * Faux si la FFBB a désigné un arbitre officiel (case "arbitre externe" cochée).
+     */
+    public function peutRecevoirArbitreBenevole(): bool
+    {
+        return !$this->arbitreExterneDesigne;
+    }
+
+    /**
+     * [B22 — 12/06/2026] True si le match est déjà passé (date du coup d'envoi < maintenant).
+     * Sert à bloquer les inscriptions/désinscriptions aux rôles officiels et les
+     * réponses aux convocations une fois le match terminé.
+     *
+     * On ajoute volontairement une marge de 4h après le début du match pour couvrir
+     * la durée du match + le post-match (rangement, douches, table de marque).
+     * Au-delà, plus aucune inscription "Je m'inscris" n'a de sens.
+     */
+    public function isPassee(): bool
+    {
+        if ($this->date === null) {
+            return false;
+        }
+        $finEstimee = $this->date->modify('+4 hours');
+        return $finEstimee < new \DateTimeImmutable();
+    }
+
+    // === B19 : Getters/Setters FFBB import ===
+
+    public function getNumeroMatch(): ?string { return $this->numeroMatch; }
+    public function setNumeroMatch(?string $n): self { $this->numeroMatch = $n; return $this; }
+    public function getCodeEMarque(): ?string { return $this->codeEMarque; }
+    public function setCodeEMarque(?string $c): self { $this->codeEMarque = $c; return $this; }
+    public function getSaison(): ?string { return $this->saison; }
+    public function setSaison(?string $s): self { $this->saison = $s; return $this; }
+    public function getDivision(): ?string { return $this->division; }
+    public function setDivision(?string $d): self { $this->division = $d; return $this; }
+    public function isForfaitEquipe(): bool { return $this->forfaitEquipe; }
+    public function setForfaitEquipe(bool $f): self { $this->forfaitEquipe = $f; return $this; }
+    public function isForfaitAdverse(): bool { return $this->forfaitAdverse; }
+    public function setForfaitAdverse(bool $f): self { $this->forfaitAdverse = $f; return $this; }
+
+    // === B23 : type rencontre + joueuses externes ===
+    public function getTypeRencontre(): string { return $this->typeRencontre; }
+    public function setTypeRencontre(string $t): self { $this->typeRencontre = $t; return $this; }
+    public function getJoueursExternes(): ?array { return $this->joueursExternes; }
+    public function setJoueursExternes(?array $j): self { $this->joueursExternes = $j; return $this; }
+    public function isEntrainementInterne(): bool { return $this->typeRencontre === self::TYPE_ENTRAINEMENT_INTERNE; }
+    public function isAmical(): bool { return $this->typeRencontre === self::TYPE_AMICAL; }
+    public function isOfficiel(): bool { return $this->typeRencontre === self::TYPE_OFFICIEL; }
+}
