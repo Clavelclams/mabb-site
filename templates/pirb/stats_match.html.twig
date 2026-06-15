@@ -40,31 +40,243 @@
             </div>
         </div>
 
-        {# === 📋 Stats officielles FFBB (toujours dispo après import OCR Vision)
-           IMPORTANT : la FFBB ne fournit QUE les tirs réussis, pas les tentés.
-           On affiche "X réussis" et PAS de % shooting (qui serait factuellement faux).
-           Les tentés viendront via Stats Live (capture tirs manqués en direct) ou
-           saisie manuelle coach via /rencontres/{id}/evals.
-        #}
-        <div class="pirb-card" style="border-left:4px solid #3b82f6;">
-            <div class="pirb-card-title">📋 Stats officielles FFBB</div>
-            <p style="font-size:0.74rem; color:var(--pirb-text-muted); margin:0 0 10px;">
-                Issues du PDF resume FFBB officiel — capturées par OCR + validées par le coach.
-            </p>
+        {# === Détail === #}
+        <div class="pirb-card">
+            <div class="pirb-card-title">Détail</div>
             <table style="width:100%; font-size:0.88rem;">
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">⏱️ Minutes jouées</td><td style="text-align:right; font-weight:600;">{{ eval.minutesJouees }}'</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">🏀 Points</td><td style="text-align:right; font-weight:600;">{{ eval.points }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">2pts réussis</td><td style="text-align:right; font-weight:600;">{{ eval.tirs2ptReussis }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">3pts réussis</td><td style="text-align:right; font-weight:600;">{{ eval.tirs3ptReussis }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">LF réussis</td><td style="text-align:right; font-weight:600;">{{ eval.lancersReussis }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Fautes commises</td><td style="text-align:right; font-weight:600;">{{ eval.fautesCommises }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Tirs 2pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs2ptsReussis }}/{{ eval.tirs2ptsTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Tirs 3pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs3ptsReussis }}/{{ eval.tirs3ptsTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Lancers francs</td><td style="text-align:right; font-weight:600;">{{ eval.lancersReussis }}/{{ eval.lancersTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Rebonds (O/D)</td><td style="text-align:right; font-weight:600;">{{ eval.rebondsOffensifs }}/{{ eval.rebondsDefensifs }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Passes décisives</td><td style="text-align:right; font-weight:600;">{{ eval.passesDecisives }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Interceptions</td><td style="text-align:right; font-weight:600;">{{ eval.interceptions }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Contres</td><td style="text-align:right; font-weight:600;">{{ eval.contres }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Fautes</td><td style="text-align:right; font-weight:600;">{{ eval.fautesCommises }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Pertes de balle</td><td style="text-align:right; font-weight:600;">{{ eval.pertesBalle }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Minutes jouées</td><td style="text-align:right; font-weight:600;">{{ eval.minutesJouees }}'</td></tr>
             </table>
-            <p style="font-size:0.7rem; color:var(--pirb-text-muted); margin:10px 0 0; font-style:italic;">
-                ℹ️ Les tirs tentés (% shooting) ne sont pas fournis par la FFBB. Disponibles uniquement via Stats Live MABB.
-            </p>
         </div>
 
-        {# === ⚡ Stats avancées MABB (Stats Live seulement) ===
-           Affiché si AU MOINS UNE des stats avancées est > 0 (donc provient de Stats Live).
-           Sinon : message "non capturées" pour ce match (la FFBB ne les donne pas). #}
-        {% set has
+        {% if eval.notesCoach %}
+            <div class="pirb-card" style="background:rgba(34,197,94,.06); border-left:4px solid #22c55e;">
+                <div class="pirb-card-title">Note du coach</div>
+                <p style="margin:0; font-size:0.88rem; line-height:1.5;">{{ eval.notesCoach }}</p>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    {# [B22d 12/06/2026] Stats Live (depuis SessionStatsLive promue officielle) #}
+    {% if session_officielle and stats_live_moi %}
+        <div class="pirb-card" style="border-left:4px solid #16a34a;">
+            <div class="pirb-card-title">⚡ Stats Live (tracking en direct)</div>
+            <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 12px;">
+                Saisies par {{ session_officielle.createdBy ? session_officielle.createdBy.prenom : 'le banc' }}
+                pendant le match.
+                {% if session_officielle.promotedAt %}
+                    Validée officielle le {{ session_officielle.promotedAt|date('d/m/Y') }}.
+                {% endif %}
+            </p>
+
+            {# Mes stats Live #}
+            <div style="background:rgba(22,163,74,.08); padding:14px; border-radius:10px; margin-bottom:14px;">
+                <div style="font-size:0.85rem; font-weight:700; margin-bottom:8px;">⚡ Mes stats Live</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.82rem;">
+                    <div>⏱️ Min : <strong>{{ stats_live_moi.minutes ?? 0 }}</strong></div>
+                    <div>🏀 Pts : <strong>{{ stats_live_moi.points ?? 0 }}</strong></div>
+                    <div>2pts : <strong>{{ stats_live_moi.tirs_2pts_reussis ?? 0 }}/{{ stats_live_moi.tirs_2pts_tentes ?? 0 }}</strong></div>
+                    <div>3pts : <strong>{{ stats_live_moi.tirs_3pts_reussis ?? 0 }}/{{ stats_live_moi.tirs_3pts_tentes ?? 0 }}</strong></div>
+                    <div>LF : <strong>{{ stats_live_moi.lancers_reussis ?? 0 }}/{{ stats_live_moi.lancers_tentes ?? 0 }}</strong></div>
+                    <div>Reb O/D : <strong>{{ stats_live_moi.rebonds_offensifs ?? 0 }}/{{ stats_live_moi.rebonds_defensifs ?? 0 }}</strong></div>
+                    <div>Pass D : <strong>{{ stats_live_moi.passes_decisives ?? 0 }}</strong></div>
+                    <div>Inter : <strong>{{ stats_live_moi.interceptions ?? 0 }}</strong></div>
+                    <div>Contres : <strong>{{ stats_live_moi.contres ?? 0 }}</strong></div>
+                    <div>Fautes : <strong>{{ stats_live_moi.fautes_commises ?? 0 }}</strong></div>
+                    <div>Pertes : <strong>{{ stats_live_moi.pertes_balle ?? 0 }}</strong></div>
+                    <div>⭐ Éval : <strong>{{ stats_live_moi.eval ?? 0 }}</strong></div>
+                </div>
+            </div>
+
+            {# Toggle équipe #}
+            {% if stats_live_equipe|length > 0 %}
+                <details>
+                    <summary style="cursor:pointer; color:#16a34a; font-size:0.85rem; font-weight:700;">
+                        📊 Voir Stats Live de l'équipe ({{ stats_live_equipe|length }} joueuses)
+                    </summary>
+                    <div style="margin-top:10px; max-height:300px; overflow-y:auto;">
+                        <table style="width:100%; font-size:0.74rem;">
+                            <thead style="background:rgba(255,255,255,0.05);">
+                                <tr>
+                                    <th style="text-align:left; padding:6px;">Joueuse</th>
+                                    <th style="text-align:center;">Pts</th>
+                                    <th style="text-align:center;">Reb</th>
+                                    <th style="text-align:center;">PD</th>
+                                    <th style="text-align:center;">Éval</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in stats_live_equipe %}
+                                    {% set s = entry.stats %}
+                                    <tr style="border-bottom:1px solid var(--pirb-border);
+                                              {% if entry.joueur.id == joueur.id %}background:rgba(22,163,74,.15); font-weight:700;{% endif %}">
+                                        <td style="padding:6px;">{{ entry.joueur.prenom }} {{ entry.joueur.nom }}</td>
+                                        <td style="text-align:center;">{{ s.points ?? 0 }}</td>
+                                        <td style="text-align:center;">{{ (s.rebonds_offensifs ?? 0) + (s.rebonds_defensifs ?? 0) }}</td>
+                                        <td style="text-align:center;">{{ s.passes_decisives ?? 0 }}</td>
+                                        <td style="text-align:center;">{{ s.eval ?? 0 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# [B22b 12/06/2026] Stats FFBB officielles (extraites du PDF resume) #}
+    {% if stats_ffbb_moi or stats_ffbb_equipe|length > 0 %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">🏆 Stats FFBB officielles</div>
+            <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 12px;">
+                Extraites du PDF résumé FFBB. Différent des stats coach (saisie manuelle).
+            </p>
+
+            {% if stats_ffbb_moi %}
+                {# Mes stats à moi #}
+                <div style="background:rgba(234,88,12,.08); padding:14px; border-radius:10px; margin-bottom:14px;">
+                    <div style="font-size:0.85rem; font-weight:700; margin-bottom:8px;">🎯 Mes stats officielles</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.82rem;">
+                        <div>⏱️ Min : <strong>{{ stats_ffbb_moi.minutesJouees }}</strong></div>
+                        <div>🏀 Pts : <strong>{{ stats_ffbb_moi.points }}</strong></div>
+                        <div>2pts : <strong>{{ stats_ffbb_moi.tirs2ptReussis }}/{{ stats_ffbb_moi.tirs2ptTentes }}</strong></div>
+                        <div>3pts : <strong>{{ stats_ffbb_moi.tirs3ptReussis }}/{{ stats_ffbb_moi.tirs3ptTentes }}</strong></div>
+                        <div>LF : <strong>{{ stats_ffbb_moi.lancersReussis }}/{{ stats_ffbb_moi.lancersTentes }}</strong></div>
+                        <div>Reb O/D : <strong>{{ stats_ffbb_moi.rebondsOff }}/{{ stats_ffbb_moi.rebondsDef }}</strong></div>
+                        <div>Pass D : <strong>{{ stats_ffbb_moi.passesD }}</strong></div>
+                        <div>Inter : <strong>{{ stats_ffbb_moi.interceptions }}</strong></div>
+                        <div>Contres : <strong>{{ stats_ffbb_moi.contres }}</strong></div>
+                        <div>Fautes : <strong>{{ stats_ffbb_moi.fautesCommises }}</strong></div>
+                        <div>Pertes : <strong>{{ stats_ffbb_moi.pertesBalle }}</strong></div>
+                        <div>⭐ Éval : <strong>{{ stats_ffbb_moi.evalFfbb }}</strong></div>
+                    </div>
+                </div>
+            {% else %}
+                <div style="background:rgba(255,255,255,0.04); padding:12px; border-radius:8px; margin-bottom:14px; font-size:0.78rem; color:var(--pirb-text-muted);">
+                    Tes stats individuelles ne sont pas encore disponibles dans le PDF résumé.
+                </div>
+            {% endif %}
+
+            {# Stats équipe (résumé compact des autres) #}
+            {% if stats_ffbb_equipe|length > 0 %}
+                <details>
+                    <summary style="cursor:pointer; color:var(--pirb-accent); font-size:0.85rem; font-weight:700;">
+                        📊 Voir les stats de toute l'équipe ({{ stats_ffbb_equipe|length }} joueuses)
+                    </summary>
+                    <div style="margin-top:10px; max-height:300px; overflow-y:auto;">
+                        <table style="width:100%; font-size:0.74rem;">
+                            <thead style="background:rgba(255,255,255,0.05);">
+                                <tr>
+                                    <th style="text-align:left; padding:6px;">Joueuse</th>
+                                    <th style="text-align:center;">Min</th>
+                                    <th style="text-align:center;">Pts</th>
+                                    <th style="text-align:center;">Reb</th>
+                                    <th style="text-align:center;">Éval</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in stats_ffbb_equipe %}
+                                    <tr style="border-bottom:1px solid var(--pirb-border);
+                                              {% if s.joueur and s.joueur.id == joueur.id %}background:rgba(234,88,12,.1); font-weight:700;{% endif %}">
+                                        <td style="padding:6px;">{{ s.nomComplet }} {% if s.estStarter %}⭐{% endif %}</td>
+                                        <td style="text-align:center;">{{ s.minutesJouees }}</td>
+                                        <td style="text-align:center;">{{ s.points }}</td>
+                                        <td style="text-align:center;">{{ s.rebondsOff + s.rebondsDef }}</td>
+                                        <td style="text-align:center;">{{ s.evalFfbb }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            {% endif %}
+
+            {# Compteur tirs FFBB de la joueuse #}
+            {% if tirs_ffbb_match|length > 0 %}
+                <div style="margin-top:12px; padding:10px; background:rgba(29,78,216,0.08); border-radius:8px;">
+                    <strong>🎯 {{ tirs_ffbb_match|length }} tir(s) réussi(s)</strong> selon le PDF positions FFBB
+                    <a href="{{ path('pirb_stats_shotchart') }}" style="color:var(--pirb-accent); margin-left:8px; font-size:0.82rem;">
+                        Voir le shot chart saison →
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# [B22b-bis 14/06/2026] Badge validation Stats FFBB par le coach.
+       Quand le coach a explicitement déclaré que sa saisie EvaluationMatch
+       correspond au PDF officiel FFBB, on affiche un badge officiel à la joueuse.
+       Cf. B22b initial (parser PDF) abandonné car PDFs FFBB scannés. #}
+    {% if rencontre.isFfbbStatsValidated() %}
+        <div class="pirb-card" style="border-left:4px solid #10b981;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <div style="font-size:1.8rem;">✓</div>
+                <div>
+                    <div style="font-weight:800; font-size:1rem; color:#10b981;">Stats officielles FFBB validées</div>
+                    <div style="font-size:0.78rem; color:var(--pirb-text-muted);">
+                        Vérifiées par <strong>{{ rencontre.ffbbStatsValidatedBy.prenom }}</strong>
+                        le {{ rencontre.ffbbStatsValidatedAt|date('d/m/Y') }}
+                    </div>
+                </div>
+            </div>
+            {% if rencontre.ffbbStatsValidationNote %}
+                <div style="margin-top:8px; padding:8px 10px; background:rgba(16,185,129,.08); border-radius:6px; font-size:0.8rem; font-style:italic;">
+                    « {{ rencontre.ffbbStatsValidationNote }} »
+                </div>
+            {% endif %}
+            {% if rencontre.resumePath %}
+                <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'resume'}) }}"
+                   style="display:inline-block; margin-top:10px; color:var(--pirb-accent); font-size:0.85rem; text-decoration:none; font-weight:600;">
+                    <i class="bi bi-file-earmark-pdf"></i> Télécharger le PDF officiel →
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {# [B22a 12/06/2026] Documents FFBB officiels téléchargeables par la joueuse #}
+    {% set has_pdfs = rencontre.feuilleMatchPath or rencontre.resumePath or rencontre.positionsTirsPath %}
+    {% if has_pdfs %}
+        <div class="pirb-card">
+            <div class="pirb-card-title">📄 Documents FFBB officiels</div>
+            <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 12px;">
+                Téléchargements officiels — feuille de match validée FFBB.
+            </p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                {% if rencontre.feuilleMatchPath %}
+                    <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'feuille'}) }}"
+                       class="pirb-btn" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); justify-content:flex-start;">
+                        <i class="bi bi-file-earmark-pdf" style="color:#ef4444; font-size:1.2rem;"></i>
+                        <span style="flex:1;">Feuille de match</span>
+                        <i class="bi bi-download" style="color:var(--pirb-text-muted);"></i>
+                    </a>
+                {% endif %}
+                {% if rencontre.resumePath %}
+                    <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'resume'}) }}"
+                       class="pirb-btn" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); justify-content:flex-start;">
+                        <i class="bi bi-file-earmark-bar-graph" style="color:#3b82f6; font-size:1.2rem;"></i>
+                        <span style="flex:1;">Résumé stats</span>
+                        <i class="bi bi-download" style="color:var(--pirb-text-muted);"></i>
+                    </a>
+                {% endif %}
+                {% if rencontre.positionsTirsPath %}
+                    <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'positions'}) }}"
+                       class="pirb-btn" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); justify-content:flex-start;">
+                        <i class="bi bi-bullseye" style="color:#ea580c; font-size:1.2rem;"></i>
+                        <span style="flex:1;">Positions des tirs</span>
+                        <i class="bi bi-download" style="color:var(--pirb-text-muted);"></i>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+{% endblock %}
