@@ -11,6 +11,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.7",
         "doctrine/orm": "^3.6.7",
         "dompdf/dompdf": "^3.1.5",
+        "google/cloud-vision": "^2.2",
         "league/commonmark": ">=2.8.2",
         "phpdocumentor/reflection-docblock": "^5.6.7",
         "phpoffice/phpspreadsheet": "^5.8",

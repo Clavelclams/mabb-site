@@ -103,3 +103,11 @@ services:
     App\Service\Ffbb\FfbbPositionTirParser:
         arguments:
             $projectDir: '%kernel.project_dir%'
+
+    # [B-FFBB-OCR 15/06/2026] Google Vision OCR
+    # Le fichier google-vision-key.json contient la clé service account et NE DOIT
+    # JAMAIS être committé (cf. .gitignore /config/credentials/).
+    # En prod, déposer la même clé via SCP dans le même chemin sur OVH.
+    App\Service\Ffbb\GoogleVisionOcrService:
+        arguments:
+            $googleVisionKeyPath: '%kernel.project_dir%/config/credentials/google-vision-key.json'
