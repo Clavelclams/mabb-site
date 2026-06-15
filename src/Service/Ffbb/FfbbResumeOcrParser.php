@@ -429,6 +429,35 @@ class FfbbResumeOcrParser
 
                     // Filtre : skip si vraiment ligne vide (probablement remplissage tableau)
                     if ($joueuse['minutes'] > 0 || $joueuse['points'] > 0 || $joueuse['tirs_r'] > 0) {
+                        // [15/06/2026] Garde-fou anti-aberration OCR : si Vision a sorti
+                        // un nombre variable de cellules (cellules vides omises), le mapping
+                        // positionnel peut faire glisser des valeurs et donner des chiffres
+                        // absurdes (ex: tirs2pts_reussis=142 sur 14 min). On rejette toute
+                        // ligne avec des valeurs manifestement aberrantes.
+                        // Seuils basés sur les records FFBB féminines amateurs.
+                        $absurde = (
+                            $joueuse['minutes'] > 50      // un match dure 40min max
+                            || $joueuse['points'] > 80    // top scoreur U15F = ~50 pts
+                            || $joueuse['tirs_r'] > 30    // max raisonnable
+                            || $joueuse['t3_r'] > 15
+                            || $joueuse['t2int_r'] > 25
+                            || $joueuse['t2ext_r'] > 15
+                            || $joueuse['lf_r'] > 25
+                            || $joueuse['ftes'] > 10      // FFBB = 5 fautes max avant éliminatoire
+                        );
+                        if ($absurde) {
+                            // On garde la joueuse mais on remet ses stats à 0 pour ne pas
+                            // polluer la base. Le coach pourra saisir manuellement via UI.
+                            $joueuse['minutes'] = 0;
+                            $joueuse['points'] = 0;
+                            $joueuse['tirs_r'] = 0;
+                            $joueuse['t3_r'] = 0;
+                            $joueuse['t2int_r'] = 0;
+                            $joueuse['t2ext_r'] = 0;
+                            $joueuse['lf_r'] = 0;
+                            $joueuse['ftes'] = 0;
+                            $joueuse['_aberrant'] = true;
+                        }
                         $joueuses[] = $joueuse;
                     }
 
