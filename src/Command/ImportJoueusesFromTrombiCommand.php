@@ -69,6 +69,8 @@ final class ImportJoueusesFromTrombiCommand extends Command
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Simule sans écrire.')
             ->addOption('set-equipe-principale', null, InputOption::VALUE_NONE,
                 'Si --type=principale, force aussi Joueur.equipe pour les nouvelles joueuses (rétrocompat).')
+            ->addOption('debug', null, InputOption::VALUE_NONE,
+                'Affiche le texte brut extrait par smalot/pdfparser pour debug du regex.')
         ;
     }
 
@@ -83,6 +85,7 @@ final class ImportJoueusesFromTrombiCommand extends Command
         $clubId = (int) $input->getOption('club-id');
         $dryRun = (bool) $input->getOption('dry-run');
         $setEquipePrincipale = (bool) $input->getOption('set-equipe-principale');
+        $debug = (bool) $input->getOption('debug');
 
         // === Garde-fous ===
         if (!is_file($pdfPath)) {
@@ -130,6 +133,19 @@ final class ImportJoueusesFromTrombiCommand extends Command
         } catch (\Throwable $e) {
             $io->error("Erreur parsing PDF : " . $e->getMessage());
             return Command::FAILURE;
+        }
+
+        // === Mode debug : dump du texte brut pour analyser le format ===
+        if ($debug) {
+            $io->section("DEBUG — Texte brut extrait par smalot/pdfparser");
+            $io->writeln("Longueur totale : " . strlen($text) . " caractères");
+            $lines = preg_split('/\r?\n/', $text);
+            $io->writeln("Nombre de lignes : " . count($lines));
+            $io->writeln("--- 50 premières lignes (avec numéros) ---");
+            foreach (array_slice($lines, 0, 50) as $idx => $line) {
+                $io->writeln(sprintf("[%03d] %s", $idx, $line));
+            }
+            $io->writeln("--- fin debug ---");
         }
 
         $joueuses = $this->extractJoueuses($text);
