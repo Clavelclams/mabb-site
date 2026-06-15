@@ -99,14 +99,35 @@ final class RencontrePdfUploader
     /**
      * Retourne le chemin ABSOLU d'un PDF (pour servir le fichier ou le streamer).
      * Renvoie null si pas de fichier ou type invalide.
+     *
+     * [B22b-bis fix 15/06/2026] Gère 2 conventions de stockage qui coexistent :
+     *   1. Upload manuel via UI → filename seul (ex: "rencontre_5_resume_xyz.pdf")
+     *      → chemin absolu = uploadDirectory + filename
+     *   2. Import auto B20 (depuis dossier ressource) → path relatif au public/
+     *      (ex: "uploads/rencontres/5/resume.pdf")
+     *      → chemin absolu = publicDir + path
+     *
+     * Avant ce fix, le cas 2 retournait null (404) car on concaténait l'uploadDirectory
+     * avec le path complet, donnant un chemin doublé ("uploads/rencontres/uploads/...").
      */
     public function getAbsolutePath(Rencontre $rencontre, string $type): ?string
     {
-        $filename = $rencontre->getPdfPath($type);
-        if ($filename === null) {
+        $stored = $rencontre->getPdfPath($type);
+        if ($stored === null) {
             return null;
         }
-        $path = $this->uploadDirectory . DIRECTORY_SEPARATOR . $filename;
+
+        // Cas 2 : path complet déjà préfixé par "uploads/" → relatif au public/
+        if (str_starts_with($stored, 'uploads/')) {
+            // uploadDirectory = <projectDir>/public/uploads/rencontres
+            // → publicDir = dirname(dirname(uploadDirectory))
+            $publicDir = dirname($this->uploadDirectory, 2);
+            $path = $publicDir . DIRECTORY_SEPARATOR . $stored;
+        } else {
+            // Cas 1 : filename seul → relatif à uploadDirectory
+            $path = $this->uploadDirectory . DIRECTORY_SEPARATOR . $stored;
+        }
+
         return file_exists($path) ? $path : null;
     }
 
