@@ -392,10 +392,11 @@
             <i class="bi bi-calendar-event"></i> Agenda
             <span class="badge-soon">Soon</span>
         </button>
-        <button type="button" class="pirb-nav-tab disabled" title="Bientôt disponible">
+        {# [15/06/2026] Stats : activée — la route pirb_stats existe depuis B10/B11.
+           Mauvais oubli de fin de sprint qui laissait l'onglet en disabled. #}
+        <a href="{{ path('pirb_stats') }}" class="pirb-nav-tab {{ route starts with 'pirb_stats' ? 'active' : '' }}">
             <i class="bi bi-bar-chart"></i> Stats
-            <span class="badge-soon">Soon</span>
-        </button>
+        </a>
     </nav>
     {% endblock %}
 </div>
