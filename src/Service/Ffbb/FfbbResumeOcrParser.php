@@ -192,51 +192,50 @@ class FfbbResumeOcrParser
     }
 
     /**
-     * Cherche dans le texte si MABB apparaît dans la section LOCAUX ou VISITEURS.
-     * Retourne 'LOCAUX', 'VISITEURS' ou null si pas détecté.
+     * Cherche dans le texte FFBB si MABB est Équipe A (LOCAUX) ou Équipe B (VISITEURS).
+     *
+     * 🎯 STRATÉGIE FIABLE : on cherche les libellés "Équipe A" et "Équipe B"
+     * dans l'en-tête du PDF, et on regarde lequel contient le nom MABB.
+     *
+     * Format attendu (testé sur resume_match5.pdf via Vision) :
+     *   "Équipe A BRAY BASKET BALL"
+     *   "Équipe B METROPOLE AMIE NOISE BASKETBALL"
+     *
+     * → Équipe A = LOCAUX (équipe qui reçoit, à domicile)
+     * → Équipe B = VISITEURS (équipe qui se déplace)
+     *
+     * On extrait les 2 noms d'équipe via regex puis on cherche MABB dans chacun.
+     * Plus robuste que de comparer des positions de mots-clés dans le texte
+     * (la détection précédente faisait des faux positifs car "METROPOLE"
+     * apparaît dans l'en-tête, donc entre les mots "LOCAUX" et "VISITEURS"
+     * qui sont en bas du PDF).
      */
     private function detecterCoteMabb(string $text): ?string
     {
-        $textUpper = mb_strtoupper($text);
+        $equipeA = null;
+        $equipeB = null;
 
-        // Cherche l'index de "LOCAUX" et "VISITEURS"
-        $locauxPos = mb_strpos($textUpper, 'LOCAUX');
-        $visitPos = mb_strpos($textUpper, 'VISITEURS');
-
-        if ($locauxPos === false || $visitPos === false) {
-            return null;
+        if (preg_match('/Équipe\s*A\s+([^\r\n]+)/u', $text, $m)) {
+            $equipeA = trim($m[1]);
+        }
+        if (preg_match('/Équipe\s*B\s+([^\r\n]+)/u', $text, $m)) {
+            $equipeB = trim($m[1]);
         }
 
-        // Cherche dans quel ordre apparaissent ces sections et où apparaît MABB
+        $this->logger->info('OCR détection équipes', [
+            'equipe_a' => $equipeA,
+            'equipe_b' => $equipeB,
+        ]);
+
         foreach (self::MABB_PATTERNS as $pattern) {
-            $mabbPos = mb_strpos($textUpper, $pattern);
-            if ($mabbPos === false) continue;
-            // Si MABB est avant LOCAUX ou entre LOCAUX et VISITEURS → MABB = LOCAUX
-            // Si MABB est après VISITEURS → MABB = VISITEURS
-            // En pratique, l'en-tête contient toujours les 2 équipes ("Équipe A X / Équipe B Y")
-            // Donc on regarde plutôt si MABB apparaît APRÈS le mot LOCAUX ou APRÈS le mot VISITEURS dans le tableau
-            if ($mabbPos > $visitPos) {
-                return 'VISITEURS';
-            }
-            if ($mabbPos > $locauxPos && $mabbPos < $visitPos) {
+            if ($equipeA !== null && mb_stripos($equipeA, $pattern) !== false) {
                 return 'LOCAUX';
             }
-            // Si MABB est avant les 2, c'est dans l'en-tête → on regarde l'autre équipe
-            // L'autre équipe est l'adversaire (BRAY, etc.). On peut juste regarder dans
-            // quelle section apparaît un nom de joueuse MABB connu… plus tard.
-            // Pour V1, on assume que si MABB est dans l'en-tête en équipe B,
-            // alors MABB = VISITEURS (équipe B sur le PDF)
-            if ($mabbPos < $locauxPos && $mabbPos < $visitPos) {
-                // On regarde encore : est-ce que l'en-tête mentionne "Équipe B METROPOLE"
-                // ou "Équipe A METROPOLE" pour confirmer
-                if (preg_match('/Équipe\s*B\s*[^a-z]*' . preg_quote($pattern, '/') . '/iu', $text)) {
-                    return 'VISITEURS';
-                }
-                if (preg_match('/Équipe\s*A\s*[^a-z]*' . preg_quote($pattern, '/') . '/iu', $text)) {
-                    return 'LOCAUX';
-                }
+            if ($equipeB !== null && mb_stripos($equipeB, $pattern) !== false) {
+                return 'VISITEURS';
             }
         }
+
         return null;
     }
 
