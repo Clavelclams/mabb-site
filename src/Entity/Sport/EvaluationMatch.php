@@ -224,7 +224,12 @@ class EvaluationMatch implements ClubAwareInterface
 
     /**
      * Pourcentage de réussite aux tirs du terrain (hors lancers francs).
-     * Retourne null si aucun tir tenté (évite division par zéro).
+     * Retourne null si :
+     *   - aucun tir tenté (évite division par zéro)
+     *   - tirs réussis > tirs tentés (incohérence : la FFBB ne donne que les
+     *     réussis via OCR, donc les "tentés" peuvent rester à 0 ou à une vieille
+     *     valeur, donnant des % aberrants type 3000%). Les % ne sont fiables
+     *     qu'avec Stats Live qui capture aussi les tirs manqués.
      */
     public function getPourcentageTirs(): ?float
     {
@@ -233,6 +238,10 @@ class EvaluationMatch implements ClubAwareInterface
             return null;
         }
         $reussis = $this->tirs2ptsReussis + $this->tirs3ptsReussis;
+        // Garde-fou cohérence : on ne peut pas avoir plus de réussis que de tentés
+        if ($reussis > $tentes) {
+            return null;
+        }
         return round($reussis / $tentes * 100, 1);
     }
 

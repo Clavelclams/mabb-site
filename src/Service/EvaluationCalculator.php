@@ -144,7 +144,12 @@ final class EvaluationCalculator
             'interceptions_moyenne' => round($totalIntercep / $nb, 1),
             'contres_moyenne'       => round($totalContres / $nb, 1),
             'minutes_moyenne'       => round($totalMinutes / $nb, 1),
-            'pourcentage_tirs'      => $totalTirsTentes > 0
+            // [15/06/2026] Garde-fou cohérence : la FFBB ne donne que les tirs réussis
+            // (pas les tentés). Si l'agrégation saison a plus de réussis que de tentés,
+            // c'est incohérent (% > 100). On retourne null pour afficher "—" plutôt
+            // qu'un 3000% absurde. Les % réels viennent de Stats Live MABB qui capture
+            // les tirs manqués.
+            'pourcentage_tirs'      => ($totalTirsTentes > 0 && $totalTirsReussis <= $totalTirsTentes)
                                         ? round($totalTirsReussis / $totalTirsTentes * 100, 1)
                                         : null,
             'nb_matchs_dominants'   => $nbDominants,
