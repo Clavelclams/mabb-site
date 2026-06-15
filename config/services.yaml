@@ -85,9 +85,9 @@ services:
             $projectDir: '%kernel.project_dir%'
 
     # B22a — Téléchargement PDF FFBB côté PIRB joueuse
-    App\Controller\Pirb\PirbStatsController:
-        bind:
-            string $projectDir: '%kernel.project_dir%'
+    # [15/06/2026] Bind $projectDir retiré : refactor PirbStatsController::downloadPdf
+    # utilise maintenant RencontrePdfUploader::getAbsolutePath (DRY).
+    # Symfony 7.4 strict refuse les bindings non utilisés au boot.
 
     # B30c — Invitation parent par mail
     App\Service\Security\ParentInvitationManager:
