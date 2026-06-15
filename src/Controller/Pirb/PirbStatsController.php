@@ -40,7 +40,7 @@ class PirbStatsController extends AbstractController
     ) {}
 
     #[Route('/stats', name: 'pirb_stats', methods: ['GET'])]
-    public function index(): Response
+    public function index(\App\Repository\Sport\RencontreRepository $rencontreRepo): Response
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -53,9 +53,26 @@ class PirbStatsController extends AbstractController
 
         $stats = $this->aggregator->statsSaison($joueur);
 
+        // [15/06/2026] Rajouter la liste des matchs de l'équipe pour que la joueuse
+        // puisse cliquer dessus et accéder au badge ✓ FFBB + PDF même sans EvaluationMatch.
+        // Sinon la page Stats est vide tant qu'aucune éval n'a été saisie.
+        $matchsEquipe = [];
+        if ($joueur->getEquipe() !== null) {
+            $matchsEquipe = $rencontreRepo->createQueryBuilder('r')
+                ->where('r.equipe = :eq')
+                ->andWhere('r.date < :now')
+                ->setParameter('eq', $joueur->getEquipe())
+                ->setParameter('now', new \DateTimeImmutable())
+                ->orderBy('r.date', 'DESC')
+                ->setMaxResults(20)
+                ->getQuery()
+                ->getResult();
+        }
+
         return $this->render('pirb/stats.html.twig', [
-            'joueur' => $joueur,
-            'stats'  => $stats,
+            'joueur'        => $joueur,
+            'stats'         => $stats,
+            'matchs_equipe' => $matchsEquipe,
         ]);
     }
 

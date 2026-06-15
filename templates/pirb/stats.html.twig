@@ -15,10 +15,61 @@
     {% if stats.nb_matchs == 0 %}
         <div class="pirb-card" style="text-align:center; padding:24px;">
             <p style="margin:0; color:var(--pirb-text-muted); font-size:0.9rem;">
-                Aucune évaluation de match enregistrée pour l'instant.<br>
-                Tes stats apparaîtront après que le coach ait saisi ton premier match.
+                Aucune évaluation individuelle saisie pour l'instant.<br>
+                <small>Les stats détaillées apparaîtront après que le coach ait saisi les évals.</small>
             </p>
         </div>
+
+        {# [15/06/2026] Affiche quand même les matchs récents de l'équipe avec
+           le badge ✓ FFBB validé si applicable. La joueuse peut cliquer sur
+           chaque match pour voir le PDF FFBB officiel téléchargeable. #}
+        {% if matchs_equipe is defined and matchs_equipe|length > 0 %}
+            <div class="pirb-card">
+                <div class="pirb-card-title">📅 Mes matchs de la saison</div>
+                <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 12px;">
+                    Clique sur un match pour voir le détail et télécharger le PDF officiel FFBB.
+                </p>
+                {% for r in matchs_equipe %}
+                    {% set isHome = r.domicile ?? true %}
+                    {% set scoreEq = r.scoreEquipe ?? null %}
+                    {% set scoreAdv = r.scoreAdverse ?? null %}
+                    {% set hasScore = scoreEq is not null and scoreAdv is not null %}
+                    {% set isVictoire = hasScore and scoreEq > scoreAdv %}
+                    <a href="{{ path('pirb_stats_match', {id: r.id}) }}"
+                       style="display:flex; align-items:center; gap:10px; padding:12px 0;
+                              border-bottom:1px solid var(--pirb-border);
+                              text-decoration:none; color:inherit;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                vs {{ r.adversaire }}
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center; margin-top:3px; flex-wrap:wrap;">
+                                <span style="font-size:0.72rem; color:var(--pirb-text-muted);">
+                                    {{ r.date|date('d/m/Y') }} · {{ isHome ? '🏠 domicile' : '🚗 ext.' }}
+                                </span>
+                                {% if r.isFfbbStatsValidated() %}
+                                    <span style="font-size:0.68rem; padding:2px 6px; background:rgba(16,185,129,.15); color:#10b981; border-radius:4px; font-weight:600;">
+                                        ✓ FFBB
+                                    </span>
+                                {% endif %}
+                                {% if r.resumePath %}
+                                    <span style="font-size:0.68rem; padding:2px 6px; background:rgba(59,130,246,.15); color:#3b82f6; border-radius:4px; font-weight:600;">
+                                        📄 PDF
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if hasScore %}
+                            <div style="text-align:right; font-weight:800; font-size:0.95rem;
+                                       color:{{ isVictoire ? '#10b981' : '#ef4444' }};">
+                                {{ scoreEq }}-{{ scoreAdv }}
+                            </div>
+                        {% endif %}
+                        <i class="bi bi-chevron-right" style="color:var(--pirb-text-muted); font-size:0.8rem;"></i>
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
     {% else %}
 
         {# === Indicateurs clés === #}
