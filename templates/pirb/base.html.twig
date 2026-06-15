@@ -103,7 +103,9 @@
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 16px 14px;
-            padding-bottom: 80px; /* dégage la bottom nav */
+            /* [15/06/2026] padding-bottom large pour dégager la nav fixed
+               + safe-area pour iPhone X+ (encoche notch en bas) */
+            padding-bottom: calc(90px + env(safe-area-inset-bottom));
         }
         @media (min-width: 700px) {
             .pirb-content {
@@ -113,16 +115,33 @@
             }
         }
 
-        /* === BOTTOM NAV (4 tabs) === */
+        /* === BOTTOM NAV (4 tabs) ===
+           [15/06/2026] FIX MOBILE : position: fixed pour rester collée au
+           viewport VISIBLE (et non au viewport virtuel 100vh). iOS Safari
+           change la hauteur du viewport quand la barre URL apparaît/disparaît,
+           ce qui poussait la nav hors écran avec flex-shrink: 0. */
         .pirb-bottom-nav {
-            flex-shrink: 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: var(--pirb-card);
             border-top: 1px solid var(--pirb-border);
             padding: 6px 4px;
             padding-bottom: max(6px, env(safe-area-inset-bottom));
             display: flex;
             gap: 4px;
-            z-index: 10;
+            z-index: 100;
+            /* Largeur centrée sur grand écran pour matcher le contenu */
+        }
+        @media (min-width: 700px) {
+            .pirb-bottom-nav {
+                max-width: 720px;
+                left: 50%;
+                right: auto;
+                transform: translateX(-50%);
+                border-radius: 14px 14px 0 0;
+            }
         }
         .pirb-nav-tab {
             flex: 1;
