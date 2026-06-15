@@ -307,18 +307,18 @@
         #pirbEditInfos:checked ~ .pirb-infos-view { display: none; }
         #pirbEditInfos:checked ~ .pirb-infos-edit { display: block; }
 
-        /* V1.2a — Footer dédicace discret, COLLÉ au-dessus de la bottom-nav.
-           Sorti du <main> donc plus de margin-top ni border-top fluctuant —
-           ce footer flex-shrink:0 reste à sa place quelle que soit la hauteur
-           du contenu (pas de grand vide quand contenu court). */
+        /* V1.2a — Footer dédicace discret.
+           [15/06/2026 v2] Remis DANS le <main> : la navbar fixed cachait la
+           dédicace sur mobile et iPad. Maintenant elle scrolle avec le
+           contenu, le padding-bottom du .pirb-content garantit qu'elle
+           passe au-dessus de la navbar fixed. */
         .pirb-dedicace {
-            flex-shrink: 0;
             text-align: center;
-            padding: 10px 16px 8px;
+            padding: 18px 16px 8px;
+            margin-top: 12px;
             color: var(--pirb-text-muted);
             font-size: 0.7rem;
             line-height: 1.5;
-            background: var(--pirb-bg);
             border-top: 1px solid var(--pirb-border);
         }
         .pirb-dedicace a {
@@ -388,15 +388,17 @@
 
     <main class="pirb-content">
         {% block body %}{% endblock %}
-    </main>
 
-    {# === V1.2a — Footer dédicace à @pirb_scouting ===
-       Sorti du <main> pour rester COLLÉ au-dessus de la bottom-nav,
-       même si le contenu est court. Évite le grand vide vertical. #}
-    <footer class="pirb-dedicace">
-        <strong style="color:var(--pirb-text);">PIRB</strong> — Ton espace joueur de basket · stats, profil, performances<br>
-        En hommage à <a href="https://www.instagram.com/pirb_scouting/" target="_blank" rel="noopener">@pirb_scouting</a>
-    </footer>
+        {# === V1.2a — Footer dédicace à @pirb_scouting ===
+           [15/06/2026 v2] Remis dans le <main> : la nav fixed cachait
+           cette dédicace sur mobile/iPad. Maintenant elle scrolle avec
+           le contenu et le padding-bottom du content garantit qu'elle
+           reste accessible au-dessus de la navbar. #}
+        <footer class="pirb-dedicace">
+            <strong style="color:var(--pirb-text);">PIRB</strong> — Ton espace joueur de basket · stats, profil, performances<br>
+            En hommage à <a href="https://www.instagram.com/pirb_scouting/" target="_blank" rel="noopener">@pirb_scouting</a>
+        </footer>
+    </main>
 
     {% block bottom_nav %}
     <nav class="pirb-bottom-nav" aria-label="Navigation principale">
