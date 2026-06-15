@@ -153,16 +153,15 @@ class FfbbResumeOcrParser
             // Tirs 2pts réussis = INT + EXT (l'entité ne distingue pas)
             $tirs2R = ($ligne['t2int_r'] ?? 0) + ($ligne['t2ext_r'] ?? 0);
             $eval->setTirs2ptsReussis($tirs2R);
-            // Note : on N'ÉCRASE PAS les tirs TENTÉS qui peuvent venir de Stats Live
-            // Sauf si l'éval est nouvelle (alors tentés = réussis comme estimation min.)
-            if ($isNew) {
-                $eval->setTirs2ptsTentes($tirs2R);
-                $eval->setTirs3ptsTentes($ligne['t3_r'] ?? 0);
-                $eval->setLancersTentes($ligne['lf_r'] ?? 0);
-            }
             $eval->setTirs3ptsReussis($ligne['t3_r'] ?? 0);
             $eval->setLancersReussis($ligne['lf_r'] ?? 0);
             $eval->setFautesCommises($ligne['ftes'] ?? 0);
+            // [15/06/2026] ON N'ÉCRIT PAS les tirs TENTÉS depuis l'OCR FFBB :
+            // la FFBB ne fournit QUE les réussis (le PDF resume ne donne pas les manqués).
+            // Mettre tentes=réussis donnerait 100% partout, ce qui serait factuellement faux.
+            // Les tentes resteront à 0 → template PIRB affichera juste "X réussis" sans %.
+            // Les tentes seront remplis UNIQUEMENT par Stats Live (qui capture les tirs manqués)
+            // ou par saisie manuelle du coach via /rencontres/{id}/evals.
 
             // Note coach pour traçabilité de la source
             $eval->setNotesCoach(

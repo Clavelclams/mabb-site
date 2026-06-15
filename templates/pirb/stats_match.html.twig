@@ -40,20 +40,28 @@
             </div>
         </div>
 
-        {# === 📋 Stats officielles FFBB (toujours dispo après import Excel) === #}
+        {# === 📋 Stats officielles FFBB (toujours dispo après import OCR Vision)
+           IMPORTANT : la FFBB ne fournit QUE les tirs réussis, pas les tentés.
+           On affiche "X réussis" et PAS de % shooting (qui serait factuellement faux).
+           Les tentés viendront via Stats Live (capture tirs manqués en direct) ou
+           saisie manuelle coach via /rencontres/{id}/evals.
+        #}
         <div class="pirb-card" style="border-left:4px solid #3b82f6;">
             <div class="pirb-card-title">📋 Stats officielles FFBB</div>
             <p style="font-size:0.74rem; color:var(--pirb-text-muted); margin:0 0 10px;">
-                Issues du PDF resume FFBB officiel — capturées et validées par le coach.
+                Issues du PDF resume FFBB officiel — capturées par OCR + validées par le coach.
             </p>
             <table style="width:100%; font-size:0.88rem;">
                 <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">⏱️ Minutes jouées</td><td style="text-align:right; font-weight:600;">{{ eval.minutesJouees }}'</td></tr>
                 <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">🏀 Points</td><td style="text-align:right; font-weight:600;">{{ eval.points }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">2pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs2ptsReussis }}/{{ eval.tirs2ptsTentes }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">3pts</td><td style="text-align:right; font-weight:600;">{{ eval.tirs3ptsReussis }}/{{ eval.tirs3ptsTentes }}</td></tr>
-                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Lancers francs</td><td style="text-align:right; font-weight:600;">{{ eval.lancersReussis }}/{{ eval.lancersTentes }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">2pts réussis</td><td style="text-align:right; font-weight:600;">{{ eval.tirs2ptsReussis }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">3pts réussis</td><td style="text-align:right; font-weight:600;">{{ eval.tirs3ptsReussis }}</td></tr>
+                <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">LF réussis</td><td style="text-align:right; font-weight:600;">{{ eval.lancersReussis }}</td></tr>
                 <tr><td style="padding:4px 0; color:var(--pirb-text-muted);">Fautes commises</td><td style="text-align:right; font-weight:600;">{{ eval.fautesCommises }}</td></tr>
             </table>
+            <p style="font-size:0.7rem; color:var(--pirb-text-muted); margin:10px 0 0; font-style:italic;">
+                ℹ️ Les tirs tentés (% shooting) ne sont pas fournis par la FFBB. Disponibles uniquement via Stats Live MABB.
+            </p>
         </div>
 
         {# === ⚡ Stats avancées MABB (Stats Live seulement) ===

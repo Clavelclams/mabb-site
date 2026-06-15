@@ -3,76 +3,45 @@
 
 {% block body %}
 
+    {# ====================================================================
+       [15/06/2026] Refonte page Stats PIRB en 4 sections selon vision Clavel.
+       ====================================================================
+       Section 1 : Stats saison (agrégées)
+       Section 2 : Stats shoot entraînement (placeholder, B34 à venir)
+       Section 3 : Stats par match (liste + drawer interactif au click)
+       Section 4 : Position de tir / Shot chart (par match + globalité saison)
+    #}
+
+    {# ====================================================================
+       BANDEAU EN-TÊTE
+       ==================================================================== #}
     <div class="pirb-card" style="text-align:center; padding:22px 16px;">
         <div style="font-size:2.4rem; margin-bottom:6px;">📊</div>
-        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Mes stats saison</h1>
+        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Mes stats</h1>
         <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin-top:6px;">
             {{ stats.nb_matchs }} match{{ stats.nb_matchs > 1 ? 's' : '' }} joué{{ stats.nb_matchs > 1 ? 's' : '' }}
             {% if stats.titulaire > 0 %} · {{ stats.titulaire }} titularisation{{ stats.titulaire > 1 ? 's' : '' }}{% endif %}
+            · saison {{ joueur.equipe.saisonCourante ?? '2025-2026' }}
         </p>
+    </div>
+
+    {# ====================================================================
+       SECTION 1 — STATS SAISON (agrégées)
+       ==================================================================== #}
+    <div class="pirb-section-header" style="margin:18px 4px 8px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.1rem;">📊</span>
+        <h2 style="margin:0; font-size:0.95rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--pirb-text-muted);">Stats saison</h2>
     </div>
 
     {% if stats.nb_matchs == 0 %}
         <div class="pirb-card" style="text-align:center; padding:24px;">
             <p style="margin:0; color:var(--pirb-text-muted); font-size:0.9rem;">
                 Aucune évaluation individuelle saisie pour l'instant.<br>
-                <small>Les stats détaillées apparaîtront après que le coach ait saisi les évals.</small>
+                <small>Les stats détaillées apparaîtront après import OCR FFBB ou saisie coach.</small>
             </p>
         </div>
-
-        {# [15/06/2026] Affiche quand même les matchs récents de l'équipe avec
-           le badge ✓ FFBB validé si applicable. La joueuse peut cliquer sur
-           chaque match pour voir le PDF FFBB officiel téléchargeable. #}
-        {% if matchs_equipe is defined and matchs_equipe|length > 0 %}
-            <div class="pirb-card">
-                <div class="pirb-card-title">📅 Mes matchs de la saison</div>
-                <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 12px;">
-                    Clique sur un match pour voir le détail et télécharger le PDF officiel FFBB.
-                </p>
-                {% for r in matchs_equipe %}
-                    {% set isHome = r.domicile ?? true %}
-                    {% set scoreEq = r.scoreEquipe ?? null %}
-                    {% set scoreAdv = r.scoreAdverse ?? null %}
-                    {% set hasScore = scoreEq is not null and scoreAdv is not null %}
-                    {% set isVictoire = hasScore and scoreEq > scoreAdv %}
-                    <a href="{{ path('pirb_stats_match', {id: r.id}) }}"
-                       style="display:flex; align-items:center; gap:10px; padding:12px 0;
-                              border-bottom:1px solid var(--pirb-border);
-                              text-decoration:none; color:inherit;">
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                vs {{ r.adversaire }}
-                            </div>
-                            <div style="display:flex; gap:8px; align-items:center; margin-top:3px; flex-wrap:wrap;">
-                                <span style="font-size:0.72rem; color:var(--pirb-text-muted);">
-                                    {{ r.date|date('d/m/Y') }} · {{ isHome ? '🏠 domicile' : '🚗 ext.' }}
-                                </span>
-                                {% if r.isFfbbStatsValidated() %}
-                                    <span style="font-size:0.68rem; padding:2px 6px; background:rgba(16,185,129,.15); color:#10b981; border-radius:4px; font-weight:600;">
-                                        ✓ FFBB
-                                    </span>
-                                {% endif %}
-                                {% if r.resumePath %}
-                                    <span style="font-size:0.68rem; padding:2px 6px; background:rgba(59,130,246,.15); color:#3b82f6; border-radius:4px; font-weight:600;">
-                                        📄 PDF
-                                    </span>
-                                {% endif %}
-                            </div>
-                        </div>
-                        {% if hasScore %}
-                            <div style="text-align:right; font-weight:800; font-size:0.95rem;
-                                       color:{{ isVictoire ? '#10b981' : '#ef4444' }};">
-                                {{ scoreEq }}-{{ scoreAdv }}
-                            </div>
-                        {% endif %}
-                        <i class="bi bi-chevron-right" style="color:var(--pirb-text-muted); font-size:0.8rem;"></i>
-                    </a>
-                {% endfor %}
-            </div>
-        {% endif %}
     {% else %}
-
-        {# === Indicateurs clés === #}
+        {# Moyennes par match #}
         <div class="pirb-card">
             <div class="pirb-card-title">Moyennes par match</div>
             <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:10px;">
@@ -95,29 +64,49 @@
             </div>
         </div>
 
-        {# === Pourcentages tirs === #}
+        {# Tirs réussis (sans % car FFBB ne fournit pas les tirs tentés) #}
         <div class="pirb-card">
-            <div class="pirb-card-title">% Tirs</div>
+            <div class="pirb-card-title">🏀 Tirs réussis (cumul saison)</div>
             <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
-                <div style="text-align:center;">
-                    <div style="font-size:1.3rem; font-weight:800;">{{ stats.pourcentages.tirs2 ?? '—' }}{% if stats.pourcentages.tirs2 %}%{% endif %}</div>
-                    <div style="font-size:0.72rem; color:var(--pirb-text-muted);">2pts ({{ stats.reussites.tirs2 }}/{{ stats.tentatives.tirs2 }})</div>
+                <div style="text-align:center; padding:10px; background:rgba(234,88,12,.08); border-radius:10px;">
+                    <div style="font-size:1.6rem; font-weight:800; color:var(--pirb-accent);">{{ stats.reussites.tirs2 ?? 0 }}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted); text-transform:uppercase;">2pts</div>
                 </div>
-                <div style="text-align:center;">
-                    <div style="font-size:1.3rem; font-weight:800;">{{ stats.pourcentages.tirs3 ?? '—' }}{% if stats.pourcentages.tirs3 %}%{% endif %}</div>
-                    <div style="font-size:0.72rem; color:var(--pirb-text-muted);">3pts ({{ stats.reussites.tirs3 }}/{{ stats.tentatives.tirs3 }})</div>
+                <div style="text-align:center; padding:10px; background:rgba(59,130,246,.08); border-radius:10px;">
+                    <div style="font-size:1.6rem; font-weight:800; color:#60a5fa;">{{ stats.reussites.tirs3 ?? 0 }}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted); text-transform:uppercase;">3pts</div>
                 </div>
-                <div style="text-align:center;">
-                    <div style="font-size:1.3rem; font-weight:800;">{{ stats.pourcentages.lf ?? '—' }}{% if stats.pourcentages.lf %}%{% endif %}</div>
-                    <div style="font-size:0.72rem; color:var(--pirb-text-muted);">LF ({{ stats.reussites.lf }}/{{ stats.tentatives.lf }})</div>
+                <div style="text-align:center; padding:10px; background:rgba(245,158,11,.08); border-radius:10px;">
+                    <div style="font-size:1.6rem; font-weight:800; color:#fbbf24;">{{ stats.reussites.lf ?? 0 }}</div>
+                    <div style="font-size:0.72rem; color:var(--pirb-text-muted); text-transform:uppercase;">Lancers</div>
                 </div>
             </div>
+            {% if (stats.tentatives.tirs2 ?? 0) > 0 or (stats.tentatives.tirs3 ?? 0) > 0 or (stats.tentatives.lf ?? 0) > 0 %}
+                <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--pirb-border);">
+                    <div style="font-size:0.78rem; color:var(--pirb-text-muted); margin-bottom:6px;">⚡ % shooting (depuis Stats Live MABB)</div>
+                    <div style="display:flex; gap:14px; justify-content:space-around; font-size:0.82rem; flex-wrap:wrap;">
+                        {% if (stats.tentatives.tirs2 ?? 0) > 0 %}
+                            <div>2pts <strong>{{ stats.pourcentages.tirs2 }}%</strong> <small>({{ stats.reussites.tirs2 }}/{{ stats.tentatives.tirs2 }})</small></div>
+                        {% endif %}
+                        {% if (stats.tentatives.tirs3 ?? 0) > 0 %}
+                            <div>3pts <strong>{{ stats.pourcentages.tirs3 }}%</strong> <small>({{ stats.reussites.tirs3 }}/{{ stats.tentatives.tirs3 }})</small></div>
+                        {% endif %}
+                        {% if (stats.tentatives.lf ?? 0) > 0 %}
+                            <div>LF <strong>{{ stats.pourcentages.lf }}%</strong> <small>({{ stats.reussites.lf }}/{{ stats.tentatives.lf }})</small></div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <p style="margin:10px 0 0; font-size:0.7rem; color:var(--pirb-text-muted); font-style:italic;">
+                    ℹ️ % shooting non disponible (la FFBB ne fournit pas les tirs tentés). Apparaîtra si Stats Live MABB est utilisé.
+                </p>
+            {% endif %}
         </div>
 
-        {# === Graph progression Chart.js (10 derniers) === #}
+        {# Graph progression Chart.js (10 derniers matchs) #}
         {% if stats.graph_progression|length > 1 %}
             <div class="pirb-card">
-                <div class="pirb-card-title">Progression — 10 derniers matchs</div>
+                <div class="pirb-card-title">📈 Progression — 10 derniers matchs</div>
                 <canvas id="progChart" height="220"></canvas>
                 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
                 <script>
@@ -151,33 +140,161 @@
                 </script>
             </div>
         {% endif %}
+    {% endif %}
 
-        {# === Liste matchs cliquables === #}
+    {# ====================================================================
+       SECTION 2 — STATS SHOOT ENTRAÎNEMENT (PLACEHOLDER, B34)
+       ==================================================================== #}
+    <div class="pirb-section-header" style="margin:24px 4px 8px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.1rem;">🎯</span>
+        <h2 style="margin:0; font-size:0.95rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--pirb-text-muted);">Stats shoot entraînement</h2>
+    </div>
+    <div class="pirb-card" style="border-left:4px solid var(--pirb-accent); opacity:.92;">
+        <div style="display:flex; gap:14px; align-items:start;">
+            <div style="font-size:2rem; flex-shrink:0;">🎯</div>
+            <div style="flex:1;">
+                <div style="font-weight:800; font-size:1rem; margin-bottom:4px;">À venir — Séances de shoot perso</div>
+                <p style="margin:0 0 10px; font-size:0.85rem; color:var(--pirb-text-muted); line-height:1.5;">
+                    Saisis tes séances de shoot d'entraînement directement sur un terrain interactif.
+                    Tu pointes où tu tires, ça compte tes réussites par zone. Tu travailles tes points faibles
+                    et tu visualises tes progrès.
+                </p>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.74rem; margin-top:8px;">
+                    <span style="padding:3px 8px; background:rgba(16,185,129,.15); color:#10b981; border-radius:5px; font-weight:600;">✓ Vérifié par coach</span>
+                    <span style="padding:3px 8px; background:rgba(245,158,11,.15); color:#f59e0b; border-radius:5px; font-weight:600;">⏳ En attente validation</span>
+                </div>
+                <p style="margin:10px 0 0; font-size:0.74rem; color:var(--pirb-text-muted); font-style:italic;">
+                    Inspiré de Ball.ia — version IA vidéo en V4/V5.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {# ====================================================================
+       SECTION 3 — STATS PAR MATCH (liste + drawer interactif)
+       ==================================================================== #}
+    <div class="pirb-section-header" style="margin:24px 4px 8px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.1rem;">🏀</span>
+        <h2 style="margin:0; font-size:0.95rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--pirb-text-muted);">Stats par match</h2>
+    </div>
+
+    {% if matchs_equipe is defined and matchs_equipe|length > 0 %}
         <div class="pirb-card">
-            <div class="pirb-card-title">Détail par match</div>
-            {% for e in stats.evaluations|slice(0, 15) %}
-                {% set r = e.rencontre %}
-                {% if r %}
-                    <a href="{{ path('pirb_stats_match', {id: r.id}) }}"
-                       style="display:flex; align-items:center; gap:12px; padding:10px 0;
-                              border-bottom:1px solid var(--pirb-border); text-decoration:none; color:inherit;">
-                        <div style="flex:1;">
-                            <div style="font-weight:600; font-size:0.9rem;">
-                                {% if r.adversaire %}vs {{ r.adversaire }}{% endif %}
+            <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 10px;">
+                Tape sur un match pour voir un aperçu et accéder au détail.
+            </p>
+            {% for r in matchs_equipe %}
+                {% set isHome = r.domicile ?? true %}
+                {% set scoreEq = r.scoreEquipe ?? null %}
+                {% set scoreAdv = r.scoreAdverse ?? null %}
+                {% set hasScore = scoreEq is not null and scoreAdv is not null %}
+                {% set isVictoire = hasScore and scoreEq > scoreAdv %}
+
+                <div class="pirb-match-row" data-match-id="{{ r.id }}" style="border-bottom:1px solid var(--pirb-border); padding:0;">
+                    <div class="pirb-match-toggle" style="display:flex; align-items:center; gap:10px; padding:12px 0; cursor:pointer;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                vs {{ r.adversaire }}
                             </div>
-                            <div style="color:var(--pirb-text-muted); font-size:0.74rem;">
-                                {{ r.date|date('d/m/Y') }}
+                            <div style="display:flex; gap:6px; align-items:center; margin-top:3px; flex-wrap:wrap;">
+                                <span style="font-size:0.7rem; color:var(--pirb-text-muted);">
+                                    {{ r.date|date('d/m/Y') }} · {{ isHome ? '🏠' : '🚗' }}
+                                </span>
+                                {% if r.isFfbbStatsValidated() %}
+                                    <span style="font-size:0.66rem; padding:2px 5px; background:rgba(16,185,129,.15); color:#10b981; border-radius:4px; font-weight:600;">✓ FFBB</span>
+                                {% endif %}
+                                {% if r.resumePath %}
+                                    <span style="font-size:0.66rem; padding:2px 5px; background:rgba(59,130,246,.15); color:#3b82f6; border-radius:4px; font-weight:600;">📄 PDF</span>
+                                {% endif %}
                             </div>
                         </div>
-                        <div style="text-align:right;">
-                            <div style="font-weight:800; color:var(--pirb-accent);">{{ e.points }} pts</div>
-                            <div style="font-size:0.7rem; color:var(--pirb-text-muted);">éval {{ e.eval }}</div>
+                        {% if hasScore %}
+                            <div style="text-align:right; font-weight:800; font-size:0.95rem;
+                                       color:{{ isVictoire ? '#10b981' : '#ef4444' }};">
+                                {{ scoreEq }}-{{ scoreAdv }}
+                            </div>
+                        {% endif %}
+                        <i class="bi bi-chevron-down toggle-icon" style="color:var(--pirb-text-muted); font-size:0.85rem; transition:transform .25s ease;"></i>
+                    </div>
+                    {# Drawer caché par défaut, s'affiche au click #}
+                    <div class="pirb-match-drawer" style="display:none; padding:0 0 12px;">
+                        <div style="background:rgba(255,255,255,.04); padding:12px; border-radius:8px; margin-top:4px;">
+                            <p style="margin:0 0 10px; font-size:0.8rem; color:var(--pirb-text);">
+                                <strong>{{ r.equipe.nom ?? 'MABB' }}</strong>
+                                {% if isHome %}reçoit{% else %}à l'extérieur chez{% endif %}
+                                <strong>{{ r.adversaire }}</strong>
+                                {% if hasScore %}
+                                    · résultat <strong style="color:{{ isVictoire ? '#10b981' : '#ef4444' }};">{{ isVictoire ? 'victoire' : 'défaite' }} {{ scoreEq }}-{{ scoreAdv }}</strong>
+                                {% endif %}
+                            </p>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <a href="{{ path('pirb_stats_match', {id: r.id}) }}"
+                                   class="pirb-btn-primary" style="display:inline-block; padding:7px 14px; background:var(--pirb-accent); color:white; border-radius:6px; text-decoration:none; font-size:0.82rem; font-weight:600;">
+                                    📊 Consulter mes stats détaillées
+                                </a>
+                                {% if r.resumePath %}
+                                    <a href="{{ path('pirb_stats_match_pdf', {id: r.id, type: 'resume'}) }}"
+                                       style="display:inline-block; padding:7px 14px; background:rgba(255,255,255,.08); color:var(--pirb-text); border-radius:6px; text-decoration:none; font-size:0.82rem;">
+                                        📄 PDF FFBB officiel
+                                    </a>
+                                {% endif %}
+                            </div>
                         </div>
-                        <i class="bi bi-chevron-right" style="color:var(--pirb-text-muted);"></i>
-                    </a>
-                {% endif %}
+                    </div>
+                </div>
             {% endfor %}
         </div>
+
+        <script>
+            (function(){
+                document.querySelectorAll('.pirb-match-row').forEach(function(row) {
+                    var toggle = row.querySelector('.pirb-match-toggle');
+                    var drawer = row.querySelector('.pirb-match-drawer');
+                    var icon = row.querySelector('.toggle-icon');
+                    if (!toggle || !drawer) return;
+                    toggle.addEventListener('click', function(e) {
+                        // Ne pas déclencher si on a cliqué sur un lien
+                        if (e.target.tagName === 'A') return;
+                        var isOpen = drawer.style.display !== 'none';
+                        drawer.style.display = isOpen ? 'none' : 'block';
+                        if (icon) {
+                            icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+                        }
+                    });
+                });
+            })();
+        </script>
+    {% else %}
+        <div class="pirb-card" style="text-align:center; padding:20px;">
+            <p style="margin:0; color:var(--pirb-text-muted); font-size:0.85rem;">
+                Aucun match enregistré pour ton équipe sur cette saison.
+            </p>
+        </div>
     {% endif %}
+
+    {# ====================================================================
+       SECTION 4 — POSITION DE TIR / SHOT CHART
+       ==================================================================== #}
+    <div class="pirb-section-header" style="margin:24px 4px 8px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.1rem;">🎯</span>
+        <h2 style="margin:0; font-size:0.95rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--pirb-text-muted);">Position de tir</h2>
+    </div>
+    <a href="{{ path('pirb_stats_shotchart') }}" style="text-decoration:none; color:inherit; display:block;">
+        <div class="pirb-card" style="border-left:4px solid #ea580c;">
+            <div style="display:flex; gap:14px; align-items:start;">
+                <div style="font-size:2rem; flex-shrink:0;">🎯</div>
+                <div style="flex:1;">
+                    <div style="font-weight:800; font-size:1rem; margin-bottom:4px;">Mon shot chart</div>
+                    <p style="margin:0 0 8px; font-size:0.85rem; color:var(--pirb-text-muted); line-height:1.5;">
+                        Visualise où tu tires sur le terrain — par match ou en cumul saison.
+                        Repère tes zones fortes (à renforcer) et tes zones à travailler.
+                    </p>
+                    <span style="color:var(--pirb-accent); font-size:0.82rem; font-weight:600;">
+                        Voir le shot chart →
+                    </span>
+                </div>
+            </div>
+        </div>
+    </a>
 
 {% endblock %}
