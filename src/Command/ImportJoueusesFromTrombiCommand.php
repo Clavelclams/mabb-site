@@ -338,55 +338,62 @@ final class ImportJoueusesFromTrombiCommand extends Command
     }
 
     /**
-     * Parse le texte d'un PDF trombinoscope FFBB et extrait la liste des joueuses.
+     * Parse le texte d'un PDF trombinoscope FFBB extrait par smalot/pdfparser.
      *
-     * Pattern par joueuse (4-5 lignes) :
-     *   "Généralités Sportif"
-     *   "Prénom - NOM Licence XC - UXX"
-     *   "BCXXXXXX - JJ/MM/AAAA [NS|D13 D18 D20...]"
-     *   "HDF0080036 - METROPOLE AMIENOISE BASKETBALL X - Formule X"
-     *   "JJ/MM/AAAA - Féminin"
+     * STRUCTURE smalot (différente de pdfplumber Python) — pattern par joueuse :
+     *   "Sportif"                                       (marqueur)
+     *   "Licence XC - UXXPrénom - NOM"                  (joueuse — format inversé et collé)
+     *   "BCXXXXXX - JJ/MM/AAAA"                         (licence FFBB)
+     *   "JJ/MM/AAAA - Féminin" ou "Masculin"            (date naissance + sexe)
+     *   "HDF0080036 - METROPOLE AMIENOISE BASKETBALL"  (club)
+     *   ["NS"|"D13"|"D18 D20"...]                       (surclassements éventuels, ligne suivante)
+     *   "N - Pas d'assurance" ou "A - Formule A"        (assurance)
      *
-     * @return array<int, array{prenom: string, nom: string, licence: ?string, date_naissance: ?string, surclassements: array<int, string>}>
+     * FILTRES MÉTIER :
+     *   - On exclut les profils "Masculin" (coachs/dirigeants licenciés mais pas joueuses)
+     *   - On accepte les catégories U7 à U20 + "Seniors" (un trombi peut contenir des seniors qui surclassent)
+     *
+     * @return array<int, array{prenom: string, nom: string, licence: ?string, date_naissance: ?string, surclassements: array<int, string>, categorie_age: ?string}>
      */
     private function extractJoueuses(string $text): array
     {
         $joueuses = [];
         $lines = preg_split('/\r?\n/', $text);
+        $nbLines = count($lines);
 
-        for ($i = 0; $i < count($lines); $i++) {
+        for ($i = 0; $i < $nbLines; $i++) {
             $line = trim($lines[$i]);
 
-            // Cherche le marqueur "Généralités Sportif"
-            if (!preg_match('/^Généralités\s+Sportif/u', $line)) {
+            // Le pattern à matcher est "Licence XC - UXXPrénom - NOM"
+            // L'enchaînement "U18Elissa" sans espace est l'astuce typique de smalot.
+            // On capture la catégorie d'âge (UXX, Seniors) ET le nom collé.
+            // Regex : "Licence" + code (0C, 1C, 2C...) + " - " + catégorie + Prénom + " - " + NOM
+            // - catégorie : "U" + chiffres OU "Seniors" OU "Senior X"
+            if (!preg_match(
+                '/^Licence\s+\w+\s*-\s*(U\d+|Seniors?|Loisir(?:\s+Mixte)?)([\p{L}\s\'-]+?)\s*-\s*([\p{Lu}][\p{Lu}\s\'-]*?)$/u',
+                $line,
+                $mName
+            )) {
                 continue;
             }
+
+            $categorieAge = trim($mName[1]);
+            $prenom       = trim($mName[2]);
+            $nom          = trim($mName[3]);
 
             // Lignes suivantes
-            $nameLine    = trim($lines[$i+1] ?? '');
-            $licenceLine = trim($lines[$i+2] ?? '');
-            $birthLine   = trim($lines[$i+4] ?? '');
+            $licenceLine = trim($lines[$i+1] ?? '');
+            $birthLine   = trim($lines[$i+2] ?? '');
 
-            // Parse "Prénom - NOM Licence XC - UXX"
-            if (!preg_match('/^(.+?)\s*-\s*([A-ZÀ-Ÿ][^a-z]*?)\s+Licence\s+\w+\s*-\s*U\d+/u', $nameLine, $mName)) {
+            // FILTRE : on ne garde QUE les profils "Féminin" — exclut les coachs/dirigeants masculins
+            if (stripos($birthLine, 'Masculin') !== false) {
                 continue;
             }
-            $prenom = trim($mName[1]);
-            $nom = trim($mName[2]);
 
-            // Parse "BCXXXXXX - JJ/MM/AAAA [surclassements]"
+            // Parse licence "BCXXXXXX - JJ/MM/AAAA"
             $licence = null;
-            $surclassements = [];
-            if (preg_match('/^(BC\d{6,8})\s*-\s*\d{2}\/\d{2}\/\d{4}\s*(.*)$/u', $licenceLine, $mLic)) {
+            if (preg_match('/^(BC\d{6,8})\s*-\s*\d{2}\/\d{2}\/\d{4}/u', $licenceLine, $mLic)) {
                 $licence = $mLic[1];
-                $suffix = trim($mLic[2]);
-                if ($suffix !== '' && $suffix !== 'NS') {
-                    foreach (preg_split('/\s+/', $suffix) as $tok) {
-                        if (preg_match('/^D\d+$/', $tok)) {
-                            $surclassements[] = $tok;
-                        }
-                    }
-                }
             }
 
             // Parse date naissance "JJ/MM/AAAA - Féminin"
@@ -395,15 +402,33 @@ final class ImportJoueusesFromTrombiCommand extends Command
                 $dateNaissance = $mBirth[1];
             }
 
+            // Cherche les surclassements dans les 3 lignes suivantes
+            // (format "NS" ou "D13" ou "D18 D20", parfois "N20 DS" pour les coachs/seniors)
+            $surclassements = [];
+            for ($j = $i+3; $j <= $i+6 && $j < $nbLines; $j++) {
+                $next = trim($lines[$j] ?? '');
+                if ($next === '' || $next === 'NS') break;
+                // Match "D13", "D18 D20", etc.
+                if (preg_match_all('/\bD(\d+)\b/u', $next, $mSurcl)) {
+                    foreach ($mSurcl[0] as $tok) {
+                        $surclassements[] = $tok;
+                    }
+                    break;
+                }
+                // Si on tombe sur "N - Pas d'assurance" ou "A - Formule A" → fin de joueuse
+                if (preg_match('/^[NA]\s*-\s*(Pas|Formule)/u', $next)) {
+                    break;
+                }
+            }
+
             $joueuses[] = [
                 'prenom'         => $prenom,
                 'nom'            => $nom,
                 'licence'        => $licence,
                 'date_naissance' => $dateNaissance,
                 'surclassements' => $surclassements,
+                'categorie_age'  => $categorieAge,
             ];
-
-            $i += 4; // avance de 5 lignes au total
         }
 
         return $joueuses;
