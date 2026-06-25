@@ -57,6 +57,13 @@ services:
         arguments:
             $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/joueurs'
 
+    # Service d'upload des médias d'une fiche séance (ContenuSeance) — B-Seances V1.
+    # Stockage par club : public/uploads/seances/{clubId}/{uniqid}.{ext}
+    # Supporte images (JPEG/PNG/WEBP/GIF) + PDFs. Max 5 Mo par fichier.
+    App\Service\ContenuSeanceMediaUploader:
+        arguments:
+            $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/seances'
+
     # Service mailer des convocations (Bureau Phase E).
     # L'email et le nom expéditeur sont injectés depuis .env / .env.local
     # → JAMAIS de valeurs en clair ici (velito-credentials-policy).
