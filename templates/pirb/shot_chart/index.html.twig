@@ -1,0 +1,782 @@
+{#
+   Shot Chart V2.3 — PIRB (espace joueuse)
+   ========================================
+   Page principale : shot map interactive + saisie d'une nouvelle séance + courbes.
+
+   Variables :
+     joueur                : Joueur
+     seances_validees      : SeanceTir[]
+     seances_en_attente    : SeanceTir[]
+     zones_json            : string (JSON, pour le terrain JS)
+     progression_data      : string (JSON, pour les courbes Chart.js)
+     stats_globales        : array
+     filtre_source/from/to : string (filtres actifs)
+     csrf_nouvelle         : string
+#}
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}Shot Chart — PIRB MABB{% endblock %}
+
+{% block body %}
+<style>
+/* ──── Shot Chart : styles spécifiques ──── */
+.sc-terrain-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 187 / 100;
+    background: #1a5c34;
+    border-radius: 10px;
+    overflow: hidden;
+    touch-action: none;
+    cursor: crosshair;
+}
+.sc-terrain-wrapper svg {
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+}
+/* Dots sur la shot map */
+.sc-dot {
+    position: absolute;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: #fff;
+    border: 1.5px solid rgba(255,255,255,.6);
+    cursor: pointer;
+    transition: transform .15s;
+    z-index: 2;
+}
+.sc-dot:hover { transform: translate(-50%, -50%) scale(1.3); z-index: 3; }
+/* Popup zone (saisie 9/16) */
+#sc-popup {
+    position: fixed;
+    z-index: 1000;
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 12px;
+    padding: 16px;
+    width: 200px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+}
+/* Séances list */
+.sc-seance-card {
+    background: rgba(255,255,255,.04);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--pirb-accent);
+}
+.sc-seance-card.pending {
+    border-left-color: #f59e0b;
+    opacity: .8;
+}
+/* Stat badges */
+.sc-stat-badge {
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 10px;
+    flex: 1;
+}
+</style>
+
+{# ─── Header ─────────────────────────────────────────────────────────── #}
+<div class="pirb-card" style="text-align:center; padding:18px 16px 12px;">
+    <div style="font-size:2rem; margin-bottom:4px;">🎯</div>
+    <h1 style="margin:0; font-size:1.1rem; font-weight:800;">Shot Chart</h1>
+    <p style="color:var(--pirb-text-muted); font-size:.8rem; margin:4px 0 0;">
+        {{ stats_globales.totalReussis }}/{{ stats_globales.totalTentatives }} tirs
+        {% if stats_globales.pctGlobal %}• {{ stats_globales.pctGlobal }}%{% endif %}
+    </p>
+</div>
+
+{# ─── Badges stats globales ───────────────────────────────────────────── #}
+{% if stats_globales.totalTentatives > 0 %}
+<div class="pirb-card">
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        {% set couleursBadge = {'3pt': ['#ea580c', 'rgba(234,88,12,.15)'], '2pt_ext': ['#3b82f6', 'rgba(59,130,246,.15)'], '2pt_int': ['#10b981', 'rgba(16,185,129,.15)'], 'lancer': ['#a78bfa', 'rgba(167,139,250,.15)']} %}
+        {% set labelsBadge = {'3pt': '3 pts', '2pt_ext': '2pts ext', '2pt_int': '2pts int', 'lancer': 'Lancer'} %}
+        {% for type, data in stats_globales.parType %}
+            {% if data.tentatives > 0 %}
+            <div class="sc-stat-badge" style="background:{{ couleursBadge[type][1] ?? 'rgba(255,255,255,.06)' }};">
+                <div style="font-size:1.3rem; font-weight:800; color:{{ couleursBadge[type][0] ?? '#fff' }};">
+                    {{ data.pct }}%
+                </div>
+                <div style="font-size:.7rem; color:var(--pirb-text-muted); margin-top:2px;">{{ labelsBadge[type] ?? type }}</div>
+                <div style="font-size:.68rem; color:var(--pirb-text-muted);">{{ data.reussis }}/{{ data.tentatives }}</div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ─── Bouton Saisir une séance ─────────────────────────────────────────── #}
+<div class="pirb-card" style="padding:12px 16px;">
+    <button type="button" id="btn-nouvelle-seance"
+            style="width:100%; padding:13px; border-radius:10px; border:none;
+                   background:var(--pirb-accent); color:#fff; font-weight:800; font-size:.95rem; cursor:pointer;">
+        ➕ Saisir une séance de tir
+    </button>
+</div>
+
+{# ─── Shot map (terrain) ──────────────────────────────────────────────── #}
+<div class="pirb-card">
+    <div class="pirb-card-title">
+        Shot map
+        {% if filtre_source or filtre_from or filtre_to %}
+            <span style="font-size:.72rem; color:var(--pirb-accent); font-weight:600; margin-left:6px;">— filtrée</span>
+        {% endif %}
+    </div>
+
+    {# Filtres #}
+    <form method="GET" action="{{ path('pirb_shot_chart') }}" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+        <select name="source" style="flex:1; min-width:110px; padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#1e293b; color:var(--pirb-text); font-size:.8rem;">
+            <option value="" {% if filtre_source == '' %}selected{% endif %}>Tous types</option>
+            <option value="ENTRAINEMENT" {% if filtre_source == 'ENTRAINEMENT' %}selected{% endif %}>Entraînement</option>
+            <option value="MATCH" {% if filtre_source == 'MATCH' %}selected{% endif %}>Match</option>
+        </select>
+        <input type="date" name="from" value="{{ filtre_from }}"
+               style="flex:1; min-width:110px; padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#1e293b; color:var(--pirb-text); font-size:.8rem;"
+               placeholder="Du">
+        <input type="date" name="to" value="{{ filtre_to }}"
+               style="flex:1; min-width:110px; padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#1e293b; color:var(--pirb-text); font-size:.8rem;"
+               placeholder="Au">
+        <button type="submit" style="padding:6px 14px; border-radius:7px; border:none; background:var(--pirb-blue); color:#fff; font-size:.82rem; cursor:pointer;">OK</button>
+        {% if filtre_source or filtre_from or filtre_to %}
+            <a href="{{ path('pirb_shot_chart') }}" style="padding:6px 10px; border-radius:7px; background:rgba(255,255,255,.08); color:var(--pirb-text-muted); font-size:.8rem; text-decoration:none;">✕</a>
+        {% endif %}
+    </form>
+
+    {# Terrain cliquable — rendu des dots depuis zones_json via JS #}
+    <div class="sc-terrain-wrapper" id="sc-terrain">
+        {# SVG du demi-terrain baskettball ─ panier à gauche, vue offensive #}
+        <svg viewBox="0 0 374 200" xmlns="http://www.w3.org/2000/svg">
+            {# Fond terrain #}
+            <rect width="374" height="200" fill="#1a5c34"/>
+            {# Contours #}
+            <rect x="1" y="1" width="372" height="198" fill="none" stroke="#fff" stroke-width="1.5"/>
+            {# Ligne centrale #}
+            <line x1="187" y1="1" x2="187" y2="199" stroke="#fff" stroke-width="1"/>
+            <circle cx="187" cy="100" r="27" fill="none" stroke="#fff" stroke-width="1"/>
+            {# Arc côté droit (défense) — demi-cercle #}
+            <path d="M187,1 A100,100 0 0 1 187,199" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1"/>
+            {# Raquette gauche #}
+            <rect x="1" y="65" width="80" height="70" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-width="1.2"/>
+            {# Cercle de tir (raquette) #}
+            <circle cx="81" cy="100" r="24" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="4,3"/>
+            {# Arc 3pts gauche ─ rayon ≈ 98px centré sur le panier (x=16, y=100) #}
+            <path d="M16,10 A100,100 0 0 1 16,190" fill="none" stroke="#fff" stroke-width="1.2" stroke-dasharray="0"/>
+            <line x1="1" y1="10" x2="16" y2="10" stroke="#fff" stroke-width="1.2"/>
+            <line x1="1" y1="190" x2="16" y2="190" stroke="#fff" stroke-width="1.2"/>
+            {# Panier gauche #}
+            <circle cx="16" cy="100" r="5" fill="none" stroke="#ea580c" stroke-width="2"/>
+            <line x1="12" y1="100" x2="1" y2="100" stroke="#ea580c" stroke-width="2"/>
+            {# Lancers francs #}
+            <circle cx="81" cy="100" r="24" fill="none" stroke="#fff" stroke-width="1"/>
+            {# Marqueurs distances #}
+            <text x="16" y="8" fill="rgba(255,255,255,.3)" font-size="5" text-anchor="middle">🏀</text>
+        </svg>
+
+        {# Légende superposée #}
+        <div style="position:absolute; bottom:6px; right:8px; font-size:.62rem; color:rgba(255,255,255,.5);">
+            Clique sur le terrain pour saisir
+        </div>
+    </div>
+
+    {# Légende couleurs #}
+    <div style="display:flex; gap:8px; margin-top:10px; justify-content:center; flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--pirb-text-muted);">
+            <div style="width:12px;height:12px;border-radius:50%;background:#ef4444;"></div> &lt;33%
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--pirb-text-muted);">
+            <div style="width:12px;height:12px;border-radius:50%;background:#f59e0b;"></div> 33-66%
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--pirb-text-muted);">
+            <div style="width:12px;height:12px;border-radius:50%;background:#16a34a;"></div> &gt;66%
+        </div>
+    </div>
+</div>
+
+{# ─── Courbe de progression (Chart.js) ──────────────────────────────────── #}
+<div class="pirb-card" id="pirb-card-courbe">
+    <div class="pirb-card-title">Progression</div>
+    <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+        {% for type, label in {'': 'Tous', '3pt': '3pts', '2pt_ext': '2pts ext', '2pt_int': '2pts int', 'lancer': 'Lancers'} %}
+            <button type="button" class="btn-filtre-progression" data-type="{{ type }}"
+                    style="padding:4px 10px; border-radius:6px; font-size:.75rem; cursor:pointer; border:1px solid rgba(255,255,255,.15);
+                           background:{% if type == '' %}var(--pirb-accent){% else %}transparent{% endif %};
+                           color:{% if type == '' %}#fff{% else %}var(--pirb-text-muted){% endif %};">
+                {{ label }}
+            </button>
+        {% endfor %}
+    </div>
+    <canvas id="chart-progression" style="max-height:180px;"></canvas>
+    <p id="chart-empty" style="text-align:center; color:var(--pirb-text-muted); font-size:.8rem; display:none; padding:16px 0;">
+        Pas encore de données de progression.<br>
+        <small>Saisis des séances pour voir tes courbes ici.</small>
+    </p>
+</div>
+
+{# ─── Séances en attente ──────────────────────────────────────────────── #}
+{% if seances_en_attente is not empty %}
+<div class="pirb-card">
+    <div class="pirb-card-title" style="color:#f59e0b;">⏳ En attente de validation ({{ seances_en_attente|length }})</div>
+    {% for seance in seances_en_attente %}
+    <div class="sc-seance-card pending" id="sc-seance-{{ seance.id }}">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-weight:700; font-size:.88rem;">{{ seance.dateSeance|date('d/m/Y') }}</div>
+                <div style="font-size:.75rem; color:var(--pirb-text-muted); margin-top:2px;">
+                    {{ seance.zones|length }} zone(s) · {{ seance.totalTentatives }} tirs
+                    {% if seance.notes %}<span style="font-style:italic;">· {{ seance.notes|u.truncate(40, '…') }}</span>{% endif %}
+                </div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <span style="background:rgba(245,158,11,.15); color:#f59e0b; padding:3px 8px; border-radius:5px; font-size:.7rem; font-weight:600;">en attente</span>
+                {# Suppression — CSRF dynamique depuis le controller #}
+                <button type="button" class="btn-supprimer-seance"
+                        data-id="{{ seance.id }}"
+                        data-csrf="{{ csrf_token('shot_chart_supprimer_' ~ seance.id) }}"
+                        style="background:none; border:1px solid rgba(239,68,68,.3); color:#ef4444; border-radius:6px; padding:4px 8px; font-size:.75rem; cursor:pointer;"
+                        title="Supprimer cette séance">
+                    ✕
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ─── Historique des séances validées ──────────────────────────────────── #}
+<div class="pirb-card">
+    <div class="pirb-card-title">Séances validées ({{ seances_validees|length }})</div>
+    {% if seances_validees is empty %}
+        <p style="color:var(--pirb-text-muted); font-size:.83rem; text-align:center; padding:12px 0;">
+            Aucune séance validée pour le moment.<br>
+            <small>Saisis ta première séance ci-dessus !</small>
+        </p>
+    {% else %}
+        {% for seance in seances_validees %}
+        <div class="sc-seance-card">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                <div>
+                    <div style="font-weight:700; font-size:.88rem;">
+                        {{ seance.dateSeance|date('d/m/Y') }}
+                        <span style="font-size:.72rem; font-weight:400; color:var(--pirb-text-muted); margin-left:6px;">
+                            {{ seance.source == 'MATCH' ? '🏀 Match' : '🏋️ Entraînement' }}
+                        </span>
+                    </div>
+                    <div style="font-size:.75rem; color:var(--pirb-text-muted); margin-top:3px;">
+                        {{ seance.zones|length }} zone(s) · {{ seance.totalTentatives }} tentatives · {{ seance.totalReussis }} réussis
+                        {% if seance.pourcentageGlobal %}<strong style="color:var(--pirb-accent);">· {{ seance.pourcentageGlobal }}%</strong>{% endif %}
+                    </div>
+                    {# Stats par type en mini-badges #}
+                    <div style="display:flex; gap:5px; margin-top:6px; flex-wrap:wrap;">
+                        {% for type, data in seance.statsByType %}
+                            {% if data.tentatives > 0 %}
+                            <span style="background:rgba(255,255,255,.06); padding:2px 7px; border-radius:4px; font-size:.68rem; color:var(--pirb-text-muted);">
+                                {{ {'3pt':'3pts','2pt_ext':'2ext','2pt_int':'2int','lancer':'LF'}[type] ?? type }}
+                                {{ data.reussis }}/{{ data.tentatives }}{% if data.pct %} ({{ data.pct }}%){% endif %}
+                            </span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+                <span style="background:rgba(22,163,74,.15); color:#16a34a; padding:3px 8px; border-radius:5px; font-size:.68rem; font-weight:700; white-space:nowrap; flex-shrink:0;">
+                    ✓ validée
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+{# ─── Navigation retour #}
+<div style="text-align:center; padding:8px 0 20px;">
+    <a href="{{ path('pirb_stats') }}" style="color:var(--pirb-text-muted); font-size:.82rem; text-decoration:none;">
+        ← Retour stats
+    </a>
+</div>
+
+{# ═══ Modale saisie terrain ═══════════════════════════════════════════════════ #}
+<div id="modal-sc-overlay"
+     style="display:none; position:fixed; inset:0; z-index:900; background:rgba(0,0,0,.7); backdrop-filter:blur(2px);">
+    <div id="modal-sc-inner"
+         style="position:absolute; top:0; left:0; right:0; bottom:0; overflow-y:auto; display:flex; flex-direction:column; padding:12px 8px;">
+
+        {# En-tête modale #}
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding:0 4px;">
+            <div>
+                <div style="font-weight:800; font-size:1rem;">🎯 Nouvelle séance de tir</div>
+                <div style="font-size:.75rem; color:var(--pirb-text-muted); margin-top:2px;">Clique sur le terrain pour ajouter des zones</div>
+            </div>
+            <button type="button" id="modal-sc-close"
+                    style="background:none;border:none;color:var(--pirb-text-muted);font-size:1.5rem;cursor:pointer;line-height:1;padding:0 4px;">&times;</button>
+        </div>
+
+        {# Infos séance #}
+        <div style="background:rgba(255,255,255,.04); border-radius:10px; padding:12px; margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+                <label style="font-size:.75rem; font-weight:600; display:block; margin-bottom:4px;">Date <span style="color:#ef4444;">*</span></label>
+                <input type="date" id="sc-date"
+                       value="{{ 'now'|date('Y-m-d') }}" max="{{ 'now'|date('Y-m-d') }}"
+                       style="width:100%; padding:8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#0f172a; color:var(--pirb-text); font-size:.85rem;">
+            </div>
+            <div>
+                <label style="font-size:.75rem; font-weight:600; display:block; margin-bottom:4px;">Type</label>
+                <select id="sc-source"
+                        style="width:100%; padding:8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#0f172a; color:var(--pirb-text); font-size:.85rem;">
+                    <option value="ENTRAINEMENT">Entraînement</option>
+                    <option value="MATCH">Match</option>
+                </select>
+            </div>
+            <div style="grid-column:1/-1;">
+                <label style="font-size:.75rem; font-weight:600; display:block; margin-bottom:4px;">Notes (optionnel)</label>
+                <input type="text" id="sc-notes" maxlength="200" placeholder="Travail côté faible, séance post-blessure…"
+                       style="width:100%; padding:8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#0f172a; color:var(--pirb-text); font-size:.85rem;">
+            </div>
+        </div>
+
+        {# Terrain de saisie (dans la modale) #}
+        <div class="sc-terrain-wrapper" id="sc-terrain-modal" style="cursor:crosshair; margin-bottom:12px;">
+            <svg viewBox="0 0 374 200" xmlns="http://www.w3.org/2000/svg">
+                <rect width="374" height="200" fill="#1a5c34"/>
+                <rect x="1" y="1" width="372" height="198" fill="none" stroke="#fff" stroke-width="1.5"/>
+                <line x1="187" y1="1" x2="187" y2="199" stroke="#fff" stroke-width="1"/>
+                <circle cx="187" cy="100" r="27" fill="none" stroke="#fff" stroke-width="1"/>
+                <path d="M187,1 A100,100 0 0 1 187,199" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+                <rect x="1" y="65" width="80" height="70" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-width="1.2"/>
+                <circle cx="81" cy="100" r="24" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="4,3"/>
+                <path d="M16,10 A100,100 0 0 1 16,190" fill="none" stroke="#fff" stroke-width="1.2"/>
+                <line x1="1" y1="10" x2="16" y2="10" stroke="#fff" stroke-width="1.2"/>
+                <line x1="1" y1="190" x2="16" y2="190" stroke="#fff" stroke-width="1.2"/>
+                <circle cx="16" cy="100" r="5" fill="none" stroke="#ea580c" stroke-width="2"/>
+                <line x1="12" y1="100" x2="1" y2="100" stroke="#ea580c" stroke-width="2"/>
+                <circle cx="81" cy="100" r="24" fill="none" stroke="#fff" stroke-width="1"/>
+                <text x="190" y="108" fill="rgba(255,255,255,.25)" font-size="8" text-anchor="middle">Clique pour ajouter un spot</text>
+            </svg>
+        </div>
+
+        {# Liste des zones saisies #}
+        <div id="sc-zones-liste" style="min-height:30px; margin-bottom:10px;">
+            <div style="font-size:.78rem; color:var(--pirb-text-muted); text-align:center; padding:8px 0;" id="sc-zones-vide">
+                Aucun spot ajouté
+            </div>
+        </div>
+
+        {# Erreur #}
+        <div id="sc-error" style="display:none; padding:8px 12px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:6px; font-size:.82rem; color:#ef4444; margin-bottom:10px;"></div>
+
+        {# Boutons #}
+        <div style="display:flex; gap:8px; margin-top:auto; padding-bottom:env(safe-area-inset-bottom, 8px);">
+            <button type="button" id="modal-sc-close2"
+                    style="flex:1; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:transparent; color:var(--pirb-text-muted); font-size:.9rem; cursor:pointer;">
+                Annuler
+            </button>
+            <button type="button" id="sc-sauvegarder"
+                    style="flex:2; padding:12px; border-radius:10px; border:none; background:var(--pirb-accent); color:#fff; font-weight:800; font-size:.9rem; cursor:pointer;">
+                💾 Sauvegarder
+            </button>
+        </div>
+    </div>
+</div>
+
+{# ─── Popup zone de tir ───────────────────────────────────────────────── #}
+<div id="sc-popup" style="display:none;">
+    <div style="font-size:.82rem; font-weight:700; margin-bottom:10px; color:var(--pirb-text);">
+        Ajoute les stats pour ce spot
+    </div>
+
+    {# Type de tir auto-détecté mais modifiable #}
+    <div style="margin-bottom:8px;">
+        <label style="font-size:.72rem; font-weight:600; display:block; margin-bottom:3px;">Type de tir</label>
+        <select id="popup-type" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid rgba(255,255,255,.15); background:#0f172a; color:var(--pirb-text); font-size:.8rem;">
+            <option value="2pt_int">2pts Raquette</option>
+            <option value="2pt_ext">2pts Mi-distance</option>
+            <option value="3pt" selected>3 points</option>
+            <option value="lancer">Lancer franc</option>
+        </select>
+    </div>
+
+    {# Réussis / tentatives #}
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div>
+            <label style="font-size:.72rem; font-weight:600; display:block; margin-bottom:3px; color:#16a34a;">Réussis</label>
+            <input type="number" id="popup-reussis" min="0" max="999" value="0"
+                   style="width:100%; padding:7px; border-radius:6px; border:1px solid rgba(255,255,255,.15); background:#0f172a; color:var(--pirb-text); font-size:1rem; text-align:center; font-weight:800;">
+        </div>
+        <div>
+            <label style="font-size:.72rem; font-weight:600; display:block; margin-bottom:3px; color:var(--pirb-text-muted);">Tentatives</label>
+            <input type="number" id="popup-tentatives" min="1" max="999" value="10"
+                   style="width:100%; padding:7px; border-radius:6px; border:1px solid rgba(255,255,255,.15); background:#0f172a; color:var(--pirb-text); font-size:1rem; text-align:center; font-weight:800;">
+        </div>
+    </div>
+
+    {# Boutons popup #}
+    <div style="display:flex; gap:6px;">
+        <button type="button" id="popup-annuler"
+                style="flex:1; padding:8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:transparent; color:var(--pirb-text-muted); font-size:.82rem; cursor:pointer;">
+            Annuler
+        </button>
+        <button type="button" id="popup-valider"
+                style="flex:2; padding:8px; border-radius:7px; border:none; background:#16a34a; color:#fff; font-weight:700; font-size:.82rem; cursor:pointer;">
+            Ajouter ce spot
+        </button>
+    </div>
+
+    {# Flèche de direction vers le dot #}
+    <div id="popup-arrow" style="position:absolute; width:10px; height:10px;"></div>
+</div>
+
+{# ═══ Scripts ═════════════════════════════════════════════════════════════════ #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    // ────────────────────────────────────────────────────────────────
+    // Données côté PHP → JS
+    // ────────────────────────────────────────────────────────────────
+    const zonesData        = {{ zones_json|raw }};
+    const progressionData  = {{ progression_data|raw }};
+    const csrfNouvelle     = '{{ csrf_token('shot_chart_nouvelle') }}';
+
+    // ────────────────────────────────────────────────────────────────
+    // Shot map lecture (page principale)
+    // ────────────────────────────────────────────────────────────────
+    const terrain     = document.getElementById('sc-terrain');
+    if (terrain && zonesData.length) {
+        zonesData.forEach(zone => {
+            const dot = document.createElement('div');
+            dot.className = 'sc-dot';
+            dot.style.left       = (zone.x * 100) + '%';
+            dot.style.top        = (zone.y * 100) + '%';
+            dot.style.background = zone.couleur;
+            dot.title = `${zone.typeTir} · ${zone.label} (${zone.pct ?? '?'}%) · ${zone.date} · ${zone.source}`;
+            terrain.appendChild(dot);
+        });
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // Courbes de progression Chart.js
+    // ────────────────────────────────────────────────────────────────
+    const chartCanvas = document.getElementById('chart-progression');
+    const chartEmpty  = document.getElementById('chart-empty');
+    let chartInstance = null;
+
+    const couleurTypes = {
+        '3pt':     '#ea580c',
+        '2pt_ext': '#3b82f6',
+        '2pt_int': '#10b981',
+        'lancer':  '#a78bfa',
+    };
+
+    function buildChart(filtreType) {
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+        // Filtrer les données
+        let filtered = progressionData;
+        if (filtreType !== '') {
+            filtered = progressionData.filter(d => d.typeTir === filtreType);
+        }
+
+        // Grouper par date → pourcentage
+        const byDate = {};
+        filtered.forEach(d => {
+            const key = d.date;
+            if (!byDate[key]) byDate[key] = {};
+            const t = d.typeTir;
+            if (!byDate[key][t]) byDate[key][t] = {t: 0, r: 0};
+            byDate[key][t].t += Number(d.tentatives);
+            byDate[key][t].r += Number(d.reussis);
+        });
+
+        const dates = Object.keys(byDate).sort();
+
+        if (dates.length === 0) {
+            chartCanvas.style.display = 'none';
+            chartEmpty.style.display = 'block';
+            return;
+        }
+        chartCanvas.style.display = 'block';
+        chartEmpty.style.display  = 'none';
+
+        const types = filtreType !== '' ? [filtreType] : Object.keys(couleurTypes);
+
+        const datasets = types.map(type => {
+            return {
+                label: {
+                    '3pt': '3pts', '2pt_ext': '2pts ext', '2pt_int': '2pts int', 'lancer': 'Lancers'
+                }[type] || type,
+                data: dates.map(date => {
+                    const g = byDate[date][type];
+                    if (!g || g.t === 0) return null;
+                    return Math.round(g.r / g.t * 100);
+                }),
+                borderColor: couleurTypes[type] || '#fff',
+                backgroundColor: 'transparent',
+                pointBackgroundColor: couleurTypes[type] || '#fff',
+                tension: 0.3,
+                spanGaps: true,
+            };
+        });
+
+        chartInstance = new Chart(chartCanvas, {
+            type: 'line',
+            data: { labels: dates, datasets },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: {
+                        min: 0, max: 100,
+                        ticks: { color: '#94a3b8', callback: v => v + '%' },
+                        grid: { color: 'rgba(255,255,255,.06)' },
+                    },
+                    x: { ticks: { color: '#94a3b8', maxRotation: 30 }, grid: { display: false } },
+                },
+                plugins: {
+                    legend: { labels: { color: '#f1f5f9', font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y ?? '—'}%`,
+                        },
+                    },
+                },
+            },
+        });
+    }
+
+    buildChart(''); // initialisation
+
+    document.querySelectorAll('.btn-filtre-progression').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.btn-filtre-progression').forEach(b => {
+                b.style.background = 'transparent';
+                b.style.color = 'var(--pirb-text-muted)';
+            });
+            btn.style.background = 'var(--pirb-accent)';
+            btn.style.color = '#fff';
+            buildChart(btn.dataset.type);
+        });
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Suppression séance en attente
+    // ────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.btn-supprimer-seance').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!confirm('Supprimer cette séance ?')) return;
+            const id        = btn.dataset.id;
+            const csrfToken = btn.dataset.csrf;
+            try {
+                const resp = await fetch(`/shot-chart/${id}/supprimer`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-Token': csrfToken },
+                });
+                if (resp.ok) {
+                    document.getElementById('sc-seance-' + id)?.remove();
+                } else {
+                    const data = await resp.json();
+                    alert(data.error || 'Erreur');
+                }
+            } catch { alert('Erreur réseau.'); }
+        });
+    });
+
+    // ────────────────────────────────────────────────────────────────
+    // Modale saisie terrain
+    // ────────────────────────────────────────────────────────────────
+    const overlay     = document.getElementById('modal-sc-overlay');
+    const terrainModal= document.getElementById('sc-terrain-modal');
+    const popup       = document.getElementById('sc-popup');
+    const zonesListe  = document.getElementById('sc-zones-liste');
+    const zonesVide   = document.getElementById('sc-zones-vide');
+    const errorBox    = document.getElementById('sc-error');
+    const btnSave     = document.getElementById('sc-sauvegarder');
+
+    let pendingZone = null; // zone en cours de saisie dans la popup
+    let zones       = [];   // zones sauvegardées pour cette séance
+
+    // Ouvrir / fermer
+    document.getElementById('btn-nouvelle-seance')?.addEventListener('click', () => {
+        zones = [];
+        refreshZonesListe();
+        overlay.style.display = 'block';
+    });
+    [document.getElementById('modal-sc-close'), document.getElementById('modal-sc-close2')].forEach(b => {
+        b?.addEventListener('click', () => {
+            overlay.style.display = 'none';
+            popup.style.display   = 'none';
+        });
+    });
+
+    // Clic sur le terrain de la modale
+    terrainModal.addEventListener('click', (e) => {
+        const rect = terrainModal.getBoundingClientRect();
+        const x    = (e.clientX - rect.left)  / rect.width;
+        const y    = (e.clientY - rect.top)   / rect.height;
+
+        // Auto-détecter le type selon la position (approximation)
+        let typeTir = autoDetectType(x, y);
+        document.getElementById('popup-type').value = typeTir;
+        document.getElementById('popup-reussis').value   = '0';
+        document.getElementById('popup-tentatives').value = '10';
+
+        pendingZone = { x, y };
+
+        // Positionner la popup
+        const popupW = 200;
+        const popupH = 210;
+        let left = e.clientX - popupW / 2;
+        let top  = e.clientY - popupH - 10;
+        if (left < 8)                   left = 8;
+        if (left + popupW > window.innerWidth - 8) left = window.innerWidth - popupW - 8;
+        if (top < 8) top = e.clientY + 10;
+
+        popup.style.left    = left + 'px';
+        popup.style.top     = top + 'px';
+        popup.style.display = 'block';
+        document.getElementById('popup-reussis').focus();
+    });
+
+    // Valider la popup → ajouter la zone
+    document.getElementById('popup-valider').addEventListener('click', () => {
+        if (!pendingZone) return;
+        const reussis    = parseInt(document.getElementById('popup-reussis').value)    || 0;
+        const tentatives = parseInt(document.getElementById('popup-tentatives').value) || 1;
+        const typeTir    = document.getElementById('popup-type').value;
+
+        if (reussis > tentatives) {
+            alert('Les réussis ne peuvent pas dépasser les tentatives.');
+            return;
+        }
+
+        zones.push({ ...pendingZone, typeTir, reussis, tentatives });
+        pendingZone = null;
+        popup.style.display = 'none';
+        refreshZonesListe();
+        renderDotModal(zones[zones.length - 1], zones.length - 1);
+    });
+
+    document.getElementById('popup-annuler').addEventListener('click', () => {
+        popup.style.display = 'none';
+        pendingZone = null;
+    });
+
+    // Refresh liste des zones
+    function refreshZonesListe() {
+        zonesVide.style.display = zones.length === 0 ? 'block' : 'none';
+        // Supprimer anciens items (pas zonesVide)
+        Array.from(zonesListe.children).forEach(c => { if (c !== zonesVide) c.remove(); });
+
+        zones.forEach((z, i) => {
+            const pct = z.tentatives > 0 ? Math.round(z.reussis / z.tentatives * 100) : 0;
+            const div = document.createElement('div');
+            div.style.cssText = 'display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.04);border-radius:7px;padding:7px 10px;margin-bottom:5px;';
+            const labels = { '3pt': '3pts', '2pt_ext': '2pts ext', '2pt_int': '2pts int', 'lancer': 'Lancer' };
+            div.innerHTML = `
+                <div style="font-size:.82rem;">
+                    <strong>${labels[z.typeTir] || z.typeTir}</strong>
+                    <span style="color:var(--pirb-text-muted); margin-left:6px;">${z.reussis}/${z.tentatives} (${pct}%)</span>
+                </div>
+                <button type="button" onclick="removeZone(${i})"
+                        style="background:none;border:none;color:#ef4444;font-size:.9rem;cursor:pointer;padding:0 4px;">✕</button>
+            `;
+            zonesListe.appendChild(div);
+        });
+    }
+
+    // Supprimer zone (global pour onclick inline)
+    window.removeZone = function(index) {
+        zones.splice(index, 1);
+        refreshZonesListe();
+        // Reconstruire tous les dots de la modale
+        terrainModal.querySelectorAll('.sc-dot-modal').forEach(d => d.remove());
+        zones.forEach((z, i) => renderDotModal(z, i));
+    };
+
+    function renderDotModal(zone, index) {
+        const pct   = zone.tentatives > 0 ? Math.round(zone.reussis / zone.tentatives * 100) : 0;
+        const hue   = Math.round(pct * 1.2);
+        const couleur = `hsl(${hue}, 80%, 45%)`;
+        const dot = document.createElement('div');
+        dot.className = 'sc-dot sc-dot-modal';
+        dot.style.left       = (zone.x * 100) + '%';
+        dot.style.top        = (zone.y * 100) + '%';
+        dot.style.background = couleur;
+        dot.style.fontSize   = '8px';
+        dot.title = `${zone.typeTir} · ${zone.reussis}/${zone.tentatives}`;
+        dot.textContent = `${pct}%`;
+        terrainModal.appendChild(dot);
+    }
+
+    // Auto-détection type par position
+    function autoDetectType(x, y) {
+        // Panier à gauche (x≈0.04), raquette x<0.21 environ
+        // Arc 3pts : r≈100/374 ≈ 0.27 (centré sur x=0.04, y=0.5)
+        const px = x - 0.04, py = y - 0.5;
+        const dist = Math.sqrt(px * px + py * py);
+        if (dist < 0.08) return '2pt_int';  // dans la raquette
+        if (dist > 0.27) return '3pt';       // derrière l'arc
+        return '2pt_ext';                    // mi-distance
+    }
+
+    // Sauvegarder la séance
+    btnSave.addEventListener('click', async () => {
+        errorBox.style.display = 'none';
+
+        if (zones.length === 0) {
+            errorBox.textContent = 'Ajoute au moins un spot sur le terrain.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        const date = document.getElementById('sc-date').value;
+        if (!date) {
+            errorBox.textContent = 'La date est requise.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        btnSave.disabled = true;
+        btnSave.textContent = '⏳ Sauvegarde…';
+
+        try {
+            const resp = await fetch('/shot-chart/sauvegarder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfNouvelle,
+                },
+                body: JSON.stringify({
+                    date,
+                    source: document.getElementById('sc-source').value,
+                    notes:  document.getElementById('sc-notes').value.trim(),
+                    zones,
+                }),
+            });
+
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                errorBox.textContent = data.error || 'Erreur inattendue.';
+                errorBox.style.display = 'block';
+            } else {
+                overlay.style.display = 'none';
+                // Recharger la page pour afficher la séance créée dans la liste
+                window.location.reload();
+            }
+        } catch {
+            errorBox.textContent = 'Erreur réseau.';
+            errorBox.style.display = 'block';
+        } finally {
+            btnSave.disabled = false;
+            btnSave.textContent = '💾 Sauvegarder';
+        }
+    });
+
+})();
+</script>
+{% endblock %}

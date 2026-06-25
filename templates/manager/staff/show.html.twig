@@ -4,91 +4,174 @@
 
 {% block body %}
 
-    <div class="page-header">
-        <div style="display:flex; align-items:center; gap:20px;">
-            <div style="width:90px; height:90px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:2rem;">
-                {{ user_membre.prenom|first|upper }}{{ user_membre.nom|first|upper }}
-            </div>
-            <div>
-                <h1 style="margin:0;">{{ user_membre.prenom }} {{ user_membre.nom }}</h1>
-                <p class="subtitle" style="margin-top:6px;">
-                    <i class="bi bi-envelope"></i> {{ user_membre.email }}
-                    {% if depuis %}
-                        <span style="margin-left:12px; color:var(--mabb-muted);">
-                            <i class="bi bi-clock"></i> Depuis le {{ depuis|date('d/m/Y') }}
-                        </span>
-                    {% endif %}
-                </p>
-                <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
-                    {% for role in roles %}
-                        <span class="badge-categorie">{{ role }}</span>
-                    {% endfor %}
-                </div>
-            </div>
+<div class="page-header">
+    <div style="display:flex; align-items:center; gap:20px;">
+        <div style="width:90px; height:90px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:2rem;">
+            {{ user_membre.prenom|first|upper }}{{ user_membre.nom|first|upper }}
         </div>
-        <div style="display:flex; gap:8px;">
-            <a href="{{ path('manager_staff_index') }}" class="btn-mabb-ghost">
-                <i class="bi bi-arrow-left"></i> Tout le staff
-            </a>
-            {% if joueur_lie %}
-                <a href="{{ path('manager_joueur_show', {id: joueur_lie.id}) }}" class="btn-mabb-primary">
-                    <i class="bi bi-person-badge"></i> Fiche joueuse
-                </a>
-            {% endif %}
+        <div>
+            <h1 style="margin:0;">{{ user_membre.prenom }} {{ user_membre.nom }}</h1>
+            <p class="subtitle" style="margin-top:6px;">
+                <i class="bi bi-envelope"></i> {{ user_membre.email }}
+                {% if depuis %}
+                    <span style="margin-left:12px; color:var(--mabb-muted);">
+                        <i class="bi bi-clock"></i> Depuis le {{ depuis|date('d/m/Y') }}
+                    </span>
+                {% endif %}
+            </p>
+            <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap;">
+                {% for role in roles %}
+                    <span class="badge-categorie">{{ role }}</span>
+                {% endfor %}
+            </div>
         </div>
     </div>
+    <div style="display:flex; gap:8px;">
+        <a href="{{ path('manager_staff_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Tout le staff
+        </a>
+        {% if joueur_lie %}
+            <a href="{{ path('manager_joueur_show', {id: joueur_lie.id}) }}" class="btn-mabb-primary">
+                <i class="bi bi-person-badge"></i> Fiche joueuse
+            </a>
+        {% endif %}
+    </div>
+</div>
 
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card-mabb">
-                <div class="card-header"><i class="bi bi-shield-fill-check"></i> Rôles actifs au club</div>
-                <div class="card-body">
-                    {% for ucr in ucrs %}
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #e5e7eb;">
-                            <div>
-                                <strong>{{ ucr.role }}</strong>
-                                {% if ucr.createdAt %}
-                                    <div style="color:var(--mabb-muted); font-size:.78rem;">
-                                        Depuis le {{ ucr.createdAt|date('d/m/Y') }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <span class="badge-active">Actif</span>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card-mabb">
-                <div class="card-header"><i class="bi bi-info-circle"></i> Activité</div>
-                <div class="card-body">
-                    {% if joueur_lie %}
-                        <p style="margin:0 0 12px 0;">
-                            ✅ <strong>Profil joueur lié :</strong> {{ joueur_lie.prenom }} {{ joueur_lie.nom }}
-                            {% if joueur_lie.equipe %}
-                                <span style="color:var(--mabb-muted);">— {{ joueur_lie.equipe.nom }}</span>
+{# ── Ligne 1 : Rôles + Activité ───────────────────────────────────────────── #}
+<div class="row g-3 mb-3">
+    <div class="col-md-6">
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-shield-fill-check"></i> Rôles actifs au club</div>
+            <div class="card-body">
+                {% for ucr in ucrs %}
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #e5e7eb;">
+                        <div>
+                            <strong>{{ ucr.role }}</strong>
+                            {% if ucr.createdAt %}
+                                <div style="color:var(--mabb-muted); font-size:.78rem;">
+                                    Depuis le {{ ucr.createdAt|date('d/m/Y') }}
+                                </div>
                             {% endif %}
-                        </p>
-                    {% endif %}
-
-                    <p style="margin:0; color:var(--mabb-muted); font-size:.88rem; line-height:1.5;">
-                        <i class="bi bi-info-circle"></i> La liste des équipes coachées et des séances animées sera disponible
-                        prochainement (lien Coach↔Équipe à venir en V2).
-                    </p>
-                </div>
+                        </div>
+                        <span class="badge-active">Actif</span>
+                    </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    {# Lien vers gestion rôles pour les dirigeants #}
-    {% if is_granted('CLUB_ADMIN', club) %}
-        <div style="text-align:center; padding:20px;">
-            <a href="{{ path('manager_utilisateurs_index') }}" class="btn-mabb-ghost">
-                <i class="bi bi-gear"></i> Modifier les rôles de ce user
-            </a>
+    <div class="col-md-6">
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-info-circle"></i> Profil & liens</div>
+            <div class="card-body">
+                {% if joueur_lie %}
+                    <div style="margin-bottom:12px; padding:10px; background:rgba(59,130,246,.06); border-radius:8px; border-left:3px solid #3b82f6;">
+                        <i class="bi bi-person-badge me-1" style="color:#3b82f6;"></i>
+                        <strong>Profil joueur lié :</strong> {{ joueur_lie.prenom }} {{ joueur_lie.nom }}
+                        {% if joueur_lie.equipe %}
+                            <span style="color:var(--mabb-muted);"> — {{ joueur_lie.equipe.nom }}</span>
+                        {% endif %}
+                        <a href="{{ path('manager_joueur_show', {id: joueur_lie.id}) }}" class="btn-mabb-ghost ms-2" style="font-size:.78rem; padding:2px 8px;">Voir</a>
+                    </div>
+                {% else %}
+                    <p style="color:var(--mabb-muted); font-size:.88rem; margin:0;">
+                        <i class="bi bi-person-x"></i> Aucun profil joueur lié à ce compte.
+                    </p>
+                {% endif %}
+            </div>
         </div>
-    {% endif %}
+    </div>
+</div>
+
+{# ── Ligne 2 : Équipes coachées ───────────────────────────────────────────── #}
+<div class="card-mabb mb-3">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <span><i class="bi bi-clipboard-pulse"></i> Équipes coachées — saison {{ saison_courante }}</span>
+        <span style="color:var(--mabb-muted); font-size:.82rem;">{{ coach_equipes|length }} équipe{{ coach_equipes|length != 1 ? 's' : '' }}</span>
+    </div>
+    <div class="card-body">
+
+        {% if coach_equipes is empty %}
+            <p style="color:var(--mabb-muted); text-align:center; padding:20px 0; margin:0;">
+                <i class="bi bi-clipboard-x" style="font-size:1.6rem; display:block; margin-bottom:8px;"></i>
+                Aucune équipe assignée pour cette saison.
+            </p>
+        {% else %}
+            <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                {% for ce in coach_equipes %}
+                    <div style="display:flex; align-items:center; gap:10px; background:{% if ce.isPrincipal() %}rgba(59,130,246,.08){% else %}rgba(8,145,178,.08){% endif %}; border:1px solid {% if ce.isPrincipal() %}#bfdbfe{% else %}#a5f3fc{% endif %}; border-radius:10px; padding:10px 14px;">
+                        <div>
+                            <div style="font-weight:600; color:var(--mabb-dark);">{{ ce.equipe.nom }}</div>
+                            <div style="font-size:.78rem; color:{% if ce.isPrincipal() %}#3b82f6{% else %}#0891b2{% endif %}; font-weight:600;">
+                                <i class="bi bi-{% if ce.isPrincipal() %}star-fill{% else %}star{% endif %} me-1"></i>{{ ce.roleCoach }}
+                            </div>
+                        </div>
+                        {% if is_granted('CLUB_STAFF', club) %}
+                            <form action="{{ path('manager_staff_retirer_equipe', {coachEquipeId: ce.id}) }}" method="post"
+                                  onsubmit="return confirm('Retirer {{ user_membre.prenom }} de l\'équipe {{ ce.equipe.nom }} ?')">
+                                <input type="hidden" name="_token" value="{{ csrf_token('retirer_equipe_' ~ ce.id) }}">
+                                <button type="submit" style="background:none; border:none; cursor:pointer; color:#dc2626; font-size:1.1rem; padding:4px;" title="Retirer de l'équipe">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Formulaire d'affectation (CLUB_STAFF uniquement) #}
+        {% if is_granted('CLUB_STAFF', club) %}
+            <div style="border-top:1px solid #e5e7eb; padding-top:16px;">
+                <div style="font-size:.88rem; font-weight:600; color:var(--mabb-muted); margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px;">
+                    <i class="bi bi-plus-circle me-1"></i>Affecter à une équipe
+                </div>
+                <form action="{{ path('manager_staff_affecter_equipe', {userId: user_membre.id}) }}" method="post" style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('affecter_equipe_' ~ user_membre.id) }}">
+
+                    <div>
+                        <label style="font-size:.8rem; color:var(--mabb-muted); display:block; margin-bottom:3px;">Équipe</label>
+                        <select name="equipe_id" required style="border:1px solid #d1d5db; border-radius:8px; padding:7px 10px; font-size:.9rem; min-width:180px; background:#fff;">
+                            <option value="">— Choisir une équipe —</option>
+                            {% for equipe in equipes_disponibles %}
+                                <option value="{{ equipe.id }}"
+                                    {% if equipe.id in equipes_deja_coachs %}disabled style="color:#94a3b8"{% endif %}>
+                                    {{ equipe.nom }}{% if equipe.id in equipes_deja_coachs %} (déjà assigné){% endif %}
+                                </option>
+                            {% endfor %}
+                            {% if equipes_disponibles is empty %}
+                                <option disabled>Aucune équipe pour la saison {{ saison_courante }}</option>
+                            {% endif %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="font-size:.8rem; color:var(--mabb-muted); display:block; margin-bottom:3px;">Rôle</label>
+                        <select name="role_coach" style="border:1px solid #d1d5db; border-radius:8px; padding:7px 10px; font-size:.9rem; background:#fff;">
+                            {% for role in coach_roles %}
+                                <option value="{{ role }}">{{ role }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-mabb-orange" style="margin-bottom:0;">
+                        <i class="bi bi-plus-lg"></i> Affecter
+                    </button>
+                </form>
+            </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{# ── Actions DIRIGEANT ────────────────────────────────────────────────────── #}
+{% if is_granted('CLUB_ADMIN', club) %}
+    <div style="text-align:center; padding:20px;">
+        <a href="{{ path('manager_utilisateurs_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-gear"></i> Modifier les rôles de ce user
+        </a>
+    </div>
+{% endif %}
 
 {% endblock %}

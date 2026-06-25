@@ -6,6 +6,7 @@ namespace App\Repository\Sport;
 
 use App\Entity\Core\Club;
 use App\Entity\Core\User;
+use App\Entity\Sport\Joueur;
 use App\Entity\Sport\ParentJoueur;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -28,6 +29,25 @@ class ParentJoueurRepository extends ServiceEntityRepository
             ->andWhere('pj.statut = :a')
             ->setParameter('p', $parent)
             ->setParameter('a', ParentJoueur::STATUT_ACTIVE)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Tous les liens (actifs, pending, refusés) d'une joueuse donnée.
+     * Utilisé sur la fiche joueuse Manager pour afficher les parents liés.
+     *
+     * @return ParentJoueur[]
+     */
+    public function findByJoueur(Joueur $joueur): array
+    {
+        return $this->createQueryBuilder('pj')
+            ->join('pj.parentUser', 'u')
+            ->addSelect('u')
+            ->where('pj.joueur = :j')
+            ->setParameter('j', $joueur)
+            ->orderBy('pj.statut', 'ASC') // active avant pending avant rejected
+            ->addOrderBy('pj.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
     }

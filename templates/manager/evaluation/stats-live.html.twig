@@ -2070,6 +2070,82 @@
                             </div>
                         </div>
                     {% endfor %}
+
+                    {# [V2.2] Joueuses éphémères de NOTRE équipe pour cette rencontre #}
+                    {% if joueuses_ephemeres_notres is defined and joueuses_ephemeres_notres|length > 0 %}
+                        <div style="margin:8px 0 4px; padding:4px 0; border-top:1px solid rgba(255,255,255,.08); font-size:.72rem; font-weight:700; color:#ea580c; text-transform:uppercase; letter-spacing:.05em;">
+                            ⚡ Éphémères
+                        </div>
+                        {% for j in joueuses_ephemeres_notres %}
+                            {% set comptages = comptages_par_joueur[j.id] ?? {} %}
+                            {% set pts = ((comptages.tir_2pt_int_reussi ?? 0) + (comptages.tir_2pt_ext_reussi ?? 0)) * 2
+                                       + (comptages.tir_3pt_reussi ?? 0) * 3
+                                       + (comptages.lancer_reussi ?? 0) %}
+                            {% set est_sur_terrain = j.id in ids_sur_terrain %}
+                            <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
+                                 data-joueur-id="{{ j.id }}"
+                                 data-pts="{{ pts }}"
+                                 data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}"
+                                 style="border-left: 3px solid {{ j.couleurMaillot ?? '#ea580c' }};">
+                                <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
+                                    <span class="dot"></span>
+                                    <span class="badge-label">{{ est_sur_terrain ? 'ON' : 'OFF' }}</span>
+                                </span>
+                                <div class="joueuse-avatar"
+                                     style="background:{{ j.couleurMaillot ?? '#ea580c' }}; font-size:.7rem;">
+                                    {% if j.numeroMaillot is not null %}{{ j.numeroMaillot }}{% else %}{{ j.prenom|first|upper }}{% endif %}
+                                </div>
+                                <div class="joueuse-info">
+                                    <div class="joueuse-name" style="display:flex; align-items:center; gap:4px;">
+                                        {{ j.prenom }} {{ j.nom }}
+                                        <span style="font-size:.65rem; background:rgba(234,88,12,.2); color:#ea580c; padding:0 4px; border-radius:3px;">essai</span>
+                                    </div>
+                                    <div class="joueuse-stats">
+                                        <span class="pts" data-joueur-pts="{{ j.id }}">{{ pts }}</span> pts
+                                        · <span class="temps-jeu" data-temps-jeu="{{ j.id }}">00:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {# [V2.2] Joueuses éphémères de L'ÉQUIPE ADVERSE #}
+                    {% if joueuses_ephemeres_adverses is defined and joueuses_ephemeres_adverses|length > 0 %}
+                        <div style="margin:8px 0 4px; padding:4px 0; border-top:1px solid rgba(255,255,255,.08); font-size:.72rem; font-weight:700; color:#ef4444; text-transform:uppercase; letter-spacing:.05em;">
+                            🆚 {{ joueuses_ephemeres_adverses[0].equipeEphemere ?? rencontre.adversaire }}
+                        </div>
+                        {% for j in joueuses_ephemeres_adverses %}
+                            {% set comptages = comptages_par_joueur[j.id] ?? {} %}
+                            {% set pts = ((comptages.tir_2pt_int_reussi ?? 0) + (comptages.tir_2pt_ext_reussi ?? 0)) * 2
+                                       + (comptages.tir_3pt_reussi ?? 0) * 3
+                                       + (comptages.lancer_reussi ?? 0) %}
+                            {% set est_sur_terrain = j.id in ids_sur_terrain %}
+                            <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
+                                 data-joueur-id="{{ j.id }}"
+                                 data-pts="{{ pts }}"
+                                 data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}"
+                                 style="border-left: 3px solid {{ j.couleurMaillot ?? '#ef4444' }}; opacity:.9;">
+                                <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
+                                    <span class="dot"></span>
+                                    <span class="badge-label">{{ est_sur_terrain ? 'ON' : 'OFF' }}</span>
+                                </span>
+                                <div class="joueuse-avatar"
+                                     style="background:{{ j.couleurMaillot ?? '#ef4444' }}; font-size:.7rem;">
+                                    {% if j.numeroMaillot is not null %}{{ j.numeroMaillot }}{% else %}{{ j.prenom|first|upper }}{% endif %}
+                                </div>
+                                <div class="joueuse-info">
+                                    <div class="joueuse-name" style="display:flex; align-items:center; gap:4px;">
+                                        {{ j.prenom }} {{ j.nom }}
+                                        <span style="font-size:.65rem; background:rgba(239,68,68,.2); color:#ef4444; padding:0 4px; border-radius:3px;">adv</span>
+                                    </div>
+                                    <div class="joueuse-stats">
+                                        <span class="pts" data-joueur-pts="{{ j.id }}">{{ pts }}</span> pts
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
                 {% endif %}
             </div>
 

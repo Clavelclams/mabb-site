@@ -1,0 +1,164 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Séances solo — validation{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-person-walking"></i> Séances solo</h1>
+        <p class="subtitle">Valide les déclarations d'entraînement personnel de tes joueuses.</p>
+    </div>
+    {% if pending|length > 0 %}
+        <span class="badge bg-danger fs-6">{{ pending|length }} en attente</span>
+    {% endif %}
+</div>
+
+{% for label, messages in app.flashes(['success','error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+{# ─── Validation en masse ────────────────────────────────────────────────── #}
+<section style="margin-bottom:2rem;">
+    <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem; color:var(--mabb-text);">
+        <i class="bi bi-hourglass-split" style="color:#f59e0b;"></i>
+        En attente de validation ({{ pending|length }})
+    </h2>
+
+    {% if pending is empty %}
+        <div class="card-mabb" style="text-align:center; padding:30px 20px;">
+            <i class="bi bi-check-circle" style="font-size:2.5rem; color:#10b981;"></i>
+            <p style="margin-top:10px; color:var(--mabb-muted);">Tout est à jour ! Aucune séance solo en attente.</p>
+        </div>
+    {% else %}
+        <form method="POST" action="{{ path('manager_seances_solo_valider_masse') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('valider_solos_masse') }}">
+
+            {# Checkbox "tout sélectionner" #}
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding:8px 14px; background:rgba(234,88,12,.06); border-radius:8px;">
+                <input type="checkbox" id="selectAll" class="form-check-input" style="cursor:pointer;" onchange="document.querySelectorAll('.solo-check').forEach(c=>c.checked=this.checked)">
+                <label for="selectAll" style="cursor:pointer; font-size:.88rem; font-weight:600;">Tout sélectionner</label>
+                <button type="submit" class="btn btn-sm btn-success ms-auto">
+                    <i class="bi bi-check-all"></i> Valider la sélection
+                </button>
+            </div>
+
+            <div class="row g-2">
+                {% for solo in pending %}
+                    <div class="col-12">
+                        <div class="card-mabb" style="border-left:4px solid #f59e0b; padding:0;">
+                            <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; flex-wrap:wrap;">
+
+                                <input type="checkbox" name="ids[]" value="{{ solo.id }}"
+                                       class="form-check-input solo-check" style="flex-shrink:0; width:18px; height:18px; cursor:pointer;">
+
+                                {# Joueuse #}
+                                <div style="flex:1; min-width:130px;">
+                                    <div style="font-weight:700; font-size:.9rem;">{{ solo.joueur.prenom }} {{ solo.joueur.nom }}</div>
+                                    <div style="font-size:.75rem; color:var(--mabb-muted);">{{ solo.joueur.equipe ? solo.joueur.equipe.nom : 'Équipe non définie' }}</div>
+                                </div>
+
+                                {# Type + date #}
+                                <div style="flex:1; min-width:130px;">
+                                    <div style="font-size:.88rem; font-weight:600;">{{ constant('App\\Entity\\Sport\\SeanceSolo::TYPES')[solo.type] ?? solo.type }}</div>
+                                    <div style="font-size:.78rem; color:var(--mabb-muted);">
+                                        {{ solo.dateSolo|date('d/m/Y') }} · {{ solo.dureeMinutes }} min
+                                    </div>
+                                </div>
+
+                                {# Description #}
+                                {% if solo.description %}
+                                    <div style="flex:2; min-width:180px; font-size:.82rem; color:var(--mabb-muted); font-style:italic;">
+                                        "{{ solo.description|u.truncate(80, '…') }}"
+                                    </div>
+                                {% endif %}
+
+                                {# Refuser (individuel) #}
+                                <div style="flex-shrink:0;">
+                                    <button type="button" class="btn btn-xs btn-outline-danger" style="font-size:.8rem;"
+                                            onclick="document.getElementById('refus-form-{{ solo.id }}').classList.toggle('d-none')">
+                                        <i class="bi bi-x-circle"></i> Refuser
+                                    </button>
+                                </div>
+                            </div>
+
+                            {# Formulaire de refus (caché par défaut) #}
+                            <div id="refus-form-{{ solo.id }}" class="d-none" style="border-top:1px solid var(--mabb-border); padding:10px 14px; background:rgba(239,68,68,.04);">
+                                <form method="POST" action="{{ path('manager_seances_solo_refuser', {id: solo.id}) }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('refuser_solo_' ~ solo.id) }}">
+                                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                                        <input type="text" name="message_coach" placeholder="Message optionnel pour la joueuse…"
+                                               class="form-control form-control-sm" style="flex:1; min-width:200px;">
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="bi bi-x"></i> Confirmer refus
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div style="margin-top:1rem; text-align:right;">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-all"></i> Valider la sélection
+                </button>
+            </div>
+        </form>
+    {% endif %}
+</section>
+
+{# ─── Historique ─────────────────────────────────────────────────────────── #}
+<section>
+    <h2 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem; color:var(--mabb-text);">
+        <i class="bi bi-clock-history" style="color:var(--mabb-muted);"></i>
+        Historique récent ({{ historique|length }})
+    </h2>
+
+    {% set apresValidation = historique|filter(s => s.statut != 'pending') %}
+    {% if apresValidation is empty %}
+        <p style="color:var(--mabb-muted); font-size:.88rem; text-align:center; padding:16px 0;">Aucun historique.</p>
+    {% else %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th style="font-size:.78rem;">Joueuse</th>
+                        <th style="font-size:.78rem;">Type</th>
+                        <th style="font-size:.78rem;">Date</th>
+                        <th style="font-size:.78rem;">Durée</th>
+                        <th style="font-size:.78rem;">Statut</th>
+                        <th style="font-size:.78rem;">Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for solo in apresValidation %}
+                        <tr>
+                            <td style="font-size:.85rem; font-weight:600;">{{ solo.joueur.prenom }} {{ solo.joueur.nom }}</td>
+                            <td style="font-size:.82rem;">{{ constant('App\\Entity\\Sport\\SeanceSolo::TYPES')[solo.type] ?? solo.type }}</td>
+                            <td style="font-size:.82rem;">{{ solo.dateSolo|date('d/m/Y') }}</td>
+                            <td style="font-size:.82rem;">{{ solo.dureeMinutes }} min</td>
+                            <td>
+                                {% if solo.statut == 'approved' %}
+                                    <span class="badge bg-success">✓ Validé</span>
+                                {% elseif solo.statut == 'rejected' %}
+                                    <span class="badge bg-danger">✗ Refusé</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">En attente</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:.78rem; color:var(--mabb-muted);">
+                                {{ solo.messageCoach ? ('"' ~ solo.messageCoach|u.truncate(50, '…') ~ '"') : '—' }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

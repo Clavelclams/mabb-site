@@ -27,11 +27,23 @@
                  - "Saisir les évals" : saisie rapide post-match en remplissant les compteurs FIBA
                Les 2 cohabitent : selon que la table de marque a noté ou pas. #}
             {% if is_granted('CLUB_STAFF', rencontre) %}
+                {# [V2.2] Bouton "Joueuse rapide" — affiché pour rencontres non-officielles #}
+                {% if rencontre.isNonOfficielle() %}
+                    <button type="button" id="btn-ouvrir-jr"
+                            style="display:inline-flex;align-items:center;gap:6px;padding:8px 14px;
+                                   background:rgba(234,88,12,.15);border:1px solid rgba(234,88,12,.4);
+                                   color:#ea580c;border-radius:8px;font-weight:700;font-size:.85rem;cursor:pointer;"
+                            title="Ajouter une joueuse rapide (recrutement, open gym, adversaire)">
+                        ⚡ Joueuse rapide
+                    </button>
+                {% endif %}
+                {% if rencontre.accepteStatsLive() %}
                 <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}"
                    class="btn-mabb-primary"
                    title="Saisie live pendant le match (tablette / table de marque)">
                     <i class="bi bi-broadcast"></i> Stats LIVE
                 </a>
+                {% endif %}
                 {# V2.1d — Lien vers la page de gestion des sessions de saisie #}
                 <a href="{{ path('manager_rencontre_sessions', {id: rencontre.id}) }}"
                    class="btn-mabb-ghost"
@@ -491,6 +503,59 @@
             {% endif %}
         </div>
     </div>
+
+    {# [V2.2] Section joueuses éphémères — visible si rencontre non-officielle #}
+    {% if rencontre.isNonOfficielle() and joueuses_ephemeres|length > 0 %}
+        <div style="margin-top:24px; padding:16px 20px; background:rgba(234,88,12,.06); border:1px solid rgba(234,88,12,.2); border-radius:12px;">
+            <h3 style="font-size:.9rem; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:#ea580c; margin:0 0 12px;">
+                ⚡ Joueuses éphémères ({{ joueuses_ephemeres|length }})
+            </h3>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                {% for j in joueuses_ephemeres %}
+                    <div id="jr-card-{{ j.id }}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.05);border-radius:8px;border:1px solid rgba(255,255,255,.08);">
+                        <span style="width:10px;height:10px;border-radius:50%;background:{{ j.couleurMaillot ?? '#6b7280' }};flex-shrink:0;"></span>
+                        <div>
+                            <div style="font-weight:700;font-size:.88rem;">
+                                {{ j.nomComplet }}{% if j.numeroMaillot %} <span style="opacity:.6">#{{ j.numeroMaillot }}</span>{% endif %}
+                            </div>
+                            {% if j.isEphemereAdverse() %}
+                                <span style="font-size:.72rem;background:rgba(239,68,68,.15);color:#ef4444;padding:1px 6px;border-radius:4px;">
+                                    Adverse · {{ j.equipeEphemere }}
+                                </span>
+                            {% else %}
+                                <span style="font-size:.72rem;background:rgba(59,130,246,.15);color:#3b82f6;padding:1px 6px;border-radius:4px;">
+                                    Notre équipe
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% if is_granted('CLUB_STAFF', rencontre) %}
+                            {# Bouton "Recruter" pour les joueuses de notre équipe seulement #}
+                            {% if not j.isEphemereAdverse() %}
+                                <form method="POST" action="{{ path('manager_joueur_recruter', {id: j.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('recruter_joueur_' ~ j.id) }}">
+                                    <input type="hidden" name="equipeId" value="{{ rencontre.equipe.id }}">
+                                    <button type="submit" title="Recruter dans l'effectif officiel"
+                                            style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);color:#10b981;padding:3px 8px;border-radius:5px;font-size:.75rem;cursor:pointer;font-weight:700;">
+                                        ✓ Recruter
+                                    </button>
+                                </form>
+                            {% endif %}
+                            <button type="button" onclick="supprimerEphemere({{ j.id }}, this)"
+                                    style="background:none;border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:5px;padding:3px 8px;font-size:.75rem;cursor:pointer;">
+                                ✕
+                            </button>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {# [V2.2] Modale "Ajouter joueuse rapide" #}
+    {% if rencontre.isNonOfficielle() and is_granted('CLUB_STAFF', rencontre) %}
+        {{ include('manager/rencontre/_modale_joueur_rapide.html.twig') }}
+    {% endif %}
+
 {% endblock %}
 
 {# ========================================================

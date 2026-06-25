@@ -1,0 +1,117 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Modifier — {{ contenu.titre }}{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <a href="{{ path('manager_seances_show', {id: contenu.id}) }}" class="btn btn-sm btn-outline-secondary mb-2">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <h1><i class="bi bi-pencil-square"></i> Modifier — {{ contenu.titre }}</h1>
+    </div>
+</div>
+
+{% for label, messages in app.flashes(['success','error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+{{ form_start(form, {attr: {enctype: 'multipart/form-data', class: 'form-mabb'}}) }}
+
+<div class="card-mabb" style="margin-bottom:1.2rem; padding:1.2rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 1rem 0;">
+        <i class="bi bi-pencil-fill" style="color:#ea580c;"></i> Informations
+    </h2>
+    <div class="mb-3">
+        {{ form_label(form.titre, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.titre, {attr: {class: 'form-control'}}) }}
+        {{ form_errors(form.titre) }}
+    </div>
+    <div class="mb-3">
+        {{ form_label(form.categoriesAge, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        <div style="display:flex; flex-wrap:wrap; gap:8px; padding:6px 0;">
+            {% for choice in form.categoriesAge %}
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; background:rgba(234,88,12,.07); border:1px solid rgba(234,88,12,.3); border-radius:6px; padding:5px 12px; font-size:.88rem; font-weight:500;">
+                    {{ form_widget(choice) }} {{ choice.vars.label }}
+                </label>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card-mabb" style="margin-bottom:1.2rem; padding:1.2rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 1rem 0;">
+        <i class="bi bi-tags-fill" style="color:#3b82f6;"></i> Thèmes &amp; Description
+    </h2>
+    <div class="mb-3">
+        {{ form_label(form.themes, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.themes, {attr: {class: 'form-select', size: 8}}) }}
+        <div class="form-text">{{ form_help(form.themes)|raw }}</div>
+    </div>
+    <div class="mb-3">
+        {{ form_label(form.description, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.description, {attr: {class: 'form-control'}}) }}
+    </div>
+</div>
+
+<div class="card-mabb" style="margin-bottom:1.2rem; padding:1.2rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 .8rem 0;">
+        <i class="bi bi-paperclip" style="color:#10b981;"></i>
+        Fichiers joints ({{ contenu.fichiers|length }}/5)
+    </h2>
+
+    {# Fichiers existants #}
+    {% if contenu.fichiers|length > 0 %}
+        <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">
+            {% for i, fichier in contenu.fichiers %}
+                <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; background:var(--mabb-bg-card); border:1px solid var(--mabb-border); border-radius:6px; font-size:.85rem;">
+                    <i class="bi {{ fichier.type == 'pdf' ? 'bi-file-earmark-pdf text-danger' : 'bi-image text-success' }}"></i>
+                    <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ fichier.originalName }}</span>
+                    <form method="POST" action="{{ path('manager_seances_delete_fichier', {id: contenu.id, index: i}) }}"
+                          onsubmit="return confirm('Supprimer ?')">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete_fichier_' ~ contenu.id ~ '_' ~ i) }}">
+                        <button type="submit" class="btn btn-xs btn-outline-danger" style="font-size:.75rem; padding:2px 6px;">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if contenu.fichiers|length < 5 %}
+        {{ form_label(form.fichiers_upload, 'Ajouter des fichiers', {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.fichiers_upload, {attr: {class: 'form-control'}}) }}
+        {{ form_errors(form.fichiers_upload) }}
+        {{ form_help(form.fichiers_upload) }}
+    {% else %}
+        <p class="form-text text-muted">Limite de 5 fichiers atteinte. Supprime-en un pour pouvoir en ajouter.</p>
+    {% endif %}
+</div>
+
+<div class="card-mabb" style="margin-bottom:1.5rem; padding:1rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 0.8rem 0;">
+        <i class="bi bi-eye-fill" style="color:#8b5cf6;"></i> Partage
+    </h2>
+    <div class="form-check">
+        {{ form_widget(form.isPublicClub, {attr: {class: 'form-check-input'}}) }}
+        {{ form_label(form.isPublicClub, null, {label_attr: {class: 'form-check-label'}}) }}
+    </div>
+    {{ form_help(form.isPublicClub) }}
+</div>
+
+<div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i> Enregistrer
+    </button>
+    <a href="{{ path('manager_seances_show', {id: contenu.id}) }}" class="btn btn-outline-secondary">
+        Annuler
+    </a>
+</div>
+
+{{ form_end(form) }}
+{% endblock %}

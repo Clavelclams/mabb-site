@@ -1,0 +1,138 @@
+{#
+   Shot Chart Validation — Manager (Coach)
+   Variables :
+     par_joueuse : array[{joueur, seances[]}]
+     total       : int
+#}
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Shot chart — Validation{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-3" style="max-width:960px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-0 fw-bold">🎯 Shot chart — Validation</h4>
+            <small class="text-muted">Séances de tir en attente de validation par un coach</small>
+        </div>
+        <span class="badge bg-warning text-dark fs-6">{{ total }} en attente</span>
+    </div>
+
+    {% if total == 0 %}
+    <div class="card border-0 shadow-sm text-center py-5">
+        <div style="font-size:2.5rem;">✅</div>
+        <h5 class="mt-3">Tout est à jour</h5>
+        <p class="text-muted mb-0">Aucune séance en attente de validation.</p>
+    </div>
+
+    {% else %}
+
+    {% for groupe in par_joueuse %}
+    {% set joueur = groupe.joueur %}
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ joueur.nomComplet }}</strong>
+                <span class="text-muted ms-2 small">{{ joueur.equipe.nom ?? 'Équipe ?' }}</span>
+            </div>
+            <span class="badge bg-secondary">{{ groupe.seances|length }} séance(s)</span>
+        </div>
+        <div class="card-body p-0">
+
+            {% for seance in groupe.seances %}
+            <div class="p-3 border-bottom" id="val-seance-{{ seance.id }}">
+                <div class="row align-items-start g-3">
+
+                    {# Infos séance #}
+                    <div class="col-md-4">
+                        <div class="fw-bold">{{ seance.dateSeance|date('d/m/Y') }}</div>
+                        <div class="text-muted small">
+                            {{ seance.source == 'MATCH' ? '🏀 Match' : '🏋️ Entraînement' }}
+                            · {{ seance.zones|length }} zones
+                            · {{ seance.totalTentatives }} tentatives
+                        </div>
+                        {% if seance.notes %}
+                        <div class="text-muted small mt-1 fst-italic">{{ seance.notes }}</div>
+                        {% endif %}
+                    </div>
+
+                    {# Stats par type #}
+                    <div class="col-md-5">
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for type, data in seance.statsByType %}
+                                {% if data.tentatives > 0 %}
+                                <span class="badge rounded-pill bg-light text-dark border" style="font-size:.75rem; font-weight:500;">
+                                    {{ {'3pt':'3pts','2pt_ext':'2pts ext','2pt_int':'2pts int','lancer':'Lancers'}[type] ?? type }}
+                                    {{ data.reussis }}/{{ data.tentatives }}
+                                    {% if data.pct %}({{ data.pct }}%){% endif %}
+                                </span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        {# Mini shot map preview — terrain SVG 200×100 avec dots #}
+                        <div style="position:relative; width:200px; height:107px; background:#1a5c34; border-radius:6px; margin-top:8px; overflow:hidden; flex-shrink:0;">
+                            <svg viewBox="0 0 374 200" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:100%;height:100%;">
+                                <rect width="374" height="200" fill="#1a5c34"/>
+                                <rect x="1" y="1" width="372" height="198" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2"/>
+                                <rect x="1" y="65" width="80" height="70" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+                                <circle cx="81" cy="100" r="24" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"/>
+                                <path d="M16,10 A100,100 0 0 1 16,190" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+                                <line x1="1" y1="10" x2="16" y2="10" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+                                <line x1="1" y1="190" x2="16" y2="190" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>
+                                <circle cx="16" cy="100" r="5" fill="none" stroke="#ea580c" stroke-width="2"/>
+                                {% for zone in seance.zones %}
+                                    {% set pct = zone.pourcentage %}
+                                    {% set hue = (pct ?? 0) * 1.2 | round %}
+                                    <circle
+                                        cx="{{ zone.positionX * 374 }}"
+                                        cy="{{ zone.positionY * 200 }}"
+                                        r="9"
+                                        fill="hsl({{ hue }}, 80%, 45%)"
+                                        fill-opacity="0.85"
+                                        stroke="#fff" stroke-width="1">
+                                        <title>{{ zone.typeTir }} · {{ zone.reussis }}/{{ zone.tentatives }}{% if pct %} ({{ pct }}%){% endif %}</title>
+                                    </circle>
+                                {% endfor %}
+                            </svg>
+                        </div>
+                    </div>
+
+                    {# Actions #}
+                    <div class="col-md-3 d-flex flex-column gap-2">
+                        {# Valider #}
+                        <form method="POST" action="{{ path('manager_shot_chart_valider', {id: seance.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('shot_chart_valider_' ~ seance.id) }}">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                ✅ Valider
+                            </button>
+                        </form>
+
+                        {# Rejeter #}
+                        <form method="POST" action="{{ path('manager_shot_chart_rejeter', {id: seance.id}) }}"
+                              onsubmit="return confirm('Supprimer cette séance ? La joueuse devra la ressaisir.');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('shot_chart_rejeter_' ~ seance.id) }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                                🗑️ Rejeter
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+    {% endfor %}
+
+    {% endif %}
+
+    <div class="text-center mt-3">
+        <a href="{{ path('manager_dashboard') }}" class="text-muted small text-decoration-none">← Retour dashboard</a>
+    </div>
+
+</div>
+{% endblock %}

@@ -409,10 +409,9 @@
         <a href="{{ path('pirb_equipe') }}" class="pirb-nav-tab {{ route == 'pirb_equipe' ? 'active' : '' }}">
             <i class="bi bi-people"></i> Équipe
         </a>
-        <button type="button" class="pirb-nav-tab disabled" title="Bientôt disponible">
-            <i class="bi bi-calendar-event"></i> Agenda
-            <span class="badge-soon">Soon</span>
-        </button>
+        <a href="{{ path('pirb_seances_index') }}" class="pirb-nav-tab {{ route starts with 'pirb_seances' ? 'active' : '' }}">
+            <i class="bi bi-calendar-week"></i> Séances
+        </a>
         {# [15/06/2026] Stats : activée — la route pirb_stats existe depuis B10/B11.
            Mauvais oubli de fin de sprint qui laissait l'onglet en disabled. #}
         <a href="{{ path('pirb_stats') }}" class="pirb-nav-tab {{ route starts with 'pirb_stats' ? 'active' : '' }}">
@@ -439,6 +438,12 @@
         {% endif %}
         <a href="{{ path('pirb_dashboard') }}" class="pirb-drawer-item">
             <i class="bi bi-person"></i> Mon profil
+        </a>
+        <a href="{{ path('pirb_seances_index') }}" class="pirb-drawer-item">
+            <i class="bi bi-calendar-week"></i> Séances
+        </a>
+        <a href="{{ path('pirb_seances_solo_declarer') }}" class="pirb-drawer-item">
+            <i class="bi bi-person-walking"></i> Déclarer une séance solo
         </a>
         <a href="{{ path('pirb_logout') }}" class="pirb-drawer-item danger">
             <i class="bi bi-box-arrow-right"></i> Se déconnecter
@@ -473,5 +478,11 @@
 </script>
 
 {% block javascripts %}{% endblock %}
+
+{# ─── Chatbot assistant flottant ─────────────────────────────────────────── #}
+{% if app.user %}
+    {{ include('partials/_chatbot.html.twig', {chatbotContext: 'pirb'}) }}
+{% endif %}
+
 </body>
 </html>

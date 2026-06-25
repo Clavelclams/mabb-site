@@ -57,6 +57,29 @@ class Seance implements ClubAwareInterface
     private ?string $notes = null;
 
     /**
+     * [B-Seances] Titre public visible par les joueuses dans PIRB.
+     * Ex: "Prépa finale U15F", "Travail défense zone".
+     * Si null → les joueuses voient juste le type + lieu.
+     */
+    #[ORM\Column(length: 150, nullable: true)]
+    private ?string $intitule = null;
+
+    /**
+     * [B-Seances] Si true → les joueuses voient titre/heure/lieu mais PAS le contenu
+     * de `notes` (pour les séances tactiques confidentielles).
+     */
+    #[ORM\Column]
+    private bool $contenuPrive = false;
+
+    /**
+     * [B-Seances] Fiche pédagogique optionnelle (bibliothèque ContenuSeance).
+     * Permet de réutiliser un contenu sur plusieurs séances du planning.
+     */
+    #[ORM\ManyToOne(targetEntity: ContenuSeance::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?ContenuSeance $contenuSeance = null;
+
+    /**
      * PlanningSeance source — si la séance a été générée à partir d'un planning
      * récurrent, on garde le lien. Permet de :
      *   - Régénérer/synchroniser les futures séances quand le planning change
@@ -103,6 +126,24 @@ class Seance implements ClubAwareInterface
     public function setType(string $type): static { $this->type = $type; return $this; }
     public function getNotes(): ?string { return $this->notes; }
     public function setNotes(?string $notes): static { $this->notes = $notes; return $this; }
+    public function getIntitule(): ?string { return $this->intitule; }
+    public function setIntitule(?string $i): static { $this->intitule = $i; return $this; }
+    public function isContenuPrive(): bool { return $this->contenuPrive; }
+    public function setContenuPrive(bool $b): static { $this->contenuPrive = $b; return $this; }
+    public function getContenuSeance(): ?ContenuSeance { return $this->contenuSeance; }
+    public function setContenuSeance(?ContenuSeance $c): static { $this->contenuSeance = $c; return $this; }
+
+    /**
+     * Titre d'affichage pour les joueuses.
+     * Priorité : intitule > contenuSeance.titre > type
+     */
+    public function getTitreAffichage(): string
+    {
+        return $this->intitule
+            ?? $this->contenuSeance?->getTitre()
+            ?? ($this->type ?? 'Séance');
+    }
+
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
     public function getPresences(): Collection { return $this->presences; }
     public function getPlanningSource(): ?PlanningSeance { return $this->planningSource; }

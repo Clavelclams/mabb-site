@@ -234,47 +234,114 @@
                 </div>
             {% endif %}
             {% if rencontre.resumePath %}
-                <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'resume'}) }}"
-                   style="display:inline-block; margin-top:10px; color:var(--pirb-accent); font-size:0.85rem; text-decoration:none; font-weight:600;">
-                    <i class="bi bi-file-earmark-pdf"></i> Télécharger le PDF officiel →
-                </a>
+                {# [B22a-sec] Le lien PDF est conditionnel : approuvé = téléchargement direct, sinon demande #}
+                {% set d = demandes_acces_pdf['resume'] ?? null %}
+                {% if d and d.statut == 'approved' %}
+                    <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'resume'}) }}"
+                       style="display:inline-block; margin-top:10px; color:var(--pirb-accent); font-size:0.85rem; text-decoration:none; font-weight:600;">
+                        <i class="bi bi-file-earmark-pdf"></i> Télécharger le PDF officiel →
+                    </a>
+                {% elseif d and d.statut == 'pending' %}
+                    <span style="display:inline-block; margin-top:10px; font-size:0.82rem; color:#f59e0b; font-weight:500;">
+                        <i class="bi bi-clock-history"></i> Accès en attente de validation coach
+                    </span>
+                {% else %}
+                    <form method="post" action="{{ path('pirb_stats_match_pdf_request', {id: rencontre.id, type: 'resume'}) }}" style="display:inline; margin-top:10px;">
+                        <input type="hidden" name="_token" value="{{ csrf_token('pdf_request_' ~ rencontre.id ~ '_resume') }}">
+                        <button type="submit" style="background:none; border:none; cursor:pointer; color:var(--pirb-accent); font-size:0.85rem; font-weight:600; padding:0;">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            {% if d and d.statut == 'rejected' %}Re-demander l'accès au PDF{% else %}Demander l'accès au PDF{% endif %} →
+                        </button>
+                    </form>
+                {% endif %}
             {% endif %}
         </div>
     {% endif %}
 
-    {# [B22a 12/06/2026] Documents FFBB officiels téléchargeables par la joueuse #}
+    {# [B22a 12/06/2026] Documents FFBB officiels — avec workflow demande/validation #}
+    {# [B22a-sec 25/06/2026] Accès contrôlé par le coach via DemandeAccesPdf #}
     {% set has_pdfs = rencontre.feuilleMatchPath or rencontre.resumePath or rencontre.positionsTirsPath %}
     {% if has_pdfs %}
         <div class="pirb-card">
             <div class="pirb-card-title">📄 Documents FFBB officiels</div>
-            <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 12px;">
-                Téléchargements officiels — feuille de match validée FFBB.
+            <p style="font-size:0.78rem; color:var(--pirb-text-muted); margin:0 0 4px;">
+                Ces documents officiels sont soumis à validation de ton coach.
+            </p>
+            <p style="font-size:0.75rem; color:var(--pirb-text-muted); margin:0 0 12px; font-style:italic;">
+                Tes stats individuelles restent toujours visibles ci-dessus.
             </p>
             <div style="display:flex; flex-direction:column; gap:8px;">
-                {% if rencontre.feuilleMatchPath %}
-                    <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'feuille'}) }}"
-                       class="pirb-btn" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); justify-content:flex-start;">
-                        <i class="bi bi-file-earmark-pdf" style="color:#ef4444; font-size:1.2rem;"></i>
-                        <span style="flex:1;">Feuille de match</span>
-                        <i class="bi bi-download" style="color:var(--pirb-text-muted);"></i>
-                    </a>
-                {% endif %}
-                {% if rencontre.resumePath %}
-                    <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'resume'}) }}"
-                       class="pirb-btn" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); justify-content:flex-start;">
-                        <i class="bi bi-file-earmark-bar-graph" style="color:#3b82f6; font-size:1.2rem;"></i>
-                        <span style="flex:1;">Résumé stats</span>
-                        <i class="bi bi-download" style="color:var(--pirb-text-muted);"></i>
-                    </a>
-                {% endif %}
-                {% if rencontre.positionsTirsPath %}
-                    <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: 'positions'}) }}"
-                       class="pirb-btn" style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); justify-content:flex-start;">
-                        <i class="bi bi-bullseye" style="color:#ea580c; font-size:1.2rem;"></i>
-                        <span style="flex:1;">Positions des tirs</span>
-                        <i class="bi bi-download" style="color:var(--pirb-text-muted);"></i>
-                    </a>
-                {% endif %}
+
+                {# ─ Macro inline pour chaque bouton PDF ─ #}
+                {% for typeKey, typeLabel, typePath, typeColor, typeIcon in [
+                    ['feuille',   'Feuille de match',    rencontre.feuilleMatchPath,    '#ef4444', 'bi-file-earmark-pdf'],
+                    ['resume',    'Résumé stats',         rencontre.resumePath,          '#3b82f6', 'bi-file-earmark-bar-graph'],
+                    ['positions', 'Positions des tirs',   rencontre.positionsTirsPath,   '#ea580c', 'bi-bullseye']
+                ] %}
+                    {% if typePath %}
+                        {% set demande = demandes_acces_pdf[typeKey] ?? null %}
+
+                        {% if demande and demande.statut == 'approved' %}
+                            {# ✅ Approuvé → téléchargement direct #}
+                            <a href="{{ path('pirb_stats_match_pdf', {id: rencontre.id, type: typeKey}) }}"
+                               class="pirb-btn"
+                               style="display:flex; align-items:center; gap:10px; background:rgba(16,185,129,.08); border:1px solid rgba(16,185,129,.25); justify-content:flex-start;">
+                                <i class="bi {{ typeIcon }}" style="color:{{ typeColor }}; font-size:1.2rem;"></i>
+                                <span style="flex:1;">{{ typeLabel }}</span>
+                                <span style="font-size:0.75rem; color:#10b981; font-weight:600;">✓ Accès accordé</span>
+                                <i class="bi bi-download" style="color:#10b981;"></i>
+                            </a>
+
+                        {% elseif demande and demande.statut == 'pending' %}
+                            {# ⏳ En attente #}
+                            <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:rgba(245,158,11,.06); border:1px solid rgba(245,158,11,.2); border-radius:8px;">
+                                <i class="bi {{ typeIcon }}" style="color:{{ typeColor }}; font-size:1.2rem; opacity:0.4;"></i>
+                                <span style="flex:1; color:var(--pirb-text-muted); font-size:0.9rem;">{{ typeLabel }}</span>
+                                <span style="font-size:0.75rem; color:#f59e0b; font-weight:500;">
+                                    <i class="bi bi-clock-history"></i> En attente de ton coach
+                                </span>
+                            </div>
+
+                        {% elseif demande and demande.statut == 'rejected' %}
+                            {# ✗ Refusé → possibilité de re-demander #}
+                            <form method="post"
+                                  action="{{ path('pirb_stats_match_pdf_request', {id: rencontre.id, type: typeKey}) }}"
+                                  style="display:block;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('pdf_request_' ~ rencontre.id ~ '_' ~ typeKey) }}">
+                                <button type="submit"
+                                        style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 14px;
+                                               background:rgba(239,68,68,.06); border:1px solid rgba(239,68,68,.2);
+                                               border-radius:8px; cursor:pointer; text-align:left;">
+                                    <i class="bi {{ typeIcon }}" style="color:{{ typeColor }}; font-size:1.2rem; opacity:0.4;"></i>
+                                    <span style="flex:1; color:var(--pirb-text-muted); font-size:0.9rem;">{{ typeLabel }}</span>
+                                    <span style="font-size:0.75rem; color:#ef4444; font-weight:500;">
+                                        ✗ Refusé — Re-demander ?
+                                    </span>
+                                </button>
+                            </form>
+
+                        {% else %}
+                            {# Pas de demande → bouton "Demander l'accès" #}
+                            <form method="post"
+                                  action="{{ path('pirb_stats_match_pdf_request', {id: rencontre.id, type: typeKey}) }}"
+                                  style="display:block;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('pdf_request_' ~ rencontre.id ~ '_' ~ typeKey) }}">
+                                <button type="submit"
+                                        style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 14px;
+                                               background:rgba(255,255,255,.04); border:1px solid var(--pirb-border);
+                                               border-radius:8px; cursor:pointer; text-align:left;">
+                                    <i class="bi {{ typeIcon }}" style="color:{{ typeColor }}; font-size:1.2rem;"></i>
+                                    <span style="flex:1; color:var(--pirb-text); font-size:0.9rem;">{{ typeLabel }}</span>
+                                    <span style="font-size:0.75rem; color:var(--pirb-accent); font-weight:500;">
+                                        <i class="bi bi-lock"></i> Demander l'accès
+                                    </span>
+                                </button>
+                            </form>
+                        {% endif %}
+
+                    {% endif %}
+                {% endfor %}
+
             </div>
         </div>
     {% endif %}

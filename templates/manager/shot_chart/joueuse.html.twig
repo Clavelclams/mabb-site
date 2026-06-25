@@ -1,0 +1,138 @@
+{#
+   Shot Chart d'une joueuse — vue Coach (Manager, lecture seule)
+   Variables :
+     joueur            : Joueur
+     seances_validees  : SeanceTir[]
+     zones_json        : string (JSON)
+#}
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Shot chart — {{ joueur.nomComplet }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid py-3" style="max-width:960px;">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}" class="text-muted text-decoration-none small">
+                ← {{ joueur.nomComplet }}
+            </a>
+            <h4 class="mb-0 fw-bold mt-1">🎯 Shot chart</h4>
+        </div>
+        <span class="badge bg-secondary fs-6">{{ seances_validees|length }} séance(s)</span>
+    </div>
+
+    {% if seances_validees is empty %}
+    <div class="card border-0 shadow-sm text-center py-5">
+        <div style="font-size:2.5rem;">📊</div>
+        <h5 class="mt-3">Aucune séance validée</h5>
+        <p class="text-muted mb-0">{{ joueur.nomComplet }} n'a pas encore de séances de tir validées.</p>
+    </div>
+
+    {% else %}
+
+    {# ─── Shot map ───────────────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom fw-semibold py-2">Shot map (toutes séances validées)</div>
+        <div class="card-body">
+            <div style="position:relative; width:100%; max-width:600px; aspect-ratio:374/200; background:#1a5c34; border-radius:10px; overflow:hidden; margin:0 auto;" id="manager-terrain">
+                <svg viewBox="0 0 374 200" xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:100%;height:100%;">
+                    <rect width="374" height="200" fill="#1a5c34"/>
+                    <rect x="1" y="1" width="372" height="198" fill="none" stroke="#fff" stroke-width="1.5"/>
+                    <line x1="187" y1="1" x2="187" y2="199" stroke="#fff" stroke-width="1"/>
+                    <circle cx="187" cy="100" r="27" fill="none" stroke="#fff" stroke-width="1"/>
+                    <path d="M187,1 A100,100 0 0 1 187,199" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/>
+                    <rect x="1" y="65" width="80" height="70" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-width="1.2"/>
+                    <circle cx="81" cy="100" r="24" fill="none" stroke="#fff" stroke-width="1" stroke-dasharray="4,3"/>
+                    <path d="M16,10 A100,100 0 0 1 16,190" fill="none" stroke="#fff" stroke-width="1.2"/>
+                    <line x1="1" y1="10" x2="16" y2="10" stroke="#fff" stroke-width="1.2"/>
+                    <line x1="1" y1="190" x2="16" y2="190" stroke="#fff" stroke-width="1.2"/>
+                    <circle cx="16" cy="100" r="5" fill="none" stroke="#ea580c" stroke-width="2"/>
+                    <circle cx="81" cy="100" r="24" fill="none" stroke="#fff" stroke-width="1"/>
+                </svg>
+            </div>
+            {# Légende #}
+            <div class="d-flex gap-3 justify-content-center mt-2 flex-wrap">
+                <small class="text-muted d-flex align-items-center gap-1">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#ef4444;"></span>&lt;33%
+                </small>
+                <small class="text-muted d-flex align-items-center gap-1">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#f59e0b;"></span>33-66%
+                </small>
+                <small class="text-muted d-flex align-items-center gap-1">
+                    <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#16a34a;"></span>&gt;66%
+                </small>
+            </div>
+        </div>
+    </div>
+
+    {# ─── Historique séances ─────────────────────────────────────── #}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom fw-semibold py-2">Détail des séances</div>
+        <div class="card-body p-0">
+            {% for seance in seances_validees %}
+            <div class="p-3 border-bottom">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>{{ seance.dateSeance|date('d/m/Y') }}</strong>
+                        <span class="text-muted ms-2 small">
+                            {{ seance.source == 'MATCH' ? '🏀 Match' : '🏋️ Entraînement' }}
+                        </span>
+                        {% if seance.notes %}
+                            <span class="text-muted ms-2 fst-italic small">{{ seance.notes }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <span class="fw-bold">{{ seance.totalReussis }}/{{ seance.totalTentatives }}</span>
+                        {% if seance.pourcentageGlobal %}
+                            <span class="badge ms-1" style="background:#1a5c34;color:#fff;">{{ seance.pourcentageGlobal }}%</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {# Stats par type #}
+                <div class="d-flex flex-wrap gap-2 mt-2">
+                    {% for type, data in seance.statsByType %}
+                        {% if data.tentatives > 0 %}
+                        <span class="badge bg-light text-dark border rounded-pill" style="font-size:.72rem;">
+                            {{ {'3pt':'3pts','2pt_ext':'2pts ext','2pt_int':'2pts int','lancer':'LF'}[type] ?? type }}
+                            {{ data.reussis }}/{{ data.tentatives }}{% if data.pct %} · {{ data.pct }}%{% endif %}
+                        </span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% endif %}
+
+</div>
+
+<script>
+(function() {
+    const zonesData = {{ zones_json|raw }};
+    const terrain   = document.getElementById('manager-terrain');
+    if (!terrain || !zonesData.length) return;
+
+    zonesData.forEach(zone => {
+        const dot = document.createElement('div');
+        dot.style.cssText = `
+            position:absolute;
+            width:20px; height:20px;
+            border-radius:50%;
+            transform:translate(-50%,-50%);
+            background:${zone.couleur};
+            border:1.5px solid rgba(255,255,255,.6);
+            display:flex; align-items:center; justify-content:center;
+            font-size:8px; font-weight:800; color:#fff;
+            cursor:pointer;
+        `;
+        dot.style.left = (zone.x * 100) + '%';
+        dot.style.top  = (zone.y * 100) + '%';
+        dot.title = `${zone.typeTir} · ${zone.label} (${zone.pct ?? '?'}%) · ${zone.date} · ${zone.source}`;
+        terrain.appendChild(dot);
+    });
+})();
+</script>
+{% endblock %}

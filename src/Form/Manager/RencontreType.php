@@ -34,16 +34,18 @@ class RencontreType extends AbstractType
         $club = $options['club'];
 
         $builder
-            // [B31 12/06/2026] Type de rencontre — détermine UI et règles
+            // [B31 12/06/2026 — V2.2 25/06/2026] Type de rencontre
             ->add('typeRencontre', ChoiceType::class, [
                 'label'    => 'Type de rencontre',
                 'required' => true,
                 'choices'  => [
-                    'Officiel (championnat/coupe)'        => Rencontre::TYPE_OFFICIEL,
-                    'Amical (multi-catégorie possible)'   => Rencontre::TYPE_AMICAL,
-                    'Entraînement interne (avec éphémères)' => Rencontre::TYPE_ENTRAINEMENT_INTERNE,
+                    '🏆 Officiel (championnat / coupe FFBB)'   => Rencontre::TYPE_OFFICIEL,
+                    '🤝 Amical (inter-clubs, hors compétition)' => Rencontre::TYPE_AMICAL,
+                    '🔄 Entraînement interne (sparring club)'  => Rencontre::TYPE_ENTRAINEMENT_INTERNE,
+                    '🎯 Exhibition (open gym / recrutement)'   => Rencontre::TYPE_EXHIBITION,
                 ],
-                'help'     => 'Officiel = championnat FFBB. Amical = inter-clubs hors compet. Entraînement = sparring avec joueuses éphémères possibles.',
+                'help'     => 'Exhibition = match avec joueuses non licenciées (essai, open gym, début de saison). Permet d\'ajouter des joueuses rapides.',
+                'attr'     => ['class' => 'js-type-rencontre'],
             ])
             ->add('equipe', EntityType::class, [
                 'label'         => 'Équipe',
@@ -124,20 +126,21 @@ class RencontreType extends AbstractType
                 'label'    => 'Notes',
                 'required' => false,
                 'attr'     => ['rows' => 3, 'placeholder' => 'Observations, points clés du match, commentaires arbitrage...'],
+            ])
+            // [V2.2 25/06/2026] Mode de saisie des stats live
+            // Affiché uniquement pour les types non-officiels (AMICAL, ENTRAINEMENT_INTERNE, EXHIBITION)
+            // Le type 'full' ne change rien, 'light' simplifie l'interface, 'none' désactive.
+            ->add('modeStats', ChoiceType::class, [
+                'label'    => 'Mode de saisie des stats',
+                'required' => true,
+                'choices'  => [
+                    '📊 Stats complètes FIBA (tirs, rebonds, passes, fautes…)' => Rencontre::MODE_STATS_FULL,
+                    '⚡ Stats légères (points + rebonds + passes)'              => Rencontre::MODE_STATS_LIGHT,
+                    '🚫 Sans stats live'                                        => Rencontre::MODE_STATS_NONE,
+                ],
+                'help'     => 'Stats complètes = interface habituelle. Légères = parfait pour un open gym rapide. Sans = planning seul, pas de saisie.',
+                'attr'     => ['class' => 'js-mode-stats'],
             ]);
-
-        // [B31] Si amical/entraînement : champ pour joueuses éphémères (texte libre, parsé en JSON côté controller)
-        // On l'affiche aussi pour officiel mais c'est rarement utilisé.
-        $builder->add('joueursEphemeresTexte', TextareaType::class, [
-            'label'    => 'Joueuses éphémères (1 par ligne)',
-            'required' => false,
-            'mapped'   => false,
-            'attr'     => [
-                'rows' => 4,
-                'placeholder' => "Format : Prénom Nom (rôle optionnel)\nEx :\nFatou MAMAN (sparring)\nClément DIRIGEANT\nMarie BENEVOLE (formation OTM)",
-            ],
-            'help'     => 'Pour matchs amicaux / entraînements internes. Personnes sans licence FFBB qui jouent ou participent (maman, dirigeant, sparring partner). Apparaissent sur la feuille de match interne et utilisables en Stats Live.',
-        ]);
 
         // [B31 fix 15/06/2026] PRE_SUBMIT : auto-remplit adversaire pour entraînement interne.
         //
@@ -158,12 +161,23 @@ class RencontreType extends AbstractType
             if (!is_array($data)) {
                 return;
             }
-            $type = $data['typeRencontre'] ?? null;
+            $type       = $data['typeRencontre'] ?? null;
             $adversaire = trim($data['adversaire'] ?? '');
 
-            // Pour entraînement interne, on s'en fout du nom adversaire — auto-rempli
+            // Pour entraînement interne et exhibition : adversaire auto-rempli si vide
             if ($type === Rencontre::TYPE_ENTRAINEMENT_INTERNE && $adversaire === '') {
                 $data['adversaire'] = 'Entraînement interne';
+                $event->setData($data);
+            }
+            if ($type === Rencontre::TYPE_EXHIBITION && $adversaire === '') {
+                $data['adversaire'] = 'Match exhibition';
+                $event->setData($data);
+            }
+
+            // Pour les matchs officiels, forcer le mode stats à 'full'
+            // (même si l'UI cache le champ, on s'assure de la cohérence)
+            if ($type === Rencontre::TYPE_OFFICIEL) {
+                $data['modeStats'] = Rencontre::MODE_STATS_FULL;
                 $event->setData($data);
             }
         });

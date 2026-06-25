@@ -1,0 +1,206 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Demandes d'accès PDFs FFBB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-shield-lock-fill"></i> Demandes d'accès — PDFs FFBB</h1>
+        <p class="subtitle">
+            Les joueuses ne peuvent pas télécharger directement les documents officiels FFBB.
+            Approuve ou refuse leurs demandes ici.
+        </p>
+    </div>
+    {% if nb_pending > 0 %}
+        <span class="badge bg-danger fs-6">{{ nb_pending }} en attente</span>
+    {% endif %}
+</div>
+
+{# ─── Demandes en attente ───────────────────────────────────────────────── #}
+<section style="margin-bottom: 2rem;">
+    <h2 style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:var(--mabb-text);">
+        <i class="bi bi-clock-history" style="color:#f59e0b;"></i>
+        En attente de validation ({{ pending_demandes|length }})
+    </h2>
+
+    {% if pending_demandes is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:30px 20px;">
+                <i class="bi bi-check-circle" style="font-size:2.5rem; color:#10b981;"></i>
+                <p style="margin-top:10px; color:var(--mabb-muted);">Aucune demande en attente. 👍</p>
+            </div>
+        </div>
+    {% else %}
+        <div class="row g-3">
+            {% for demande in pending_demandes %}
+                <div class="col-12">
+                    <div class="card-mabb" style="border-left: 4px solid #f59e0b;">
+                        <div class="card-body" style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:14px 18px;">
+
+                            {# Infos joueuse #}
+                            <div style="flex:1; min-width:180px;">
+                                <div style="font-weight:600; font-size:0.95rem;">
+                                    {{ demande.joueur.prenom }} {{ demande.joueur.nom }}
+                                </div>
+                                <div style="font-size:0.78rem; color:var(--mabb-muted);">
+                                    {{ demande.joueur.equipe ? demande.joueur.equipe.nom : 'Équipe inconnue' }}
+                                </div>
+                            </div>
+
+                            {# Document demandé #}
+                            <div style="flex:1; min-width:160px;">
+                                <span style="font-size:0.85rem; font-weight:500;">
+                                    {% if demande.typePdf == 'feuille' %}
+                                        <i class="bi bi-file-earmark-pdf" style="color:#ef4444;"></i>
+                                    {% elseif demande.typePdf == 'resume' %}
+                                        <i class="bi bi-file-earmark-bar-graph" style="color:#3b82f6;"></i>
+                                    {% else %}
+                                        <i class="bi bi-bullseye" style="color:#ea580c;"></i>
+                                    {% endif %}
+                                    {{ demande.labelType }}
+                                </span>
+                                <div style="font-size:0.78rem; color:var(--mabb-muted); margin-top:2px;">
+                                    vs {{ demande.rencontre.adversaire ?? '—' }}
+                                    {% if demande.rencontre.date %}
+                                        · {{ demande.rencontre.date|date('d/m/Y') }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {# Date de la demande #}
+                            <div style="min-width:110px; font-size:0.78rem; color:var(--mabb-muted); text-align:center;">
+                                Demandé le<br>
+                                <strong>{{ demande.createdAt ? demande.createdAt|date('d/m/Y à H\\hi') : '—' }}</strong>
+                            </div>
+
+                            {# Actions : Approuver / Refuser #}
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+
+                                {# Formulaire Approuver #}
+                                <form method="post"
+                                      action="{{ path('manager_demandes_pdf_approuver', {id: demande.id}) }}"
+                                      style="display:inline;"
+                                      onsubmit="return true;">
+                                    <input type="hidden" name="_token"
+                                           value="{{ csrf_token('demande_pdf_' ~ demande.id) }}">
+                                    <button type="submit" class="btn-mabb-primary"
+                                            style="font-size:0.82rem; padding:6px 14px;">
+                                        <i class="bi bi-check-lg"></i> Approuver
+                                    </button>
+                                </form>
+
+                                {# Formulaire Refuser (avec message optionnel via modal-like inline) #}
+                                <form method="post"
+                                      action="{{ path('manager_demandes_pdf_refuser', {id: demande.id}) }}"
+                                      style="display:inline;"
+                                      onsubmit="return confirm('Refuser la demande de ' + '{{ demande.joueur.prenom }}' + ' ?');">
+                                    <input type="hidden" name="_token"
+                                           value="{{ csrf_token('demande_pdf_' ~ demande.id) }}">
+                                    <input type="text"
+                                           name="message_coach"
+                                           placeholder="Raison (optionnel)"
+                                           style="font-size:0.8rem; padding:5px 8px; border:1px solid var(--mabb-border); border-radius:6px; background:var(--mabb-bg-card); color:var(--mabb-text); width:160px;">
+                                    <button type="submit"
+                                            style="font-size:0.82rem; padding:6px 14px; background:transparent; border:1px solid #ef4444; color:#ef4444; border-radius:6px; cursor:pointer;">
+                                        <i class="bi bi-x-lg"></i> Refuser
+                                    </button>
+                                </form>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+
+{# ─── Historique récent ────────────────────────────────────────────────── #}
+<section>
+    <h2 style="font-size:1.1rem; font-weight:600; margin-bottom:1rem; color:var(--mabb-text);">
+        <i class="bi bi-journal-text" style="color:var(--mabb-muted);"></i>
+        Historique récent ({{ historique|length }})
+    </h2>
+
+    {% if historique is empty %}
+        <div class="card-mabb">
+            <div class="card-body" style="text-align:center; padding:20px; color:var(--mabb-muted);">
+                Aucune demande pour le moment.
+            </div>
+        </div>
+    {% else %}
+        <div class="card-mabb">
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                    <thead>
+                        <tr style="border-bottom:2px solid var(--mabb-border); color:var(--mabb-muted); font-size:0.78rem; text-transform:uppercase; letter-spacing:.5px;">
+                            <th style="padding:10px 14px; text-align:left;">Joueuse</th>
+                            <th style="padding:10px 14px; text-align:left;">Document</th>
+                            <th style="padding:10px 14px; text-align:left;">Match</th>
+                            <th style="padding:10px 14px; text-align:center;">Statut</th>
+                            <th style="padding:10px 14px; text-align:right;">Date demande</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for demande in historique %}
+                            <tr style="border-bottom:1px solid var(--mabb-border);">
+                                <td style="padding:10px 14px;">
+                                    <strong>{{ demande.joueur.prenom }} {{ demande.joueur.nom }}</strong>
+                                    <div style="font-size:0.75rem; color:var(--mabb-muted);">
+                                        {{ demande.joueur.equipe ? demande.joueur.equipe.nom : '—' }}
+                                    </div>
+                                </td>
+                                <td style="padding:10px 14px;">
+                                    {% if demande.typePdf == 'feuille' %}
+                                        <i class="bi bi-file-earmark-pdf" style="color:#ef4444;"></i>
+                                    {% elseif demande.typePdf == 'resume' %}
+                                        <i class="bi bi-file-earmark-bar-graph" style="color:#3b82f6;"></i>
+                                    {% else %}
+                                        <i class="bi bi-bullseye" style="color:#ea580c;"></i>
+                                    {% endif %}
+                                    {{ demande.labelType }}
+                                </td>
+                                <td style="padding:10px 14px; color:var(--mabb-muted);">
+                                    vs {{ demande.rencontre.adversaire ?? '—' }}
+                                    {% if demande.rencontre.date %}
+                                        <br><small>{{ demande.rencontre.date|date('d/m/Y') }}</small>
+                                    {% endif %}
+                                </td>
+                                <td style="padding:10px 14px; text-align:center;">
+                                    {% if demande.statut == 'approved' %}
+                                        <span class="badge" style="background:#d1fae5; color:#065f46; font-size:0.75rem; padding:3px 10px; border-radius:12px;">
+                                            ✓ Approuvé
+                                        </span>
+                                        {% if demande.coach %}
+                                            <div style="font-size:0.7rem; color:var(--mabb-muted); margin-top:2px;">
+                                                par {{ demande.coach.prenom }}
+                                            </div>
+                                        {% endif %}
+                                    {% elseif demande.statut == 'rejected' %}
+                                        <span class="badge" style="background:#fee2e2; color:#991b1b; font-size:0.75rem; padding:3px 10px; border-radius:12px;">
+                                            ✗ Refusé
+                                        </span>
+                                        {% if demande.messageCoach %}
+                                            <div style="font-size:0.7rem; color:var(--mabb-muted); margin-top:2px;" title="{{ demande.messageCoach }}">
+                                                « {{ demande.messageCoach|slice(0, 30) }}{% if demande.messageCoach|length > 30 %}…{% endif %} »
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge" style="background:#fef3c7; color:#92400e; font-size:0.75rem; padding:3px 10px; border-radius:12px;">
+                                            ⏳ En attente
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td style="padding:10px 14px; text-align:right; color:var(--mabb-muted); font-size:0.78rem;">
+                                    {{ demande.createdAt ? demande.createdAt|date('d/m à H\\hi') : '—' }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}

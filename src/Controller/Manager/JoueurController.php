@@ -4,8 +4,10 @@ namespace App\Controller\Manager;
 
 use App\Entity\Sport\Equipe;
 use App\Entity\Sport\Joueur;
+use App\Entity\Sport\JoueurEquipe;
 use App\Form\Manager\JoueurType;
 use App\Repository\Sport\EquipeRepository;
+use App\Repository\Sport\JoueurEquipeRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
@@ -142,6 +144,7 @@ class JoueurController extends AbstractController
         \App\Repository\Sport\EvaluationMatchRepository $evaluationMatchRepository,
         \App\Repository\Sport\CotisationJoueurRepository $cotisationRepository,
         \App\Repository\Sport\JoueurRepository $joueurRepository,
+        \App\Repository\Sport\ParentJoueurRepository $parentJoueurRepository,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $joueur);
 
@@ -227,6 +230,37 @@ class JoueurController extends AbstractController
         $performancesSaison    = $evaluationCalculator->moyennesSaison($joueur, $saison);
         $evaluationsRecentes   = $evaluationMatchRepository->evaluationsRecentes($joueur, 5);
 
+        // ====================================================================
+        // V1.6.1 — Affectations multi-équipes (surclassement / doublage / réserve)
+        // ====================================================================
+        // Liste des équipes disponibles pour le select du formulaire "Ajouter
+        // une affectation". On exclut l'équipe principale ET celles déjà
+        // affectées (sinon UNIQUE constraint viol).
+        $equipePrincipaleId = $joueur->getEquipe()?->getId();
+        $equipesDejaAffectees = [];
+        foreach ($joueur->getAffectations() as $aff) {
+            $equipesDejaAffectees[] = $aff->getEquipe()?->getId();
+        }
+        $equipesDisponibles = $this->equipeRepository->createQueryBuilder('e')
+            ->where('e.club = :club')
+            ->andWhere('e.isActive = true')
+            ->setParameter('club', $joueur->getClub())
+            ->orderBy('e.categorie', 'ASC')
+            ->addOrderBy('e.nom', 'ASC')
+            ->getQuery()->getResult();
+        $equipesDisponibles = array_filter($equipesDisponibles, function(Equipe $e) use ($equipePrincipaleId, $equipesDejaAffectees) {
+            if ($equipePrincipaleId !== null && $e->getId() === $equipePrincipaleId) return false;
+            if (in_array($e->getId(), $equipesDejaAffectees, true)) return false;
+            return true;
+        });
+
+        // Types d'affectation pour le select (hors principale — gérée séparément)
+        $typesAffectationDisponibles = [];
+        foreach (JoueurEquipe::TYPES as $t) {
+            if ($t === JoueurEquipe::TYPE_PRINCIPALE) continue;
+            $typesAffectationDisponibles[$t] = JoueurEquipe::TYPE_LABELS[$t] ?? $t;
+        }
+
         return $this->render('manager/joueur/show.html.twig', [
             'joueur'              => $joueur,
             'age'                 => $age,
@@ -251,6 +285,14 @@ class JoueurController extends AbstractController
             // V1.4a — Section "Compte PIRB lié" (visible CLUB_STAFF)
             'candidats_link_user' => $candidatsLinkUser,
             'recherche_user'      => trim((string) $request->query->get('q_user', '')),
+            // V1.6.1 — Affectations multi-équipes
+            'equipes_disponibles'           => array_values($equipesDisponibles),
+            'types_affectation_disponibles' => $typesAffectationDisponibles,
+            'type_labels'                   => JoueurEquipe::TYPE_LABELS,
+            'type_couleurs'                 => JoueurEquipe::TYPE_COULEURS,
+            'saison_courante'               => $saison,
+            // Liens Parents — tous les ParentJoueur de cette joueuse (actifs + pending)
+            'parent_joueurs'                => $parentJoueurRepository->findByJoueur($joueur),
         ]);
     }
 
@@ -447,6 +489,138 @@ class JoueurController extends AbstractController
         $this->em->flush();
 
         $this->addFlash('success', '🔓 Compte PIRB délié de cette fiche.');
+        return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+    }
+
+    /**
+     * V1.6.1 — Ajoute une affectation équipe (surclassement / doublage / réserve).
+     *
+     * L'équipe principale est gérée via Joueur.equipe (champ historique) + sa
+     * JoueurEquipe principale auto-créée par la migration V1.6. Cette route
+     * sert UNIQUEMENT à ajouter une affectation secondaire (multi-équipes).
+     *
+     * Garde-fous métier :
+     *   - L'équipe sélectionnée doit être du même club (multi-tenant)
+     *   - Doit être différente de l'équipe principale (sinon doublon non-sens)
+     *   - Doit être différente d'une affectation existante (UNIQUE constraint)
+     *   - Type doit être valide (pas 'principale' — on ne peut pas avoir 2 principales)
+     */
+    #[Route('/joueuses/{id}/affectations/ajouter', name: 'manager_joueur_affectation_add', methods: ['POST'])]
+    public function affectationAdd(Request $request, Joueur $joueur): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $joueur);
+
+        if (!$this->isCsrfTokenValid('add_affectation_joueur_' . $joueur->getId(), (string) $request->request->get('_token', ''))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        // === Inputs ===
+        $equipeId = (int) $request->request->get('equipe_id', 0);
+        $type = (string) $request->request->get('type', '');
+        $saison = trim((string) $request->request->get('saison', '2025-2026'));
+        $notes = trim((string) $request->request->get('notes', ''));
+
+        // === Validation type ===
+        if (!in_array($type, JoueurEquipe::TYPES, true) || $type === JoueurEquipe::TYPE_PRINCIPALE) {
+            $this->addFlash('error', 'Type d\'affectation invalide (l\'équipe principale est gérée séparément).');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        // === Validation saison (format ISO 2025-2026) ===
+        if (!preg_match('/^\d{4}-\d{4}$/', $saison)) {
+            $this->addFlash('error', 'Format saison invalide (attendu : "2025-2026").');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        // === Validation équipe : doit exister et être du même club ===
+        $equipe = $this->equipeRepository->find($equipeId);
+        if (!$equipe || $equipe->getClub()->getId() !== $joueur->getClub()->getId()) {
+            $this->addFlash('error', 'Équipe invalide ou d\'un autre club.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        // === Anti-doublon : équipe principale ===
+        if ($joueur->getEquipe() && $joueur->getEquipe()->getId() === $equipe->getId()) {
+            $this->addFlash('error', sprintf(
+                'Cette joueuse est déjà dans %s (équipe principale). Inutile de l\'ajouter en %s.',
+                $equipe->getNom(),
+                JoueurEquipe::TYPE_LABELS[$type]
+            ));
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        // === Anti-doublon : affectation existante (UNIQUE constraint en base mais on check avant pour msg propre) ===
+        foreach ($joueur->getAffectations() as $aff) {
+            if ($aff->getEquipe() === $equipe && $aff->getSaison() === $saison) {
+                $this->addFlash('error', sprintf(
+                    'Cette joueuse a déjà une affectation à %s pour la saison %s.',
+                    $equipe->getNom(),
+                    $saison
+                ));
+                return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+            }
+        }
+
+        // === Création ===
+        $affectation = new JoueurEquipe();
+        $affectation->setJoueur($joueur);
+        $affectation->setEquipe($equipe);
+        $affectation->setType($type);
+        $affectation->setSaison($saison);
+        $affectation->setActif(true);
+        if ($notes !== '') {
+            $affectation->setNotes($notes);
+        }
+
+        $this->em->persist($affectation);
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf(
+            '✅ %s ajouté : %s dans "%s" (%s).',
+            JoueurEquipe::TYPE_LABELS[$type],
+            $joueur->getNomComplet(),
+            $equipe->getNom(),
+            $saison
+        ));
+        return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+    }
+
+    /**
+     * V1.6.1 — Supprime une affectation équipe.
+     *
+     * Garde-fou : on REFUSE de supprimer l'affectation principale (sinon la
+     * joueuse n'a plus d'équipe de référence). Pour changer l'équipe principale,
+     * passer par la modification de Joueur.equipe.
+     */
+    #[Route('/joueuses/{id}/affectations/{affId}/supprimer', name: 'manager_joueur_affectation_remove', methods: ['POST'])]
+    public function affectationRemove(Request $request, Joueur $joueur, int $affId): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $joueur);
+
+        if (!$this->isCsrfTokenValid('remove_affectation_' . $affId, (string) $request->request->get('_token', ''))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        $affectation = $this->em->getRepository(JoueurEquipe::class)->find($affId);
+        if (!$affectation || $affectation->getJoueur() !== $joueur) {
+            $this->addFlash('error', 'Affectation introuvable.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        if ($affectation->isPrincipale()) {
+            $this->addFlash('error', 'Impossible de supprimer l\'affectation principale. Modifie l\'équipe de la joueuse à la place.');
+            return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
+        }
+
+        $equipeNom = $affectation->getEquipe()->getNom();
+        $typeLabel = JoueurEquipe::TYPE_LABELS[$affectation->getType()] ?? $affectation->getType();
+
+        $this->em->remove($affectation);
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf('🗑️ %s retiré de "%s".', $typeLabel, $equipeNom));
         return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
     }
 }

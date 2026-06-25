@@ -83,9 +83,17 @@ class StatsLiveController extends AbstractController
         }
 
         // Joueuses actives de l'équipe — affichées dans la sidebar
+        // [V2.2] isTemporaire=false : on ne veut pas les éphémères d'autres rencontres
         $joueusesActives = $this->joueurRepository->findBy(
-            ['equipe' => $rencontre->getEquipe(), 'isActive' => true],
+            ['equipe' => $rencontre->getEquipe(), 'isActive' => true, 'isTemporaire' => false],
             ['numeroMaillot' => 'ASC', 'nom' => 'ASC']
+        );
+
+        // [V2.2] Joueuses éphémères créées SPÉCIFIQUEMENT pour CETTE rencontre
+        // Chargées séparément et affichées avec badge coloré dans la sidebar
+        $joueusesEphemeres = $this->joueurRepository->findBy(
+            ['rencontreOrigine' => $rencontre, 'isActive' => true],
+            ['equipeEphemere' => 'ASC', 'numeroMaillot' => 'ASC', 'nom' => 'ASC']
         );
 
         // V2.1f — Filtre les joueuses non convoquées pour ce match
@@ -93,15 +101,30 @@ class StatsLiveController extends AbstractController
         // Cast int explicite : Doctrine peut renvoyer le JSON avec des string
         // selon la version BDD, et in_array(strict:true) casse silencieusement.
         $idsNonConvoquees = array_map('intval', $rencontre->getJoueursNonConvoques());
+
+        // Joueuses officielles convoquées
         $joueuses = array_values(array_filter(
             $joueusesActives,
             fn(Joueur $j) => !in_array((int) $j->getId(), $idsNonConvoquees, true)
         ));
 
+        // [V2.2] Les éphémères adverse ne sont pas "convoquées" au sens classique,
+        // on les ajoute toutes (pas de filtre non-convoquées sur elles)
+        $joueusesEphemeresNotres = array_values(array_filter(
+            $joueusesEphemeres,
+            fn(Joueur $j) => !$j->isEphemereAdverse()
+                          && !in_array((int) $j->getId(), $idsNonConvoquees, true)
+        ));
+        $joueusesEphemeresAdverses = array_values(array_filter(
+            $joueusesEphemeres,
+            fn(Joueur $j) => $j->isEphemereAdverse()
+        ));
+
         // Comptages par joueuse — FILTRÉ par session courante en V2.1d.
-        // Chaque bénévole voit SES propres comptages, pas ceux des autres sessions.
+        // [V2.2] Inclut aussi les joueuses éphémères (notre équipe + adverses)
         $comptagesParJoueur = [];
-        foreach ($joueuses as $j) {
+        $toutesLesJoueuses  = array_merge($joueuses, $joueusesEphemeresNotres, $joueusesEphemeresAdverses);
+        foreach ($toutesLesJoueuses as $j) {
             $qb = $this->actionMatchRepository->createQueryBuilder('a')
                 ->select('a.type AS type, COUNT(a.id) AS nb')
                 ->where('a.joueur = :joueur')
@@ -150,21 +173,24 @@ class StatsLiveController extends AbstractController
         );
 
         return $this->render('manager/evaluation/stats-live.html.twig', [
-            'rencontre'          => $rencontre,
-            'joueuses'           => $joueuses,
-            'comptages_par_joueur' => $comptagesParJoueur,
-            'historique'         => $historique,
+            'rencontre'                   => $rencontre,
+            'joueuses'                    => $joueuses,
+            'comptages_par_joueur'        => $comptagesParJoueur,
+            'historique'                  => $historique,
             // Constantes exposées pour le JS (types autorisés, quart-temps)
-            'types_actions'      => ActionMatch::TYPES,
-            'types_avec_position' => ActionMatch::TYPES_AVEC_POSITION,
-            'quarts_temps'       => ActionMatch::QUARTS_TEMPS,
+            'types_actions'               => ActionMatch::TYPES,
+            'types_avec_position'         => ActionMatch::TYPES_AVEC_POSITION,
+            'quarts_temps'                => ActionMatch::QUARTS_TEMPS,
             // V2.1b
-            'ids_sur_terrain'    => array_filter($idsSurTerrain),
+            'ids_sur_terrain'             => array_filter($idsSurTerrain),
             // V2.1f — liste complète + non convoquées pour le modal effectif
-            'joueuses_toutes'    => $joueusesActives,
-            'ids_non_convoquees' => $idsNonConvoquees,
+            'joueuses_toutes'             => $joueusesActives,
+            'ids_non_convoquees'          => $idsNonConvoquees,
             // V2.1d Étape 2 — session courante du user
-            'session_courante'   => $sessionCourante,
+            'session_courante'            => $sessionCourante,
+            // [V2.2] Joueuses éphémères de CETTE rencontre (notre côté + adversaires)
+            'joueuses_ephemeres_notres'   => $joueusesEphemeresNotres,
+            'joueuses_ephemeres_adverses' => $joueusesEphemeresAdverses,
         ]);
     }
 

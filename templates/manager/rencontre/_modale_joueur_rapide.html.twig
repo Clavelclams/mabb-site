@@ -1,0 +1,282 @@
+{#
+ # Modale "Ajouter une joueuse rapide" — V2.2
+ #
+ # Inclure dans la page détail rencontre :
+ #   {% if is_granted('CLUB_STAFF', rencontre) %}
+ #     {% include 'manager/rencontre/_modale_joueur_rapide.html.twig' %}
+ #   {% endif %}
+ #
+ # Variables attendues :
+ #   rencontre : Rencontre (pour l'URL de la route et le nom de l'adversaire)
+ #
+ # Fonctionnement AJAX :
+ #   - Bouton dans la page ouvre la modale (#modal-joueur-rapide)
+ #   - Submit → POST JSON /rencontres/{id}/joueur-rapide (header X-CSRF-Token)
+ #   - Réponse 201 → ajoute la joueuse dans la liste sans reload
+ #}
+
+{# ─── Overlay modale ─────────────────────────────────────────────────────── #}
+<div id="modal-joueur-rapide"
+     style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.55); backdrop-filter:blur(2px);"
+     aria-modal="true" role="dialog" aria-labelledby="modal-jr-title">
+
+    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                background:var(--mabb-bg-card, #1e2132); border:1px solid var(--mabb-border, #3a3f5c);
+                border-radius:14px; padding:24px 20px; width:min(420px, 95vw); box-shadow:0 8px 40px rgba(0,0,0,.5);">
+
+        {# En-tête #}
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+            <h3 id="modal-jr-title" style="margin:0; font-size:1.05rem; font-weight:800;">
+                ⚡ Ajouter une joueuse rapide
+            </h3>
+            <button type="button" id="modal-jr-close"
+                    style="background:none; border:none; color:var(--mabb-text-muted,#8b929e); font-size:1.4rem; cursor:pointer; line-height:1; padding:0 4px;"
+                    aria-label="Fermer">&times;</button>
+        </div>
+
+        {# Onglets : Notre équipe / Adversaire #}
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <button type="button" class="btn-tab-jr active" data-side="notres"
+                    style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--mabb-accent, #3b82f6);
+                           background:var(--mabb-accent, #3b82f6); color:#fff; font-weight:700; font-size:.85rem; cursor:pointer;">
+                Notre équipe
+            </button>
+            <button type="button" class="btn-tab-jr" data-side="adverse"
+                    style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--mabb-border, #3a3f5c);
+                           background:transparent; color:var(--mabb-text-muted,#8b929e); font-weight:600; font-size:.85rem; cursor:pointer;">
+                Équipe adverse
+            </button>
+        </div>
+
+        {# Formulaire #}
+        <form id="form-joueur-rapide" novalidate>
+            <input type="hidden" id="jr-side" value="notres">
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div>
+                    <label style="font-size:.78rem; font-weight:600; display:block; margin-bottom:4px;">
+                        Prénom <span style="color:#ef4444;">*</span>
+                    </label>
+                    <input type="text" id="jr-prenom" maxlength="80" required
+                           style="width:100%; padding:8px 10px; border-radius:7px; border:1px solid var(--mabb-border,#3a3f5c);
+                                  background:var(--mabb-bg,#111827); color:var(--mabb-text,#f1f5f9); font-size:.9rem;"
+                           placeholder="Fatou">
+                </div>
+                <div>
+                    <label style="font-size:.78rem; font-weight:600; display:block; margin-bottom:4px;">
+                        Nom <span style="color:#ef4444;">*</span>
+                    </label>
+                    <input type="text" id="jr-nom" maxlength="80" required
+                           style="width:100%; padding:8px 10px; border-radius:7px; border:1px solid var(--mabb-border,#3a3f5c);
+                                  background:var(--mabb-bg,#111827); color:var(--mabb-text,#f1f5f9); font-size:.9rem;"
+                           placeholder="DIALLO">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:80px 1fr; gap:10px; margin-bottom:10px;">
+                <div>
+                    <label style="font-size:.78rem; font-weight:600; display:block; margin-bottom:4px;">N° maillot</label>
+                    <input type="number" id="jr-numero" min="0" max="99"
+                           style="width:100%; padding:8px 10px; border-radius:7px; border:1px solid var(--mabb-border,#3a3f5c);
+                                  background:var(--mabb-bg,#111827); color:var(--mabb-text,#f1f5f9); font-size:.9rem; text-align:center;"
+                           placeholder="7">
+                </div>
+                <div>
+                    <label style="font-size:.78rem; font-weight:600; display:block; margin-bottom:4px;">Couleur maillot</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="color" id="jr-couleur" value="#3b82f6"
+                               style="width:40px; height:36px; padding:2px; border-radius:6px; border:1px solid var(--mabb-border,#3a3f5c); cursor:pointer;">
+                        <input type="text" id="jr-couleur-hex" maxlength="20" value="#3b82f6"
+                               style="flex:1; padding:8px 10px; border-radius:7px; border:1px solid var(--mabb-border,#3a3f5c);
+                                      background:var(--mabb-bg,#111827); color:var(--mabb-text,#f1f5f9); font-size:.85rem;"
+                               placeholder="#3b82f6">
+                    </div>
+                </div>
+            </div>
+
+            {# Champ équipe adverse — visible seulement si onglet "Adversaire" #}
+            <div id="jr-equipe-adverse-row" style="display:none; margin-bottom:10px;">
+                <label style="font-size:.78rem; font-weight:600; display:block; margin-bottom:4px;">
+                    Nom de l'équipe adverse
+                </label>
+                <input type="text" id="jr-equipe-adverse" maxlength="100"
+                       style="width:100%; padding:8px 10px; border-radius:7px; border:1px solid var(--mabb-border,#3a3f5c);
+                              background:var(--mabb-bg,#111827); color:var(--mabb-text,#f1f5f9); font-size:.9rem;"
+                       placeholder="{{ rencontre.adversaire }}">
+                <div style="font-size:.73rem; color:var(--mabb-text-muted,#8b929e); margin-top:3px;">
+                    Par défaut : "{{ rencontre.adversaire }}"
+                </div>
+            </div>
+
+            {# Erreur #}
+            <div id="jr-error" style="display:none; padding:8px 12px; background:rgba(239,68,68,.1);
+                                       border:1px solid rgba(239,68,68,.3); border-radius:6px; font-size:.82rem;
+                                       color:#ef4444; margin-bottom:10px;"></div>
+
+            {# Submit #}
+            <button type="submit" id="jr-submit"
+                    style="width:100%; padding:11px; border-radius:9px; border:none;
+                           background:var(--mabb-accent, #3b82f6); color:#fff; font-weight:800; font-size:.95rem; cursor:pointer;">
+                ➕ Ajouter la joueuse
+            </button>
+        </form>
+
+        {# Liste dynamique des éphémères créées — mise à jour sans reload #}
+        <div id="jr-liste" style="margin-top:16px;">
+            {% set ephemeresExistantes = [] %}
+            {# On a besoin de passer les éphémères depuis le controller — voir show.html.twig #}
+        </div>
+    </div>
+</div>
+
+{# ─── Script modale ───────────────────────────────────────────────────────── #}
+<script>
+(function() {
+    const rencontreId   = {{ rencontre.id }};
+    const csrfToken     = '{{ csrf_token("joueur_rapide_" ~ rencontre.id) }}';
+    const overlay       = document.getElementById('modal-joueur-rapide');
+    const closeBtn      = document.getElementById('modal-jr-close');
+    const form          = document.getElementById('form-joueur-rapide');
+    const errorBox      = document.getElementById('jr-error');
+    const submitBtn     = document.getElementById('jr-submit');
+    const sideInput     = document.getElementById('jr-side');
+    const tabBtns       = document.querySelectorAll('.btn-tab-jr');
+    const adverseRow    = document.getElementById('jr-equipe-adverse-row');
+    const colorPicker   = document.getElementById('jr-couleur');
+    const colorHex      = document.getElementById('jr-couleur-hex');
+    const listeDiv      = document.getElementById('jr-liste');
+
+    // Sync color picker ↔ hex input
+    colorPicker.addEventListener('input', () => { colorHex.value = colorPicker.value; });
+    colorHex.addEventListener('input', () => {
+        if (/^#[0-9a-fA-F]{6}$/.test(colorHex.value)) colorPicker.value = colorHex.value;
+    });
+
+    // Onglets Notre équipe / Adversaire
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => {
+                b.style.background    = 'transparent';
+                b.style.color         = 'var(--mabb-text-muted, #8b929e)';
+                b.style.borderColor   = 'var(--mabb-border, #3a3f5c)';
+            });
+            btn.style.background  = 'var(--mabb-accent, #3b82f6)';
+            btn.style.color       = '#fff';
+            btn.style.borderColor = 'var(--mabb-accent, #3b82f6)';
+            sideInput.value = btn.dataset.side;
+            adverseRow.style.display = btn.dataset.side === 'adverse' ? 'block' : 'none';
+        });
+    });
+
+    // Ouvrir / fermer
+    document.getElementById('btn-ouvrir-jr')?.addEventListener('click', () => {
+        overlay.style.display = 'block';
+        document.getElementById('jr-prenom')?.focus();
+    });
+    closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
+
+    // Rendu d'une joueuse dans la liste
+    function renderJoueurCard(joueur) {
+        const card = document.createElement('div');
+        card.id = 'jr-card-' + joueur.id;
+        // Stocker le token CSRF pour la suppression (fourni par le server dans la réponse JSON)
+        card.dataset.csrf = joueur.csrfSupprimer || '';
+        const sideLabel = joueur.isAdverse
+            ? `<span style="background:rgba(239,68,68,.15);color:#ef4444;padding:2px 7px;border-radius:4px;font-size:.72rem;">Adverse${joueur.equipeEphemere ? ' · ' + joueur.equipeEphemere : ''}</span>`
+            : `<span style="background:rgba(59,130,246,.15);color:#3b82f6;padding:2px 7px;border-radius:4px;font-size:.72rem;">Notre équipe</span>`;
+        const couleur = joueur.couleur || '#6b7280';
+        card.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.04);border-radius:8px;margin-bottom:6px;gap:8px;';
+        card.innerHTML = `
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:10px;height:10px;border-radius:50%;background:${couleur};flex-shrink:0;"></span>
+                <div>
+                    <div style="font-weight:700;font-size:.88rem;">${joueur.nomComplet}${joueur.numero != null ? ' <span style="opacity:.6">#' + joueur.numero + '</span>' : ''}</div>
+                    <div style="margin-top:2px;">${sideLabel}</div>
+                </div>
+            </div>
+            <button type="button" onclick="supprimerEphemere(${joueur.id}, this)"
+                    style="background:none;border:1px solid rgba(239,68,68,.3);color:#ef4444;border-radius:6px;padding:3px 8px;font-size:.75rem;cursor:pointer;">
+                ✕
+            </button>
+        `;
+        listeDiv.prepend(card);
+    }
+
+    // Submit
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        errorBox.style.display = 'none';
+
+        const prenom = document.getElementById('jr-prenom').value.trim();
+        const nom    = document.getElementById('jr-nom').value.trim();
+        if (!prenom || !nom) {
+            errorBox.textContent = 'Prénom et nom sont requis.';
+            errorBox.style.display = 'block';
+            return;
+        }
+
+        const isAdverse = sideInput.value === 'adverse';
+        const equipeAdverse = document.getElementById('jr-equipe-adverse').value.trim();
+
+        submitBtn.disabled   = true;
+        submitBtn.textContent = '⏳ Ajout…';
+
+        try {
+            const resp = await fetch(`/rencontres/${rencontreId}/joueur-rapide`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken,
+                },
+                body: JSON.stringify({
+                    prenom,
+                    nom,
+                    numero: document.getElementById('jr-numero').value !== '' ? parseInt(document.getElementById('jr-numero').value) : null,
+                    equipeEphemere: isAdverse ? (equipeAdverse || '{{ rencontre.adversaire }}') : null,
+                    couleurMaillot: colorHex.value || null,
+                }),
+            });
+
+            const data = await resp.json();
+            if (!resp.ok) {
+                errorBox.textContent = data.error || 'Erreur inattendue.';
+                errorBox.style.display = 'block';
+            } else {
+                renderJoueurCard(data);
+                form.reset();
+                colorPicker.value = '#3b82f6';
+                colorHex.value    = '#3b82f6';
+                // Reset onglets
+                tabBtns[0].click();
+                // Notifier la sidebar stats live si ouverte
+                document.dispatchEvent(new CustomEvent('joueur-ephemere-ajoute', { detail: data }));
+            }
+        } catch (err) {
+            errorBox.textContent = 'Erreur réseau. Réessaie.';
+            errorBox.style.display = 'block';
+        } finally {
+            submitBtn.disabled    = false;
+            submitBtn.textContent = '➕ Ajouter la joueuse';
+        }
+    });
+})();
+
+// Suppression éphémère
+async function supprimerEphemere(joueurId, btn) {
+    if (!confirm('Supprimer cette joueuse éphémère ?')) return;
+    // Token généré côté serveur pour un ID dynamique — on utilise le même token que le controller
+    // Limitation : pour une génération vraiment par-joueur il faudrait une route dédiée
+    // ou passer les tokens depuis le controller. Ici on accepte que le token soit générique.
+    const csrfToken = btn.closest('[data-csrf]')?.dataset.csrf || '';
+    try {
+        const resp = await fetch(`/joueurs/${joueurId}/ephemere`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-Token': csrfToken },
+        });
+        if (resp.ok) {
+            document.getElementById('jr-card-' + joueurId)?.remove();
+        }
+    } catch {}
+}
+</script>

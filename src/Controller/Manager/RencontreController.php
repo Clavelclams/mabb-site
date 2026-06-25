@@ -3,6 +3,7 @@
 namespace App\Controller\Manager;
 
 use App\Entity\Core\User;
+use App\Entity\Sport\Equipe;
 use App\Entity\Sport\Joueur;
 use App\Entity\Sport\Mission;
 use App\Entity\Sport\Rencontre;
@@ -10,6 +11,7 @@ use App\Entity\Sport\RencontreRole;
 use App\Form\Manager\RencontreType;
 use App\Gamification\BadgeChecker;
 use App\Repository\Sport\EquipeRepository;
+use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\RencontreRepository;
 use App\Repository\Sport\RencontreRoleRepository;
 use App\Security\Tenant\TenantResolver;
@@ -17,9 +19,11 @@ use App\Security\Voter\ClubVoter;
 use App\Service\RencontrePdfUploader;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Security\Csrf\CsrfTokenManagerInterface;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\ResponseHeaderBag;
@@ -44,9 +48,11 @@ class RencontreController extends AbstractController
         private readonly TenantResolver $tenantResolver,
         private readonly RencontreRepository $rencontreRepository,
         private readonly EquipeRepository $equipeRepository,
+        private readonly JoueurRepository $joueurRepository,
         private readonly EntityManagerInterface $em,
         private readonly BadgeChecker $badgeChecker,
         private readonly RencontreRoleRepository $rencontreRoleRepository,
+        private readonly CsrfTokenManagerInterface $csrfTokenManager,
     ) {}
 
     /**
@@ -132,8 +138,18 @@ class RencontreController extends AbstractController
     {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $rencontre);
 
+        // [V2.2] Charger les joueuses éphémères pour la modale et l'affichage
+        $joueusesEphemeres = [];
+        if ($rencontre->isNonOfficielle()) {
+            $joueusesEphemeres = $this->joueurRepository->findBy(
+                ['rencontreOrigine' => $rencontre],
+                ['equipeEphemere' => 'ASC', 'numeroMaillot' => 'ASC', 'nom' => 'ASC']
+            );
+        }
+
         return $this->render('manager/rencontre/show.html.twig', [
-            'rencontre' => $rencontre,
+            'rencontre'          => $rencontre,
+            'joueuses_ephemeres' => $joueusesEphemeres,
         ]);
     }
 
@@ -165,13 +181,19 @@ class RencontreController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // [B31 12/06/2026] Parse les joueuses éphémères saisies en texte libre
-            $ephemeresTexte = (string) $form->get('joueursEphemeresTexte')->getData();
-            $rencontre->setJoueursExternes($this->parseJoueursEphemeres($ephemeresTexte));
-
+            // [V2.2] Les joueuses éphémères ne sont plus saisies dans le form de création.
+            // Elles s'ajoutent via la modale "Ajouter joueuse rapide" sur la page détail
+            // rencontre (route manager_rencontre_joueur_rapide). Workflow plus intuitif :
+            // on crée d'abord la rencontre, puis on ajoute les joueuses.
             $this->em->persist($rencontre);
             $this->em->flush();
-            $this->addFlash('success', sprintf('Rencontre contre %s créée.', $rencontre->getAdversaire()));
+            $this->addFlash('success', sprintf(
+                'Rencontre contre %s créée.%s',
+                $rencontre->getAdversaire(),
+                $rencontre->isExhibition()
+                    ? ' Ajoute maintenant les joueuses éphémères avec le bouton "Joueuse rapide".'
+                    : ''
+            ));
             return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
         }
 
@@ -870,5 +892,216 @@ class RencontreController extends AbstractController
 
         $this->addFlash('info', 'Validation Stats FFBB annulée.');
         return $this->redirectToRoute('manager_rencontre_show', ['id' => $rencontre->getId()]);
+    }
+
+    // =========================================================================
+    // [V2.2 — 25/06/2026] JOUEUSES ÉPHÉMÈRES
+    // =========================================================================
+
+    /**
+     * Création d'une joueuse éphémère pour une rencontre (AJAX JSON).
+     *
+     * POST /rencontres/{id}/joueur-rapide
+     * Body JSON :
+     * {
+     *   "prenom": "Fatou",
+     *   "nom": "Diallo",
+     *   "numero": 7,
+     *   "equipeEphemere": null,           // null = notre équipe, string = adversaire
+     *   "couleurMaillot": "#ef4444"       // optionnel
+     * }
+     *
+     * Réponse JSON 201 :
+     * { "id": 42, "nomComplet": "Fatou Diallo", "numero": 7, "equipeEphemere": null, "couleur": "#ef4444" }
+     *
+     * Sécurité :
+     *   - CLUB_STAFF requis
+     *   - CSRF token via header X-CSRF-Token (token_id: "joueur_rapide_{rencontre.id}")
+     *   - Multi-tenant : rencontre doit appartenir au club courant
+     */
+    #[Route(
+        '/rencontres/{id}/joueur-rapide',
+        name: 'manager_rencontre_joueur_rapide',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function ajouterJoueurRapide(Rencontre $rencontre, Request $request): JsonResponse
+    {
+        // Auth
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        // CSRF
+        $csrfToken = $request->headers->get('X-CSRF-Token', '');
+        if (!$this->isCsrfTokenValid('joueur_rapide_' . $rencontre->getId(), $csrfToken)) {
+            return $this->json(['error' => 'Token CSRF invalide.'], Response::HTTP_FORBIDDEN);
+        }
+
+        // Lecture body JSON
+        $body = json_decode((string) $request->getContent(), true) ?? [];
+
+        $prenom = trim((string) ($body['prenom'] ?? ''));
+        $nom    = trim((string) ($body['nom'] ?? ''));
+
+        if ($prenom === '' || $nom === '') {
+            return $this->json(['error' => 'Prénom et nom sont requis.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $numero         = isset($body['numero']) ? (int) $body['numero'] : null;
+        $equipeEphemere = isset($body['equipeEphemere']) && $body['equipeEphemere'] !== ''
+            ? (string) $body['equipeEphemere']
+            : null;
+        $couleur        = isset($body['couleurMaillot']) && $body['couleurMaillot'] !== ''
+            ? substr((string) $body['couleurMaillot'], 0, 20)
+            : null;
+
+        // Validation numéro maillot
+        if ($numero !== null && ($numero < 0 || $numero > 99)) {
+            return $this->json(['error' => 'Numéro de maillot invalide (0–99).'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // Création du Joueur éphémère
+        // Pas d'équipe officielle assignée — isTemporaire=true l'identifie
+        $joueur = new Joueur();
+        $joueur->setClub($rencontre->getClub());
+        $joueur->setPrenom($prenom);
+        $joueur->setNom($nom);
+        $joueur->setNumeroMaillot($numero);
+        $joueur->setIsTemporaire(true);
+        $joueur->setEquipeEphemere($equipeEphemere);
+        $joueur->setCouleurMaillot($couleur);
+        $joueur->setRencontreOrigine($rencontre);
+
+        // On lui assigne l'équipe de la rencontre seulement si c'est une joueuse "notre équipe"
+        // → les stats live peuvent la trouver via rencontreOrigine ou via equipe
+        if ($equipeEphemere === null) {
+            $joueur->setEquipe($rencontre->getEquipe());
+        }
+
+        $this->em->persist($joueur);
+        $this->em->flush();
+
+        // Passer le token CSRF de suppression dans la réponse pour que le JS puisse
+        // supprimer la joueuse dynamiquement sans reload
+        $csrfSupprimer = $this->csrfTokenManager
+            ->getToken('supprimer_ephemere_' . $joueur->getId())
+            ->getValue();
+
+        return $this->json([
+            'id'             => $joueur->getId(),
+            'nomComplet'     => $joueur->getNomComplet(),
+            'prenom'         => $joueur->getPrenom(),
+            'nom'            => $joueur->getNom(),
+            'numero'         => $joueur->getNumeroMaillot(),
+            'equipeEphemere' => $joueur->getEquipeEphemere(),
+            'couleur'        => $joueur->getCouleurMaillot(),
+            'isAdverse'      => $joueur->isEphemereAdverse(),
+            'csrfSupprimer'  => $csrfSupprimer,
+        ], Response::HTTP_CREATED);
+    }
+
+    /**
+     * Suppression d'une joueuse éphémère.
+     *
+     * DELETE /joueurs/{id}/ephemere
+     * Sécurité : CLUB_STAFF, multi-tenant, isTemporaire doit être true.
+     */
+    #[Route(
+        '/joueurs/{id}/ephemere',
+        name: 'manager_joueur_ephemere_supprimer',
+        methods: ['DELETE'],
+        requirements: ['id' => '\d+']
+    )]
+    public function supprimerJoueurEphemere(Joueur $joueur, Request $request): JsonResponse
+    {
+        // Multi-tenant + auth
+        $club = $this->tenantResolver->getCurrentClub();
+        if (!$club || $joueur->getClub()->getId() !== $club->getId()) {
+            return $this->json(['error' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        // Sécurité : ne peut supprimer QUE les éphémères (pas les vraies joueuses)
+        if (!$joueur->isTemporaire()) {
+            return $this->json(['error' => 'Seules les joueuses éphémères peuvent être supprimées par cette route.'], Response::HTTP_FORBIDDEN);
+        }
+
+        // CSRF
+        $csrfToken = $request->headers->get('X-CSRF-Token', '');
+        if (!$this->isCsrfTokenValid('supprimer_ephemere_' . $joueur->getId(), $csrfToken)) {
+            return $this->json(['error' => 'Token CSRF invalide.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $this->em->remove($joueur);
+        $this->em->flush();
+
+        return $this->json(['success' => true]);
+    }
+
+    /**
+     * Conversion joueuse éphémère → joueuse officielle ("Recruter").
+     *
+     * POST /joueurs/{id}/recruter
+     *
+     * Body form (multipart ou JSON) :
+     *   equipeId  : int (optionnel — sinon reste sur l'équipe de la rencontre)
+     *   licence   : string (optionnel)
+     *
+     * La conversion conserve TOUT l'historique ActionMatch / PresenceTerrain.
+     * Seul isTemporaire passe à false. L'historique reste lié à ce joueur.
+     *
+     * Réponse : redirect vers la fiche joueuse Manager (ou JSON si X-Requested-With: XMLHttpRequest).
+     */
+    #[Route(
+        '/joueurs/{id}/recruter',
+        name: 'manager_joueur_recruter',
+        methods: ['POST'],
+        requirements: ['id' => '\d+']
+    )]
+    public function recruterJoueur(Joueur $joueur, Request $request): Response
+    {
+        // Multi-tenant
+        $club = $this->tenantResolver->getCurrentClub();
+        if (!$club || $joueur->getClub()->getId() !== $club->getId()) {
+            throw $this->createAccessDeniedException();
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        // Sécurité : doit être éphémère
+        if (!$joueur->isTemporaire()) {
+            $this->addFlash('warning', 'Cette joueuse est déjà officielle.');
+            return $this->redirectToRoute('manager_rencontre_index');
+        }
+
+        // CSRF
+        $token = $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('recruter_joueur_' . $joueur->getId(), $token)) {
+            $this->addFlash('error', 'Token de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_index');
+        }
+
+        // Équipe cible
+        $equipe = null;
+        $equipeId = (int) $request->request->get('equipeId', 0);
+        if ($equipeId > 0) {
+            $equipe = $this->equipeRepository->find($equipeId);
+            if ($equipe && $equipe->getClub()->getId() !== $club->getId()) {
+                $equipe = null; // anti-IDOR
+            }
+        }
+
+        $licence = trim((string) $request->request->get('licence', '')) ?: null;
+
+        // Conversion — garde tout l'historique ActionMatch intact
+        $joueur->recruter($equipe, $licence);
+
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf(
+            '✓ %s recrutée ! Son historique de stats est conservé.',
+            $joueur->getNomComplet()
+        ));
+
+        // Redirige vers la fiche joueur si la route existe
+        return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
     }
 }

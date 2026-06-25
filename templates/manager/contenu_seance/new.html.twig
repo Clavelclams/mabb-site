@@ -1,0 +1,108 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Nouvelle fiche séance{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <a href="{{ path('manager_seances_index') }}" class="btn btn-sm btn-outline-secondary mb-2">
+            <i class="bi bi-arrow-left"></i> Bibliothèque
+        </a>
+        <h1><i class="bi bi-plus-square-fill"></i> Nouvelle fiche séance</h1>
+    </div>
+</div>
+
+{% for label, messages in app.flashes(['success','error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+{{ form_start(form, {attr: {enctype: 'multipart/form-data', class: 'form-mabb'}}) }}
+
+<div class="card-mabb" style="margin-bottom:1.2rem; padding:1.2rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 1rem 0; color:var(--mabb-text);">
+        <i class="bi bi-pencil-fill" style="color:#ea580c;"></i> Informations de la séance
+    </h2>
+
+    <div class="mb-3">
+        {{ form_label(form.titre, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.titre, {attr: {class: 'form-control'}}) }}
+        {{ form_errors(form.titre) }}
+        {{ form_help(form.titre) }}
+    </div>
+
+    <div class="mb-3">
+        {{ form_label(form.categoriesAge, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        <div style="display:flex; flex-wrap:wrap; gap:8px; padding:6px 0;">
+            {% for choice in form.categoriesAge %}
+                <label style="display:flex; align-items:center; gap:6px; cursor:pointer; background:rgba(234,88,12,.07); border:1px solid rgba(234,88,12,.3); border-radius:6px; padding:5px 12px; font-size:.88rem; font-weight:500; transition: background .15s;"
+                       onmouseover="this.style.background='rgba(234,88,12,.15)'"
+                       onmouseout="this.style.background='rgba(234,88,12,.07)'">
+                    {{ form_widget(choice) }}
+                    {{ choice.vars.label }}
+                </label>
+            {% endfor %}
+        </div>
+        {{ form_errors(form.categoriesAge) }}
+        {{ form_help(form.categoriesAge) }}
+    </div>
+</div>
+
+<div class="card-mabb" style="margin-bottom:1.2rem; padding:1.2rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 1rem 0; color:var(--mabb-text);">
+        <i class="bi bi-tags-fill" style="color:#3b82f6;"></i> Thèmes &amp; Description
+    </h2>
+
+    <div class="mb-3">
+        {{ form_label(form.themes, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.themes, {attr: {class: 'form-select', size: 8}}) }}
+        {{ form_errors(form.themes) }}
+        <div class="form-text">{{ form_help(form.themes)|raw }}</div>
+    </div>
+
+    <div class="mb-3">
+        {{ form_label(form.description, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.description, {attr: {class: 'form-control'}}) }}
+        {{ form_errors(form.description) }}
+        {{ form_help(form.description) }}
+    </div>
+</div>
+
+<div class="card-mabb" style="margin-bottom:1.2rem; padding:1.2rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 1rem 0; color:var(--mabb-text);">
+        <i class="bi bi-paperclip" style="color:#10b981;"></i> Fichiers joints
+    </h2>
+
+    <div class="mb-3">
+        {{ form_label(form.fichiers_upload, null, {label_attr: {class: 'form-label fw-semibold'}}) }}
+        {{ form_widget(form.fichiers_upload, {attr: {class: 'form-control'}}) }}
+        {{ form_errors(form.fichiers_upload) }}
+        {{ form_help(form.fichiers_upload) }}
+    </div>
+</div>
+
+<div class="card-mabb" style="margin-bottom:1.5rem; padding:1rem 1.4rem;">
+    <h2 style="font-size:.95rem; font-weight:700; margin:0 0 0.8rem 0; color:var(--mabb-text);">
+        <i class="bi bi-eye-fill" style="color:#8b5cf6;"></i> Partage
+    </h2>
+    <div class="form-check">
+        {{ form_widget(form.isPublicClub, {attr: {class: 'form-check-input'}}) }}
+        {{ form_label(form.isPublicClub, null, {label_attr: {class: 'form-check-label'}}) }}
+    </div>
+    {{ form_help(form.isPublicClub) }}
+</div>
+
+<div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button type="submit" class="btn btn-primary">
+        <i class="bi bi-check-lg"></i> Créer la fiche
+    </button>
+    <a href="{{ path('manager_seances_index') }}" class="btn btn-outline-secondary">
+        Annuler
+    </a>
+</div>
+
+{{ form_end(form) }}
+{% endblock %}

@@ -1,0 +1,169 @@
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}Séances — PIRB{% endblock %}
+
+{% block stylesheets %}
+.seance-card {
+    background: var(--pirb-bg-card);
+    border: 1px solid var(--pirb-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: transform .15s, box-shadow .15s;
+}
+.seance-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.seance-card.prochaine { border-left: 4px solid var(--pirb-accent); }
+.seance-card.passee { border-left: 4px solid var(--pirb-border); opacity: .9; }
+.note-stars { font-size:1.1rem; }
+.note-badge { display:inline-block; font-size:.75rem; padding:2px 8px; border-radius:20px; font-weight:600; }
+.solo-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:4px 10px; border-radius:6px; font-size:.78rem; font-weight:600;
+    border:1px solid var(--pirb-border);
+}
+.solo-pill.pending { background:rgba(245,158,11,.1); color:#f59e0b; border-color:rgba(245,158,11,.3); }
+.solo-pill.approved { background:rgba(16,185,129,.1); color:#10b981; border-color:rgba(16,185,129,.3); }
+.solo-pill.rejected { background:rgba(239,68,68,.1); color:#ef4444; border-color:rgba(239,68,68,.3); }
+{% endblock %}
+
+{% block body %}
+
+{% for label, messages in app.flashes(['success','error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="pirb-card" style="padding:12px 14px; margin-bottom:10px; border-left:4px solid {{ label == 'success' ? '#10b981' : (label == 'error' ? '#ef4444' : '#3b82f6') }}; background:{{ label == 'success' ? 'rgba(16,185,129,.1)' : (label == 'error' ? 'rgba(239,68,68,.1)' : 'rgba(59,130,246,.1)') }}; font-size:.88rem;">
+            {{ msg }}
+        </div>
+    {% endfor %}
+{% endfor %}
+
+{# ─── Header #}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+    <h1 style="font-size:1.3rem; font-weight:800; margin:0;">
+        <i class="bi bi-calendar-week" style="color:var(--pirb-accent);"></i> Séances
+    </h1>
+    <a href="{{ path('pirb_seances_solo_declarer') }}"
+       style="display:inline-flex; align-items:center; gap:6px; background:var(--pirb-accent); color:#fff; padding:8px 14px; border-radius:8px; font-weight:700; font-size:.85rem; text-decoration:none;">
+        <i class="bi bi-plus-lg"></i> Séance solo
+    </a>
+</div>
+
+{# ─── Prochaines séances ─────────────────────────────────────────────────── #}
+<section style="margin-bottom:24px;">
+    <h2 style="font-size:.9rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+        À venir ({{ prochaines|length }})
+    </h2>
+
+    {% if prochaines is empty %}
+        <div class="pirb-card" style="text-align:center; padding:24px 16px; color:var(--pirb-text-muted); font-size:.88rem;">
+            <i class="bi bi-calendar-x" style="font-size:2rem; display:block; margin-bottom:8px;"></i>
+            Aucune séance programmée pour le moment.
+        </div>
+    {% else %}
+        {% for seance in prochaines %}
+            <div class="seance-card prochaine">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:.95rem; margin-bottom:2px;">
+                            {{ seance.titreAffichage }}
+                        </div>
+                        <div style="font-size:.8rem; color:var(--pirb-text-muted);">
+                            <i class="bi bi-calendar3"></i>
+                            {{ seance.date|date('d/m/Y H:i') }}
+                            {% if seance.lieu %} · <i class="bi bi-geo-alt"></i> {{ seance.lieu }}{% endif %}
+                            {% if seance.dureeMinutes %} · {{ seance.dureeMinutes }} min{% endif %}
+                        </div>
+
+                        {# Thèmes — visible seulement si pas privé #}
+                        {% if not seance.contenuPrive and seance.contenuSeance and seance.contenuSeance.themes|length > 0 %}
+                            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
+                                {% for theme in seance.contenuSeance.themes|slice(0, 4) %}
+                                    <span style="font-size:.7rem; padding:2px 7px; border-radius:4px; background:rgba(234,88,12,.1); color:var(--pirb-accent); font-weight:600;">{{ theme.libelle }}</span>
+                                {% endfor %}
+                            </div>
+                        {% elseif seance.contenuPrive %}
+                            <div style="margin-top:6px; font-size:.78rem; color:var(--pirb-text-muted);">
+                                <i class="bi bi-lock-fill"></i> Contenu de la séance masqué
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {# Badge type #}
+                    <div>
+                        <span style="font-size:.72rem; padding:3px 8px; border-radius:20px; background:rgba(234,88,12,.1); color:var(--pirb-accent); font-weight:700; white-space:nowrap;">
+                            {{ seance.type }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</section>
+
+{# ─── Séances passées (noter) ────────────────────────────────────────────── #}
+<section style="margin-bottom:24px;">
+    <h2 style="font-size:.9rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+        Passées — noter ({{ passees|length }})
+    </h2>
+
+    {% if passees is empty %}
+        <p style="color:var(--pirb-text-muted); font-size:.88rem; text-align:center; padding:16px 0;">Aucune séance passée enregistrée.</p>
+    {% else %}
+        {% for seance in passees %}
+            {% set maNote = mesNotes[seance.id] ?? null %}
+            <div class="seance-card passee">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:130px;">
+                        <div style="font-weight:600; font-size:.88rem; margin-bottom:2px;">{{ seance.titreAffichage }}</div>
+                        <div style="font-size:.76rem; color:var(--pirb-text-muted);">
+                            {{ seance.date|date('d/m/Y') }}
+                            {% if seance.lieu %} · {{ seance.lieu }}{% endif %}
+                        </div>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        {% if maNote %}
+                            <span class="note-stars" title="Ta note : {{ maNote.note }}/5">
+                                {% for i in 1..5 %}{{ i <= maNote.note ? '⭐' : '·' }}{% endfor %}
+                            </span>
+                            <a href="{{ path('pirb_seances_show', {id: seance.id}) }}"
+                               style="font-size:.78rem; color:var(--pirb-text-muted); text-decoration:none;">
+                                Modifier
+                            </a>
+                        {% else %}
+                            <a href="{{ path('pirb_seances_show', {id: seance.id}) }}"
+                               style="display:inline-flex; align-items:center; gap:4px; padding:5px 12px; background:var(--pirb-accent); color:#fff; border-radius:7px; font-size:.8rem; font-weight:700; text-decoration:none;">
+                                <i class="bi bi-star"></i> Noter
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</section>
+
+{# ─── Séances solo ────────────────────────────────────────────────────────── #}
+{% if solos|length > 0 %}
+<section>
+    <h2 style="font-size:.9rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+        Mes séances solo ({{ solos|length }})
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:6px;">
+        {% for solo in solos %}
+            <div class="pirb-card" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                <div>
+                    <div style="font-weight:600; font-size:.88rem;">{{ constant('App\\Entity\\Sport\\SeanceSolo::TYPES')[solo.type] ?? solo.type }}</div>
+                    <div style="font-size:.76rem; color:var(--pirb-text-muted);">{{ solo.dateSolo|date('d/m/Y') }} · {{ solo.dureeMinutes }} min</div>
+                </div>
+                <span class="solo-pill {{ solo.statut }}">
+                    {% if solo.statut == 'approved' %}<i class="bi bi-check-circle-fill"></i> Validé
+                    {% elseif solo.statut == 'rejected' %}<i class="bi bi-x-circle-fill"></i> Refusé
+                    {% else %}<i class="bi bi-hourglass-split"></i> En attente{% endif %}
+                </span>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}

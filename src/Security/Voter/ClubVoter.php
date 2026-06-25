@@ -29,11 +29,23 @@ use Symfony\Component\Security\Core\Authorization\Voter\Voter;
 class ClubVoter extends Voter
 {
     // Attributs disponibles
-    public const CLUB_MEMBER   = 'CLUB_MEMBER';   // Appartenir au club (tout rôle)
-    public const CLUB_COACH    = 'CLUB_COACH';    // Être COACH dans ce club
-    public const CLUB_ADMIN    = 'CLUB_ADMIN';    // Être DIRIGEANT dans ce club
-    public const CLUB_STAFF    = 'CLUB_STAFF';    // Être STAFF ou COACH ou DIRIGEANT
-    public const CLUB_JOUEUR   = 'CLUB_JOUEUR';   // Être JOUEUR dans ce club
+    public const CLUB_MEMBER        = 'CLUB_MEMBER';        // Appartenir au club (tout rôle)
+    public const CLUB_COACH         = 'CLUB_COACH';         // Être COACH dans ce club
+    public const CLUB_ADMIN         = 'CLUB_ADMIN';         // Être DIRIGEANT dans ce club
+    public const CLUB_STAFF         = 'CLUB_STAFF';         // Être STAFF ou COACH ou DIRIGEANT
+    public const CLUB_JOUEUR        = 'CLUB_JOUEUR';        // Être JOUEUR dans ce club
+
+    /**
+     * CLUB_STAFF_ELARGI — accès élargi au personnel opérationnel du club.
+     *
+     * Inclut : DIRIGEANT, COACH, STAFF, TRESORIER, EMPLOYE (service civique).
+     * Exclut : BENEVOLE, PARENT, JOUEUR.
+     *
+     * Utilisé pour les sections sensibles mais non-secrètes : réunions du
+     * bureau, documents internes, plannings staff, etc.
+     * Les bénévoles, parents et joueurs n'ont pas accès à ces informations.
+     */
+    public const CLUB_STAFF_ELARGI  = 'CLUB_STAFF_ELARGI'; // DIRIGEANT+COACH+STAFF+TRESORIER+EMPLOYE
 
     private const SUPPORTED_ATTRIBUTES = [
         self::CLUB_MEMBER,
@@ -41,6 +53,7 @@ class ClubVoter extends Voter
         self::CLUB_ADMIN,
         self::CLUB_STAFF,
         self::CLUB_JOUEUR,
+        self::CLUB_STAFF_ELARGI,
     ];
 
     public function __construct(
@@ -87,12 +100,13 @@ class ClubVoter extends Voter
         }
 
         return match ($attribute) {
-            self::CLUB_MEMBER => $this->isMember($user, $club),
-            self::CLUB_COACH  => $this->hasMetaRole($user, $club, UserClubRole::ROLE_COACH),
-            self::CLUB_ADMIN  => $this->hasMetaRole($user, $club, UserClubRole::ROLE_DIRIGEANT),
-            self::CLUB_STAFF  => $this->isStaffOrAbove($user, $club),
-            self::CLUB_JOUEUR => $this->hasMetaRole($user, $club, UserClubRole::ROLE_JOUEUR),
-            default           => false,
+            self::CLUB_MEMBER        => $this->isMember($user, $club),
+            self::CLUB_COACH         => $this->hasMetaRole($user, $club, UserClubRole::ROLE_COACH),
+            self::CLUB_ADMIN         => $this->hasMetaRole($user, $club, UserClubRole::ROLE_DIRIGEANT),
+            self::CLUB_STAFF         => $this->isStaffOrAbove($user, $club),
+            self::CLUB_JOUEUR        => $this->hasMetaRole($user, $club, UserClubRole::ROLE_JOUEUR),
+            self::CLUB_STAFF_ELARGI  => $this->isStaffElargi($user, $club),
+            default                  => false,
         };
     }
 
@@ -129,6 +143,31 @@ class ClubVoter extends Voter
             UserClubRole::ROLE_STAFF,
         ];
         foreach ($staffRoles as $role) {
+            if ($this->hasMetaRole($user, $club, $role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Vérifie si l'utilisateur fait partie du personnel opérationnel élargi.
+     *
+     * Personnel inclus : DIRIGEANT, COACH, STAFF, TRESORIER, EMPLOYE.
+     * Exclus explicitement : BENEVOLE, PARENT, JOUEUR.
+     *
+     * Usage typique : réunions bureau, documents internes confidentiels.
+     */
+    private function isStaffElargi(User $user, Club $club): bool
+    {
+        $rolesElargi = [
+            UserClubRole::ROLE_DIRIGEANT,
+            UserClubRole::ROLE_COACH,
+            UserClubRole::ROLE_STAFF,
+            UserClubRole::ROLE_TRESORIER,
+            UserClubRole::ROLE_EMPLOYE,
+        ];
+        foreach ($rolesElargi as $role) {
             if ($this->hasMetaRole($user, $club, $role)) {
                 return true;
             }

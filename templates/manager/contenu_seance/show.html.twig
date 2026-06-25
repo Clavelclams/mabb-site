@@ -1,0 +1,151 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ contenu.titre }}{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <a href="{{ path('manager_seances_index') }}" class="btn btn-sm btn-outline-secondary mb-2">
+            <i class="bi bi-arrow-left"></i> Bibliothèque
+        </a>
+        <h1>
+            <i class="bi bi-book-open"></i> {{ contenu.titre }}
+        </h1>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <a href="{{ path('manager_seances_edit', {id: contenu.id}) }}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil"></i> Modifier
+        </a>
+        <form method="POST" action="{{ path('manager_seances_delete', {id: contenu.id}) }}"
+              onsubmit="return confirm('Supprimer cette fiche ? Cette action est irréversible.')">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete_contenu_' ~ contenu.id) }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i> Supprimer
+            </button>
+        </form>
+    </div>
+</div>
+
+{% for label, messages in app.flashes(['success','error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+            {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+<div class="row g-3">
+
+    {# ─── Infos principales ─────────────────────────────────────────────── #}
+    <div class="col-12 col-lg-8">
+        <div class="card-mabb" style="padding:1.2rem 1.4rem; margin-bottom:1rem;">
+
+            {# Catégories + visibilité #}
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                {% if not contenu.isPublicClub %}
+                    <span class="badge bg-secondary"><i class="bi bi-lock-fill"></i> Privé</span>
+                {% else %}
+                    <span class="badge" style="background:rgba(16,185,129,.12); color:#059669; border:1px solid rgba(16,185,129,.3);">
+                        <i class="bi bi-people-fill"></i> Partagé club
+                    </span>
+                {% endif %}
+                {% for cat in contenu.categoriesAge %}
+                    <span class="badge" style="background:rgba(234,88,12,.1); color:#ea580c; border:1px solid rgba(234,88,12,.25);">{{ cat }}</span>
+                {% endfor %}
+            </div>
+
+            {# Thèmes #}
+            {% if contenu.themes|length > 0 %}
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:.78rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px;">Thèmes</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                        {% for theme in contenu.themes %}
+                            <span class="badge bg-light text-dark border" style="font-size:.8rem;">
+                                {{ theme.libelle }}
+                                <span style="color:var(--mabb-muted); font-weight:400; font-size:.72rem;"> · {{ theme.groupe }}</span>
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            {# Description #}
+            {% if contenu.description %}
+                <div style="border-top:1px solid var(--mabb-border); padding-top:14px;">
+                    <div style="font-size:.78rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px;">Description / Plan</div>
+                    <div style="white-space:pre-wrap; font-size:.9rem; line-height:1.6; color:var(--mabb-text);">{{ contenu.description }}</div>
+                </div>
+            {% else %}
+                <p style="color:var(--mabb-muted); font-size:.88rem; font-style:italic;">Pas de description.</p>
+            {% endif %}
+        </div>
+
+        {# ─── Fichiers joints ─────────────────────────────────────────── #}
+        <div class="card-mabb" style="padding:1.2rem 1.4rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                <h2 style="font-size:.95rem; font-weight:700; margin:0;">
+                    <i class="bi bi-paperclip"></i>
+                    Fichiers joints ({{ contenu.fichiers|length }}/5)
+                </h2>
+                {% if contenu.fichiers|length < 5 %}
+                    <a href="{{ path('manager_seances_edit', {id: contenu.id}) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-upload"></i> Ajouter
+                    </a>
+                {% endif %}
+            </div>
+
+            {% if contenu.fichiers is empty %}
+                <p style="color:var(--mabb-muted); font-size:.88rem; text-align:center; padding:20px 0;">
+                    Aucun fichier joint.
+                </p>
+            {% else %}
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    {% for i, fichier in contenu.fichiers %}
+                        <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--mabb-bg-card); border:1px solid var(--mabb-border); border-radius:8px;">
+                            <i class="bi {{ fichier.type == 'pdf' ? 'bi-file-earmark-pdf text-danger' : 'bi-image text-success' }}" style="font-size:1.3rem; flex-shrink:0;"></i>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-size:.88rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ fichier.originalName }}</div>
+                                <div style="font-size:.75rem; color:var(--mabb-muted);">{{ (fichier.size / 1024)|round }} Ko</div>
+                            </div>
+                            <a href="/{{ fichier.path }}" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:.78rem; padding:3px 8px;">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <form method="POST" action="{{ path('manager_seances_delete_fichier', {id: contenu.id, index: i}) }}"
+                                  onsubmit="return confirm('Supprimer ce fichier ?')">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete_fichier_' ~ contenu.id ~ '_' ~ i) }}">
+                                <button type="submit" class="btn btn-xs btn-outline-danger" style="font-size:.78rem; padding:3px 8px;">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ─── Sidebar méta ─────────────────────────────────────────────────── #}
+    <div class="col-12 col-lg-4">
+        <div class="card-mabb" style="padding:1rem 1.2rem;">
+            <h3 style="font-size:.85rem; font-weight:700; margin:0 0 .8rem 0; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.05em;">Infos</h3>
+            <dl style="font-size:.88rem; margin:0; display:flex; flex-direction:column; gap:8px;">
+                <div>
+                    <dt style="font-weight:600; color:var(--mabb-muted); font-size:.75rem;">Créée par</dt>
+                    <dd style="margin:0;">{{ contenu.createdBy.prenom }} {{ contenu.createdBy.nom }}</dd>
+                </div>
+                <div>
+                    <dt style="font-weight:600; color:var(--mabb-muted); font-size:.75rem;">Date de création</dt>
+                    <dd style="margin:0;">{{ contenu.createdAt|date('d/m/Y à H:i') }}</dd>
+                </div>
+                {% if contenu.updatedAt %}
+                    <div>
+                        <dt style="font-weight:600; color:var(--mabb-muted); font-size:.75rem;">Dernière modification</dt>
+                        <dd style="margin:0;">{{ contenu.updatedAt|date('d/m/Y à H:i') }}</dd>
+                    </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

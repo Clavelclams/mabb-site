@@ -745,6 +745,33 @@
         <li><a href="{{ path('manager_classement') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_classement' ? 'active' : '' }}">
             <i class="bi bi-trophy-fill"></i> Classement
         </a></li>
+        {# Réunions — visible au personnel opérationnel (DIRIGEANT, COACH, STAFF, TRESORIER, EMPLOYE)
+           Exclu : BENEVOLE, PARENT, JOUEUR #}
+        {% if club is defined and club and is_granted('CLUB_STAFF_ELARGI', club) %}
+            <li><a href="{{ path('manager_reunion_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_reunion' ? 'active' : '' }}">
+                <i class="bi bi-people-fill"></i> Réunions
+            </a></li>
+        {% endif %}
+        {# Demandes PDFs FFBB — visible aux coachs et staff (pas aux BENEVOLE/PARENT/JOUEUR) #}
+        {% if club is defined and club and is_granted('CLUB_COACH', club) %}
+            <li>
+                <a href="{{ path('manager_demandes_pdf_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_demandes_pdf' ? 'active' : '' }}">
+                    <i class="bi bi-shield-lock"></i> PDFs FFBB
+                </a>
+            </li>
+            {# Bibliothèque fiches séances #}
+            <li>
+                <a href="{{ path('manager_seances_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_seances' ? 'active' : '' }}">
+                    <i class="bi bi-book-half"></i> Bibliothèque
+                </a>
+            </li>
+            {# Validation séances solo joueuses #}
+            <li>
+                <a href="{{ path('manager_seances_solo_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_seances_solo' ? 'active' : '' }}">
+                    <i class="bi bi-person-walking"></i> Séances solo
+                </a>
+            </li>
+        {% endif %}
         {# Lien Demandes — visible UNIQUEMENT aux dirigeants du club actif #}
         {% if club is defined and club and is_granted('CLUB_ADMIN', club) %}
             <li><a href="{{ path('manager_demandes_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_demandes' ? 'active' : '' }}">
@@ -784,6 +811,11 @@
 </main>
 
 {% block javascripts %}{% endblock %}
+
+{# ─── Chatbot assistant flottant ─────────────────────────────────────────── #}
+{% if app.user %}
+    {{ include('partials/_chatbot.html.twig', {chatbotContext: 'manager'}) }}
+{% endif %}
 
 </body>
 </html>

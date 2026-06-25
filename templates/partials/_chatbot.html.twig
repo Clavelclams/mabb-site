@@ -1,0 +1,799 @@
+{#
+   _chatbot.html.twig — Assistant FAQ flottant V1
+   ────────────────────────────────────────────────
+   Paramètre requis : chatbotContext = 'manager' | 'pirb'
+
+   V1 : recherche par mots-clés (JS pur, zéro backend)
+        → scoring multi-mots, retourne top 3 résultats
+   V2 prévu : endpoint /api/chat Symfony → Claude API
+
+   Inclus via :
+     manager/base.html.twig → chatbotContext='manager'
+     pirb/base.html.twig    → chatbotContext='pirb'
+#}
+
+{# ─── CSS ─────────────────────────────────────────────────────────────────── #}
+<style>
+/* ── Bouton flottant ───────────────────────────────────────────── */
+#mabb-chat-btn {
+    position: fixed;
+    {% if chatbotContext == 'pirb' %}
+    bottom: 76px; /* au-dessus de la bottom nav PIRB */
+    {% else %}
+    bottom: 24px;
+    {% endif %}
+    right: 20px;
+    width: 52px; height: 52px;
+    background: {% if chatbotContext == 'pirb' %}var(--pirb-accent, #ea580c){% else %}var(--mabb-accent, #ea580c){% endif %};
+    color: #fff;
+    border: none; border-radius: 50%;
+    font-size: 1.3rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9998;
+    transition: transform .2s, box-shadow .2s;
+}
+#mabb-chat-btn:hover { transform: scale(1.08); box-shadow: 0 6px 22px rgba(0,0,0,.45); }
+#mabb-chat-btn .chat-badge {
+    position: absolute; top: -2px; right: -2px;
+    background: #ef4444; color: #fff;
+    font-size: .58rem; font-weight: 800;
+    padding: 1px 5px; border-radius: 10px;
+    display: none;
+}
+
+/* ── Panneau chat ──────────────────────────────────────────────── */
+#mabb-chat-panel {
+    position: fixed;
+    {% if chatbotContext == 'pirb' %}
+    bottom: 136px;
+    {% else %}
+    bottom: 88px;
+    {% endif %}
+    right: 20px;
+    width: min(380px, calc(100vw - 32px));
+    max-height: min(520px, calc(100dvh - 160px));
+    background: {% if chatbotContext == 'pirb' %}var(--pirb-bg, #0f1117){% else %}#fff{% endif %};
+    border: 1px solid {% if chatbotContext == 'pirb' %}var(--pirb-border, rgba(255,255,255,.1)){% else %}#e2e8f0{% endif %};
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    display: flex; flex-direction: column;
+    z-index: 9999;
+    overflow: hidden;
+    transform: scale(.9) translateY(12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .2s ease, opacity .2s ease;
+}
+#mabb-chat-panel.open {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* Header */
+.chat-header {
+    padding: 12px 14px;
+    background: {% if chatbotContext == 'pirb' %}var(--pirb-accent, #ea580c){% else %}#ea580c{% endif %};
+    color: #fff;
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+}
+.chat-header-title { flex: 1; font-size: .9rem; font-weight: 700; }
+.chat-close-btn {
+    background: rgba(255,255,255,.2); border: none; color: #fff;
+    width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
+    font-size: .9rem; display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+}
+.chat-close-btn:hover { background: rgba(255,255,255,.35); }
+
+/* Messages */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    scroll-behavior: smooth;
+}
+.chat-bubble {
+    max-width: 88%;
+    padding: 9px 12px;
+    border-radius: 12px;
+    font-size: .83rem;
+    line-height: 1.5;
+}
+.chat-bubble.bot {
+    background: {% if chatbotContext == 'pirb' %}rgba(255,255,255,.06){% else %}#f1f5f9{% endif %};
+    color: {% if chatbotContext == 'pirb' %}var(--pirb-text, #f8f9fa){% else %}#334155{% endif %};
+    align-self: flex-start;
+    border-bottom-left-radius: 3px;
+}
+.chat-bubble.user {
+    background: #ea580c;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 3px;
+}
+.chat-result-card {
+    background: {% if chatbotContext == 'pirb' %}rgba(255,255,255,.05){% else %}#f8fafc{% endif %};
+    border: 1px solid {% if chatbotContext == 'pirb' %}rgba(255,255,255,.08){% else %}#e2e8f0{% endif %};
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-top: 4px;
+    max-width: 94%;
+    align-self: flex-start;
+}
+.chat-result-title {
+    font-weight: 700;
+    font-size: .85rem;
+    margin-bottom: 5px;
+    color: {% if chatbotContext == 'pirb' %}var(--pirb-text, #fff){% else %}#1e293b{% endif %};
+}
+.chat-result-text {
+    font-size: .79rem;
+    color: {% if chatbotContext == 'pirb' %}var(--pirb-text-muted, rgba(255,255,255,.6)){% else %}#64748b{% endif %};
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+.chat-result-links { display: flex; flex-direction: column; gap: 4px; }
+.chat-result-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: .78rem; font-weight: 600;
+    color: #ea580c;
+    text-decoration: none;
+    padding: 3px 0;
+    transition: opacity .15s;
+}
+.chat-result-link:hover { opacity: .75; text-decoration: underline; }
+.chat-separator { font-size: .72rem; color: {% if chatbotContext == 'pirb' %}rgba(255,255,255,.3){% else %}#cbd5e1{% endif %}; text-align: center; padding: 4px 0; }
+
+/* Input */
+.chat-input-area {
+    padding: 10px 12px;
+    border-top: 1px solid {% if chatbotContext == 'pirb' %}rgba(255,255,255,.08){% else %}#e2e8f0{% endif %};
+    display: flex; gap: 8px;
+    flex-shrink: 0;
+}
+.chat-input {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid {% if chatbotContext == 'pirb' %}rgba(255,255,255,.15){% else %}#cbd5e1{% endif %};
+    background: {% if chatbotContext == 'pirb' %}rgba(255,255,255,.06){% else %}#f8fafc{% endif %};
+    color: {% if chatbotContext == 'pirb' %}var(--pirb-text, #f8f9fa){% else %}#1e293b{% endif %};
+    font-size: .85rem;
+    outline: none;
+    transition: border-color .15s;
+}
+.chat-input::placeholder { color: {% if chatbotContext == 'pirb' %}rgba(255,255,255,.3){% else %}#94a3b8{% endif %}; }
+.chat-input:focus { border-color: #ea580c; }
+.chat-send-btn {
+    padding: 8px 14px;
+    background: #ea580c; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: .85rem; font-weight: 700;
+    cursor: pointer;
+    transition: opacity .15s;
+    white-space: nowrap;
+}
+.chat-send-btn:hover { opacity: .85; }
+
+/* Suggestions rapides */
+.chat-quick-btns {
+    padding: 0 12px 10px;
+    display: flex; flex-wrap: wrap; gap: 5px;
+    flex-shrink: 0;
+}
+.chat-quick-btn {
+    background: transparent;
+    border: 1px solid {% if chatbotContext == 'pirb' %}rgba(255,255,255,.15){% else %}#e2e8f0{% endif %};
+    color: {% if chatbotContext == 'pirb' %}rgba(255,255,255,.6){% else %}#64748b{% endif %};
+    padding: 4px 10px; border-radius: 20px;
+    font-size: .72rem; cursor: pointer;
+    transition: all .15s;
+}
+.chat-quick-btn:hover {
+    background: rgba(234,88,12,.12);
+    border-color: rgba(234,88,12,.4);
+    color: #ea580c;
+}
+</style>
+
+{# ─── HTML du widget ─────────────────────────────────────────────────────── #}
+<button id="mabb-chat-btn" title="Assistant" aria-label="Ouvrir l'assistant">
+    <i class="bi bi-chat-dots-fill" id="chatBtnIcon"></i>
+    <span class="chat-badge" id="chatBadge">!</span>
+</button>
+
+<div id="mabb-chat-panel" role="dialog" aria-label="Assistant MABB">
+    <div class="chat-header">
+        <i class="bi bi-robot" style="font-size:1.1rem;"></i>
+        <span class="chat-header-title">
+            {% if chatbotContext == 'pirb' %}Assistant PIRB{% else %}Assistant Manager{% endif %}
+        </span>
+        <button class="chat-close-btn" id="chatCloseBtn" title="Fermer">×</button>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <div class="chat-bubble bot">
+            {% if chatbotContext == 'pirb' %}
+            👋 Salut ! Je suis l'assistant PIRB. Tape ce que tu cherches (ex&nbsp;: <em>séance</em>, <em>stats</em>, <em>licence</em>…)
+            {% else %}
+            👋 Bonjour ! Je suis l'assistant Manager. Tape un mot-clé pour trouver une réponse rapidement (ex&nbsp;: <em>licence</em>, <em>séance</em>, <em>cotisation</em>…)
+            {% endif %}
+        </div>
+    </div>
+
+    {# Suggestions rapides #}
+    <div class="chat-quick-btns" id="chatQuickBtns">
+        {% if chatbotContext == 'pirb' %}
+            <button class="chat-quick-btn" onclick="chatSearch('séance')">📅 Séances</button>
+            <button class="chat-quick-btn" onclick="chatSearch('stats')">📊 Stats</button>
+            <button class="chat-quick-btn" onclick="chatSearch('convocation')">📩 Convocations</button>
+            <button class="chat-quick-btn" onclick="chatSearch('solo')">🏃 Séance solo</button>
+            <button class="chat-quick-btn" onclick="chatSearch('licence')">🪪 Licence</button>
+        {% else %}
+            <button class="chat-quick-btn" onclick="chatSearch('licence')">🪪 Licences</button>
+            <button class="chat-quick-btn" onclick="chatSearch('séance')">📅 Séances</button>
+            <button class="chat-quick-btn" onclick="chatSearch('cotisation')">💶 Cotisations</button>
+            <button class="chat-quick-btn" onclick="chatSearch('pdf')">📄 PDFs FFBB</button>
+            <button class="chat-quick-btn" onclick="chatSearch('planning')">🗓 Planning</button>
+        {% endif %}
+    </div>
+
+    <div class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput"
+               placeholder="Tape ta question…" autocomplete="off"
+               onkeydown="if(event.key==='Enter')chatSearch()">
+        <button class="chat-send-btn" onclick="chatSearch()">
+            <i class="bi bi-send-fill"></i>
+        </button>
+    </div>
+</div>
+
+{# ─── JS : base de connaissances + moteur ────────────────────────────────── #}
+<script>
+(function () {
+
+/* ═══════════════════════════════════════════════════════════════
+   BASE DE CONNAISSANCES — {{ chatbotContext|upper }}
+   Chaque entrée :
+     keywords : mots-clés pour matcher (lowercase, sans accents ok)
+     title    : titre affiché
+     text     : explication courte
+     steps    : étapes optionnelles (array de strings)
+     links    : [{label, url}] — URL pré-générées par Twig
+═══════════════════════════════════════════════════════════════ */
+
+{% if chatbotContext == 'manager' %}
+const KB = [
+  {
+    keywords: ['licence','licences','renouvellement','renouveler','adhesion','adhésion','ffbb','inscription joueur','inscrire','inscrire joueur'],
+    title: '🪪 Licences FFBB',
+    text: 'Les licences FFBB sont liées aux fiches joueurs. Chaque joueur doit être créé dans Manager avec ses infos avant de déclarer la licence sur le portail FFBB.',
+    steps: [
+      'Crée ou vérifie la fiche du joueur (nom, prénom, date de naissance, email)',
+      'Va sur le portail FFBB (extraclub ou monclub.ffbb.com)',
+      'Déclare/renouvelle la licence avec les infos de la fiche',
+      'Mets à jour le statut "Licencié" dans la fiche joueur Manager'
+    ],
+    links: [
+      { label: 'Voir tous les joueurs', url: '{{ path('manager_joueur_index') }}' },
+      { label: 'Ajouter un joueur', url: '{{ path('manager_joueur_new') }}' }
+    ]
+  },
+  {
+    keywords: ['seance','séance','seances','séances','fiche seance','bibliotheque','bibliothèque','entraînement','entrainement','créer séance','creer seance','contenu séance'],
+    title: '📅 Bibliothèque des séances',
+    text: 'Crée des fiches pédagogiques réutilisables entre équipes et saisons. Une fiche peut avoir des thèmes, des catégories d\'âge et des fichiers joints (PDF, photos).',
+    steps: [
+      'Va dans la Bibliothèque des séances',
+      'Crée une fiche : titre + catégories d\'âge + thèmes',
+      'Ajoute une description + fichiers optionnels',
+      'Lors de la création d\'une séance, associe-lui cette fiche'
+    ],
+    links: [
+      { label: 'Bibliothèque des séances', url: '{{ path('manager_seances_index') }}' },
+      { label: 'Nouvelle fiche séance', url: '{{ path('manager_seances_new') }}' }
+    ]
+  },
+  {
+    keywords: ['seance solo','séance solo','solo','valider solo','validation solo','declaration solo','déclaration','approbation'],
+    title: '🏃 Séances solo (validation)',
+    text: 'Les joueuses déclarent leurs entraînements persos depuis PIRB. Tu valides (ou refuses) leurs déclarations en masse depuis Manager.',
+    steps: [
+      'Va sur la page "Séances solo"',
+      'Sélectionne les déclarations à valider (coche "Tout sélectionner")',
+      'Clique "Valider la sélection"',
+      'Pour refuser : clique "Refuser" sur une ligne et ajoute un message optionnel'
+    ],
+    links: [
+      { label: 'Voir les séances solo', url: '{{ path('manager_seances_solo_index') }}' }
+    ]
+  },
+  {
+    keywords: ['pdf','pdfs','feuille match','feuille de match','resume match','résumé match','positions','demande pdf','acces pdf','accès pdf','demandes pdf'],
+    title: '📄 PDFs FFBB — Demandes d\'accès',
+    text: 'Les joueuses ne peuvent pas télécharger directement les PDFs officiels FFBB. Elles font une demande depuis PIRB → tu approuves ou refuses ici.',
+    steps: [
+      'Va sur la page "PDFs FFBB" dans le menu',
+      'Vois les demandes en attente (joueuse + type de document)',
+      'Clique "Approuver" ou "Refuser" (avec message optionnel)',
+      'La joueuse voit directement le résultat dans PIRB'
+    ],
+    links: [
+      { label: 'Gérer les demandes PDF', url: '{{ path('manager_demandes_pdf_index') }}' }
+    ]
+  },
+  {
+    keywords: ['planning','créneau','creneau','récurrent','recurrent','horaire','générer séances','generer seances','calendrier entrainement'],
+    title: '🗓 Planning & créneaux récurrents',
+    text: 'Définis les créneaux récurrents d\'entraînement par équipe, puis génère automatiquement toutes les séances de la saison en 1 clic.',
+    steps: [
+      'Va sur la fiche d\'une équipe',
+      'Section "Créneaux récurrents" → ajoute un créneau (jour, heure, lieu)',
+      'Clique "Générer les séances" : toutes les séances de la saison sont créées',
+      'Modifie les séances individuelles si besoin'
+    ],
+    links: [
+      { label: 'Voir les équipes', url: '{{ path('manager_equipe_index') }}' },
+      { label: 'Voir toutes les séances', url: '{{ path('manager_seance_index') }}' }
+    ]
+  },
+  {
+    keywords: ['cotisation','cotisations','paiement','payer','règlement','reglement','montant','tarif','tarifs','dû','du joueur'],
+    title: '💶 Cotisations',
+    text: 'Suis le paiement des cotisations par joueur. Génère les cotisations selon les tarifs définis, enregistre les versements, exempte si nécessaire.',
+    steps: [
+      'Définis les tarifs dans "Tarifs"',
+      'Génère les cotisations pour la saison (bouton dans la liste joueurs)',
+      'Pour enregistrer un paiement : fiche joueur → Cotisations → Payer',
+      'Pour une exemption : bouton "Exempter" dans la fiche cotisation'
+    ],
+    links: [
+      { label: 'Cotisations', url: '{{ path('manager_cotisations_index') }}' },
+      { label: 'Tarifs', url: '{{ path('manager_tarifs_index') }}' }
+    ]
+  },
+  {
+    keywords: ['joueur','joueurs','joueuse','joueuses','ajouter joueur','creer joueur','créer joueur','fiche joueur','profil joueur','nouveau joueur'],
+    title: '👤 Joueurs',
+    text: 'Crée et gère les fiches joueurs. Chaque joueur peut être lié à un compte utilisateur pour accéder à PIRB.',
+    steps: [
+      'Va dans "Joueurs" → "Ajouter un joueur"',
+      'Remplis les infos obligatoires (nom, prénom, date de naissance, équipe)',
+      'Enregistre → la fiche est créée',
+      'Optionnel : lie la fiche à un compte utilisateur (email) pour l\'accès PIRB'
+    ],
+    links: [
+      { label: 'Tous les joueurs', url: '{{ path('manager_joueur_index') }}' },
+      { label: 'Ajouter un joueur', url: '{{ path('manager_joueur_new') }}' }
+    ]
+  },
+  {
+    keywords: ['equipe','équipe','equipes','équipes','créer équipe','creer equipe','nouvelle équipe','composition'],
+    title: '🏀 Équipes',
+    text: 'Crée des équipes pour organiser les joueurs par catégorie. Chaque équipe a ses créneaux, séances et rencontres.',
+    steps: [
+      'Va dans "Équipes" → "Nouvelle équipe"',
+      'Remplis le nom, catégorie, saison',
+      'Ajoute les coachs via "Affecter un staff"',
+      'Ajoute les joueurs via "Gérer la composition"'
+    ],
+    links: [
+      { label: 'Toutes les équipes', url: '{{ path('manager_equipe_index') }}' },
+      { label: 'Nouvelle équipe', url: '{{ path('manager_equipe_new') }}' }
+    ]
+  },
+  {
+    keywords: ['rencontre','rencontres','match','matchs','résultat','resultat','score','feuille','competition','compétition'],
+    title: '🏆 Rencontres / Matchs',
+    text: 'Gère les rencontres officielles. Upload les PDFs FFBB (feuille, résumé, positions), saisis les évaluations, vois les stats.',
+    steps: [
+      'Va dans "Rencontres"',
+      'Sélectionne un match → "Uploader les PDFs" pour les documents FFBB',
+      'Saisis les évaluations des joueuses (note + stats)',
+      'Les joueuses voient leurs stats dans PIRB'
+    ],
+    links: [
+      { label: 'Toutes les rencontres', url: '{{ path('manager_rencontre_index') }}' }
+    ]
+  },
+  {
+    keywords: ['convocation','convoquer','convoquer joueuse','liste présence','appel','absent','présent','convocations'],
+    title: '📩 Convocations',
+    text: 'Génère et envoie des convocations par email aux joueuses pour les matchs ou événements.',
+    steps: [
+      'Va sur la fiche d\'un match ou d\'un événement',
+      'Clique "Créer une convocation"',
+      'Sélectionne les joueuses à convoquer',
+      'Envoie par email → les joueuses reçoivent un lien pour confirmer leur présence'
+    ],
+    links: [
+      { label: 'Voir les convocations en attente', url: '{{ path('manager_en_attente') }}' }
+    ]
+  },
+  {
+    keywords: ['stats','statistiques','evaluation','évaluation','eval','performance','bilan','points','rebonds','passes'],
+    title: '📊 Stats & Évaluations',
+    text: 'Saisis les évaluations match par match. Les stats individuelles sont visibles par les joueuses dans PIRB.',
+    steps: [
+      'Va sur la fiche d\'une rencontre',
+      'Section "Évaluations" → saisis les stats de chaque joueuse',
+      'Les joueuses voient automatiquement leurs stats dans PIRB → Stats'
+    ],
+    links: [
+      { label: 'Voir les équipes', url: '{{ path('manager_equipe_index') }}' }
+    ]
+  },
+  {
+    keywords: ['staff','role','rôle','permission','accès','utilisateur','utilisateurs','compte','administrateur','bénévole','benevole','dirigeant','coach'],
+    title: '🛡️ Staff & Rôles',
+    text: 'Gère les accès et les rôles des membres du staff. Les rôles déterminent ce que chacun peut voir et faire dans Manager.',
+    steps: [
+      'Va dans "Staff" pour voir les membres',
+      'Va dans "Utilisateurs" pour gérer les comptes et leurs rôles',
+      'DIRIGEANT : accès complet · COACH : ses équipes · STAFF : élargi · BÉNÉVOLE : limité'
+    ],
+    links: [
+      { label: 'Gestion du staff', url: '{{ path('manager_staff_index') }}' },
+      { label: 'Utilisateurs & Rôles', url: '{{ path('manager_utilisateurs_index') }}' }
+    ]
+  },
+  {
+    keywords: ['note frais','note de frais','remboursement','frais déplacement','frais deplacement','expense'],
+    title: '🧾 Notes de frais',
+    text: 'Le staff peut soumettre des notes de frais. Les dirigeants les valident ou les rejettent.',
+    steps: [
+      'Staff : va dans "Mes notes de frais" → "Nouvelle note"',
+      'Remplis le montant, la date, la description + justificatif',
+      'Dirigeant : va dans "Trésorerie → Notes de frais" pour valider'
+    ],
+    links: [
+      { label: 'Mes notes de frais', url: '{{ path('manager_mes_notes_frais') }}' },
+      { label: 'Trésorerie', url: '{{ path('manager_tresorerie_dashboard') }}' }
+    ]
+  },
+  {
+    keywords: ['reunion','réunion','meeting','ordre du jour','PV','procès verbal','bureau','AG','assemblee','assemblée'],
+    title: '📋 Réunions',
+    text: 'Planifie et documente les réunions du bureau : ordre du jour, procès-verbal, présence, documents joints.',
+    steps: [
+      'Va dans "Réunions" → "Nouvelle réunion"',
+      'Remplis la date, l\'ordre du jour, les participants',
+      'Après la réunion : rédige le PV + marque les présences'
+    ],
+    links: [
+      { label: 'Toutes les réunions', url: '{{ path('manager_reunion_index') }}' }
+    ]
+  },
+  {
+    keywords: ['evenement','événement','tournoi','stage','sortie','camp','competition','manifestation'],
+    title: '🎉 Événements',
+    text: 'Crée et gère les événements du club (tournois, stages, sorties). Les membres peuvent s\'inscrire depuis PIRB.',
+    links: [
+      { label: 'Voir les événements', url: '{{ path('manager_evenement_index') }}' },
+      { label: 'Nouvel événement', url: '{{ path('manager_evenement_new') }}' }
+    ]
+  },
+  {
+    keywords: ['tresorerie','trésorerie','budget','compte','argent','dépense','depense','recette','bilan financier','subvention'],
+    title: '💰 Trésorerie',
+    text: 'Suis les mouvements financiers du club : recettes, dépenses, subventions. Export possible en CSV.',
+    links: [
+      { label: 'Dashboard trésorerie', url: '{{ path('manager_tresorerie_dashboard') }}' },
+      { label: 'Nouvelle opération', url: '{{ path('manager_tresorerie_operation_new') }}' }
+    ]
+  },
+  {
+    keywords: ['classement','ligue','poule','division','championnat','niveau'],
+    title: '🥇 Classement',
+    text: 'Consulte le classement de la poule de chaque équipe. Les données sont importées / saisies manuellement.',
+    links: [
+      { label: 'Classements', url: '{{ path('manager_classement') }}' }
+    ]
+  },
+  {
+    keywords: ['pirb','application joueur','espace joueur','portail joueur','accès pirb','lien pirb','compte joueur'],
+    title: '📱 PIRB — Espace joueuse',
+    text: 'PIRB est l\'application mobile pour les joueuses. Pour qu\'une joueuse accède à PIRB, elle doit avoir un compte lié à sa fiche joueur.',
+    steps: [
+      'Crée le compte utilisateur de la joueuse (ou demande-lui de s\'inscrire)',
+      'Dans la fiche joueur → "Lier à un compte utilisateur"',
+      'La joueuse accède à pirb.mabb.fr avec ses identifiants'
+    ],
+    links: [
+      { label: 'Gérer les joueurs', url: '{{ path('manager_joueur_index') }}' },
+      { label: 'Demandes d\'accès', url: '{{ path('manager_demandes_index') }}' }
+    ]
+  }
+];
+
+{% else %} {# ─── PIRB knowledge base ─────────────────────────────────────── #}
+
+const KB = [
+  {
+    keywords: ['seance','séance','seances','séances','entraînement','entrainement','planning','programme','prochaine','prochain'],
+    title: '📅 Mes séances',
+    text: 'Retrouve ici toutes les séances programmées par ton coach : à venir et passées. Pour les séances à venir, tu vois le titre et le lieu. Le contenu est parfois masqué (🔒) jusqu\'au jour J.',
+    links: [
+      { label: 'Voir mes séances', url: '{{ path('pirb_seances_index') }}' }
+    ]
+  },
+  {
+    keywords: ['noter','note','noter séance','noter seance','étoile','etoile','feedback','ressenti','avis','rating'],
+    title: '⭐ Noter une séance',
+    text: 'Tu peux noter chaque séance passée sur 5 étoiles + laisser un commentaire libre. Ta note est ANONYME — le coach voit la moyenne globale et les commentaires mélangés, jamais ton nom.',
+    steps: [
+      'Va dans "Séances"',
+      'Clique sur une séance passée',
+      'Choisis de 😞 (1) à 🔥 (5)',
+      'Ajoute un commentaire si tu veux (optionnel, anonyme)',
+      'Valide → le coach voit la moyenne de son équipe'
+    ],
+    links: [
+      { label: 'Mes séances', url: '{{ path('pirb_seances_index') }}' }
+    ]
+  },
+  {
+    keywords: ['solo','séance solo','seance solo','entraînement solo','entraînement perso','declarer','déclarer','déclaration','tir seul','shoot seul'],
+    title: '🏃 Séance solo',
+    text: 'Tu t\'es entraîné(e) seul(e) ? Déclare-le ! Ton coach valide en masse depuis Manager. Une fois validée, la séance apparaît dans ton historique.',
+    steps: [
+      'Va dans "Séances" → bouton "Séance solo"',
+      'Choisis le type (Tir, Dribble, Physique, Tactique, Autre)',
+      'Sélectionne la date et la durée (slider)',
+      'Ajoute des notes si tu veux, puis envoie',
+      'Ton coach valide → ✓ apparaît dans ton historique'
+    ],
+    links: [
+      { label: 'Déclarer une séance solo', url: '{{ path('pirb_seances_solo_declarer') }}' }
+    ]
+  },
+  {
+    keywords: ['pdf','pdfs','feuille match','feuille de match','résumé match','resume match','telecharger pdf','télécharger pdf','positions tirs','document officiel'],
+    title: '📄 PDFs FFBB',
+    text: 'Les PDFs officiels FFBB (feuille de match, résumé, positions) nécessitent une demande d\'accès. Le coach approuve ou refuse.',
+    steps: [
+      'Va dans "Stats" → sélectionne un match',
+      'En bas, clique "Demander l\'accès" sur le PDF voulu',
+      'Ton coach voit la demande dans Manager',
+      'Une fois approuvée → le bouton devient un lien de téléchargement',
+      'Si refusée → tu peux re-demander après'
+    ],
+    links: [
+      { label: 'Voir mes stats / matchs', url: '{{ path('pirb_stats') }}' }
+    ]
+  },
+  {
+    keywords: ['stats','statistiques','performance','points','rebonds','passes','bilan','évaluation','mes chiffres','mes stats'],
+    title: '📊 Mes stats',
+    text: 'Consulte tes statistiques saison et match par match : points, rebonds, passes décisives, évaluation, etc. Les stats sont saisies par ton coach après chaque match.',
+    links: [
+      { label: 'Mes statistiques', url: '{{ path('pirb_stats') }}' }
+    ]
+  },
+  {
+    keywords: ['convocation','convoquer','match','convoquée','absente','présente','répondre','repondre','absence','confirmation'],
+    title: '📩 Convocations',
+    text: 'Ton coach peut t\'envoyer des convocations pour les matchs ou événements. Tu peux confirmer ta présence ou signaler une absence.',
+    steps: [
+      'Vérifie tes convocations dans "Convocations"',
+      'Réponds "Présente" ou "Absente" (avec motif si besoin)',
+      'Tu reçois aussi un email avec un lien de réponse'
+    ],
+    links: [
+      { label: 'Mes convocations', url: '{{ path('pirb_convocations') }}' }
+    ]
+  },
+  {
+    keywords: ['profil','photo','changer photo','modifier profil','mon nom','mes infos','compte','paramètres'],
+    title: '👤 Mon profil',
+    text: 'Modifie ta photo de profil et certaines informations personnelles depuis ton espace profil.',
+    links: [
+      { label: 'Mon profil', url: '{{ path('pirb_dashboard') }}' },
+      { label: 'Modifier mes infos', url: '{{ path('pirb_profil_infos_update') }}' },
+      { label: 'Changer ma photo', url: '{{ path('pirb_profil_photo_upload') }}' }
+    ]
+  },
+  {
+    keywords: ['licence','licences','licencié','licenciée','renouveler','renouvellement','inscription','inscrite'],
+    title: '🪪 Licence FFBB',
+    text: 'La gestion des licences se fait par le staff du club. Si tu as un problème de licence (non licenciée, renouvellement), contacte ton coach ou le staff du club.',
+    steps: [
+      'Vérifie ton statut dans ton profil',
+      'Si ta licence n\'est pas à jour → contacte directement ton coach',
+      'Le staff gère les inscriptions via le portail FFBB'
+    ],
+    links: [
+      { label: 'Mon profil', url: '{{ path('pirb_dashboard') }}' }
+    ]
+  },
+  {
+    keywords: ['cotisation','cotisations','payer','paiement','règlement','reglement','dû','dues','montant'],
+    title: '💶 Cotisation',
+    text: 'Ton statut de cotisation est visible dans ton profil. Pour toute question sur le paiement, contacte le staff.',
+    links: [
+      { label: 'Mon profil', url: '{{ path('pirb_dashboard') }}' }
+    ]
+  },
+  {
+    keywords: ['equipe','équipe','coéquipière','coequipiere','membres','roster','effectif','joueuses'],
+    title: '🏀 Mon équipe',
+    text: 'Retrouve les informations sur ton équipe : membres, classement, résultats.',
+    links: [
+      { label: 'Mon équipe', url: '{{ path('pirb_equipe') }}' }
+    ]
+  },
+  {
+    keywords: ['mission','missions','bénévolat','benevole','objectif','badge','défi'],
+    title: '🎯 Missions & Badges',
+    text: 'Le club peut t\'assigner des missions (bénévolat, objectifs sportifs…). Les missions complétées te donnent des badges affichés dans ton profil.',
+    links: [
+      { label: 'Mon profil', url: '{{ path('pirb_dashboard') }}' },
+      { label: 'Mes badges', url: '{{ path('pirb_profil_badges') }}' }
+    ]
+  },
+  {
+    keywords: ['bilan','saison','résumé saison','recap','historique','recap saison'],
+    title: '📋 Bilan de saison',
+    text: 'Consulte ton bilan de saison : présences, matchs joués, évolution de tes stats.',
+    links: [
+      { label: 'Mon bilan', url: '{{ path('pirb_bilan') }}' }
+    ]
+  },
+  {
+    keywords: ['parent','parents','tuteur','famille','enfant','mon enfant'],
+    title: '👨‍👩‍👧 Espace parents',
+    text: 'Les parents peuvent lier leur compte à celui de leur enfant pour suivre ses activités.',
+    links: [
+      { label: 'Mes enfants', url: '{{ path('pirb_mes_enfants') }}' },
+      { label: 'Mes parents', url: '{{ path('pirb_mes_parents') }}' }
+    ]
+  },
+  {
+    keywords: ['shot chart','shotchart','tirs','zones de tir','carte tirs','où je tire'],
+    title: '🎯 Shot Chart',
+    text: 'Visualise tes zones de tir sur le terrain, match par match.',
+    links: [
+      { label: 'Shot Chart', url: '{{ path('pirb_stats_shotchart') }}' }
+    ]
+  }
+];
+
+{% endif %}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOTEUR DE RECHERCHE
+   Scoring : chaque mot de la query qui matche un keyword = +2
+             correspondance partielle = +1
+   Retourne les 3 meilleurs résultats (score > 0)
+═══════════════════════════════════════════════════════════════ */
+
+function normalize(s) {
+    return s.toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '') // retire accents
+        .replace(/[^\w\s]/g, ' ');
+}
+
+function scoreEntry(entry, queryWords) {
+    let score = 0;
+    const kws = entry.keywords.map(normalize);
+    for (const qw of queryWords) {
+        for (const kw of kws) {
+            if (kw === qw) { score += 2; break; }
+            if (kw.includes(qw) || qw.includes(kw)) { score += 1; }
+        }
+    }
+    return score;
+}
+
+function search(query) {
+    const words = normalize(query).split(/\s+/).filter(w => w.length > 1);
+    if (!words.length) return [];
+    return KB
+        .map(e => ({ ...e, score: scoreEntry(e, words) }))
+        .filter(e => e.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RENDU HTML
+═══════════════════════════════════════════════════════════════ */
+
+function renderResult(entry) {
+    const stepsHtml = entry.steps && entry.steps.length
+        ? '<ol style="margin:6px 0 8px 16px; padding:0; font-size:.77rem; color:inherit; opacity:.8;">' +
+          entry.steps.map(s => `<li style="margin-bottom:3px;">${s}</li>`).join('') +
+          '</ol>'
+        : '';
+    const linksHtml = entry.links && entry.links.length
+        ? '<div class="chat-result-links">' +
+          entry.links.map(l => `<a class="chat-result-link" href="${l.url}">→ ${l.label}</a>`).join('') +
+          '</div>'
+        : '';
+    return `<div class="chat-result-card">
+        <div class="chat-result-title">${entry.title}</div>
+        <div class="chat-result-text">${entry.text}${stepsHtml}</div>
+        ${linksHtml}
+    </div>`;
+}
+
+function renderNoResult() {
+    return `<div class="chat-bubble bot">
+        😕 Je n'ai pas trouvé de réponse précise.<br>
+        Essaie un autre mot-clé, ou contacte directement ton coach / le staff du club.
+    </div>`;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INTERACTIONS UI
+═══════════════════════════════════════════════════════════════ */
+
+const panel   = document.getElementById('mabb-chat-panel');
+const btn     = document.getElementById('mabb-chat-btn');
+const icon    = document.getElementById('chatBtnIcon');
+const input   = document.getElementById('chatInput');
+const msgs    = document.getElementById('chatMessages');
+const quick   = document.getElementById('chatQuickBtns');
+
+function togglePanel() {
+    const isOpen = panel.classList.toggle('open');
+    icon.className = isOpen ? 'bi bi-x-lg' : 'bi bi-chat-dots-fill';
+    if (isOpen) { input.focus(); }
+}
+
+document.getElementById('chatCloseBtn').addEventListener('click', () => {
+    panel.classList.remove('open');
+    icon.className = 'bi bi-chat-dots-fill';
+});
+btn.addEventListener('click', togglePanel);
+
+function appendMessage(html, role) {
+    const el = document.createElement('div');
+    if (role === 'user') {
+        el.className = 'chat-bubble user';
+        el.textContent = html;
+    } else {
+        el.innerHTML = html;
+    }
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+window.chatSearch = function(overrideQuery) {
+    const query = (overrideQuery || input.value || '').trim();
+    if (!query) return;
+
+    // Cache les suggestions rapides dès la 1ère vraie question
+    if (quick) quick.style.display = 'none';
+
+    appendMessage(query, 'user');
+    input.value = '';
+
+    const results = search(query);
+    if (!results.length) {
+        appendMessage(renderNoResult(), 'bot');
+    } else {
+        if (results.length > 1) {
+            appendMessage(`<div class="chat-bubble bot">J'ai trouvé <strong>${results.length} rubriques</strong> qui peuvent aider :</div>`, 'bot');
+        }
+        for (const r of results) {
+            appendMessage(renderResult(r), 'bot');
+        }
+    }
+};
+
+// Close on outside click
+document.addEventListener('click', e => {
+    if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        panel.classList.remove('open');
+        icon.className = 'bi bi-chat-dots-fill';
+    }
+});
+
+})();
+</script>

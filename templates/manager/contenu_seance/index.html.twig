@@ -1,0 +1,144 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Bibliothèque des séances{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-book-half"></i> Bibliothèque des séances</h1>
+        <p class="subtitle">Crée et réutilise tes fiches pédagogiques entre équipes et saisons.</p>
+    </div>
+    <a href="{{ path('manager_seances_new') }}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Nouvelle fiche
+    </a>
+</div>
+
+{# ─── Flash messages ─────────────────────────────────────────────────────── #}
+{% for label, messages in app.flashes(['success','error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ label == 'error' ? 'danger' : label }} alert-dismissible fade show" role="alert">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endfor %}
+
+{# ─── Filtres ────────────────────────────────────────────────────────────── #}
+<div class="card-mabb" style="margin-bottom:1.5rem; padding:1rem 1.2rem;">
+    <form method="GET" action="{{ path('manager_seances_index') }}" class="d-flex flex-wrap gap-3 align-items-end">
+        <div>
+            <label class="form-label mb-1" style="font-size:.82rem; font-weight:600;">Catégorie</label>
+            <select name="categorie" class="form-select form-select-sm" style="min-width:110px;">
+                <option value="">Toutes</option>
+                {% for cat in categoriesAge %}
+                    <option value="{{ cat }}" {{ filtreCategorie == cat ? 'selected' : '' }}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="form-label mb-1" style="font-size:.82rem; font-weight:600;">Thème</label>
+            <select name="theme" class="form-select form-select-sm" style="min-width:200px;">
+                <option value="">Tous les thèmes</option>
+                {% for groupe, themesDuGroupe in themes %}
+                    <optgroup label="{{ groupe }}">
+                        {% for t in themesDuGroupe %}
+                            <option value="{{ t.id }}" {{ filtreThemeId == t.id ? 'selected' : '' }}>{{ t.libelle }}</option>
+                        {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-funnel"></i> Filtrer
+            </button>
+            {% if filtreCategorie or filtreThemeId %}
+                <a href="{{ path('manager_seances_index') }}" class="btn btn-sm btn-outline-secondary ms-1">
+                    <i class="bi bi-x"></i> Effacer
+                </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+{# ─── Liste des fiches ───────────────────────────────────────────────────── #}
+{% if contenus is empty %}
+    <div class="card-mabb" style="text-align:center; padding:40px 20px;">
+        <i class="bi bi-book" style="font-size:2.5rem; color:var(--mabb-muted);"></i>
+        <p style="margin-top:12px; color:var(--mabb-muted);">
+            {% if filtreCategorie or filtreThemeId %}
+                Aucune fiche trouvée avec ces critères.
+            {% else %}
+                Bibliothèque vide. <a href="{{ path('manager_seances_new') }}">Crée ta première fiche séance →</a>
+            {% endif %}
+        </p>
+    </div>
+{% else %}
+    <div class="row g-3">
+        {% for contenu in contenus %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="card-mabb h-100" style="display:flex; flex-direction:column;">
+                    <div class="card-body" style="padding:14px 16px; flex:1;">
+
+                        {# Titre + badge visibilité #}
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:8px;">
+                            <h3 style="font-size:.95rem; font-weight:700; margin:0; line-height:1.3;">
+                                {{ contenu.titre }}
+                            </h3>
+                            {% if not contenu.isPublicClub %}
+                                <span class="badge bg-secondary" title="Visible par toi seulement" style="font-size:.68rem; white-space:nowrap;">
+                                    <i class="bi bi-lock-fill"></i> Privé
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        {# Catégories #}
+                        {% if contenu.categoriesAge %}
+                            <div style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:4px;">
+                                {% for cat in contenu.categoriesAge %}
+                                    <span class="badge" style="background:rgba(234,88,12,.12); color:#ea580c; font-size:.7rem; font-weight:600; padding:2px 7px; border-radius:4px;">{{ cat }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {# Thèmes #}
+                        {% if contenu.themes|length > 0 %}
+                            <div style="margin-bottom:8px; display:flex; flex-wrap:wrap; gap:4px;">
+                                {% for theme in contenu.themes|slice(0, 3) %}
+                                    <span class="badge bg-light text-dark border" style="font-size:.7rem;">{{ theme.libelle }}</span>
+                                {% endfor %}
+                                {% if contenu.themes|length > 3 %}
+                                    <span class="badge bg-light text-muted border" style="font-size:.7rem;">+{{ contenu.themes|length - 3 }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        {# Fichiers #}
+                        {% set nbFichiers = contenu.fichiers|length %}
+                        {% if nbFichiers > 0 %}
+                            <div style="font-size:.8rem; color:var(--mabb-muted); margin-bottom:6px;">
+                                <i class="bi bi-paperclip"></i>
+                                {{ nbFichiers }} fichier{{ nbFichiers > 1 ? 's' : '' }}
+                                ({{ contenu.fichiersPdf|length }} PDF · {{ contenu.fichiersPhoto|length }} photo{{ contenu.fichiersPhoto|length > 1 ? 's' : '' }})
+                            </div>
+                        {% endif %}
+
+                        {# Auteur #}
+                        <div style="font-size:.75rem; color:var(--mabb-muted);">
+                            <i class="bi bi-person"></i>
+                            {{ contenu.createdBy.prenom }} {{ contenu.createdBy.nom }}
+                            · {{ contenu.createdAt|date('d/m/Y') }}
+                        </div>
+                    </div>
+
+                    <div style="padding:10px 16px; border-top:1px solid var(--mabb-border);">
+                        <a href="{{ path('manager_seances_show', {id: contenu.id}) }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> Voir
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

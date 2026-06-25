@@ -1,0 +1,155 @@
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}{{ seance.titreAffichage }}{% endblock %}
+
+{% block stylesheets %}
+.star-btn {
+    background: none;
+    border: 2px solid var(--pirb-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: transform .1s, border-color .15s, background .15s;
+    color: var(--pirb-text-muted);
+    min-width: 56px;
+    text-align: center;
+}
+.star-btn:hover, .star-btn.selected {
+    border-color: #f59e0b;
+    background: rgba(245,158,11,.1);
+    transform: scale(1.1);
+    color: #f59e0b;
+}
+{% endblock %}
+
+{% block body %}
+
+<div style="margin-bottom:16px;">
+    <a href="{{ path('pirb_seances_index') }}"
+       style="display:inline-flex; align-items:center; gap:6px; font-size:.85rem; color:var(--pirb-text-muted); text-decoration:none; padding:4px 10px; border-radius:6px; border:1px solid var(--pirb-border);">
+        <i class="bi bi-arrow-left"></i> Retour
+    </a>
+</div>
+
+{% for label, messages in app.flashes(['success','error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="pirb-card" style="padding:12px 14px; margin-bottom:10px; border-left:4px solid {{ label == 'success' ? '#10b981' : '#3b82f6' }}; background:{{ label == 'success' ? 'rgba(16,185,129,.1)' : 'rgba(59,130,246,.1)' }}; font-size:.88rem;">
+            {{ msg }}
+        </div>
+    {% endfor %}
+{% endfor %}
+
+{# ─── Infos séance ─────────────────────────────────────────────────────── #}
+<div class="pirb-card" style="margin-bottom:14px; padding:16px;">
+    <h1 style="font-size:1.15rem; font-weight:800; margin:0 0 6px 0;">{{ seance.titreAffichage }}</h1>
+
+    <div style="font-size:.82rem; color:var(--pirb-text-muted); margin-bottom:10px; display:flex; flex-wrap:wrap; gap:10px;">
+        <span><i class="bi bi-calendar3"></i> {{ seance.date|date('d/m/Y') }}</span>
+        {% if seance.lieu %}<span><i class="bi bi-geo-alt"></i> {{ seance.lieu }}</span>{% endif %}
+        {% if seance.dureeMinutes %}<span><i class="bi bi-clock"></i> {{ seance.dureeMinutes }} min</span>{% endif %}
+        <span class="badge" style="background:rgba(234,88,12,.1); color:var(--pirb-accent); font-size:.7rem;">{{ seance.type }}</span>
+    </div>
+
+    {% if seance.contenuPrive %}
+        <div style="font-size:.85rem; color:var(--pirb-text-muted); font-style:italic; padding:10px; background:rgba(255,255,255,.03); border-radius:8px; border:1px solid var(--pirb-border);">
+            <i class="bi bi-lock-fill" style="color:var(--pirb-accent);"></i>
+            Le coach a choisi de garder le contenu de cette séance privé.
+        </div>
+    {% elseif seance.contenuSeance %}
+        {% set cs = seance.contenuSeance %}
+
+        {# Thèmes #}
+        {% if cs.themes|length > 0 %}
+            <div style="margin-bottom:10px; display:flex; flex-wrap:wrap; gap:5px;">
+                {% for theme in cs.themes %}
+                    <span style="font-size:.74rem; padding:3px 9px; border-radius:4px; background:rgba(234,88,12,.1); color:var(--pirb-accent); font-weight:600;">{{ theme.libelle }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# Description #}
+        {% if cs.description %}
+            <div style="font-size:.88rem; line-height:1.65; white-space:pre-wrap; color:var(--pirb-text);">{{ cs.description }}</div>
+        {% endif %}
+
+        {# Fichiers PDFs uniquement (pas d'images car mobile) #}
+        {% if cs.fichiersPdf|length > 0 %}
+            <div style="margin-top:12px; border-top:1px solid var(--pirb-border); padding-top:12px;">
+                <div style="font-size:.78rem; font-weight:700; color:var(--pirb-text-muted); margin-bottom:6px;">Documents</div>
+                {% for fichier in cs.fichiersPdf %}
+                    <a href="/{{ fichier.path }}" target="_blank"
+                       style="display:flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; border:1px solid var(--pirb-border); text-decoration:none; color:var(--pirb-text); font-size:.85rem; margin-bottom:5px;">
+                        <i class="bi bi-file-earmark-pdf" style="color:#ef4444; font-size:1.1rem; flex-shrink:0;"></i>
+                        {{ fichier.originalName }}
+                        <i class="bi bi-box-arrow-up-right" style="margin-left:auto; font-size:.75rem; color:var(--pirb-text-muted);"></i>
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+{# ─── Notation (séances passées uniquement) ───────────────────────────── #}
+{% if peutNoter %}
+    <div class="pirb-card" style="padding:18px 16px;">
+        <h2 style="font-size:.95rem; font-weight:700; margin:0 0 4px 0;">
+            {% if maNote %}✏️ Modifier ta note{% else %}⭐ Noter cette séance{% endif %}
+        </h2>
+        <p style="font-size:.8rem; color:var(--pirb-text-muted); margin:0 0 14px 0;">
+            Ta note est <strong>anonyme</strong> — le coach voit la moyenne globale, pas les noms.
+        </p>
+
+        <form method="POST" action="{{ path('pirb_seances_noter', {id: seance.id}) }}" id="noteForm">
+            <input type="hidden" name="_token" value="{{ csrf_token('noter_seance_' ~ seance.id) }}">
+            <input type="hidden" name="note" id="noteValue" value="{{ maNote ? maNote.note : 3 }}">
+
+            {# Étoiles cliquables #}
+            <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+                {% for i in 1..5 %}
+                    <button type="button" class="star-btn {% if maNote and maNote.note >= i %}selected{% elseif not maNote and i == 3 %}selected{% endif %}"
+                            data-val="{{ i }}" title="{{ ['😞 Moyen', '😕 Pas top', '😐 Ok', '😊 Bien', '🔥 Super !'][i-1] }}"
+                            onclick="selectNote({{ i }})">
+                        {{ ['😞','😕','😐','😊','🔥'][i-1] }}
+                    </button>
+                {% endfor %}
+            </div>
+
+            <div id="noteLabel" style="font-size:.82rem; color:var(--pirb-text-muted); margin-bottom:12px;">
+                {# JS remplira ici #}
+            </div>
+
+            {# Commentaire libre #}
+            <textarea name="commentaire" rows="3"
+                      placeholder="Ton ressenti (optionnel) — anonyme pour le coach…"
+                      style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--pirb-border); background:var(--pirb-bg-card); color:var(--pirb-text); font-size:.88rem; resize:vertical; box-sizing:border-box;">{{ maNote ? maNote.commentaire : '' }}</textarea>
+
+            <button type="submit" style="margin-top:12px; width:100%; padding:12px; background:var(--pirb-accent); color:#fff; border:none; border-radius:10px; font-size:.95rem; font-weight:700; cursor:pointer; transition:opacity .15s;"
+                    onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+                {% if maNote %}Mettre à jour{% else %}Envoyer ma note{% endif %}
+            </button>
+        </form>
+    </div>
+{% elseif not estPassee %}
+    <div class="pirb-card" style="text-align:center; padding:20px; color:var(--pirb-text-muted); font-size:.88rem;">
+        <i class="bi bi-clock" style="font-size:1.5rem; display:block; margin-bottom:6px;"></i>
+        Tu pourras noter cette séance une fois qu'elle sera passée.
+    </div>
+{% endif %}
+
+<script>
+const labels = ['😞 Moyen (1/5)', '😕 Pas terrible (2/5)', '😐 Correct (3/5)', '😊 Bien (4/5)', '🔥 Super séance ! (5/5)'];
+function selectNote(val) {
+    document.getElementById('noteValue').value = val;
+    document.querySelectorAll('.star-btn').forEach(b => {
+        b.classList.toggle('selected', parseInt(b.dataset.val) <= val);
+    });
+    document.getElementById('noteLabel').textContent = labels[val - 1];
+}
+// Init label
+const initVal = parseInt(document.getElementById('noteValue')?.value || 3);
+if (document.getElementById('noteLabel')) {
+    document.getElementById('noteLabel').textContent = labels[initVal - 1];
+}
+</script>
+{% endblock %}

@@ -497,6 +497,148 @@
         {% endif %}
 
         {# ========================================================
+           V1.6.1 — Section "Affectations équipes" (multi-équipes)
+           Visible CLUB_STAFF. Affiche l'équipe principale + tous les
+           surclassements / doublages / réserves. Permet d'en ajouter
+           ou retirer via formulaire CSRF.
+           ======================================================== #}
+        {% if is_granted('CLUB_STAFF', joueur) %}
+        <div class="card-mabb" style="margin-top:16px;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-diagram-3"></i> Affectations équipes</span>
+                <span style="color:var(--mabb-muted); font-size:.78rem;">
+                    {{ joueur.affectations|length }} affectation{{ joueur.affectations|length > 1 ? 's' : '' }}
+                </span>
+            </div>
+            <div class="card-body">
+
+                {# === Liste des affectations actuelles === #}
+                {% if joueur.affectations|length > 0 %}
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+                        {% for aff in joueur.affectations %}
+                            {% set couleur = type_couleurs[aff.type] ?? 'gray' %}
+                            {% set badge_bg = {
+                                'blue':   'rgba(59,130,246,.12)',
+                                'orange': 'rgba(234,88,12,.12)',
+                                'purple': 'rgba(168,85,247,.12)',
+                                'green':  'rgba(22,163,74,.12)',
+                                'gray':   'rgba(148,163,184,.12)'
+                            }[couleur] %}
+                            {% set badge_color = {
+                                'blue':   '#3b82f6',
+                                'orange': '#ea580c',
+                                'purple': '#a855f7',
+                                'green':  '#16a34a',
+                                'gray':   '#64748b'
+                            }[couleur] %}
+                            <div style="display:flex; align-items:center; gap:12px; padding:10px 12px; background:#f8fafc; border:1px solid var(--mabb-border, #e2e8f0); border-radius:10px;">
+                                <span style="background:{{ badge_bg }}; color:{{ badge_color }}; padding:3px 10px; border-radius:999px; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap;">
+                                    {{ type_labels[aff.type] ?? aff.type }}
+                                </span>
+                                <div style="flex:1;">
+                                    <div style="font-weight:700;">{{ aff.equipe.nom }}</div>
+                                    <div style="color:var(--mabb-muted); font-size:.78rem;">
+                                        Saison {{ aff.saison }}
+                                        {% if not aff.actif %}<span style="color:#ef4444;">• inactive</span>{% endif %}
+                                        {% if aff.notes %}<br><em>{{ aff.notes }}</em>{% endif %}
+                                    </div>
+                                </div>
+                                {% if not aff.isPrincipale %}
+                                    <form method="post"
+                                          action="{{ path('manager_joueur_affectation_remove', {id: joueur.id, affId: aff.id}) }}"
+                                          onsubmit="return confirm('Retirer cette affectation ?');"
+                                          style="margin:0;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('remove_affectation_' ~ aff.id) }}">
+                                        <button type="submit" class="btn-mabb btn-ghost" style="padding:4px 10px; font-size:.78rem;" title="Retirer cette affectation">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.7rem; font-style:italic;">verrouillée</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div style="padding:14px; background:#fff7ed; border-left:3px solid #ea580c; border-radius:6px; margin-bottom:14px; color:#9a3412; font-size:.85rem;">
+                        ⚠️ Aucune affectation. Si la joueuse a une équipe principale, elle devrait apparaître automatiquement (auto-créée par la migration V1.6).
+                    </div>
+                {% endif %}
+
+                {# === Formulaire d'ajout d'affectation === #}
+                {% if equipes_disponibles|length > 0 %}
+                    <details style="margin-top:10px;">
+                        <summary style="cursor:pointer; font-weight:700; color:var(--mabb-accent, #ea580c); padding:8px 0;">
+                            <i class="bi bi-plus-circle"></i> Ajouter une affectation (surclassement / doublage / réserve)
+                        </summary>
+                        <form method="post"
+                              action="{{ path('manager_joueur_affectation_add', {id: joueur.id}) }}"
+                              style="margin-top:12px; padding:14px; background:#f8fafc; border-radius:10px;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('add_affectation_joueur_' ~ joueur.id) }}">
+
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+
+                                <div>
+                                    <label for="aff_type" style="display:block; font-size:.78rem; font-weight:700; color:var(--mabb-muted); margin-bottom:4px;">Type d'affectation</label>
+                                    <select name="type" id="aff_type" required class="form-control"
+                                            style="width:100%; padding:8px; border:1px solid var(--mabb-border, #e2e8f0); border-radius:6px;">
+                                        <option value="">— Choisir un type —</option>
+                                        {% for code, label in types_affectation_disponibles %}
+                                            <option value="{{ code }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="aff_equipe" style="display:block; font-size:.78rem; font-weight:700; color:var(--mabb-muted); margin-bottom:4px;">Équipe</label>
+                                    <select name="equipe_id" id="aff_equipe" required class="form-control"
+                                            style="width:100%; padding:8px; border:1px solid var(--mabb-border, #e2e8f0); border-radius:6px;">
+                                        <option value="">— Choisir une équipe —</option>
+                                        {% for e in equipes_disponibles %}
+                                            <option value="{{ e.id }}">
+                                                {{ e.nom }}
+                                                {% if e.categorie %}({{ e.categorie }}{% if e.niveau %} — {{ e.niveau }}{% endif %}){% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="aff_saison" style="display:block; font-size:.78rem; font-weight:700; color:var(--mabb-muted); margin-bottom:4px;">Saison</label>
+                                    <input type="text" name="saison" id="aff_saison" required
+                                           value="{{ saison_courante }}" pattern="\d{4}-\d{4}"
+                                           class="form-control"
+                                           style="width:100%; padding:8px; border:1px solid var(--mabb-border, #e2e8f0); border-radius:6px;">
+                                </div>
+
+                                <div>
+                                    <label for="aff_notes" style="display:block; font-size:.78rem; font-weight:700; color:var(--mabb-muted); margin-bottom:4px;">Notes (optionnel)</label>
+                                    <textarea name="notes" id="aff_notes" rows="2"
+                                              placeholder="Ex : autorisé pour les matchs à domicile uniquement, jusqu'à fin saison régulière..."
+                                              class="form-control"
+                                              style="width:100%; padding:8px; border:1px solid var(--mabb-border, #e2e8f0); border-radius:6px; resize:vertical;"></textarea>
+                                </div>
+
+                                <div style="display:flex; justify-content:flex-end;">
+                                    <button type="submit" class="btn-mabb btn-primary">
+                                        <i class="bi bi-check-lg"></i> Ajouter l'affectation
+                                    </button>
+                                </div>
+
+                            </div>
+                        </form>
+                    </details>
+                {% else %}
+                    <div style="padding:10px; background:#f1f5f9; border-radius:6px; color:var(--mabb-muted); font-size:.85rem;">
+                        Aucune autre équipe disponible (la joueuse est déjà affectée à toutes les équipes du club, ou il n'y en a qu'une).
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+        {% endif %}
+
+        {# ========================================================
            V1.4a — Section "Compte PIRB lié"
            Visible CLUB_STAFF (DIRIGEANT + COACH + STAFF).
            Permet de lier un User PIRB existant à cette fiche Joueur.
@@ -603,6 +745,75 @@
                     {% endif %}
 
                 {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ========================================================
+           Section "Parents / Tuteurs liés"
+           Visible CLUB_STAFF uniquement.
+           Affiche les liens ParentJoueur actifs/pending pour cette joueuse.
+           ======================================================== #}
+        {% if is_granted('CLUB_STAFF', joueur) %}
+        <div class="card-mabb" style="margin-top:16px;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-people-fill"></i> Parents / Tuteurs liés</span>
+                <span style="color:var(--mabb-muted); font-size:.78rem;">
+                    {% set nb_actifs = parent_joueurs|filter(p => p.statut == 'active')|length %}
+                    {{ nb_actifs }} actif{{ nb_actifs != 1 ? 's' : '' }}
+                </span>
+            </div>
+            <div class="card-body">
+
+                {% if parent_joueurs is empty %}
+                    <p style="color:var(--mabb-muted); font-size:.85rem; text-align:center; padding:16px 0; margin:0;">
+                        <i class="bi bi-person-x" style="font-size:1.6rem; display:block; margin-bottom:8px;"></i>
+                        Aucun parent/tuteur lié à cette joueuse.
+                    </p>
+                {% else %}
+                    {% set statut_labels = {active: 'Actif', pending: 'En attente', rejected: 'Refusé'} %}
+                    {% set statut_colors = {active: '#16a34a', pending: '#d97706', rejected: '#dc2626'} %}
+                    {% set statut_bg    = {active: 'rgba(22,163,74,.08)', pending: 'rgba(217,119,6,.08)', rejected: 'rgba(220,38,38,.06)'} %}
+
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+                        {% for pj in parent_joueurs %}
+                            <div style="display:flex; align-items:center; gap:12px; padding:10px 14px;
+                                        background:{{ statut_bg[pj.statut] ?? '#f8fafc' }};
+                                        border:1px solid {{ statut_colors[pj.statut] ?? '#e5e7eb' }}33;
+                                        border-radius:10px;">
+                                <div style="width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg, #7c3aed, #2563eb); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.9rem; flex-shrink:0;">
+                                    {{ pj.parentUser.prenom|first|upper }}{{ pj.parentUser.nom|first|upper }}
+                                </div>
+                                <div style="flex:1;">
+                                    <div style="font-weight:700; font-size:.92rem;">{{ pj.parentUser.prenom }} {{ pj.parentUser.nom }}</div>
+                                    <div style="color:var(--mabb-muted); font-size:.78rem;">{{ pj.parentUser.email }}</div>
+                                </div>
+                                <span style="background:{{ statut_bg[pj.statut] ?? '#f1f5f9' }}; color:{{ statut_colors[pj.statut] ?? '#64748b' }}; border:1px solid {{ statut_colors[pj.statut] ?? '#cbd5e1' }}44; padding:3px 10px; border-radius:999px; font-size:.72rem; font-weight:700; white-space:nowrap;">
+                                    {{ statut_labels[pj.statut] ?? pj.statut }}
+                                </span>
+                                {% if pj.statut == 'pending' %}
+                                    {# Boutons valider/refuser (raccourci depuis la fiche joueuse) #}
+                                    <a href="{{ path('manager_parents_enfants_index') }}"
+                                       class="btn-mabb-ghost btn-sm" style="font-size:.78rem; white-space:nowrap;">
+                                        <i class="bi bi-arrow-right-circle"></i> Gérer
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# Bouton "Ajouter un parent" → redirige vers la route dédiée #}
+                <div style="border-top:1px solid #e5e7eb; padding-top:12px; text-align:center;">
+                    <a href="{{ path('manager_parents_enfants_lier_staff', {joueurId: joueur.id}) }}"
+                       class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-person-plus"></i> Lier un parent à cette joueuse
+                    </a>
+                    <p style="margin:6px 0 0 0; color:var(--mabb-muted); font-size:.75rem;">
+                        Les parents liés peuvent voir les stats et présences de leur enfant sur PIRB.
+                    </p>
+                </div>
+
             </div>
         </div>
         {% endif %}

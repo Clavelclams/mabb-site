@@ -158,6 +158,59 @@ class Joueur implements ClubAwareInterface
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $user = null;
 
+    // ====================================================================
+    // [V2.2 — 25/06/2026] JOUEUSES ÉPHÉMÈRES
+    //
+    // Une joueuse éphémère est créée rapidement pour une seule rencontre
+    // (recrutement, open gym, match d'exhibition, début de saison).
+    // Elle est un vrai Joueur dans la BDD pour réutiliser 100% du moteur
+    // ActionMatch / stats live existant — pas de table supplémentaire.
+    //
+    // Workflow de vie :
+    //   1. Coach clique "Ajouter joueuse rapide" sur une rencontre exhibition
+    //   2. Formulaire minimal : prénom, nom, numéro, côté (notre équipe/adversaire)
+    //   3. Joueur créé avec isTemporaire=true, rencontreOrigine=cette rencontre
+    //   4. Elle apparaît dans les stats live avec badge coloré
+    //   5. Si recrutée : bouton "Recruter" → isTemporaire=false → elle devient officielle
+    //
+    // Règles :
+    //   - Les listes normales de joueurs filtrent isTemporaire=false (transparence)
+    //   - Les stats live d'une rencontre chargent aussi les éphémères de CETTE rencontre
+    //   - La suppression d'une rencontre met rencontreOrigine à NULL (SET NULL)
+    //   - Si équipe adverse : equipeEphemere = nom de l'équipe adverse
+    // ====================================================================
+
+    /**
+     * Joueuse créée rapidement pour une seule rencontre (pas de compte, pas de licence).
+     * Les listes normales de joueuses filtrent isTemporaire=false.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $isTemporaire = false;
+
+    /**
+     * NULL = joueuse de notre équipe (ou side non précisé).
+     * STRING = nom de l'équipe adverse pour laquelle elle joue.
+     * Ex: "Eagles Basket Amiens", "Équipe B"
+     */
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $equipeEphemere = null;
+
+    /**
+     * Couleur de maillot pour distinguer visuellement en stats live.
+     * Format libre : code hex (#ef4444) ou nom couleur (rouge, bleu…).
+     * Affiché comme pastille colorée dans l'interface stats live.
+     */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $couleurMaillot = null;
+
+    /**
+     * Rencontre qui a créé cette joueuse éphémère.
+     * NULL si la joueuse a été recrutée (isTemporaire=false) ou si la rencontre a été supprimée.
+     */
+    #[ORM\ManyToOne(targetEntity: Rencontre::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Rencontre $rencontreOrigine = null;
+
     #[ORM\Column]
     private bool $isActive = true;
 
@@ -352,6 +405,44 @@ class Joueur implements ClubAwareInterface
     public function setUser(?User $user): static { $this->user = $user; return $this; }
     public function isActive(): bool { return $this->isActive; }
     public function setIsActive(bool $isActive): static { $this->isActive = $isActive; return $this; }
+
+    // ====== [V2.2] Joueuses éphémères ======
+
+    public function isTemporaire(): bool { return $this->isTemporaire; }
+    public function setIsTemporaire(bool $v): static { $this->isTemporaire = $v; return $this; }
+
+    public function getEquipeEphemere(): ?string { return $this->equipeEphemere; }
+    public function setEquipeEphemere(?string $v): static { $this->equipeEphemere = $v !== '' ? $v : null; return $this; }
+
+    /** True si la joueuse éphémère joue pour l'équipe adverse. */
+    public function isEphemereAdverse(): bool { return $this->equipeEphemere !== null; }
+
+    public function getCouleurMaillot(): ?string { return $this->couleurMaillot; }
+    public function setCouleurMaillot(?string $v): static { $this->couleurMaillot = $v !== '' ? $v : null; return $this; }
+
+    public function getRencontreOrigine(): ?Rencontre { return $this->rencontreOrigine; }
+    public function setRencontreOrigine(?Rencontre $r): static { $this->rencontreOrigine = $r; return $this; }
+
+    /**
+     * Convertit une joueuse éphémère en joueuse officielle.
+     * Appelé par le controller "Recruter" — garde tout l'historique ActionMatch intact.
+     *
+     * @param Equipe|null $equipe     Affecter à une équipe (null = à affecter plus tard)
+     * @param string|null $licence   Numéro FFBB si connu
+     */
+    public function recruter(?Equipe $equipe = null, ?string $licence = null): static
+    {
+        $this->isTemporaire      = false;
+        $this->equipeEphemere    = null;
+        $this->rencontreOrigine  = null;
+        if ($equipe !== null) {
+            $this->equipe = $equipe;
+        }
+        if ($licence !== null) {
+            $this->licence = $licence;
+        }
+        return $this;
+    }
 
     // [B33] Section Sportive
     public function isEstSectionSportive(): bool { return $this->estSectionSportive; }

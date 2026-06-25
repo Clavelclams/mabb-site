@@ -30,9 +30,10 @@ use Symfony\Component\Routing\Attribute\Route;
  * ReunionController — gestion des réunions du bureau d'un club.
  *
  * RÈGLES D'ACCÈS :
- *   - Liste/voir une réunion :     CLUB_MEMBER (tout membre voit les réunions du club)
- *   - Créer/éditer une réunion :   CLUB_STAFF  (staff = secrétaire/président/coach)
+ *   - Liste/voir une réunion :        CLUB_STAFF_ELARGI (DIRIGEANT, COACH, STAFF, TRESORIER, EMPLOYE)
+ *   - Créer/éditer une réunion :      CLUB_STAFF (staff restreint = secrétaire/président/coach)
  *   - Saisir le PV / changer statut : CLUB_STAFF
+ *   - EXCLU : BENEVOLE, PARENT, JOUEUR ne voient PAS les réunions du bureau.
  *
  * UX :
  *   - Lors de la création, le créateur peut convoquer par ROLE (ex: tous les
@@ -57,10 +58,9 @@ class ReunionController extends AbstractController
     /**
      * Liste des réunions du club (récentes d'abord).
      *
-     * VISIBILITÉ (Phase F) :
-     *   - STAFF/COACH/DIRIGEANT : toutes les réunions du club
-     *   - MEMBER simple (BENEVOLE/JOUEUR/PARENT/EMPLOYE) : seulement les réunions
-     *     où il est convoqué OU dont la synthèse est publiée publiquement.
+     * ACCÈS : CLUB_STAFF_ELARGI — DIRIGEANT, COACH, STAFF, TRESORIER, EMPLOYE.
+     * Les réunions du bureau sont des documents internes au personnel opérationnel.
+     * BENEVOLE, PARENT et JOUEUR n'ont pas accès.
      */
     #[Route('/reunions', name: 'manager_reunion_index', methods: ['GET'])]
     public function index(): Response
@@ -70,36 +70,9 @@ class ReunionController extends AbstractController
             $this->addFlash('warning', 'Aucun club actif.');
             return $this->redirectToRoute('manager_dashboard');
         }
-        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF_ELARGI, $club);
 
-        // Staff voit tout — Member simple voit ce qui le concerne
-        $estStaff = $this->isGranted(ClubVoter::CLUB_STAFF, $club);
-        if ($estStaff) {
-            $reunions = $this->reunionRepository->findByClub($club);
-        } else {
-            // Member non-staff : on charge toutes les réunions du club PUIS on filtre en PHP
-            // selon (convoqué OU synthèse_visible_roles contient un de ses rôles).
-            // Filtrage en PHP car JSON_CONTAINS pas portable / lourd à maintenir en DQL.
-            $user = $this->getUser();
-            $rolesUser = [];
-            if ($user instanceof User) {
-                foreach ($user->getUserClubRoles() as $ucr) {
-                    if ($ucr->getClub()?->getId() === $club->getId() && $ucr->isStatusActive()) {
-                        $rolesUser[] = $ucr->getRole();
-                    }
-                }
-            }
-
-            $toutes = $this->reunionRepository->findByClub($club);
-            $reunions = array_values(array_filter($toutes, function (Reunion $r) use ($user, $rolesUser) {
-                // Convoqué ?
-                foreach ($r->getConvocations() as $c) {
-                    if ($c->getUser()?->getId() === $user?->getId()) return true;
-                }
-                // Synthèse publiée pour au moins un de ses rôles ?
-                return $r->syntheseVisibleA($rolesUser);
-            }));
-        }
+        $reunions = $this->reunionRepository->findByClub($club);
 
         return $this->render('manager/reunion/index.html.twig', [
             'club'     => $club,
@@ -209,7 +182,7 @@ class ReunionController extends AbstractController
     #[Route('/reunions/{id}', name: 'manager_reunion_show', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function show(Reunion $reunion): Response
     {
-        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $reunion);
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF_ELARGI, $reunion);
 
         // Marque le PV comme lu pour l'user courant (si convoqué et PV existant)
         if ($reunion->hasPv() && $this->getUser() instanceof User) {
@@ -391,8 +364,8 @@ class ReunionController extends AbstractController
         ReunionDocument $document,
         ReunionDocumentUploader $uploader,
     ): Response {
-        // CLUB_MEMBER suffit (lecture) — pas besoin d'être staff
-        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $document);
+        // CLUB_STAFF_ELARGI : documents internes réservés au personnel opérationnel
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF_ELARGI, $document);
 
         $absolutePath = $uploader->getAbsolutePath($document);
         if ($absolutePath === null) {

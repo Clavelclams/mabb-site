@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace App\Controller\Pirb;
 
 use App\Entity\Core\User;
+use App\Entity\Sport\DemandeAccesPdf;
 use App\Entity\Sport\Rencontre;
 use App\Repository\Sport\ActionMatchRepository;
+use App\Repository\Sport\DemandeAccesPdfRepository;
 use App\Repository\Sport\EvaluationFfbbRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\SessionStatsLiveRepository;
 use App\Repository\Sport\TirFfbbRepository;
 use App\Service\Stats\ActionMatchAggregator;
 use App\Service\Stats\JoueurStatsAggregator;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -37,6 +41,8 @@ class PirbStatsController extends AbstractController
         private readonly SessionStatsLiveRepository $sessionRepo,
         private readonly ActionMatchAggregator $actionAggregator,
         private readonly ActionMatchRepository $actionMatchRepo,
+        private readonly DemandeAccesPdfRepository $demandeAccesPdfRepo,
+        private readonly EntityManagerInterface $em,
     ) {}
 
     #[Route('/stats', name: 'pirb_stats', methods: ['GET'])]
@@ -136,16 +142,25 @@ class PirbStatsController extends AbstractController
             }
         }
 
+        // [B22a-sec] Statuts des demandes d'accès PDF pour ce match.
+        // Le template affiche des boutons différents selon le statut :
+        //   null → bouton "Demander l'accès"
+        //   pending → badge "En attente"
+        //   approved → lien téléchargement direct
+        //   rejected → bouton "Re-demander"
+        $demandesAccesPdf = $this->demandeAccesPdfRepo->findDemandesParMatch($joueur, $rencontre);
+
         return $this->render('pirb/stats_match.html.twig', [
-            'joueur'             => $joueur,
-            'rencontre'          => $rencontre,
-            'eval'               => $eval,
-            'stats_ffbb_moi'     => $statsFfbbMoi,
-            'stats_ffbb_equipe'  => $statsFfbbEquipe,
-            'tirs_ffbb_match'    => $tirsFfbbMatch,
-            'session_officielle' => $sessionOfficielle,
-            'stats_live_moi'     => $statsLiveMoi,
-            'stats_live_equipe'  => $statsLiveEquipe,
+            'joueur'               => $joueur,
+            'rencontre'            => $rencontre,
+            'eval'                 => $eval,
+            'stats_ffbb_moi'       => $statsFfbbMoi,
+            'stats_ffbb_equipe'    => $statsFfbbEquipe,
+            'tirs_ffbb_match'      => $tirsFfbbMatch,
+            'session_officielle'   => $sessionOfficielle,
+            'stats_live_moi'       => $statsLiveMoi,
+            'stats_live_equipe'    => $statsLiveEquipe,
+            'demandes_acces_pdf'   => $demandesAccesPdf,
         ]);
     }
 
@@ -223,19 +238,25 @@ class PirbStatsController extends AbstractController
 
     /**
      * [B22a 12/06/2026] Téléchargement sécurisé d'un PDF FFBB par la joueuse.
-     * RGPD : seules les joueuses de l'équipe de la rencontre peuvent télécharger.
+     * [B22a-sec 25/06/2026] Ajout du workflow d'approbation coach.
      *
      * Routes :
      *   GET /stats/match/{id}/pdf/feuille
      *   GET /stats/match/{id}/pdf/resume
      *   GET /stats/match/{id}/pdf/positions
+     *
+     * Sécurité :
+     *   - La joueuse ne peut pas télécharger directement.
+     *   - Elle doit d'abord faire une demande (POST pirb_stats_match_pdf_request).
+     *   - Le coach approuve dans Manager.
+     *   - Une fois approved, le GET sert le fichier normalement.
      */
     #[Route('/stats/match/{id}/pdf/{type}', name: 'pirb_stats_match_pdf', methods: ['GET'], requirements: ['type' => 'feuille|resume|positions'])]
     public function downloadPdf(
         Rencontre $rencontre,
         string $type,
         \App\Service\RencontrePdfUploader $pdfUploader,
-    ): \Symfony\Component\HttpFoundation\BinaryFileResponse {
+    ): Response {
         /** @var User $user */
         $user = $this->getUser();
         $joueur = $this->joueurRepo->findOneBy(['user' => $user]);
@@ -249,10 +270,32 @@ class PirbStatsController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
+        // [B22a-sec] Vérifier l'approbation avant de servir le fichier.
+        $demande = $this->demandeAccesPdfRepo->findOneDemande($joueur, $rencontre, $type);
+
+        if ($demande === null || $demande->isPending()) {
+            // Pas de demande ou demande en attente → bloquer + message
+            if ($demande === null) {
+                $this->addFlash('info', 'Tu dois d\'abord demander l\'accès à ce document. Ton coach devra valider.');
+            } else {
+                $this->addFlash('warning', 'Ta demande est en attente de validation par ton coach.');
+            }
+            return $this->redirectToRoute('pirb_stats_match', ['id' => $rencontre->getId()]);
+        }
+
+        if ($demande->isRejected()) {
+            $msg = 'Ton coach a refusé l\'accès à ce document.';
+            if ($demande->getMessageCoach()) {
+                $msg .= ' Message : « ' . $demande->getMessageCoach() . ' »';
+            }
+            $this->addFlash('danger', $msg);
+            return $this->redirectToRoute('pirb_stats_match', ['id' => $rencontre->getId()]);
+        }
+
+        // Demande approved → servir le fichier
+
         // [15/06/2026] Utilise RencontrePdfUploader::getAbsolutePath qui gère
         // les 2 conventions de stockage (filename simple vs path complet).
-        // Avant : duplication de code qui ne gérait QUE le cas path complet,
-        // d'où le 404 sur les rencontres uploadées via UI Manager.
         $absolutePath = $pdfUploader->getAbsolutePath($rencontre, $type);
         if ($absolutePath === null) {
             throw $this->createNotFoundException('PDF non disponible pour ce match.');
@@ -267,5 +310,83 @@ class PirbStatsController extends AbstractController
         );
 
         return $this->file($absolutePath, $filename);
+    }
+
+    /**
+     * [B22a-sec 25/06/2026] Créer une demande d'accès à un PDF FFBB.
+     *
+     * Route :
+     *   POST /stats/match/{id}/pdf/{type}/demander
+     *
+     * Logique :
+     *   - Si pas de demande → créer (statut=pending)
+     *   - Si rejected → remettre en pending (re-demander)
+     *   - Si pending → message "déjà en attente"
+     *   - Si approved → rediriger vers le download directement
+     */
+    #[Route('/stats/match/{id}/pdf/{type}/demander', name: 'pirb_stats_match_pdf_request', methods: ['POST'], requirements: ['type' => 'feuille|resume|positions'])]
+    public function requestPdfAccess(
+        Rencontre $rencontre,
+        string $type,
+        Request $request,
+    ): Response {
+        // Protection CSRF
+        if (!$this->isCsrfTokenValid('pdf_request_' . $rencontre->getId() . '_' . $type, $request->request->get('_token'))) {
+            $this->addFlash('danger', 'Token de sécurité invalide. Réessaie.');
+            return $this->redirectToRoute('pirb_stats_match', ['id' => $rencontre->getId()]);
+        }
+
+        /** @var User $user */
+        $user = $this->getUser();
+        $joueur = $this->joueurRepo->findOneBy(['user' => $user]);
+
+        if ($joueur === null) {
+            throw $this->createAccessDeniedException();
+        }
+
+        // Vérif RGPD : même équipe
+        if ($joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $demande = $this->demandeAccesPdfRepo->findOneDemande($joueur, $rencontre, $type);
+
+        if ($demande !== null && $demande->isApproved()) {
+            // Déjà approuvé → rediriger vers le téléchargement
+            return $this->redirectToRoute('pirb_stats_match_pdf', [
+                'id'   => $rencontre->getId(),
+                'type' => $type,
+            ]);
+        }
+
+        if ($demande !== null && $demande->isPending()) {
+            $this->addFlash('info', 'Ta demande est déjà en attente. Ton coach doit la valider.');
+            return $this->redirectToRoute('pirb_stats_match', ['id' => $rencontre->getId()]);
+        }
+
+        if ($demande !== null && $demande->isRejected()) {
+            // Re-demander après refus
+            $demande->reDemander();
+            $this->em->flush();
+            $this->addFlash('success', 'Nouvelle demande envoyée à ton coach !');
+            return $this->redirectToRoute('pirb_stats_match', ['id' => $rencontre->getId()]);
+        }
+
+        // Première demande → créer
+        $labels = DemandeAccesPdf::LABELS_TYPE;
+        $demande = new DemandeAccesPdf();
+        $demande->setJoueur($joueur);
+        $demande->setRencontre($rencontre);
+        $demande->setTypePdf($type);
+
+        $this->em->persist($demande);
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf(
+            'Demande d\'accès envoyée pour "%s". Ton coach doit valider avant que tu puisses télécharger.',
+            $labels[$type] ?? $type
+        ));
+
+        return $this->redirectToRoute('pirb_stats_match', ['id' => $rencontre->getId()]);
     }
 }

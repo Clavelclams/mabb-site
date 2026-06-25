@@ -326,7 +326,8 @@
            le feed "Pour toi" en haut, alimenté par FeedAggregator (convocations).
            Les réunions publiques (AG ouverte à tous) remonteront aussi par là
            quand le flag visiblePourTous sera ajouté sur Reunion. #}
-        {% if club is defined and club and (is_granted('CLUB_STAFF', club) or is_granted('CLUB_ADMIN', club)) %}
+        {# Réunions — staff élargi (DIRIGEANT, COACH, STAFF, TRESORIER, EMPLOYE) #}
+        {% if club is defined and club and is_granted('CLUB_STAFF_ELARGI', club) %}
             <div class="col-md-6 col-lg-4">
                 <a href="{{ path('manager_reunion_index') }}" style="text-decoration:none;">
                     <div class="card-mabb" style="cursor:pointer; position:relative;">

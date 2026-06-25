@@ -1,0 +1,153 @@
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}Déclarer une séance solo{% endblock %}
+
+{% block stylesheets %}
+.type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 12px 8px;
+    border: 2px solid var(--pirb-border);
+    border-radius: 10px;
+    cursor: pointer;
+    background: none;
+    color: var(--pirb-text-muted);
+    font-size: .8rem;
+    font-weight: 600;
+    transition: all .15s;
+    min-width: 80px;
+    flex: 1;
+}
+.type-btn:hover, .type-btn.selected {
+    border-color: var(--pirb-accent);
+    background: rgba(234,88,12,.1);
+    color: var(--pirb-accent);
+}
+.type-btn .type-icon { font-size: 1.4rem; line-height: 1; }
+{% endblock %}
+
+{% block body %}
+
+<div style="margin-bottom:14px;">
+    <a href="{{ path('pirb_seances_index') }}"
+       style="display:inline-flex; align-items:center; gap:6px; font-size:.85rem; color:var(--pirb-text-muted); text-decoration:none; padding:4px 10px; border-radius:6px; border:1px solid var(--pirb-border);">
+        <i class="bi bi-arrow-left"></i> Retour
+    </a>
+</div>
+
+{% for label, messages in app.flashes(['error','warning','info']) %}
+    {% for msg in messages %}
+        <div class="pirb-card" style="padding:12px 14px; margin-bottom:10px; border-left:4px solid #ef4444; background:rgba(239,68,68,.1); font-size:.88rem;">{{ msg }}</div>
+    {% endfor %}
+{% endfor %}
+
+<div class="pirb-card" style="padding:18px 16px; margin-bottom:16px;">
+    <h1 style="font-size:1.1rem; font-weight:800; margin:0 0 4px 0;">
+        <i class="bi bi-person-walking" style="color:var(--pirb-accent);"></i>
+        Déclarer une séance solo
+    </h1>
+    <p style="font-size:.82rem; color:var(--pirb-text-muted); margin:0 0 16px 0;">
+        Tu t'es entraîné(e) seul(e) ? Déclare-le ici. Le coach validera (ou non) en Manager.
+    </p>
+
+    <form method="POST" action="{{ path('pirb_seances_solo_declarer') }}" id="soloForm">
+        <input type="hidden" name="_token" value="{{ csrf_token('declarer_solo') }}">
+        <input type="hidden" name="type" id="typeValue" value="Shoot">
+
+        {# Type d'entraînement #}
+        <div style="margin-bottom:16px;">
+            <label style="font-size:.78rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:8px;">
+                Type d'entraînement
+            </label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                {% for key, label in types %}
+                    {% set icons = {
+                        'Shoot': 'bi-bullseye',
+                        'Dribble': 'bi-arrow-left-right',
+                        'Physique': 'bi-lightning-fill',
+                        'Tactique': 'bi-diagram-3',
+                        'Autre': 'bi-three-dots'
+                    } %}
+                    <button type="button" class="type-btn {{ loop.first ? 'selected' : '' }}"
+                            data-type="{{ key }}"
+                            onclick="selectType('{{ key }}', this)">
+                        <span class="type-icon"><i class="bi {{ icons[key] ?? 'bi-star' }}"></i></span>
+                        {{ label|split(' ')|first }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Date #}
+        <div style="margin-bottom:12px;">
+            <label style="font-size:.78rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:6px;">
+                Date
+            </label>
+            <input type="date" name="date_solo"
+                   max="{{ 'now'|date('Y-m-d') }}"
+                   value="{{ 'now'|date('Y-m-d') }}"
+                   style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--pirb-border); background:var(--pirb-bg-card); color:var(--pirb-text); font-size:.9rem; box-sizing:border-box;"
+                   required>
+        </div>
+
+        {# Durée #}
+        <div style="margin-bottom:12px;">
+            <label style="font-size:.78rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:6px;">
+                Durée (minutes) : <span id="dureeLabel">60</span>
+            </label>
+            <input type="range" name="duree_minutes" id="dureeRange"
+                   min="10" max="180" step="5" value="60"
+                   style="width:100%; accent-color:var(--pirb-accent);"
+                   oninput="document.getElementById('dureeLabel').textContent=this.value">
+            <div style="display:flex; justify-content:space-between; font-size:.72rem; color:var(--pirb-text-muted); margin-top:3px;">
+                <span>10 min</span><span>180 min</span>
+            </div>
+        </div>
+
+        {# Description libre #}
+        <div style="margin-bottom:16px;">
+            <label style="font-size:.78rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.05em; display:block; margin-bottom:6px;">
+                Notes (optionnel)
+            </label>
+            <textarea name="description" rows="2"
+                      placeholder="Ce que t'as travaillé, où, avec qui…"
+                      style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--pirb-border); background:var(--pirb-bg-card); color:var(--pirb-text); font-size:.85rem; resize:vertical; box-sizing:border-box;"></textarea>
+        </div>
+
+        <button type="submit" style="width:100%; padding:13px; background:var(--pirb-accent); color:#fff; border:none; border-radius:10px; font-size:.95rem; font-weight:700; cursor:pointer; transition:opacity .15s;"
+                onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
+            <i class="bi bi-send"></i> Envoyer la déclaration
+        </button>
+    </form>
+</div>
+
+{# ─── Dernières déclarations #}
+{% if solos|length > 0 %}
+<div class="pirb-card" style="padding:14px 16px;">
+    <h2 style="font-size:.88rem; font-weight:700; margin:0 0 10px 0; color:var(--pirb-text-muted);">Mes dernières déclarations</h2>
+    {% for solo in solos %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--pirb-border); font-size:.82rem;">
+            <div>
+                <span style="font-weight:600;">{{ constant('App\\Entity\\Sport\\SeanceSolo::TYPES')[solo.type] ?? solo.type }}</span>
+                <span style="color:var(--pirb-text-muted); margin-left:6px;">{{ solo.dateSolo|date('d/m/Y') }} · {{ solo.dureeMinutes }} min</span>
+            </div>
+            <span style="padding:2px 8px; border-radius:12px; font-size:.72rem; font-weight:700;
+                         background:{% if solo.statut == 'approved' %}rgba(16,185,129,.15){% elseif solo.statut == 'rejected' %}rgba(239,68,68,.15){% else %}rgba(245,158,11,.15){% endif %};
+                         color:{% if solo.statut == 'approved' %}#10b981{% elseif solo.statut == 'rejected' %}#ef4444{% else %}#f59e0b{% endif %};">
+                {% if solo.statut == 'approved' %}✓ Validé{% elseif solo.statut == 'rejected' %}✗ Refusé{% else %}⏳ Attente{% endif %}
+            </span>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<script>
+function selectType(val, btn) {
+    document.getElementById('typeValue').value = val;
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+</script>
+{% endblock %}

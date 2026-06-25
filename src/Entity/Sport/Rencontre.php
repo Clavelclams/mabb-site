@@ -42,24 +42,57 @@ class Rencontre implements ClubAwareInterface
     ];
 
     /**
-     * [B23 12/06/2026] Type de rencontre :
-     * - OFFICIEL : championnat, coupe (par défaut)
-     * - AMICAL : match d'opposition contre un autre club hors compétition
-     * - ENTRAINEMENT_INTERNE : match d'entraînement entre joueuses du club
+     * [B23 12/06/2026 — V2.2 25/06/2026] Type de rencontre :
+     * - OFFICIEL              : championnat, coupe FFBB (par défaut)
+     * - AMICAL                : match d'opposition hors compétition (ex: tournoi amical)
+     * - ENTRAINEMENT_INTERNE  : match d'entraînement entre joueuses du club
      *   (multi-catégorie possible — ex U15+U18+Sénior mélangées)
+     * - EXHIBITION            : scrimmage avec joueuses non officielles (recrutement,
+     *   open gym, début de saison). Accepte les Joueur.isTemporaire des deux côtés.
      */
     public const TYPE_OFFICIEL              = 'OFFICIEL';
     public const TYPE_AMICAL                = 'AMICAL';
     public const TYPE_ENTRAINEMENT_INTERNE  = 'ENTRAINEMENT_INTERNE';
-    public const TYPES_RENCONTRE = [self::TYPE_OFFICIEL, self::TYPE_AMICAL, self::TYPE_ENTRAINEMENT_INTERNE];
+    public const TYPE_EXHIBITION            = 'EXHIBITION';
+    public const TYPES_RENCONTRE = [
+        self::TYPE_OFFICIEL,
+        self::TYPE_AMICAL,
+        self::TYPE_ENTRAINEMENT_INTERNE,
+        self::TYPE_EXHIBITION,
+    ];
+
+    /**
+     * [V2.2] Mode de saisie des stats live.
+     *   full  = toutes les actions FIBA (tirs, rebonds, passes, fautes, contres…)
+     *   light = points + rebonds + passes seulement (suffisant pour open gym/recrutement)
+     *   none  = pas de stats live (pure rencontre de planning, juste présences)
+     */
+    public const MODE_STATS_FULL  = 'full';
+    public const MODE_STATS_LIGHT = 'light';
+    public const MODE_STATS_NONE  = 'none';
+    public const MODES_STATS = [
+        self::MODE_STATS_FULL,
+        self::MODE_STATS_LIGHT,
+        self::MODE_STATS_NONE,
+    ];
 
     #[ORM\Column(length: 30)]
     private string $typeRencontre = self::TYPE_OFFICIEL;
 
     /**
+     * [V2.2] Mode de saisie des stats live. Défaut : full.
+     * Pour les exhibitions légères, passer en 'light' pour simplifier l'interface.
+     */
+    #[ORM\Column(length: 10, options: ['default' => 'full'])]
+    private string $modeStats = self::MODE_STATS_FULL;
+
+    /**
      * [B23 12/06/2026] Joueuses externes à l'équipe officielle (hors effectif équipe).
      * Stockées en JSON array d'IDs : [12, 47, 89]. Permet match multi-catégorie
      * sans changer l'effectif officiel des équipes.
+     *
+     * Distincts des Joueur.isTemporaire (V2.2) qui sont des entités Joueur créées
+     * rapidement — plus flexibles pour les stats live.
      */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $joueursExternes = null;
@@ -492,7 +525,7 @@ class Rencontre implements ClubAwareInterface
     public function isForfaitAdverse(): bool { return $this->forfaitAdverse; }
     public function setForfaitAdverse(bool $f): self { $this->forfaitAdverse = $f; return $this; }
 
-    // === B23 : type rencontre + joueuses externes ===
+    // === B23 + V2.2 : type rencontre + mode stats + joueuses externes ===
     public function getTypeRencontre(): string { return $this->typeRencontre; }
     public function setTypeRencontre(string $t): self { $this->typeRencontre = $t; return $this; }
     public function getJoueursExternes(): ?array { return $this->joueursExternes; }
@@ -500,4 +533,32 @@ class Rencontre implements ClubAwareInterface
     public function isEntrainementInterne(): bool { return $this->typeRencontre === self::TYPE_ENTRAINEMENT_INTERNE; }
     public function isAmical(): bool { return $this->typeRencontre === self::TYPE_AMICAL; }
     public function isOfficiel(): bool { return $this->typeRencontre === self::TYPE_OFFICIEL; }
+    public function isExhibition(): bool { return $this->typeRencontre === self::TYPE_EXHIBITION; }
+
+    /** True si la rencontre est de type "souple" (amical, entraînement ou exhibition). */
+    public function isNonOfficielle(): bool
+    {
+        return in_array($this->typeRencontre, [
+            self::TYPE_AMICAL,
+            self::TYPE_ENTRAINEMENT_INTERNE,
+            self::TYPE_EXHIBITION,
+        ], true);
+    }
+
+    public function getModeStats(): string { return $this->modeStats; }
+    public function setModeStats(string $mode): self
+    {
+        if (!in_array($mode, self::MODES_STATS, true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Mode stats invalide : "%s". Valeurs autorisées : full, light, none.', $mode
+            ));
+        }
+        $this->modeStats = $mode;
+        return $this;
+    }
+
+    /** True si des stats live peuvent être saisies pour cette rencontre. */
+    public function accepteStatsLive(): bool { return $this->modeStats !== self::MODE_STATS_NONE; }
+    /** True si le mode light est activé (interface simplifiée). */
+    public function isModeLightStats(): bool { return $this->modeStats === self::MODE_STATS_LIGHT; }
 }
