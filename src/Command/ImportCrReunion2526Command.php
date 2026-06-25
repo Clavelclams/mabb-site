@@ -113,7 +113,7 @@ class ImportCrReunion2526Command extends Command
         $reunion->setVisiblePourTous(false); // Confidentiel usage interne
 
         // ── PV / Compte rendu complet ─────────────────────────────────────────
-        $pv = <<<PV
+        $pv = <<<END_PV
 COMPTE RENDU — Réunion du 25 juin 2026
 Bilan & Restructuration 2026/27
 CONFIDENTIEL — Usage interne MABB uniquement
@@ -272,7 +272,7 @@ STRATÉGIQUE :
 
 MOYEN :
 □ Moussa / Lenny : transmettre CV Lucas (service civique potentiel) à Will (début sept)
-PV
+END_PV;
 
         $reunion->setPvContenu($pv);
 
