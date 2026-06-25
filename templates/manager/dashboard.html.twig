@@ -243,6 +243,20 @@
                 </div>
             </a>
         </div>
+        {# Card Shot chart — validation des séances de tir déclarées par les joueuses.
+           Visible aux CLUB_STAFF (coachs + dirigeants). #}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_shot_chart_validation') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-bullseye" style="font-size:2.5rem; color:#ea580c;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Shot chart</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Valider les séances de tir des joueuses.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
         {# Card Demandes — visible uniquement aux DIRIGEANT du club actif #}
         {% if club is defined and club and is_granted('CLUB_ADMIN', club) %}
             <div class="col-md-6 col-lg-4">
