@@ -483,10 +483,89 @@
             {% endif %}
         </div>
 
+        {# === Mon espace — grille de fonctionnalités === #}
+        <div class="pirb-card" style="padding:16px;">
+            <div class="pirb-card-title" style="margin-bottom:14px;">Mon espace</div>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px;">
+
+                <a href="{{ path('pirb_seances_index') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">📅</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Séances</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Entraînements</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_stats') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">📊</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Mes stats</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Saison & matchs</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_shot_chart') }}" style="text-decoration:none;">
+                    <div style="background:rgba(234,88,12,.06); border:1px solid rgba(234,88,12,.25); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">🎯</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-accent); line-height:1.2;">Mes tirs</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Shot chart</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_equipe') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">👥</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Mon équipe</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Coéquipières</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_convocations') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">📨</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Convocations</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Matchs & events</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_profil_badges') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">🏆</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Badges</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">XP & récompenses</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_mes_parents') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">👤</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Responsables</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Parents & tuteurs</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_bilan') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">📋</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Bilan</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Fin de saison</div>
+                    </div>
+                </a>
+
+                <a href="{{ path('pirb_seances_solo_declarer') }}" style="text-decoration:none;">
+                    <div style="background:rgba(255,255,255,.04); border:1px solid var(--pirb-border); border-radius:10px; padding:14px 8px; text-align:center;">
+                        <div style="font-size:1.6rem; margin-bottom:6px;">🏋️</div>
+                        <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text); line-height:1.2;">Séance solo</div>
+                        <div style="font-size:.62rem; color:var(--pirb-text-muted); margin-top:3px;">Déclarer</div>
+                    </div>
+                </a>
+
+            </div>
+        </div>
+
         {# === Aide / FAQ rapide === #}
         <div style="text-align:center; padding:12px; color:var(--pirb-text-muted); font-size:0.78rem;">
-            <p style="margin:0;">L'édition de profil et les stats perso arrivent bientôt.</p>
-            <p style="margin:4px 0 0 0;">Un souci ? Contacte le staff via le drawer (avatar en haut à droite).</p>
+            <p style="margin:0;">Un souci ? Contacte le staff via le drawer (avatar en haut à droite).</p>
         </div>
 
     {% endif %}

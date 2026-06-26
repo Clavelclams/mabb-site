@@ -254,6 +254,47 @@
                 </div>
             </a>
         </div>
+        {# Card Réunions — visible CLUB_STAFF_ELARGI #}
+        {% if club is defined and club and is_granted('CLUB_STAFF_ELARGI', club) %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_reunion_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-people-fill" style="font-size:2.5rem; color:#7c3aed;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Réunions</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">PV, convocations, comptes-rendus.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
+
+        {# Cards PDFs FFBB + Bibliothèque — visible CLUB_COACH #}
+        {% if club is defined and club and is_granted('CLUB_COACH', club) %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_demandes_pdf_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-shield-lock" style="font-size:2.5rem; color:#dc2626;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">PDFs FFBB</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Licences et documents fédéraux.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_seances_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-book-half" style="font-size:2.5rem; color:#0891b2;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Bibliothèque</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Fiches séances et exercices.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
+
         {# Card Shot chart — validation des séances de tir déclarées par les joueuses.
            Visible aux CLUB_STAFF (coachs + dirigeants). #}
         <div class="col-md-6 col-lg-4">

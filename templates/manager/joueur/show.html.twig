@@ -58,6 +58,9 @@
                 <a href="{{ path('manager_shot_chart_joueuse', {id: joueur.id}) }}" class="btn-mabb-ghost">
                     <i class="bi bi-bullseye"></i> Shot chart
                 </a>
+                <a href="{{ path('manager_parents_enfants_lier_staff', {joueurId: joueur.id}) }}" class="btn-mabb-ghost">
+                    <i class="bi bi-person-heart"></i> Lier un responsable
+                </a>
             {% endif %}
         </div>
     </div>
