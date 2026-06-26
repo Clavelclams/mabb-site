@@ -230,7 +230,7 @@
                 <div style="font-weight:700; font-size:.88rem;">{{ seance.dateSeance|date('d/m/Y') }}</div>
                 <div style="font-size:.75rem; color:var(--pirb-text-muted); margin-top:2px;">
                     {{ seance.zones|length }} zone(s) · {{ seance.totalTentatives }} tirs
-                    {% if seance.notes %}<span style="font-style:italic;">· {{ seance.notes|u.truncate(40, '…') }}</span>{% endif %}
+                    {% if seance.notes %}<span style="font-style:italic;">· {{ seance.notes|length > 40 ? seance.notes|slice(0,40) ~ '…' : seance.notes }}</span>{% endif %}
                 </div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">

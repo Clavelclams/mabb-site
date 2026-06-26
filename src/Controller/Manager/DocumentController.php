@@ -6,7 +6,7 @@ namespace App\Controller\Manager;
 
 use App\Entity\Sport\Document;
 use App\Repository\Sport\DocumentRepository;
-use App\Security\ClubVoter;
+use App\Security\Voter\ClubVoter;
 use App\Service\DocumentUploader;
 use App\Security\Tenant\TenantResolver;
 use Doctrine\ORM\EntityManagerInterface;
