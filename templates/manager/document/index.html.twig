@@ -1,0 +1,355 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}ENT — Documents du club{% endblock %}
+
+{% block body %}
+
+{# ── En-tête ──────────────────────────────────────────────────────── #}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-folder2-open"></i> ENT — Documents</h1>
+        <p class="subtitle">Documents partagés par le staff du club <strong>{{ club.nom }}</strong></p>
+    </div>
+    {% if is_staff %}
+        <button class="btn-mabb-orange" onclick="document.getElementById('modal-upload').style.display='flex'">
+            <i class="bi bi-upload"></i> Ajouter un document
+        </button>
+    {% endif %}
+</div>
+
+{# ── Flash messages ──────────────────────────────────────────────── #}
+{% for msg in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endfor %}
+{% for msg in app.flashes('error') %}
+    <div class="alert alert-danger alert-dismissible" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endfor %}
+
+{# ── Filtres par type ────────────────────────────────────────────── #}
+<div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px;">
+    <a href="{{ path('manager_ent_index') }}"
+       class="btn-mabb-ghost"
+       style="font-size:.8rem; padding:5px 14px; {{ filtre_type is null ? 'background:var(--mabb-orange); color:#fff; border-color:var(--mabb-orange);' : '' }}">
+        Tous
+    </a>
+    {% for typeKey, typeLib in types %}
+        <a href="{{ path('manager_ent_index', {type: typeKey}) }}"
+           class="btn-mabb-ghost"
+           style="font-size:.8rem; padding:5px 14px; {{ filtre_type == typeKey ? 'background:var(--mabb-orange); color:#fff; border-color:var(--mabb-orange);' : '' }}">
+            {{ typeLib }}
+        </a>
+    {% endfor %}
+</div>
+
+{# ── Liste des documents ─────────────────────────────────────────── #}
+{% if documents is empty %}
+    <div class="card-mabb">
+        <div style="text-align:center; padding:50px 20px; color:var(--mabb-muted);">
+            <i class="bi bi-folder2-open" style="font-size:3rem;"></i>
+            <p style="margin-top:14px;">
+                {% if filtre_type %}
+                    Aucun document de ce type pour l'instant.
+                {% else %}
+                    L'ENT est vide pour l'instant.
+                {% endif %}
+            </p>
+            {% if is_staff %}
+                <button class="btn-mabb-primary mt-2" onclick="document.getElementById('modal-upload').style.display='flex'">
+                    <i class="bi bi-upload"></i> Ajouter le premier document
+                </button>
+            {% endif %}
+        </div>
+    </div>
+{% else %}
+    {# Tableau responsive #}
+    <div class="card-mabb" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:.87rem;">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--mabb-border); background:var(--mabb-bg-soft);">
+                        <th style="padding:10px 16px; text-align:left; font-weight:600; color:var(--mabb-muted);">Fichier</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Type</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Visibilité</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Ajouté par</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Date</th>
+                        <th style="padding:10px 12px; text-align:right; font-weight:600; color:var(--mabb-muted);">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                        <tr style="border-bottom:1px solid var(--mabb-border);">
+                            {# Fichier #}
+                            <td style="padding:12px 16px;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <i class="bi {{ doc.icone }}" style="font-size:1.4rem; color:{{ doc.typeBadgeColor }};"></i>
+                                    <div>
+                                        <div style="font-weight:600; color:var(--mabb-text);">{{ doc.titre }}</div>
+                                        <div style="font-size:.76rem; color:var(--mabb-muted);">
+                                            {{ doc.nomOriginal }} · {{ doc.tailleHumaine }}
+                                        </div>
+                                        {% if doc.description %}
+                                            <div style="font-size:.76rem; color:var(--mabb-muted); margin-top:2px; font-style:italic;">
+                                                {{ doc.description|length > 80 ? doc.description|slice(0,80) ~ '…' : doc.description }}
+                                            </div>
+                                        {% endif %}
+                                        {% if doc.joueur %}
+                                            <div style="font-size:.76rem; margin-top:3px;">
+                                                <i class="bi bi-person-fill"></i>
+                                                {{ doc.joueur.prenom }} {{ doc.joueur.nom }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+
+                            {# Type #}
+                            <td style="padding:12px;">
+                                <span style="
+                                    display:inline-block;
+                                    background:{{ doc.typeBadgeColor }}20;
+                                    color:{{ doc.typeBadgeColor }};
+                                    border:1px solid {{ doc.typeBadgeColor }}50;
+                                    border-radius:4px;
+                                    padding:2px 8px;
+                                    font-size:.74rem;
+                                    font-weight:600;
+                                    white-space:nowrap;
+                                ">{{ doc.typeLibelle }}</span>
+                            </td>
+
+                            {# Visibilité #}
+                            <td style="padding:12px;">
+                                <span class="badge {{ doc.visibiliteBadgeClass }}" style="font-size:.73rem;">
+                                    {{ doc.visibiliteLibelle }}
+                                </span>
+                            </td>
+
+                            {# Uploader #}
+                            <td style="padding:12px; color:var(--mabb-muted); white-space:nowrap;">
+                                {% if doc.uploadePar %}
+                                    {{ doc.uploadePar.prenom }} {{ doc.uploadePar.nom|slice(0,1) }}.
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+
+                            {# Date #}
+                            <td style="padding:12px; color:var(--mabb-muted); white-space:nowrap; font-size:.8rem;">
+                                {{ doc.createdAt ? doc.createdAt|date('d/m/Y') : '?' }}
+                            </td>
+
+                            {# Actions #}
+                            <td style="padding:12px 16px; text-align:right; white-space:nowrap;">
+                                <a href="{{ path('manager_ent_voir', {id: doc.id}) }}"
+                                   class="btn-mabb-ghost"
+                                   style="font-size:.78rem; padding:4px 10px;"
+                                   target="_blank"
+                                   title="Ouvrir le fichier">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="{{ path('manager_ent_voir', {id: doc.id}) }}"
+                                   class="btn-mabb-ghost"
+                                   style="font-size:.78rem; padding:4px 10px;"
+                                   download
+                                   title="Télécharger">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                                {% if is_staff %}
+                                    <form method="post"
+                                          action="{{ path('manager_ent_supprimer', {id: doc.id}) }}"
+                                          style="display:inline;"
+                                          onsubmit="return confirm('Supprimer « {{ doc.titre|e('js') }} » ? Cette action est irréversible.')">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('ent_supprimer_' ~ doc.id) }}">
+                                        <button type="submit"
+                                                class="btn-mabb-ghost"
+                                                style="font-size:.78rem; padding:4px 10px; color:#dc2626; border-color:#dc2626;"
+                                                title="Supprimer">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p style="font-size:.78rem; color:var(--mabb-muted); margin-top:8px; text-align:right;">
+        {{ documents|length }} document{{ documents|length > 1 ? 's' : '' }}
+        {% if filtre_type %} · filtre : {{ types[filtre_type] }}{% endif %}
+    </p>
+{% endif %}
+
+
+{# ══════════════════════════════════════════════════════════════════════
+   MODAL UPLOAD (staff uniquement)
+══════════════════════════════════════════════════════════════════════ #}
+{% if is_staff %}
+<div id="modal-upload"
+     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000;
+            align-items:center; justify-content:center; padding:16px;">
+    <div class="card-mabb" style="width:100%; max-width:560px; max-height:90vh; overflow-y:auto; padding:28px;">
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="font-size:1.1rem; font-weight:700; margin:0;">
+                <i class="bi bi-upload" style="color:var(--mabb-orange);"></i> Ajouter un document
+            </h2>
+            <button onclick="document.getElementById('modal-upload').style.display='none'"
+                    class="btn-mabb-ghost"
+                    style="padding:4px 10px; font-size:1.1rem;">✕</button>
+        </div>
+
+        <form method="post"
+              action="{{ path('manager_ent_upload') }}"
+              enctype="multipart/form-data">
+            <input type="hidden" name="_token" value="{{ csrf_token('ent_upload_' ~ club.id) }}">
+
+            {# Titre #}
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:.84rem; font-weight:600; margin-bottom:5px;">
+                    Titre du document <span style="color:#dc2626;">*</span>
+                </label>
+                <input type="text"
+                       name="titre"
+                       required
+                       maxlength="255"
+                       placeholder="Ex: Compte-rendu CA du 15 juin 2026"
+                       style="width:100%; padding:9px 12px; border:1px solid var(--mabb-border);
+                              border-radius:6px; font-size:.87rem; box-sizing:border-box;">
+            </div>
+
+            {# Type #}
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:.84rem; font-weight:600; margin-bottom:5px;">
+                    Type de document <span style="color:#dc2626;">*</span>
+                </label>
+                <select name="type"
+                        id="select-type"
+                        required
+                        style="width:100%; padding:9px 12px; border:1px solid var(--mabb-border);
+                               border-radius:6px; font-size:.87rem;"
+                        onchange="updateVisibiliteDefaut(this.value)">
+                    {% for typeKey, typeLib in types %}
+                        <option value="{{ typeKey }}">{{ typeLib }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            {# Visibilité #}
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:.84rem; font-weight:600; margin-bottom:5px;">
+                    Visibilité
+                    <span style="font-weight:400; color:var(--mabb-muted); font-size:.78rem;">
+                        (déduite du type, modifiable)
+                    </span>
+                </label>
+                <select name="visibilite"
+                        id="select-visibilite"
+                        style="width:100%; padding:9px 12px; border:1px solid var(--mabb-border);
+                               border-radius:6px; font-size:.87rem;">
+                    {% for visKey, visLib in visibilites %}
+                        <option value="{{ visKey }}">{{ visLib }}</option>
+                    {% endfor %}
+                </select>
+                <div id="vis-hint" style="font-size:.76rem; color:var(--mabb-muted); margin-top:4px;"></div>
+            </div>
+
+            {# Description optionnelle #}
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:.84rem; font-weight:600; margin-bottom:5px;">
+                    Description <span style="font-weight:400; color:var(--mabb-muted);">(optionnel)</span>
+                </label>
+                <textarea name="description"
+                          rows="2"
+                          maxlength="500"
+                          placeholder="Contexte, instructions pour les parents, saison concernée…"
+                          style="width:100%; padding:9px 12px; border:1px solid var(--mabb-border);
+                                 border-radius:6px; font-size:.87rem; resize:vertical; box-sizing:border-box;"></textarea>
+            </div>
+
+            {# Fichier #}
+            <div style="margin-bottom:20px;">
+                <label style="display:block; font-size:.84rem; font-weight:600; margin-bottom:5px;">
+                    Fichier <span style="color:#dc2626;">*</span>
+                </label>
+                <input type="file"
+                       name="fichier"
+                       required
+                       accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.jpg,.jpeg,.png,.webp,.gif,.txt"
+                       style="width:100%; padding:8px; border:1px solid var(--mabb-border);
+                              border-radius:6px; font-size:.84rem; box-sizing:border-box;">
+                <div style="font-size:.75rem; color:var(--mabb-muted); margin-top:4px;">
+                    PDF, Word, Excel, PowerPoint, ODT, Images, TXT — max 20 Mo
+                </div>
+            </div>
+
+            {# Boutons #}
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button"
+                        onclick="document.getElementById('modal-upload').style.display='none'"
+                        class="btn-mabb-ghost">
+                    Annuler
+                </button>
+                <button type="submit" class="btn-mabb-orange">
+                    <i class="bi bi-upload"></i> Uploader
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Visibilités par défaut par type (miroir de la constante PHP)
+const visDefaut = {
+    'COMPTE_RENDU':    'STAFF',
+    'PLANNING':        'MEMBRES',
+    'REGLEMENT':       'MEMBRES',
+    'FORMULAIRE':      'PARENTS',
+    'DOCUMENT_JOUEUR': 'PARENTS',
+    'MEDIA':           'MEMBRES',
+    'CONVOCATION':     'MEMBRES',
+    'AUTRE':           'STAFF',
+};
+
+const visHints = {
+    'STAFF':   'Visible uniquement par le staff élargi (coach, dirigeant, staff).',
+    'MEMBRES': 'Visible par tous les membres actifs du club (joueurs + staff).',
+    'PARENTS': 'Visible par les parents dans PIRB et par le staff.',
+};
+
+function updateVisibiliteDefaut(type) {
+    const defaut = visDefaut[type] || 'STAFF';
+    const sel = document.getElementById('select-visibilite');
+    sel.value = defaut;
+    document.getElementById('vis-hint').textContent = visHints[defaut] || '';
+}
+
+// Init au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    const sel = document.getElementById('select-type');
+    if (sel) updateVisibiliteDefaut(sel.value);
+    sel?.addEventListener('change', function() {
+        updateVisibiliteDefaut(this.value);
+    });
+    // Mettre à jour le hint quand on change la visibilité manuellement
+    document.getElementById('select-visibilite')?.addEventListener('change', function() {
+        document.getElementById('vis-hint').textContent = visHints[this.value] || '';
+    });
+});
+
+// Fermer modal en cliquant en dehors
+document.getElementById('modal-upload')?.addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endif %}
+
+{% endblock %}

@@ -472,6 +472,25 @@
                 </a>
             </div>
         {% endif %}
+
+        {# Card ENT Documents — visible à tous les membres (CLUB_MEMBER).
+           Le staff voit tout ; les membres voient VIS_MEMBRES uniquement ;
+           les docs VIS_STAFF restent invisibles aux membres simples. #}
+        {% if club is defined and club and is_granted('CLUB_MEMBER', club) %}
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_ent_index') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer; border-left:3px solid #2563eb;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-folder2-open" style="font-size:2.5rem; color:#2563eb;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">ENT — Documents</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">
+                                Planning, règlement, formulaires, comptes-rendus…
+                            </p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endif %}
     </div>
 
 {% endblock %}

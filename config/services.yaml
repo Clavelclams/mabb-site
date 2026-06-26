@@ -111,6 +111,13 @@ services:
         arguments:
             $projectDir: '%kernel.project_dir%'
 
+    # ENT Documents — upload de documents club (Planning, Règlement, CR, etc.)
+    # Stockage par club : public/uploads/ent/{clubId}/{uniqid}.{ext}
+    # Max 20 Mo, formats bureautiques + images.
+    App\Service\DocumentUploader:
+        arguments:
+            $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/ent'
+
     # [B-FFBB-OCR 15/06/2026] Google Vision OCR
     # Le fichier google-vision-key.json contient la clé service account et NE DOIT
     # JAMAIS être committé (cf. .gitignore /config/credentials/).

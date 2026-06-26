@@ -1,0 +1,134 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Documents — PIRB MABB{% endblock %}
+
+{% block body %}
+
+{# ── Flash messages ──────────────────────────────────────────────── #}
+{% for label, messages in app.flashes(['success', 'warning', 'error', 'info']) %}
+    {% for message in messages %}
+        <div class="pirb-card" style="padding:12px 14px; margin-bottom:12px;
+            border-left:4px solid {{ label == 'success' ? '#16a34a' : (label == 'error' ? '#ef4444' : (label == 'info' ? '#3b82f6' : '#f59e0b')) }};
+            font-size:0.88rem;">{{ message }}</div>
+    {% endfor %}
+{% endfor %}
+
+{# ── En-tête ──────────────────────────────────────────────────────── #}
+<div class="pirb-card" style="text-align:center; padding:22px 16px; margin-bottom:16px;">
+    <div style="font-size:2.6rem; margin-bottom:4px;">📁</div>
+    <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Documents du club</h1>
+    <p style="color:var(--pirb-text-muted); font-size:0.82rem; margin-top:6px;">
+        {% if is_parent %}
+            Tous les documents partagés par le staff pour les familles et membres.
+        {% else %}
+            Documents partagés par le staff avec les membres du club.
+        {% endif %}
+    </p>
+    {% if total > 0 %}
+        <div style="margin-top:10px; display:inline-block; background:rgba(234,88,12,.12);
+                    color:var(--pirb-accent); border-radius:20px; padding:4px 14px; font-size:.82rem; font-weight:700;">
+            {{ total }} document{{ total > 1 ? 's' : '' }}
+        </div>
+    {% endif %}
+</div>
+
+{# ── Aucun document ──────────────────────────────────────────────── #}
+{% if total == 0 %}
+    <div class="pirb-card" style="text-align:center; padding:40px 20px;">
+        <div style="font-size:2.4rem; opacity:.4; margin-bottom:12px;">📂</div>
+        <p style="color:var(--pirb-text-muted); font-size:.88rem; margin:0;">
+            Aucun document disponible pour le moment.
+        </p>
+    </div>
+
+{% else %}
+
+    {# ── Documents groupés par type ──────────────────────────────── #}
+    {% for typeKey, docs in documents_by_type %}
+        {% if docs|length > 0 %}
+            <div class="pirb-card" style="margin-bottom:12px;">
+
+                {# En-tête groupe type #}
+                <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--pirb-border);">
+                    <div style="font-size:1.3rem;">
+                        {% if typeKey == 'COMPTE_RENDU' %}📝
+                        {% elseif typeKey == 'PLANNING' %}📅
+                        {% elseif typeKey == 'REGLEMENT' %}📜
+                        {% elseif typeKey == 'FORMULAIRE' %}📋
+                        {% elseif typeKey == 'DOCUMENT_JOUEUR' %}👤
+                        {% elseif typeKey == 'MEDIA' %}🖼️
+                        {% elseif typeKey == 'CONVOCATION' %}📣
+                        {% else %}📄
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div style="font-weight:800; font-size:.95rem;">
+                            {{ types[typeKey] ?? typeKey }}
+                        </div>
+                        <div style="font-size:.74rem; color:var(--pirb-text-muted);">
+                            {{ docs|length }} document{{ docs|length > 1 ? 's' : '' }}
+                        </div>
+                    </div>
+                </div>
+
+                {# Liste des documents du groupe #}
+                {% for doc in docs %}
+                    <div style="display:flex; align-items:center; gap:12px; padding:10px 0;
+                                {{ not loop.last ? 'border-bottom:1px solid var(--pirb-border);' : '' }}">
+
+                        {# Icône fichier #}
+                        <div style="width:42px; height:42px; border-radius:10px; flex-shrink:0;
+                                    background:{{ doc.typeBadgeColor }}20;
+                                    display:flex; align-items:center; justify-content:center;
+                                    font-size:1.3rem; color:{{ doc.typeBadgeColor }};">
+                            <i class="bi {{ doc.icone }}"></i>
+                        </div>
+
+                        {# Info document #}
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:.9rem; white-space:nowrap;
+                                        overflow:hidden; text-overflow:ellipsis;">
+                                {{ doc.titre }}
+                            </div>
+                            {% if doc.description %}
+                                <div style="font-size:.76rem; color:var(--pirb-text-muted); margin-top:2px;
+                                            white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    {{ doc.description|length > 60 ? doc.description|slice(0,60) ~ '…' : doc.description }}
+                                </div>
+                            {% endif %}
+                            <div style="font-size:.74rem; color:var(--pirb-text-muted); margin-top:2px;">
+                                {{ doc.tailleHumaine }}
+                                {% if doc.joueur %}
+                                    · <i class="bi bi-person-fill"></i>
+                                    {{ doc.joueur.prenom }} {{ doc.joueur.nom }}
+                                {% endif %}
+                                · {{ doc.createdAt ? doc.createdAt|date('d/m/Y') : '' }}
+                            </div>
+                        </div>
+
+                        {# Bouton ouvrir #}
+                        <a href="{{ path('pirb_document_voir', {id: doc.id}) }}"
+                           target="_blank"
+                           style="display:flex; align-items:center; justify-content:center;
+                                  width:38px; height:38px; border-radius:8px; flex-shrink:0;
+                                  background:var(--pirb-accent); color:#fff; text-decoration:none;
+                                  font-size:1rem;"
+                           title="Ouvrir {{ doc.nomOriginal }}">
+                            <i class="bi bi-eye-fill"></i>
+                        </a>
+                    </div>
+                {% endfor %}
+
+            </div>
+        {% endif %}
+    {% endfor %}
+
+{% endif %}
+
+{# ── Note de bas de page ─────────────────────────────────────────── #}
+<div style="text-align:center; padding:16px; color:var(--pirb-text-muted); font-size:.76rem;">
+    <i class="bi bi-shield-lock"></i>
+    Ces documents sont partagés par le staff du club. Pour toute question,
+    contacte le secrétariat.
+</div>
+
+{% endblock %}
