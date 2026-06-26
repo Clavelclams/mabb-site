@@ -193,8 +193,35 @@ class ReunionController extends AbstractController
             }
         }
 
+        // Liste des users du club NON encore convoqués (pour le select "Ajouter un participant")
+        $usersDejaConvoques = array_map(
+            fn(ReunionConvocation $c) => $c->getUser()?->getId(),
+            $reunion->getConvocations()->toArray()
+        );
+
+        $ucrsClub = $this->em->getRepository(UserClubRole::class)
+            ->createQueryBuilder('ucr')
+            ->join('ucr.user', 'u')
+            ->where('ucr.club = :club')
+            ->andWhere('ucr.status = :active')
+            ->orderBy('u.nom', 'ASC')
+            ->addOrderBy('u.prenom', 'ASC')
+            ->setParameter('club', $reunion->getClub())
+            ->setParameter('active', UserClubRole::STATUS_ACTIVE)
+            ->getQuery()->getResult();
+
+        // Dédoublonnage (user peut avoir plusieurs rôles) + filtre déjà convoqués
+        $usersDisponibles = [];
+        foreach ($ucrsClub as $ucr) {
+            $u = $ucr->getUser();
+            if ($u !== null && !in_array($u->getId(), $usersDejaConvoques, true)) {
+                $usersDisponibles[$u->getId()] = $u;
+            }
+        }
+
         return $this->render('manager/reunion/show.html.twig', [
-            'reunion' => $reunion,
+            'reunion'           => $reunion,
+            'users_disponibles' => array_values($usersDisponibles),
         ]);
     }
 
@@ -433,6 +460,54 @@ class ReunionController extends AbstractController
         $this->em->flush();
 
         return $this->redirectToRoute('manager_reunion_show', ['id' => $convocation->getReunion()->getId()]);
+    }
+
+    /**
+     * POST /reunions/{id}/ajouter-participant
+     *
+     * Ajoute un participant qui n'était pas dans la liste initiale des convoqués.
+     * Statut par défaut : "present" (on l'ajoute après coup car il était là).
+     * Si l'user est déjà convoqué → flash warning, pas de doublon (contrainte unique BDD).
+     */
+    #[Route('/reunions/{id}/ajouter-participant', name: 'manager_reunion_ajouter_participant', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function ajouterParticipant(Request $request, Reunion $reunion): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $reunion);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('ajouter_participant_' . $reunion->getId(), $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_reunion_show', ['id' => $reunion->getId()]);
+        }
+
+        $userId = (int) $request->request->get('user_id', 0);
+        if ($userId === 0) {
+            $this->addFlash('error', 'Aucun participant sélectionné.');
+            return $this->redirectToRoute('manager_reunion_show', ['id' => $reunion->getId()]);
+        }
+
+        $user = $this->em->find(User::class, $userId);
+        if ($user === null) {
+            $this->addFlash('error', 'Utilisateur introuvable.');
+            return $this->redirectToRoute('manager_reunion_show', ['id' => $reunion->getId()]);
+        }
+
+        // Vérif déjà convoqué
+        $existant = $this->convocationRepository->findOneByReunionAndUser($reunion, $user);
+        if ($existant !== null) {
+            $this->addFlash('warning', sprintf('%s %s est déjà dans la liste.', $user->getPrenom(), $user->getNom()));
+            return $this->redirectToRoute('manager_reunion_show', ['id' => $reunion->getId()]);
+        }
+
+        $conv = new ReunionConvocation();
+        $conv->setReunion($reunion);
+        $conv->setUser($user);
+        $conv->setStatut(ReunionConvocation::STATUT_PRESENT); // ajout post-réunion → présent par défaut
+        $this->em->persist($conv);
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf('✅ %s %s ajouté(e) comme présent(e).', $user->getPrenom(), $user->getNom()));
+        return $this->redirectToRoute('manager_reunion_show', ['id' => $reunion->getId()]);
     }
 
     // ====================================================================
