@@ -309,6 +309,36 @@
             </a>
         </div>
 
+        {# Card Staff / Organigramme — visible à tous les membres #}
+        {% if club is defined and club and is_granted('CLUB_MEMBER', club) %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_staff_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-diagram-3" style="font-size:2.5rem; color:#6366f1;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Staff</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Organigramme et coachs du club.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
+
+        {# Card Parents & Enfants — validation des liens responsables/joueuses #}
+        {% if club is defined and club and is_granted('CLUB_STAFF', club) %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_parents_enfants_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-person-heart" style="font-size:2.5rem; color:#ec4899;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Parents & Enfants</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Liens responsables ↔ joueuses.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
+
         {# Card Demandes — visible uniquement aux DIRIGEANT du club actif #}
         {% if club is defined and club and is_granted('CLUB_ADMIN', club) %}
             <div class="col-md-6 col-lg-4">
@@ -348,6 +378,42 @@
                             <i class="bi bi-cash-stack" style="font-size:2.5rem; color:#16a34a;"></i>
                             <h3 style="margin-top:12px; color:var(--mabb-dark);">Trésorerie</h3>
                             <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Solde, recettes, dépenses du club.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_cotisations_index') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-credit-card" style="font-size:2.5rem; color:#0891b2;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Cotisations</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Suivi des paiements par joueuse.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_subventions_index') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-bank" style="font-size:2.5rem; color:#16a34a;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Subventions</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Dossiers de financement.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <a href="{{ path('manager_tarifs_index') }}" style="text-decoration:none;">
+                    <div class="card-mabb" style="cursor:pointer;">
+                        <div class="card-body" style="text-align:center; padding:30px 20px;">
+                            <i class="bi bi-tags" style="font-size:2.5rem; color:#a16207;"></i>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Tarifs</h3>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Grille des cotisations par catégorie.</p>
                         </div>
                     </div>
                 </a>
