@@ -765,12 +765,7 @@
                     <i class="bi bi-book-half"></i> Bibliothèque
                 </a>
             </li>
-            {# Validation séances solo joueuses #}
-            <li>
-                <a href="{{ path('manager_seances_solo_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_seances_solo' ? 'active' : '' }}">
-                    <i class="bi bi-person-walking"></i> Séances solo
-                </a>
-            </li>
+            {# Séances solo : retiré de la navbar (trop de place), accessible via card dashboard #}
         {% endif %}
         {# Lien Demandes — visible UNIQUEMENT aux dirigeants du club actif #}
         {% if club is defined and club and is_granted('CLUB_ADMIN', club) %}
