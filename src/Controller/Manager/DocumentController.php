@@ -6,6 +6,7 @@ namespace App\Controller\Manager;
 
 use App\Entity\Sport\Document;
 use App\Repository\Sport\DocumentRepository;
+use App\Repository\Sport\RencontreRepository;
 use App\Security\Voter\ClubVoter;
 use App\Service\DocumentUploader;
 use App\Security\Tenant\TenantResolver;
@@ -48,7 +49,7 @@ class DocumentController extends AbstractController
     // ====================================================================
 
     #[Route('/ent', name: 'manager_ent_index', methods: ['GET'])]
-    public function index(DocumentRepository $repo, Request $request): Response
+    public function index(DocumentRepository $repo, RencontreRepository $rencontreRepo, Request $request): Response
     {
         $club = $this->tenantResolver->getCurrentClub();
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
@@ -75,13 +76,20 @@ class DocumentController extends AbstractController
             $documents = array_values($documents);
         }
 
+        // PDFs FFBB des matchs (feuille, résumé, positions de tirs)
+        // Visibles à tous les membres (données officielles FFBB) — sauf si filtre type actif
+        $rencontresAvecPdfs = $filtreType === null
+            ? $rencontreRepo->findWithPdfsByClub($club->getId())
+            : [];
+
         return $this->render('manager/document/index.html.twig', [
-            'documents'     => $documents,
-            'types'         => Document::TYPE_LIBELLES,
-            'visibilites'   => Document::VISIBILITE_LIBELLES,
-            'filtre_type'   => $filtreType,
-            'is_staff'      => $isStaffElargi,
-            'club'          => $club,
+            'documents'              => $documents,
+            'types'                  => Document::TYPE_LIBELLES,
+            'visibilites'            => Document::VISIBILITE_LIBELLES,
+            'filtre_type'            => $filtreType,
+            'is_staff'               => $isStaffElargi,
+            'club'                   => $club,
+            'rencontres_avec_pdfs'   => $rencontresAvecPdfs,
         ]);
     }
 

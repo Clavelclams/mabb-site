@@ -6,9 +6,11 @@ namespace App\Controller\Pirb;
 
 use App\Entity\Core\User;
 use App\Entity\Sport\SeanceTir;
+use App\Entity\Sport\TirFfbb;
 use App\Entity\Sport\ZoneTir;
 use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\SeanceTirRepository;
+use App\Repository\Sport\TirFfbbRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -51,8 +53,9 @@ use Symfony\Component\Routing\Attribute\Route;
 class PirbShotChartController extends AbstractController
 {
     public function __construct(
-        private readonly JoueurRepository $joueurRepo,
+        private readonly JoueurRepository    $joueurRepo,
         private readonly SeanceTirRepository $seanceTirRepo,
+        private readonly TirFfbbRepository   $tirFfbbRepo,
         private readonly EntityManagerInterface $em,
     ) {}
 
@@ -121,10 +124,21 @@ class PirbShotChartController extends AbstractController
         );
 
         // --- Toutes les zones pour la shot map (JSON pour JS) ---
-        $zonesJson = $this->buildZonesJson($seancesValidees);
+        $zonesSeances = $this->buildZonesJson($seancesValidees);
 
-        // --- Stats globales (badges résumé) ---
-        $statsGlobales = $this->buildStatsGlobales($seancesValidees);
+        // --- TirFfbb : tirs des matchs importés depuis FFBB ---
+        // Inclus si le filtre source est '' (tous) ou 'MATCH'
+        // Les TirFfbb sans coordonnées (positionX/Y null) ne peuvent pas être placés sur la map
+        $zonesFfbb = [];
+        if ($source === '' || $source === SeanceTir::SOURCE_MATCH) {
+            $tirsFfbb = $this->tirFfbbRepo->findForJoueur($joueur);
+            $zonesFfbb = $this->buildZonesJsonFromTirFfbb($tirsFfbb, $fromDate, $toDate);
+        }
+
+        $zonesJson = array_merge($zonesSeances, $zonesFfbb);
+
+        // --- Stats globales (badges résumé) — inclut les tirs FFBB ---
+        $statsGlobales = $this->buildStatsGlobales($seancesValidees, $zonesFfbb);
 
         return $this->render('pirb/shot_chart/index.html.twig', [
             'joueur'            => $joueur,
@@ -343,12 +357,77 @@ class PirbShotChartController extends AbstractController
     }
 
     /**
+     * Convertit les TirFfbb en zones JSON pour la shot map.
+     *
+     * Seuls les tirs avec positionX/Y non null sont placés sur la map
+     * (les tirs sans coordonnées viennent d'un PDF sans shot chart ou d'une
+     * extraction ratée — on les ignore visuellement mais ils comptent dans les stats
+     * → ici on ne les inclut PAS pour ne pas biaiser la carte).
+     *
+     * Coordonnées : positionX/Y sont stockées en 0-100 (% du terrain).
+     * La shot map attend des valeurs 0.0-1.0 → division par 100.
+     *
+     * Couleur : même logique que ZoneTir::getCouleurHsl() → hsl(hue, 80%, 45%)
+     * avec hue = pct * 1.2 (0% = rouge, 100% = vert).
+     *
+     * @param TirFfbb[] $tirs
+     * @param \DateTimeImmutable|null $fromDate
+     * @param \DateTimeImmutable|null $toDate
+     * @return array
+     */
+    private function buildZonesJsonFromTirFfbb(array $tirs, ?\DateTimeImmutable $fromDate, ?\DateTimeImmutable $toDate): array
+    {
+        $result = [];
+
+        foreach ($tirs as $tir) {
+            // Skip tirs sans position (pas de coordonnées extractibles depuis le PDF)
+            $posX = $tir->getPositionX();
+            $posY = $tir->getPositionY();
+            if ($posX === null || $posY === null) {
+                continue;
+            }
+
+            // Filtre de date sur la rencontre
+            $dateMatch = $tir->getRencontre()?->getDate();
+            if ($dateMatch !== null) {
+                if ($fromDate !== null && $dateMatch < $fromDate) continue;
+                if ($toDate   !== null && $dateMatch > $toDate)   continue;
+            }
+
+            $reussi = $tir->isEstReussi() ? 1 : 0;
+            $pct    = (float) ($reussi * 100);
+
+            // Couleur : hsl(hue, 80%, 45%) — miroir de ZoneTir::getCouleurHsl()
+            $hue    = (int) round($pct * 1.2); // 0% → 0° (rouge), 100% → 120° (vert)
+            $couleur = sprintf('hsl(%d, 80%%, 45%%)', $hue);
+
+            $result[] = [
+                'seanceId'   => null,  // pas de SeanceTir — tir FFBB
+                'date'       => $dateMatch?->format('Y-m-d') ?? '',
+                'source'     => SeanceTir::SOURCE_MATCH,
+                'x'          => $posX / 100.0,
+                'y'          => $posY / 100.0,
+                'typeTir'    => $tir->getTypeTir(),
+                'reussis'    => $reussi,
+                'tentatives' => 1,
+                'pct'        => $pct,
+                'couleur'    => $couleur,
+                'label'      => $reussi . '/1',
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
      * Stats globales agrégées pour les badges de résumé.
      *
      * @param SeanceTir[] $seances
+     * @param array       $extraZones  Zones supplémentaires déjà au format JSON (ex: TirFfbb)
+     *                                  → même structure que buildZonesJson() : [reussis, tentatives, typeTir, ...]
      * @return array{totalTentatives: int, totalReussis: int, pctGlobal: float|null, parType: array}
      */
-    private function buildStatsGlobales(array $seances): array
+    private function buildStatsGlobales(array $seances, array $extraZones = []): array
     {
         $totTentatives = 0;
         $totReussis    = 0;
@@ -358,6 +437,7 @@ class PirbShotChartController extends AbstractController
             $parType[$type] = ['tentatives' => 0, 'reussis' => 0, 'pct' => null];
         }
 
+        // Séances V2 (manuellement saisies + validées coach)
         foreach ($seances as $seance) {
             foreach ($seance->getZones() as $zone) {
                 $totTentatives += $zone->getTentatives();
@@ -365,6 +445,17 @@ class PirbShotChartController extends AbstractController
                 $t = $zone->getTypeTir();
                 $parType[$t]['tentatives'] += $zone->getTentatives();
                 $parType[$t]['reussis']    += $zone->getReussis();
+            }
+        }
+
+        // Tirs FFBB importés (source: match officiel)
+        foreach ($extraZones as $z) {
+            $totTentatives += $z['tentatives'];
+            $totReussis    += $z['reussis'];
+            $t = $z['typeTir'];
+            if (isset($parType[$t])) {
+                $parType[$t]['tentatives'] += $z['tentatives'];
+                $parType[$t]['reussis']    += $z['reussis'];
             }
         }
 

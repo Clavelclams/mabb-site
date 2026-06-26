@@ -25,4 +25,25 @@ class RencontreRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Retourne les rencontres du club qui ont au moins un PDF FFBB uploadé.
+     * Utilisé dans l'ENT pour la section "PDFs officiels FFBB".
+     * Triées par date décroissante (match le plus récent en premier).
+     *
+     * @return Rencontre[]
+     */
+    public function findWithPdfsByClub(int $clubId): array
+    {
+        return $this->createQueryBuilder('r')
+            ->leftJoin('r.equipe', 'eq')->addSelect('eq')
+            ->where('r.club = :club')
+            ->andWhere(
+                'r.resumePath IS NOT NULL OR r.feuilleMatchPath IS NOT NULL OR r.positionsTirsPath IS NOT NULL'
+            )
+            ->setParameter('club', $clubId)
+            ->orderBy('r.date', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

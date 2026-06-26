@@ -190,6 +190,107 @@
 
 
 {# ══════════════════════════════════════════════════════════════════════
+   SECTION PDFs FFBB — Matchs officiels
+   (feuille de match, résumé, positions de tirs)
+   Visible à tous les membres — données officielles FFBB
+══════════════════════════════════════════════════════════════════════ #}
+{% if rencontres_avec_pdfs is not empty %}
+<div style="margin-top:36px;">
+    <h2 style="font-size:1rem; font-weight:700; color:var(--mabb-dark); margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+        <i class="bi bi-file-earmark-pdf" style="color:#dc2626;"></i>
+        PDFs officiels FFBB — Matchs
+    </h2>
+
+    <div class="card-mabb" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--mabb-border); background:var(--mabb-bg-soft);">
+                        <th style="padding:10px 16px; text-align:left; font-weight:600; color:var(--mabb-muted);">Date</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Adversaire</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Équipe</th>
+                        <th style="padding:10px 12px; text-align:center; font-weight:600; color:var(--mabb-muted);">Feuille de match</th>
+                        <th style="padding:10px 12px; text-align:center; font-weight:600; color:var(--mabb-muted);">Résumé</th>
+                        <th style="padding:10px 12px; text-align:center; font-weight:600; color:var(--mabb-muted);">Positions de tirs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rencontre in rencontres_avec_pdfs %}
+                        <tr style="border-bottom:1px solid var(--mabb-border);">
+                            {# Date #}
+                            <td style="padding:11px 16px; white-space:nowrap; font-weight:600; color:var(--mabb-text);">
+                                {{ rencontre.date ? rencontre.date|date('d/m/Y') : '—' }}
+                            </td>
+
+                            {# Adversaire #}
+                            <td style="padding:11px 12px; color:var(--mabb-text);">
+                                {{ rencontre.adversaire ?: '—' }}
+                            </td>
+
+                            {# Équipe #}
+                            <td style="padding:11px 12px; color:var(--mabb-muted); font-size:.82rem;">
+                                {{ rencontre.equipe ? rencontre.equipe.nom : '—' }}
+                            </td>
+
+                            {# Feuille de match #}
+                            <td style="padding:11px 12px; text-align:center;">
+                                {% if rencontre.feuilleMatchPath %}
+                                    <a href="{{ path('manager_rencontre_pdf_serve', {id: rencontre.id, type: 'feuille'}) }}"
+                                       target="_blank"
+                                       class="btn-mabb-ghost"
+                                       style="font-size:.78rem; padding:4px 10px; color:#dc2626; border-color:#dc2626;"
+                                       title="Ouvrir la feuille de match">
+                                        <i class="bi bi-file-earmark-pdf"></i> Voir
+                                    </a>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.8rem;">—</span>
+                                {% endif %}
+                            </td>
+
+                            {# Résumé #}
+                            <td style="padding:11px 12px; text-align:center;">
+                                {% if rencontre.resumePath %}
+                                    <a href="{{ path('manager_rencontre_pdf_serve', {id: rencontre.id, type: 'resume'}) }}"
+                                       target="_blank"
+                                       class="btn-mabb-ghost"
+                                       style="font-size:.78rem; padding:4px 10px; color:#dc2626; border-color:#dc2626;"
+                                       title="Ouvrir le résumé du match">
+                                        <i class="bi bi-file-earmark-pdf"></i> Voir
+                                    </a>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.8rem;">—</span>
+                                {% endif %}
+                            </td>
+
+                            {# Positions de tirs #}
+                            <td style="padding:11px 12px; text-align:center;">
+                                {% if rencontre.positionsTirsPath %}
+                                    <a href="{{ path('manager_rencontre_pdf_serve', {id: rencontre.id, type: 'positions'}) }}"
+                                       target="_blank"
+                                       class="btn-mabb-ghost"
+                                       style="font-size:.78rem; padding:4px 10px; color:#dc2626; border-color:#dc2626;"
+                                       title="Ouvrir les positions de tirs">
+                                        <i class="bi bi-file-earmark-pdf"></i> Voir
+                                    </a>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.8rem;">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p style="font-size:.78rem; color:var(--mabb-muted); margin-top:6px; text-align:right;">
+        {{ rencontres_avec_pdfs|length }} match{{ rencontres_avec_pdfs|length > 1 ? 's' : '' }} avec PDFs
+    </p>
+</div>
+{% endif %}
+
+
+{# ══════════════════════════════════════════════════════════════════════
    MODAL UPLOAD (staff uniquement)
 ══════════════════════════════════════════════════════════════════════ #}
 {% if is_staff %}
