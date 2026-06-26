@@ -86,7 +86,7 @@ class StatsLiveController extends AbstractController
      *   - ARCHIVEE         → badge gris "Archivée"
      */
     #[Route('/stats-live', name: 'manager_stats_live_index', methods: ['GET'])]
-    public function index(): Response
+    public function liste(): Response
     {
         $club = $this->tenantResolver->getCurrentClub();
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
