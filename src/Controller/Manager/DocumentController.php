@@ -8,7 +8,7 @@ use App\Entity\Sport\Document;
 use App\Repository\Sport\DocumentRepository;
 use App\Security\ClubVoter;
 use App\Service\DocumentUploader;
-use App\Service\TenantResolver;
+use App\Security\Tenant\TenantResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
