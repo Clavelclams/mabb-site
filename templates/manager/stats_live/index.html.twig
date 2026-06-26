@@ -1,0 +1,217 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Stats Live — Matchs{% endblock %}
+
+{% block body %}
+
+{# ── En-tête ──────────────────────────────────────────────────────────── #}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-lightning-charge-fill" style="color:#f97316;"></i> Stats Live</h1>
+        <p class="subtitle">Saisie en direct des stats match — club <strong>{{ club.nom }}</strong></p>
+    </div>
+    {% if is_staff %}
+        <a href="{{ path('manager_rencontre_new') }}" class="btn-mabb-orange">
+            <i class="bi bi-plus-lg"></i> Nouvelle rencontre
+        </a>
+    {% endif %}
+</div>
+
+{# ── Flash messages ───────────────────────────────────────────────────── #}
+{% for msg in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endfor %}
+{% for msg in app.flashes('error') %}
+    <div class="alert alert-danger alert-dismissible" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endfor %}
+
+{# ══════════════════════════════════════════════════════════════════════
+   SECTION 1 — Matchs d'AUJOURD'HUI (mise en avant orange)
+══════════════════════════════════════════════════════════════════════ #}
+{% if rencontres_today is not empty %}
+<div style="margin-bottom:28px;">
+    <h2 style="font-size:.95rem; font-weight:700; color:#f97316; display:flex; align-items:center; gap:7px; margin-bottom:12px;">
+        <i class="bi bi-broadcast-pin"></i> Aujourd'hui
+    </h2>
+    <div style="display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr));">
+        {% for rencontre in rencontres_today %}
+            {% set session = sessions_by_rencontre[rencontre.id] ?? null %}
+            <div class="card-mabb" style="border-left:4px solid #f97316; padding:18px 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                    <div>
+                        <div style="font-weight:700; font-size:1rem; color:var(--mabb-text);">
+                            vs {{ rencontre.adversaire ?: '—' }}
+                        </div>
+                        <div style="font-size:.82rem; color:var(--mabb-muted); margin-top:2px;">
+                            {{ rencontre.equipe ? rencontre.equipe.nom : '—' }}
+                            {% if rencontre.date %} · {{ rencontre.date|date('H:i') }}{% endif %}
+                        </div>
+                    </div>
+                    {% if session %}
+                        {{ _self.sessionBadge(session) }}
+                    {% else %}
+                        <span class="badge bg-secondary" style="font-size:.75rem;">Pas encore démarré</span>
+                    {% endif %}
+                </div>
+                <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}"
+                   class="btn-mabb-orange"
+                   style="width:100%; text-align:center; display:block; padding:10px;">
+                    {% if session and session.enCours %}
+                        <i class="bi bi-lightning-charge-fill"></i> Reprendre les stats
+                    {% else %}
+                        <i class="bi bi-play-circle-fill"></i> Démarrer les stats live
+                    {% endif %}
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════════════════
+   SECTION 2 — Toutes les rencontres
+══════════════════════════════════════════════════════════════════════ #}
+{% if rencontres is empty %}
+    <div class="card-mabb" style="text-align:center; padding:50px 20px; color:var(--mabb-muted);">
+        <i class="bi bi-calendar-x" style="font-size:3rem;"></i>
+        <p style="margin-top:14px;">Aucune rencontre créée pour ce club.</p>
+        {% if is_staff %}
+            <a href="{{ path('manager_rencontre_new') }}" class="btn-mabb-primary mt-2">
+                <i class="bi bi-plus-lg"></i> Créer la première rencontre
+            </a>
+        {% endif %}
+    </div>
+{% else %}
+    <h2 style="font-size:.95rem; font-weight:700; color:var(--mabb-muted); display:flex; align-items:center; gap:7px; margin-bottom:12px;">
+        <i class="bi bi-list-ul"></i> Toutes les rencontres
+        <span style="font-weight:400; font-size:.8rem;">({{ rencontres|length }})</span>
+    </h2>
+
+    <div class="card-mabb" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:.86rem;">
+                <thead>
+                    <tr style="border-bottom:2px solid var(--mabb-border); background:var(--mabb-bg-soft);">
+                        <th style="padding:10px 16px; text-align:left; font-weight:600; color:var(--mabb-muted);">Date</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Adversaire</th>
+                        <th style="padding:10px 12px; text-align:left; font-weight:600; color:var(--mabb-muted);">Équipe</th>
+                        <th style="padding:10px 12px; text-align:center; font-weight:600; color:var(--mabb-muted);">Score</th>
+                        <th style="padding:10px 12px; text-align:center; font-weight:600; color:var(--mabb-muted);">Session Stats</th>
+                        <th style="padding:10px 12px; text-align:right; font-weight:600; color:var(--mabb-muted);">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rencontre in rencontres %}
+                        {% set session = sessions_by_rencontre[rencontre.id] ?? null %}
+                        {% set isToday = rencontre.date and rencontre.date|date('Y-m-d') == 'now'|date('Y-m-d') %}
+                        <tr style="border-bottom:1px solid var(--mabb-border); {{ isToday ? 'background:rgba(249,115,22,.06);' : '' }}">
+
+                            {# Date #}
+                            <td style="padding:11px 16px; white-space:nowrap;">
+                                {% if isToday %}
+                                    <span style="font-weight:700; color:#f97316;">
+                                        <i class="bi bi-broadcast-pin"></i>
+                                        {{ rencontre.date ? rencontre.date|date('d/m/Y') : '—' }}
+                                    </span>
+                                {% else %}
+                                    <span style="color:var(--mabb-muted);">
+                                        {{ rencontre.date ? rencontre.date|date('d/m/Y') : '—' }}
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            {# Adversaire #}
+                            <td style="padding:11px 12px; font-weight:600; color:var(--mabb-text);">
+                                {{ rencontre.adversaire ?: '—' }}
+                            </td>
+
+                            {# Équipe #}
+                            <td style="padding:11px 12px; color:var(--mabb-muted); font-size:.82rem;">
+                                {{ rencontre.equipe ? rencontre.equipe.nom : '—' }}
+                            </td>
+
+                            {# Score #}
+                            <td style="padding:11px 12px; text-align:center; font-weight:700; font-size:.95rem; color:var(--mabb-text);">
+                                {% if rencontre.scoreEquipe is not null and rencontre.scoreAdverse is not null %}
+                                    {{ rencontre.scoreEquipe }} – {{ rencontre.scoreAdverse }}
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-weight:400;">—</span>
+                                {% endif %}
+                            </td>
+
+                            {# Statut session #}
+                            <td style="padding:11px 12px; text-align:center;">
+                                {% if session %}
+                                    {{ _self.sessionBadge(session) }}
+                                {% else %}
+                                    <span style="color:var(--mabb-muted); font-size:.8rem;">—</span>
+                                {% endif %}
+                            </td>
+
+                            {# Actions #}
+                            <td style="padding:11px 16px; text-align:right; white-space:nowrap;">
+                                {# Accès stats live #}
+                                <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}"
+                                   class="btn-mabb-ghost"
+                                   style="font-size:.78rem; padding:4px 10px; {{ session and session.enCours ? 'color:#f97316; border-color:#f97316;' : '' }}"
+                                   title="{{ session and session.enCours ? 'Reprendre les stats' : 'Ouvrir stats live' }}">
+                                    <i class="bi bi-lightning-charge{{ session and session.enCours ? '-fill' : '' }}"></i>
+                                    {{ session and session.enCours ? 'Reprendre' : 'Stats live' }}
+                                </a>
+
+                                {# Voir la rencontre #}
+                                <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}"
+                                   class="btn-mabb-ghost"
+                                   style="font-size:.78rem; padding:4px 10px;"
+                                   title="Voir la fiche rencontre">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════════════════
+   MACRO — Badge statut de session
+══════════════════════════════════════════════════════════════════════ #}
+{% macro sessionBadge(session) %}
+    {% if session.enCours %}
+        <span style="
+            display:inline-flex; align-items:center; gap:4px;
+            background:#f97316; color:#fff;
+            border-radius:20px; padding:3px 10px; font-size:.73rem; font-weight:700;
+            animation: pulse-badge 1.5s ease-in-out infinite;
+        ">
+            <i class="bi bi-broadcast-pin"></i> En cours
+        </span>
+    {% elseif session.complete %}
+        <span class="badge" style="background:#1d4ed8; color:#fff; font-size:.73rem;">
+            ⏳ À valider
+        </span>
+    {% elseif session.officielle %}
+        <span class="badge" style="background:#16a34a; color:#fff; font-size:.73rem;">
+            ✓ Officielle
+        </span>
+    {% elseif session.archivee %}
+        <span class="badge bg-secondary" style="font-size:.73rem;">Archivée</span>
+    {% endif %}
+{% endmacro %}
+
+<style>
+@keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,.5); }
+    50%       { box-shadow: 0 0 0 6px rgba(249,115,22,0); }
+}
+</style>
+
+{% endblock %}

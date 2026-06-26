@@ -74,6 +74,46 @@ class SessionStatsLiveRepository extends ServiceEntityRepository
     }
 
     /**
+     * Retourne une map rencontreId → SessionStatsLive pour toutes les rencontres
+     * d'un club. Utilisé par la page "Stats Live" pour afficher le statut de
+     * chaque rencontre sans faire N+1 requêtes.
+     *
+     * Priorité par rencontre : OFFICIELLE > EN_COURS > COMPLETE > ARCHIVEE.
+     * Si plusieurs sessions existent pour une rencontre, on garde la plus prioritaire.
+     *
+     * @return array<int, SessionStatsLive>  clé = rencontre.id
+     */
+    public function findByClubIndexedByRencontre(int $clubId): array
+    {
+        /** @var SessionStatsLive[] $sessions */
+        $sessions = $this->createQueryBuilder('s')
+            ->join('s.rencontre', 'r')
+            ->addSelect('r')
+            ->where('r.club = :club')
+            ->setParameter('club', $clubId)
+            ->addSelect("CASE
+                WHEN s.statut = 'OFFICIELLE' THEN 0
+                WHEN s.statut = 'EN_COURS'   THEN 1
+                WHEN s.statut = 'COMPLETE'   THEN 2
+                ELSE 3
+            END AS HIDDEN ordre")
+            ->orderBy('ordre', 'ASC')
+            ->addOrderBy('s.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        // Index par rencontre ID — première session rencontrée = la plus prioritaire
+        $indexed = [];
+        foreach ($sessions as $session) {
+            $rid = $session->getRencontre()?->getId();
+            if ($rid !== null && !isset($indexed[$rid])) {
+                $indexed[$rid] = $session;
+            }
+        }
+        return $indexed;
+    }
+
+    /**
      * Nombre de sessions officielles déjà attribuées à un user (gamification PIRB future).
      */
     public function countOfficiellesForUser(User $user): int

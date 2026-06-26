@@ -9,7 +9,10 @@ use App\Entity\Sport\Joueur;
 use App\Entity\Sport\Rencontre;
 use App\Repository\Sport\ActionMatchRepository;
 use App\Repository\Sport\JoueurRepository;
+use App\Repository\Sport\RencontreRepository;
+use App\Repository\Sport\SessionStatsLiveRepository;
 use App\Security\Voter\ClubVoter;
+use App\Security\Tenant\TenantResolver;
 use App\Service\Stats\ActionMatchAggregator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -56,7 +59,59 @@ class StatsLiveController extends AbstractController
         private readonly \App\Repository\Sport\PresenceTerrainRepository $presenceTerrainRepository,
         private readonly \App\Service\Stats\SessionStatsLivePromoteur $sessionPromoteur,
         private readonly \App\Repository\Sport\SessionStatsLiveRepository $sessionRepository,
+        private readonly TenantResolver $tenantResolver,
+        private readonly RencontreRepository $rencontreRepository,
     ) {}
+
+    // =========================================================================
+    // INDEX — Page "Stats Live" dédiée dans la navbar
+    // =========================================================================
+
+    /**
+     * GET manager.mabb.fr/stats-live
+     *
+     * Vue centrale pour démarrer / reprendre / consulter les stats live
+     * de toutes les rencontres du club. Accessible depuis la navbar.
+     *
+     * Affiche :
+     *   - Rencontres d'aujourd'hui en tête (card orange si en cours)
+     *   - Liste de toutes les rencontres + statut de la session stats live
+     *   - Bouton "Nouvelle rencontre" pour créer sans passer par /rencontres
+     *
+     * Statuts affichés :
+     *   - Aucune session   → bouton "Démarrer"
+     *   - EN_COURS         → bouton "Reprendre ⚡"
+     *   - COMPLETE         → bouton "Voir" + badge "À valider"
+     *   - OFFICIELLE       → badge "Officielle ✓"
+     *   - ARCHIVEE         → badge gris "Archivée"
+     */
+    #[Route('/stats-live', name: 'manager_stats_live_index', methods: ['GET'])]
+    public function index(): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
+
+        // Toutes les rencontres du club, plus récentes en premier, avec equipe JOIN
+        $rencontres = $this->rencontreRepository->findByClubOrderedDesc($club->getId());
+
+        // Sessions stats live indexées par rencontre ID (évite N+1)
+        $sessionsByRencontreId = $this->sessionRepository->findByClubIndexedByRencontre($club->getId());
+
+        // Rencontres d'aujourd'hui (pour les mettre en avant)
+        $today = new \DateTimeImmutable('today');
+        $rencontresToday = array_filter(
+            $rencontres,
+            fn(Rencontre $r) => $r->getDate() !== null && $r->getDate()->format('Y-m-d') === $today->format('Y-m-d')
+        );
+
+        return $this->render('manager/stats_live/index.html.twig', [
+            'rencontres'              => $rencontres,
+            'rencontres_today'        => array_values($rencontresToday),
+            'sessions_by_rencontre'   => $sessionsByRencontreId,
+            'club'                    => $club,
+            'is_staff'                => $this->isGranted(ClubVoter::CLUB_STAFF, $club),
+        ]);
+    }
 
     /**
      * Page de saisie LIVE — vue Twig.

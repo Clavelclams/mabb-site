@@ -16,12 +16,30 @@ class RencontreRepository extends ServiceEntityRepository
         parent::__construct($registry, Rencontre::class);
     }
 
-    /** Multi-tenant : ne retourne que les rencontre du club. */
+    /** Multi-tenant : ne retourne que les rencontres du club. */
     public function findByClub(int $clubId): array
     {
         return $this->createQueryBuilder('e')
             ->andWhere('e.club = :club')
             ->setParameter('club', $clubId)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Rencontres du club triées par date décroissante (plus récente en premier),
+     * avec JOIN equipe pour éviter les N+1 requêtes dans la page Stats Live.
+     *
+     * @return Rencontre[]
+     */
+    public function findByClubOrderedDesc(int $clubId): array
+    {
+        return $this->createQueryBuilder('r')
+            ->leftJoin('r.equipe', 'eq')->addSelect('eq')
+            ->where('r.club = :club')
+            ->setParameter('club', $clubId)
+            ->orderBy('r.date', 'DESC')
+            ->addOrderBy('r.id', 'DESC')
             ->getQuery()
             ->getResult();
     }

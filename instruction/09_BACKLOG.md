@@ -1,113 +1,93 @@
-# Backlog — MABB / PIRB
+# Backlog — MABB Manager + PIRB
 
-> Dernière mise à jour : 2026-02-13
-> Items priorisés par phase. Voir 02_ROADMAP_GLOBALE.md pour la vue macro.
-
-## Format
-| Champ | Description |
-|-------|-------------|
-| ID | BL-XXXX |
-| Phase | Phase V1 concernée (1 à 6) |
-| Module | Core / Sport / Stats / PIRB / Vitrine / System |
-| Description | Ce qui doit être fait |
-| Priorité | P0 (bloquant) / P1 (important) / P2 (souhaitable) |
-| Statut | a faire / en cours / fait |
-
-## Règle transverse obligatoire
-
-Toute entité métier manipulant des données club doit :
-- soit contenir explicitement un champ `club_id`
-- soit être filtrable de manière sûre via relation Doctrine
-- être protégée par ClubScopeVoter côté serveur
-
-### Contraintes d'unicité DB (obligatoires)
-- `UNIQUE (user_id, club_id)` sur ClubUser
-- `UNIQUE (code)` sur Role
-- `UNIQUE (club_user_id, role_id)` sur ClubUserRole
+> Dernière mise à jour : 2026-06-26
+> Le projet est en production sur OVH (manager.mabb.fr + pirb.mabb.fr).
+> Ce backlog reflète l'état RÉEL du code, pas les intentions initiales.
 
 ---
 
-## Phase 1 — Core
+## État actuel — Fonctionnel en prod
 
-| ID | Description | Priorité | Statut |
-|----|-------------|----------|--------|
-| BL-0000 | Résoudre blocage installation dépendances (composer SSL + vendor + php.ini) | P0 | a faire |
-| BL-0001 | Créer entité User (email, password, nom, prénom, statut, created_at, deleted_at) | P0 | a faire |
-| BL-0002 | Créer entité Club (nom, logo, couleurs, statut, club_id_ffbb) | P0 | a faire |
-| BL-0003 | Créer entité ClubUser (pivot user-club : user_id, club_id, statut, created_at, deleted_at) | P0 | a faire |
-| BL-0004 | Créer entité Role + pivot ClubUserRole (rôles par club, M:N ClubUser-Role) | P0 | a faire |
-| BL-0004b | Créer entité ClubUserRole (club_user_id, role_id, created_at, created_by) + contraintes uniques | P0 | a faire |
-| BL-0005 | Implémenter ClubScopeVoter (filtrage multi-tenant par club_id) | P0 | a faire |
-| BL-0006 | Implémenter OwnershipVoter (mes données / mon enfant) | P0 | a faire |
-| BL-0007 | Implémenter TeamCoachVoter (coach affecté à l'équipe) | P1 | a faire |
-| BL-0008 | Configurer JWT (LexikJWTAuthenticationBundle) | P0 | a faire |
-| BL-0009 | Formulaire inscription (opt-in explicite bénévole + consentement CGU/RGPD obligatoire non pré-coché) | P0 | a faire |
-| BL-0010 | Configurer password_hashers (bcrypt/argon2) dans security.yaml | P0 | a faire |
-| BL-0011 | Première migration Doctrine (User, Club, ClubUser, Role, ClubUserRole) | P0 | a faire |
-| BL-0012 | Rate limiting sur login (max 5 tentatives/min) | P1 | a faire |
-| BL-0013 | Récupération mot de passe par lien sécurisé | P1 | a faire |
-| BL-0014 | Créer endpoints API auth + contexte club sans API Platform (Controller Symfony natif) | P1 | a faire |
+| Module | Feature | Statut |
+|--------|---------|--------|
+| Auth | Login/logout multi-host (manager/pirb), TenantResolver | ✅ prod |
+| Équipes | CRUD équipes + joueuses + staff | ✅ prod |
+| Rencontres | CRUD rencontre + feuille FFBB (résumé/feuille/positions PDF) | ✅ prod |
+| Stats Live | Saisie live match (actions, tirs, présences) + bénévole | ✅ prod |
+| Shot chart | V2.3 — SeanceTir/ZoneTir + TirFfbb fusionnés sur la map PIRB | ✅ prod |
+| ENT | Upload docs (Manager) + lecture PIRB + PDFs FFBB dans ENT | ✅ prod |
+| PIRB | Dashboard, shot chart, documents, profil joueuse | ✅ prod |
+| Nav | Stats Live + ENT ajoutés dans la navbar Manager | ✅ prod (ce commit) |
 
-## Phase 2 — Sport
+---
 
-| ID | Description | Priorité | Statut |
-|----|-------------|----------|--------|
-| BL-0020 | Créer entité Season (club_id, label, dates, active) | P0 | a faire |
-| BL-0021 | Créer entité Team (club_id, season_id, nom, catégorie, genre) | P0 | a faire |
-| BL-0022 | Créer entité Player (user_id, club_id, date_naissance, poste, taille) | P0 | a faire |
-| BL-0023 | Créer entité Event (club_id, team_id, type, date, lieu, statut) | P0 | a faire |
-| BL-0024 | Créer entité Match (event_id, adversaire, domicile, scores, validé) | P0 | a faire |
-| BL-0025 | Créer entité Presence (event_id, player_id, statut, commentaire) | P0 | a faire |
-| BL-0026 | Créer entité Convocation (match_id, player_id, statut_réponse) | P0 | a faire |
-| BL-0027 | CRUD saisons/équipes/joueurs (Manager) | P0 | a faire |
-| BL-0028 | Gestion des présences (interface coach) | P0 | a faire |
+## Backlog actif — À faire
 
-## Phase 3 — Stats
+### P1 — Urgent / Cette semaine
 
-| ID | Description | Priorité | Statut |
-|----|-------------|----------|--------|
-| BL-0030 | Installer API Platform | P0 | a faire |
-| BL-0031 | Créer entité PlayerStat (match_id, player_id, minutes, points, rebonds, etc.) | P0 | a faire |
-| BL-0032 | Créer entité ShotRecord (match_id, player_id, type, result, pos_x, pos_y, period) | P0 | a faire |
-| BL-0033 | Créer entité MatchEvent (timeline : match_id, event_type, player_id, period, clock, payload) | P0 | a faire |
-| BL-0034 | Interface terrain interactif (shot tracking, tablette-friendly) | P0 | a faire |
-| BL-0035 | Cinq majeur + remplacements (entrées/sorties) | P0 | a faire |
-| BL-0036 | Validation match (workflow : brouillon → validé → verrouillé) | P0 | a faire |
-| BL-0037 | Calculs automatiques (moyennes, taux de réussite) | P1 | a faire |
+| ID | Feature | Description | Effort |
+|----|---------|-------------|--------|
+| B-101 | Stats Live page dédiée (navbar) | ✅ **FAIT CE JOUR** — `/stats-live` liste toutes les rencontres avec statut session | fait |
+| B-102 | Feedback inscription bénévole | Quand une joueuse s'inscrit sur une rencontre pour aider (bénévole table/marquage), elle voyait rien changer. Ajouter flash "Inscription enregistrée, en attente de validation staff" côté PIRB + badge visible sur la rencontre | 30 min |
+| B-103 | Push commit ENT + Shot chart + Stats Live | `git add` + `git push` + `git pull OVH` + `cache:clear` | 10 min |
 
-## Phase 4 — PIRB
+### P2 — Important / Prochaine session
 
-| ID | Description | Priorité | Statut |
-|----|-------------|----------|--------|
-| BL-0040 | Créer entité PlayerProfile (player_id, description, profil_public, visibility_settings) | P0 | a faire |
-| BL-0041 | Dashboard joueur (stats clés, résumé saison) | P0 | a faire |
-| BL-0042 | Shot chart interactif (visualisation tirs sur terrain) | P0 | a faire |
-| BL-0043 | Timeline personnelle (actions du joueur par match) | P1 | a faire |
-| BL-0044 | Créer entité TrainingFeedback (event_id, rating, feedback_positif/négatif, anonyme) | P0 | a faire |
-| BL-0045 | Gestion visibilité profil (Public / Club / Privé par bloc) | P0 | a faire |
+| ID | Feature | Description | Effort |
+|----|---------|-------------|--------|
+| B-201 | Coach valide stats live | Workflow : après un match, le coach ouvre la session COMPLETE → vérifie les stats → clic "Valider officielle". Passe la SessionStatsLive en STATUT_OFFICIELLE. Bloque l'édition. UI côté Manager : bouton "Valider" sur la page `/stats-live` pour chaque session COMPLETE. | 4h |
+| B-202 | Card "Prendre les stats" dashboard | Raccourci rapide depuis le dashboard Manager/PIRB pour aller directement sur `/stats-live`. Simple card avec lien + icône ⚡. | 30 min |
+| B-203 | Ajouter joueuse manuellement stats live | Si joueuse absente de l'effectif dans la page stats live — déjà partiellement géré via "joueur éphémère" mais à vérifier si bug d'affichage. Tester avec une rencontre réelle. | à clarifier |
+| B-204 | Pastille rouge notifications PIRB | Badge rouge sur l'avatar PIRB quand il y a des nouvelles non lues (validation coach, document, convocation). | 2h |
+| B-205 | Fix 500 `/joueuses/{id}/missions/nouvelle` | Bug connu — à investiguer | 1h |
+| B-206 | Fix 404 `manager.mabb.fr/signup` depuis PIRB | Bug connu — à investiguer | 30 min |
 
-## Phase 5 — Vitrine
+### P3 — Plus tard / Quand priorités P1+P2 sont terminées
 
-| ID | Description | Priorité | Statut |
-|----|-------------|----------|--------|
-| BL-0050 | Back-office CMS (édition pages, articles, médias) | P0 | a faire |
-| BL-0051 | Créer entités Article, Page, Media (Vitrine) | P0 | a faire |
-| BL-0052 | Éditeur WYSIWYG pour articles/pages | P1 | a faire |
-| BL-0053 | Actualités dynamiques en page d'accueil | P0 | a faire |
-| BL-0054 | Galerie photos par saison/événement | P1 | a faire |
-| BL-0055 | Calendrier public (lien Score'n'co) | P2 | a faire |
-| BL-0056 | Formulaire contact + captcha + envoi email | P0 | a faire |
-| BL-0057 | SEO : sitemap XML, robots.txt, métadonnées éditables | P1 | a faire |
+| ID | Feature | Description | Effort |
+|----|---------|-------------|--------|
+| B-301 | ENT style Kalisport GED | Refonte de l'interface `/ent` avec filtres catégorie/saison, vignettes de documents, prévisualisation inline. S'inspirer de : https://hautsdefrancebasketball.kalisport.com/private/ged (connexion requise). Clavel doit partager une capture d'écran de la GED. | 3h |
+| B-302 | Shot chart — terrain cliquable saisie | Tâches #9/#10 du backlog original — permettre à une joueuse de saisir ses tirs depuis PIRB sur un terrain interactif cliquable. Controller `pirb_shot_chart_sauvegarder` existe, terrain modal dans le template. À finaliser. | 4h |
+| B-303 | Équipes 2026-27 | Créer les équipes de la saison 2026-27 et re-run `app:seed-plannings-2026-27` | 1h |
+| B-304 | MAILER_DSN Brevo sur OVH | Configurer l'envoi d'emails transactionnels (confirmation inscription, convocations). MAILER_DSN dans `.env.local` OVH. | 1h |
+| B-305 | Stats FFBB auto — parse PDF à l'upload | Quand un admin upload le PDF "positions de tirs" FFBB, le parser `FfbbPositionTirParser` tourne automatiquement et stocke dans `TirFfbb`. Actuellement c'est une commande manuelle. | 3h |
+| B-306 | Toggle FFBB/Live shot chart | Sur la shot map PIRB, pouvoir filtrer : "uniquement matchs FFBB" / "uniquement entraînements" / "tout". Le filtre `source` existe côté controller, à wirer côté UI. | 1h |
+| B-307 | Stats Live — créer rencontre depuis `/stats-live` | Modal "Créer rencontre rapide" directement depuis la page Stats Live (sans passer par `/rencontres/nouvelle`). Formulaire minimal : date + adversaire + équipe. | 2h |
+| B-308 | Validation inscription bénévole par staff | Côté Manager : liste des inscrits bénévoles par rencontre, bouton "Valider" ou "Refuser" avec email automatique. Actuellement l'inscription existe mais la validation n'a pas de feedback. | 2h |
 
-## Phase 6 — System
+---
 
-| ID | Description | Priorité | Statut |
-|----|-------------|----------|--------|
-| BL-0060 | Logs de connexion (table logs_connexion, EventSubscriber) | P0 | a faire |
-| BL-0061 | Audit actions sensibles (table audit, AuditLogger) | P0 | a faire |
-| BL-0062 | Commande purge logs > 12 mois | P1 | a faire |
-| BL-0063 | Commande anonymisation comptes inactifs > 24 mois | P1 | a faire |
-| BL-0064 | Endpoint/procédure export données personnelles (RGPD) | P1 | a faire |
-| BL-0065 | Tests anti-fuite inter-club (Voters + API) | P0 | a faire |
-| BL-0066 | Tests unitaires et fonctionnels (couverture minimale) | P0 | a faire |
-| BL-0067 | Documentation technique | P1 | a faire |
+## Ideas brutes — Pas encore qualifiées
+
+Ces idées viennent de l'utilisateur, pas encore priorisées ni estimées :
+
+- **Shot chart agrégé saison** : vue "toute la saison" qui agrège tous les matchs de la joueuse sur un seul terrain. Idéal pour voir les zones chaudes et froides. Besoin : agréger TirFfbb par type sur un terrain unique côté PIRB.
+- **ENT — onglet "Effectif"** : section dédiée dans l'ENT pour les documents liés à l'effectif (licences, certificats médicaux, autorisations).
+- **ENT — onglet "Rencontre"** : section dédiée dans l'ENT pour les documents liés aux matchs (feuilles, résumés, comptes-rendus). **Déjà partiellement fait** via la section "PDFs officiels FFBB".
+- **ENT — filtres Kalisport** : filtres par catégorie, saison, équipe. Voir capture Kalisport GED.
+- **Notification staff inscription bénévole** : quand une joueuse s'inscrit → le staff reçoit une notification (email ou pastille).
+
+---
+
+## Bugs connus en prod
+
+| ID | Bug | Impact | Statut |
+|----|-----|--------|--------|
+| BUG-01 | 500 sur `/joueuses/{id}/missions/nouvelle` | Moyen | à corriger |
+| BUG-02 | 404 sur `manager.mabb.fr/signup` depuis lien PIRB | Faible | à corriger |
+| BUG-03 | Bénévole inscrite sur rencontre → pas de feedback visuel | UX | en cours (B-102) |
+
+---
+
+## Architecture de référence (rappel)
+
+- **Stack** : Symfony 7.4 / PHP 8.3 / MySQL 8.4 / OVH hébergement mutualisé
+- **Hosts** : `manager.mabb.fr` (staff) + `pirb.mabb.fr` (joueuses/parents)
+- **Multi-tenant** : `TenantResolver` → `ClubVoter` → `ClubAwareInterface`
+- **Namespaces critiques** :
+  - `App\Security\Tenant\TenantResolver`
+  - `App\Security\Voter\ClubVoter`
+- **PDFs FFBB** : stockés dans `public/uploads/rencontres/{id}/` — servis via `manager_rencontre_pdf_serve`
+- **Uploads ENT** : stockés dans `public/uploads/ent/{clubId}/` — servis via `manager_ent_voir`
+- **Filtre Twig OVH** : `|u.truncate()` NON disponible → utiliser `|slice(0, N) ~ '…'`
+- **MySQL COMMENT** : pas d'apostrophes dans les strings COMMENT SQL (cassent le parsing)
