@@ -169,14 +169,24 @@ class BadgeChecker
     }
 
     /** @param Mission[] $missions */
-    private function nbMissionsTypeBenevolat(array $missions, string $type, string $saison): int
+    private function nbMissionsTypeBenevolat(array $missions, string $type, ?string $saison = null): int
     {
-        [$debut, $fin] = $this->bornesSaison($saison);
+        // $saison = null → toutes saisons confondues (badges spectateur "à vie")
+        if ($saison !== null) {
+            [$debut, $fin] = $this->bornesSaison($saison);
+        }
         $n = 0;
         foreach ($missions as $m) {
-            if (!$m->isEstBenevole() || $m->getType() !== $type) continue;
-            $d = $m->getDate();
-            if ($d && $d >= $debut && $d <= $fin) $n++;
+            if (!$m->isEstBenevole() || $m->getType() !== $type) {
+                continue;
+            }
+            if ($saison !== null) {
+                $d = $m->getDate();
+                if (!$d || $d < $debut || $d > $fin) {
+                    continue;
+                }
+            }
+            $n++;
         }
         return $n;
     }
@@ -438,9 +448,16 @@ class BadgeChecker
     /**
      * @return array{0: \DateTimeImmutable, 1: \DateTimeImmutable}
      */
-    private function bornesSaison(string $saison): array
+    private function bornesSaison(?string $saison = null): array
     {
-        $anneeDebut = (int) substr($saison, 0, 4);
+        if ($saison === null) {
+            $now        = new \DateTimeImmutable();
+            $mois       = (int) $now->format('n');
+            $anneeDebut = $mois >= 9 ? (int) $now->format('Y') : (int) $now->format('Y') - 1;
+        } else {
+            $anneeDebut = (int) substr($saison, 0, 4);
+        }
+
         return [
             new \DateTimeImmutable($anneeDebut . '-09-01 00:00:00'),
             new \DateTimeImmutable(($anneeDebut + 1) . '-06-30 23:59:59'),

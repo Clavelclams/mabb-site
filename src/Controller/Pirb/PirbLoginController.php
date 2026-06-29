@@ -8,6 +8,7 @@ use App\Repository\Sport\CotisationJoueurRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\PresenceRepository;
 use App\Repository\Sport\RencontreRepository;
+use App\Repository\Sport\RencontreRoleRepository;
 use App\Repository\Sport\SeanceRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -63,6 +64,7 @@ class PirbLoginController extends AbstractController
         CotisationJoueurRepository $cotisationRepo,
         SeanceRepository $seanceRepo,
         RencontreRepository $rencontreRepo,
+        RencontreRoleRepository $rencontreRoleRepo,
         PresenceRepository $presenceRepo,
     ): Response {
         /** @var User $user */
@@ -132,11 +134,19 @@ class PirbLoginController extends AbstractController
             ];
         }
 
+        // Rôles bénévoles de l'user sur les prochaines rencontres
+        // (ex: marqueur, chrono) — pour afficher le badge "Inscrite" et
+        // permettre la désinscription depuis le PIRB.
+        $mes_roles_rencontres = !empty($prochaines_rencontres)
+            ? $rencontreRoleRepo->findByUserForRencontres($user, $prochaines_rencontres)
+            : [];
+
         return $this->render('pirb/dashboard.html.twig', [
             'joueur'                => $joueur,
             'cotisation'            => $cotisation,
             'prochaines_seances'    => $prochaines_seances,
             'prochaines_rencontres' => $prochaines_rencontres,
+            'mes_roles_rencontres'  => $mes_roles_rencontres,
             'stats_presences'       => $stats_presences,
         ]);
     }

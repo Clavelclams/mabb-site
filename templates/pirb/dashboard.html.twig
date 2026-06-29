@@ -178,17 +178,48 @@
                 <div class="pirb-card-title">À venir</div>
 
                 {% for r in prochaines_rencontres %}
-                    <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--pirb-border);">
-                        <div style="width:42px; height:42px; flex-shrink:0; border-radius:10px; background:rgba(239,68,68,.15); color:#fca5a5; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800;">
-                            <span style="font-size:0.95rem; line-height:1;">{{ r.date|date('d') }}</span>
-                            <span style="font-size:0.6rem; opacity:.8;">{{ r.date|date('M')|upper }}</span>
-                        </div>
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:0.92rem;">🏆 vs {{ r.adversaire }}</div>
-                            <div style="color:var(--pirb-text-muted); font-size:0.78rem;">
-                                {{ r.date|date('H:i') }}{% if r.lieu %} · {{ r.lieu }}{% endif %}
+                    {% set mon_role = mes_roles_rencontres[r.id] ?? null %}
+                    <div style="padding:10px 0; border-bottom:1px solid var(--pirb-border);">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div style="width:42px; height:42px; flex-shrink:0; border-radius:10px; background:rgba(239,68,68,.15); color:#fca5a5; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800;">
+                                <span style="font-size:0.95rem; line-height:1;">{{ r.date|date('d') }}</span>
+                                <span style="font-size:0.6rem; opacity:.8;">{{ r.date|date('M')|upper }}</span>
                             </div>
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:700; font-size:0.92rem;">🏆 vs {{ r.adversaire }}</div>
+                                <div style="color:var(--pirb-text-muted); font-size:0.78rem;">
+                                    {{ r.date|date('H:i') }}{% if r.lieu %} · {{ r.lieu }}{% endif %}
+                                </div>
+                            </div>
+                            {# Badge si déjà inscrite bénévole #}
+                            {% if mon_role %}
+                                <span style="background:rgba(34,197,94,.15); color:#86efac; border-radius:20px; padding:3px 8px; font-size:0.72rem; font-weight:700; white-space:nowrap;">
+                                    🙋 {{ mon_role.roleLibelle }}
+                                </span>
+                            {% endif %}
                         </div>
+                        {# Bouton s'inscrire comme bénévole — si pas encore inscrite et match pas passé #}
+                        {% if not mon_role %}
+                            <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+                                {% set roles_benevoles = {'marqueur': '📋 Marqueur', 'chrono': '⏱ Chrono', 'emarque': '💻 e-Marque', 'stats': '📊 Stats'} %}
+                                {% for code, libelle in roles_benevoles %}
+                                    <form method="post" action="{{ path('pirb_rencontre_sinscrire', {id: r.id, role: code}) }}" style="margin:0;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('pirb_role_' ~ r.id ~ '_' ~ code) }}">
+                                        <button type="submit" style="background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--pirb-text-muted); border-radius:12px; padding:4px 10px; font-size:0.72rem; cursor:pointer;">
+                                            {{ libelle }}
+                                        </button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {# Désinscription possible #}
+                            <form method="post" action="{{ path('pirb_rencontre_desinscrire', {id: r.id}) }}" style="margin-top:6px;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('pirb_desinscrire_' ~ r.id) }}">
+                                <button type="submit" style="background:transparent; border:none; color:var(--pirb-text-muted); font-size:0.72rem; cursor:pointer; text-decoration:underline; padding:0;">
+                                    Se désinscrire
+                                </button>
+                            </form>
+                        {% endif %}
                     </div>
                 {% endfor %}
 
