@@ -213,7 +213,7 @@
                                 <div class="seance-item">
                                     <div class="seance-date-block">
                                         <div>{{ seance.date|date('d') }}</div>
-                                        <div>{{ seance.date|date('M', locale='fr')|upper }}</div>
+                                        <div>{{ seance.date|format_date(pattern='MMM', locale='fr')|upper }}</div>
                                     </div>
                                     <div style="flex:1; min-width:0;">
                                         <div style="font-size:.83rem; font-weight:600; color:var(--mabb-text);">
