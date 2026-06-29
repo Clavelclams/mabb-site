@@ -212,9 +212,12 @@ class PirbShotChartController extends AbstractController
         if ($dateSeance === false) {
             return new JsonResponse(['error' => 'Date invalide. Format attendu : YYYY-MM-DD.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+        // createFromFormat('Y-m-d', ...) hérite de l'heure courante — on la remet à minuit
+        // pour éviter que "aujourd'hui à 17h" > "aujourd'hui 00:00" soit vrai.
+        $dateSeance = $dateSeance->setTime(0, 0, 0);
 
-        // Pas dans le futur
-        if ($dateSeance > new \DateTimeImmutable('today')) {
+        // Pas dans le futur (comparaison date pure, minuit vs minuit)
+        if ($dateSeance > new \DateTimeImmutable('today midnight')) {
             return new JsonResponse(['error' => 'La date ne peut pas être dans le futur.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 

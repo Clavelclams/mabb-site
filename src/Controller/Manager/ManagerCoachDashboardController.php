@@ -59,12 +59,18 @@ class ManagerCoachDashboardController extends AbstractController
             if ($equipe === null) continue;
 
             // Joueuses actives de l'équipe pour cette saison
-            $joueurs = $this->joueurEquipeRepo->joueusesParEquipeSaison($equipe, $saison);
+            // joueusesParEquipeSaison() retourne JoueurEquipe[] — on extrait les Joueur objects
+            $joueurEquipes = $this->joueurEquipeRepo->joueusesParEquipeSaison($equipe, $saison);
+            $joueurs = array_values(array_filter(
+                array_map(static fn($je) => $je->getJoueur(), $joueurEquipes),
+                static fn($j) => $j !== null
+            ));
 
             // 3 prochaines séances
             $seances = $this->seanceRepo->findProchaines($equipe, 3);
 
             // Dernier bilan par joueuse (map: joueur_id → BilanCompetence|null)
+            // findLastBilanByJoueurs attend Joueur[] — OK maintenant
             $bilanMap = $this->bilanRepo->findLastBilanByJoueurs($joueurs);
 
             $equipeData[] = [

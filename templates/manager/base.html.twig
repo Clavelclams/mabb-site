@@ -730,9 +730,6 @@
         <li><a href="{{ path('manager_staff_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_staff' ? 'active' : '' }}">
             <i class="bi bi-shield-fill-check"></i> Staff
         </a></li>
-        <li><a href="{{ path('manager_planning_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_planning' ? 'active' : '' }}">
-            <i class="bi bi-grid-3x3-gap"></i> Planning
-        </a></li>
         <li><a href="{{ path('manager_seance_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_seance' ? 'active' : '' }}">
             <i class="bi bi-calendar-week"></i> Séances
         </a></li>
@@ -746,11 +743,8 @@
         <li><a href="{{ path('manager_ent_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_ent' ? 'active' : '' }}">
             <i class="bi bi-folder2-open"></i> ENT
         </a></li>
-        <li><a href="{{ path('manager_bilan_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_bilan' ? 'active' : '' }}">
-            <i class="bi bi-clipboard-check"></i> Bilans
-        </a></li>
         {% if club is defined and club and is_granted('CLUB_STAFF_ELARGI', club) %}
-        <li><a href="{{ path('manager_coach_dashboard') }}" class="{{ app.request.attributes.get('_route') == 'manager_coach_dashboard' ? 'active' : '' }}">
+        <li><a href="{{ path('manager_coach_dashboard') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_bilan' or app.request.attributes.get('_route') == 'manager_coach_dashboard' ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Coach
         </a></li>
         {% endif %}

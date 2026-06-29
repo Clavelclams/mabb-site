@@ -210,6 +210,32 @@
                 </div>
             </a>
         </div>
+
+        {# Bilans de compétences — coaches et staff élargi #}
+        {% if club is defined and club and is_granted('CLUB_STAFF_ELARGI', club) %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_bilan_index') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-clipboard-check" style="font-size:2.5rem; color:#16a34a;"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Bilans</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Évaluations de compétences des joueuses.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <a href="{{ path('manager_coach_dashboard') }}" style="text-decoration:none;">
+                <div class="card-mabb" style="cursor:pointer;">
+                    <div class="card-body" style="text-align:center; padding:30px 20px;">
+                        <i class="bi bi-speedometer2" style="font-size:2.5rem; color:var(--mabb-orange);"></i>
+                        <h3 style="margin-top:12px; color:var(--mabb-dark);">Dashboard Coach</h3>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">Équipes, joueuses et bilans en un coup d'œil.</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
         <div class="col-md-6 col-lg-4">
             <a href="{{ path('manager_seances_solo_index') }}" style="text-decoration:none;">
                 <div class="card-mabb" style="cursor:pointer;">
