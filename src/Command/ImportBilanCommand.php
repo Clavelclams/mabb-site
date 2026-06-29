@@ -593,23 +593,25 @@ class ImportBilanCommand extends Command
         $io->title('Import bilans de compétences MABB');
         $io->note($dryRun ? '🔍 MODE DRY-RUN — aucune écriture DB' : '✍️  MODE RÉEL — écriture en DB');
 
-        // ── 1. Trouver le club (Amiens Métropole Basket-Ball, id=2) ─────────────
-        // Stratégie : nom exact → fallback "Amiens" → fallback premier club
-        $club = $this->clubRepo->findOneBy(['nom' => 'Amiens Métropole Basket-Ball'])
-             ?? $this->clubRepo->findOneBy(['nom' => 'MABB']);
+        // ── 1. Trouver le club ───────────────────────────────────────────────────
+        // Priorité : sigle → nom exact → fallback substring
+        $club = $this->clubRepo->findOneBy(['sigle' => 'MABB'])
+             ?? $this->clubRepo->findOneBy(['nom'   => 'Amiens Métropole Basket-Ball']);
         if ($club === null) {
-            $clubs = $this->clubRepo->findAll();
-            foreach ($clubs as $c) {
-                if (str_contains(strtoupper($c->getNom()), 'AMIENS')
-                    || str_contains(strtoupper($c->getNom()), 'MABB')) {
+            foreach ($this->clubRepo->findAll() as $c) {
+                $up = strtoupper($c->getNom() ?? '');
+                if (str_contains($up, 'AMIENS') || str_contains($up, 'MABB')) {
                     $club = $c;
                     break;
                 }
             }
         }
         if ($club === null) {
-            $io->error('Club introuvable en DB. Clubs disponibles : '
-                . implode(', ', array_map(fn($c) => $c->getNom(), $this->clubRepo->findAll())));
+            $all = implode(', ', array_map(
+                fn($c) => sprintf('"%s" (sigle: %s)', $c->getNom(), $c->getSigle() ?? '—'),
+                $this->clubRepo->findAll()
+            ));
+            $io->error("Club introuvable. Clubs en DB : $all");
             return Command::FAILURE;
         }
         $io->success(sprintf('Club trouvé : %s (id=%d)', $club->getNom(), $club->getId()));

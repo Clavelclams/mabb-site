@@ -52,13 +52,33 @@
 .sc-vide   { background: rgba(255,255,255,.06); color: rgba(255,255,255,.25); font-size:.7rem; }
 </style>
 
-{# Header #}
-<div class="pirb-card" style="text-align:center; padding:20px 16px;">
+{# Header + sélecteur de saison #}
+<div class="pirb-card" style="text-align:center; padding:20px 16px 16px;">
     <div style="font-size:2.2rem; margin-bottom:6px;">📋</div>
     <h1 style="margin:0; font-size:1.15rem; font-weight:800;">Mon bilan de compétences</h1>
-    <p style="color:var(--pirb-text-muted); font-size:.82rem; margin-top:6px;">
+    <p style="color:var(--pirb-text-muted); font-size:.82rem; margin-top:4px; margin-bottom:0;">
         Évaluation basketball réalisée par ton coach
     </p>
+
+    {# Dropdown saison — visible uniquement si au moins 1 bilan #}
+    {% if bilan_par_saison|length > 0 %}
+    <div style="margin-top:14px;">
+        <select id="saison-select"
+                onchange="window.location.href='{{ path('pirb_bilan_competences') }}?saison=' + this.value"
+                style="background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+                       color:var(--pirb-text); border-radius:20px; padding:7px 32px 7px 16px;
+                       font-size:.82rem; font-weight:600; cursor:pointer; appearance:none;
+                       -webkit-appearance:none; min-width:160px;">
+            {% for saison, b in bilan_par_saison %}
+                <option value="{{ saison }}"
+                        {{ saison == saison_selectionnee ? 'selected' : '' }}
+                        style="background:#1e293b; color:#f1f5f9;">
+                    {{ saison }}{% if b.contexte %} — {{ b.contexte }}{% endif %}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
 </div>
 
 {% if bilan is null %}
@@ -176,23 +196,31 @@
 </div>
 {% endif %}
 
-{# Historique bilans (si plusieurs) #}
-{% if historique|length > 1 %}
-<div class="pirb-card" style="padding:14px 16px;">
-    <div style="font-size:.8rem; font-weight:700; color:var(--pirb-text-muted); margin-bottom:10px;">
-        <i class="bi bi-clock-history"></i> Historique
+{# Mini résumé des autres saisons en bas si plusieurs bilans #}
+{% if bilan_par_saison|length > 1 %}
+<div class="pirb-card" style="padding:12px 16px; margin-top:4px;">
+    <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;">
+        <i class="bi bi-clock-history"></i> Tes autres saisons
     </div>
-    {% for b in historique %}
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--pirb-border);">
+    {% for saison, b in bilan_par_saison %}
+        {% if saison != saison_selectionnee %}
+        <a href="{{ path('pirb_bilan_competences') }}?saison={{ saison }}"
+           style="display:flex; justify-content:space-between; align-items:center;
+                  padding:8px 10px; border-radius:10px; text-decoration:none;
+                  background:rgba(255,255,255,.04); margin-bottom:6px;
+                  border:1px solid rgba(255,255,255,.07);">
             <div>
-                <span style="font-size:.83rem; font-weight:600;">{{ b.contexte ?: b.saison }}</span>
-                <span style="font-size:.72rem; color:var(--pirb-text-muted); margin-left:8px;">{{ b.dateEvaluation ? b.dateEvaluation|date('d/m/Y') : b.saison }}</span>
+                <span style="font-size:.83rem; font-weight:600; color:var(--pirb-text);">{{ saison }}</span>
+                {% if b.contexte %}
+                    <span style="font-size:.72rem; color:var(--pirb-text-muted); margin-left:6px;">{{ b.contexte }}</span>
+                {% endif %}
             </div>
             {% if b.moyenne is not null %}
                 {% set cls = b.moyenne >= 7 ? '#86efac' : (b.moyenne >= 4 ? '#fdba74' : '#fca5a5') %}
-                <span style="font-weight:800; color:{{ cls }}; font-size:.9rem;">{{ b.moyenne }}/10</span>
+                <span style="font-weight:800; color:{{ cls }}; font-size:.88rem;">{{ b.moyenne }}/10 <i class="bi bi-chevron-right" style="font-size:.7rem; opacity:.5;"></i></span>
             {% endif %}
-        </div>
+        </a>
+        {% endif %}
     {% endfor %}
 </div>
 {% endif %}

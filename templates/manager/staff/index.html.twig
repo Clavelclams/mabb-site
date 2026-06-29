@@ -10,10 +10,17 @@
 {% block body %}
 
     <div class="page-header">
-        <h1><i class="bi bi-shield-fill-check"></i> Staff du club</h1>
-        <div style="color:var(--mabb-muted); font-size:.92rem;">
-            {{ total }} membre{{ total > 1 ? 's' : '' }} encadrant{{ total > 1 ? 's' : '' }} actif{{ total > 1 ? 's' : '' }} pour <strong>{{ club.nom }}</strong>
+        <div>
+            <h1><i class="bi bi-shield-fill-check"></i> Staff du club</h1>
+            <div style="color:var(--mabb-muted); font-size:.92rem;">
+                {{ total }} membre{{ total > 1 ? 's' : '' }} encadrant{{ total > 1 ? 's' : '' }} actif{{ total > 1 ? 's' : '' }} pour <strong>{{ club.nom }}</strong>
+            </div>
         </div>
+        {% if is_granted('CLUB_STAFF', club) %}
+            <a href="{{ path('manager_staff_comptes_en_attente') }}" class="btn-mabb-ghost" style="position:relative;">
+                <i class="bi bi-person-exclamation"></i> Comptes sans fiche
+            </a>
+        {% endif %}
     </div>
 
     {% if total == 0 %}

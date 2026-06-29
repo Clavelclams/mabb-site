@@ -56,6 +56,11 @@
                     <i class="bi bi-clipboard-data"></i> Saisir les évals
                 </a>
             {% endif %}
+            {# Bouton Staff — visible pour tous les membres (chacun peut voir et s'inscrire) #}
+            <a href="{{ path('manager_rencontre_staff_show', {id: rencontre.id}) }}" class="btn-mabb-ghost">
+                <i class="bi bi-person-badge"></i> Staff
+            </a>
+
             {% if is_granted('CLUB_STAFF', rencontre) and not rencontre.isVerrouillee %}
                 <a href="{{ path('manager_rencontre_edit', {id: rencontre.id}) }}" class="btn-mabb-primary">
                     <i class="bi bi-pencil"></i> Modifier

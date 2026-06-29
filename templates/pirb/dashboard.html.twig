@@ -220,6 +220,51 @@
                                 </button>
                             </form>
                         {% endif %}
+
+                        {# ── Staff du match (lecture seule) ──────────────────────────── #}
+                        {% set staff_match = staff_par_rencontre[r.id] ?? {} %}
+                        {% if staff_match is not empty %}
+                            <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.07);">
+                                <div style="font-size:0.68rem; font-weight:700; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">
+                                    <i class="bi bi-person-badge"></i> Staff du match
+                                </div>
+                                <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                                    {% for roleCode, aff in staff_match %}
+                                        {% set isMe = aff.user is not null and aff.user.id == app.user.id %}
+                                        <div style="
+                                            display:inline-flex; align-items:center; gap:4px;
+                                            padding:3px 9px; border-radius:20px; font-size:0.7rem;
+                                            {% if aff.isAbsent() %}
+                                                background:rgba(239,68,68,.12); color:#fca5a5; border:1px solid rgba(239,68,68,.25);
+                                            {% elseif isMe %}
+                                                background:rgba(234,88,12,.2); color:var(--pirb-accent); border:1px solid rgba(234,88,12,.4);
+                                            {% else %}
+                                                background:rgba(255,255,255,.05); color:var(--pirb-text-muted); border:1px solid rgba(255,255,255,.1);
+                                            {% endif %}
+                                        ">
+                                            {% if aff.isAbsent() %}
+                                                <i class="bi bi-x-circle" style="font-size:.65rem;"></i>
+                                            {% elseif isMe %}
+                                                <i class="bi bi-star-fill" style="font-size:.6rem;"></i>
+                                            {% else %}
+                                                <i class="bi bi-person" style="font-size:.65rem;"></i>
+                                            {% endif %}
+                                            <span style="font-weight:{% if isMe %}700{% else %}500{% endif %};">
+                                                {{ aff.roleLabel }} :
+                                                {% if aff.user is not null %}
+                                                    {{ aff.user.prenom }}{% if isMe %} (toi){% endif %}
+                                                {% else %}
+                                                    À confirmer
+                                                {% endif %}
+                                                {% if aff.isAbsent() %} — absent·e{% endif %}
+                                            </span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                        {# ───────────────────────────────────────────────────────────── #}
+
                     </div>
                 {% endfor %}
 

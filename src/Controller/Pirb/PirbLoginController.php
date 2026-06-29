@@ -3,13 +3,16 @@
 namespace App\Controller\Pirb;
 
 use App\Entity\Core\User;
+use App\Entity\Sport\AffectationMatch;
 use App\Entity\Sport\Presence;
+use App\Repository\Sport\AffectationMatchRepository;
 use App\Repository\Sport\CotisationJoueurRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\PresenceRepository;
 use App\Repository\Sport\RencontreRepository;
 use App\Repository\Sport\RencontreRoleRepository;
 use App\Repository\Sport\SeanceRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -66,15 +69,26 @@ class PirbLoginController extends AbstractController
         RencontreRepository $rencontreRepo,
         RencontreRoleRepository $rencontreRoleRepo,
         PresenceRepository $presenceRepo,
+        AffectationMatchRepository $affectationRepo,
+        EntityManagerInterface $em,
     ): Response {
         /** @var User $user */
         $user = $this->getUser();
 
-        // V1.0 — Le Joueur est lié à l'User via Joueur.user (auto-link à la 1ère
-        // connexion Manager/PIRB, cf. tâche #51). Si pas encore lié, le PIRB
-        // affiche un message de fallback (l'user a peut-être un compte mais
-        // pas encore de fiche joueuse créée par le staff).
+        // V1.0 — Cherche le Joueur lié à ce User.
         $joueur = $joueurRepo->findOneBy(['user' => $user]);
+
+        // Auto-lien par email : si pas encore lié ET qu'une fiche Joueur non liée
+        // existe avec le même email, on lie automatiquement au 1er login.
+        // Le staff n'a rien à faire — transparent pour la joueuse.
+        if ($joueur === null && $user->getEmail() !== null) {
+            $candidat = $joueurRepo->findAutoLinkByEmail($user->getEmail());
+            if ($candidat !== null) {
+                $candidat->setUser($user);
+                $em->flush();
+                $joueur = $candidat;
+            }
+        }
 
         $cotisation = null;
         $prochaines_seances = [];
@@ -141,12 +155,34 @@ class PirbLoginController extends AbstractController
             ? $rencontreRoleRepo->findByUserForRencontres($user, $prochaines_rencontres)
             : [];
 
+        // Staff assigné par match (AffectationMatch) — lecture seule pour le PIRB.
+        // Permet aux joueuses de voir qui arbitre, qui fait la table, etc.
+        // Format : [rencontre_id => [roleCode => AffectationMatch]]
+        $staff_par_rencontre = [];
+        foreach ($prochaines_rencontres as $rencontre) {
+            $affMap = $affectationRepo->findByRencontre($rencontre);
+            $staffActif = [];
+            foreach ($affMap as $roleCode => $affList) {
+                foreach ($affList as $aff) {
+                    // On affiche uniquement les affectations effectives (pas les candidatures en attente)
+                    if ($aff->isCouvert() || $aff->isAbsent()) {
+                        $staffActif[$roleCode] = $aff;
+                        break;
+                    }
+                }
+            }
+            if (!empty($staffActif)) {
+                $staff_par_rencontre[$rencontre->getId()] = $staffActif;
+            }
+        }
+
         return $this->render('pirb/dashboard.html.twig', [
             'joueur'                => $joueur,
             'cotisation'            => $cotisation,
             'prochaines_seances'    => $prochaines_seances,
             'prochaines_rencontres' => $prochaines_rencontres,
             'mes_roles_rencontres'  => $mes_roles_rencontres,
+            'staff_par_rencontre'   => $staff_par_rencontre,
             'stats_presences'       => $stats_presences,
         ]);
     }

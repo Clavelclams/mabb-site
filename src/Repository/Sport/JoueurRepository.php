@@ -87,4 +87,61 @@ class JoueurRepository extends ServiceEntityRepository
 
         return $resultats;
     }
+
+    /**
+     * Cherche un Joueur non encore lié (user IS NULL) dont l'email correspond
+     * à l'email du User — pour l'auto-lien au 1er login PIRB.
+     *
+     * Priorité : email exact → nom+prénom exacts.
+     * Retourne null si aucune correspondance unique trouvée.
+     */
+    public function findAutoLinkByEmail(string $email): ?Joueur
+    {
+        $email = strtolower(trim($email));
+        if ($email === '') {
+            return null;
+        }
+
+        return $this->createQueryBuilder('j')
+            ->where('j.user IS NULL')
+            ->andWhere('j.ephemere = false OR j.ephemere IS NULL')
+            ->andWhere('LOWER(j.email) = :email')
+            ->setParameter('email', $email)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Compte les Users du club qui n'ont pas encore de Joueur lié.
+     * Utile pour l'alerte admin "X comptes PIRB en attente de lien".
+     *
+     * @return array<array{user: User, suggestion: Joueur|null}> triés par nom
+     */
+    public function findUsersWithoutJoueur(\App\Entity\Sport\Club $club): array
+    {
+        $users = $this->getEntityManager()->getRepository(\App\Entity\Core\User::class)
+            ->createQueryBuilder('u')
+            ->innerJoin(\App\Entity\Core\UserClubRole::class, 'ucr', 'WITH', 'ucr.user = u AND ucr.club = :club AND ucr.status = :active')
+            ->leftJoin(\App\Entity\Sport\Joueur::class, 'jl', 'WITH', 'jl.user = u AND jl.club = :club')
+            ->where('jl.id IS NULL')
+            ->setParameter('club', $club)
+            ->setParameter('active', \App\Entity\Core\UserClubRole::STATUS_ACTIVE)
+            ->orderBy('u.nom', 'ASC')
+            ->addOrderBy('u.prenom', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        // Pour chaque user sans joueur, chercher un joueur non-lié avec le même email
+        $result = [];
+        foreach ($users as $user) {
+            $suggestion = null;
+            if ($user->getEmail()) {
+                $suggestion = $this->findAutoLinkByEmail($user->getEmail());
+            }
+            $result[] = ['user' => $user, 'suggestion' => $suggestion];
+        }
+
+        return $result;
+    }
 }

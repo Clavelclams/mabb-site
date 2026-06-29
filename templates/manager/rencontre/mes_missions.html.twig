@@ -1,0 +1,125 @@
+{% extends 'manager/base.html.twig' %}
+{% block title %}Mes missions{% endblock %}
+
+{% block body %}
+
+<div class="page-header">
+    <div>
+        <h1>🎯 Mes missions</h1>
+        <p class="subtitle">Tes rôles assignés pour les prochains matchs</p>
+    </div>
+</div>
+
+{# Missions confirmées / assignées #}
+{% if missions_a_venir is empty %}
+    <div class="card-mabb" style="text-align:center; padding:32px 20px; margin-bottom:20px;">
+        <i class="bi bi-calendar-x" style="font-size:2.5rem; opacity:.3;"></i>
+        <h3 style="margin:12px 0 6px; font-size:1rem;">Aucune mission assignée</h3>
+        <p style="color:var(--mabb-muted); font-size:.84rem; margin:0;">
+            Tu n'as pas encore de rôle assigné pour les prochains matchs.
+        </p>
+    </div>
+{% else %}
+    <div style="margin-bottom:24px;">
+        <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+            <i class="bi bi-calendar-check"></i> Missions à venir
+        </div>
+        {% for mission in missions_a_venir %}
+            {% set r = mission.rencontre %}
+            <div class="card-mabb" style="margin-bottom:10px;">
+                <div class="card-body" style="padding:14px 16px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+                    {# Date badge #}
+                    <div style="background:var(--mabb-orange); color:#fff; border-radius:10px; padding:6px 10px; text-align:center; min-width:52px; flex-shrink:0;">
+                        <div style="font-size:1.3rem; font-weight:900; line-height:1;">{{ r.date|date('d') }}</div>
+                        <div style="font-size:.65rem; font-weight:700; text-transform:uppercase;">{{ r.date|date('M')|upper }}</div>
+                    </div>
+                    {# Infos match #}
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:.92rem;">MABB vs {{ r.adversaire }}</div>
+                        <div style="font-size:.78rem; color:var(--mabb-muted);">
+                            {{ r.date|date('H:i') }}
+                            {% if r.lieu %} · {{ r.lieu }}{% endif %}
+                            {% if r.equipe %} · {{ r.equipe.nom }}{% endif %}
+                        </div>
+                    </div>
+                    {# Rôle #}
+                    <div style="text-align:right;">
+                        <span style="background:#eff6ff; color:#2563eb; padding:5px 12px; border-radius:20px; font-size:.78rem; font-weight:700;">
+                            <i class="bi bi-person-badge"></i>
+                            {{ mission.roleLabel }}
+                        </span>
+                        <div style="margin-top:4px;">
+                            {% if mission.isAssigne() %}
+                                <span style="font-size:.7rem; color:#16a34a;"><i class="bi bi-check2"></i> Assigné</span>
+                            {% elseif mission.isConfirme() %}
+                                <span style="font-size:.7rem; color:#065f46;"><i class="bi bi-patch-check"></i> Confirmé</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {# Lien staff match #}
+                    <a href="{{ path('manager_rencontre_staff_show', {id: r.id}) }}" class="btn-mabb-ghost btn-sm">
+                        <i class="bi bi-eye"></i> Voir le staff
+                    </a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{# Candidatures en cours #}
+{% if candidatures_en_cours|length > 0 %}
+    <div style="margin-bottom:24px;">
+        <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+            <i class="bi bi-hourglass-split"></i> Candidatures en attente de validation
+        </div>
+        {% for c in candidatures_en_cours %}
+            {% set r = c.rencontre %}
+            <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:10px; padding:12px 16px; margin-bottom:8px; display:flex; align-items:center; gap:12px;">
+                <i class="bi bi-hourglass-split" style="color:#b45309;"></i>
+                <div style="flex:1;">
+                    <span style="font-weight:600; font-size:.88rem;">{{ c.roleLabel }}</span>
+                    <span style="color:var(--mabb-muted); font-size:.78rem;"> — MABB vs {{ r.adversaire }} · {{ r.date|date('d/m/Y') }}</span>
+                </div>
+                <span style="font-size:.72rem; color:#b45309;">En attente admin</span>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{# Rôles vacants — postes à prendre #}
+{% if rencontres_avec_vacants|length > 0 %}
+    <div>
+        <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+            <i class="bi bi-hand-index"></i> Postes ouverts — tu peux t'inscrire
+        </div>
+        {% for item in rencontres_avec_vacants %}
+            {% set r = item.rencontre %}
+            <div class="card-mabb" style="margin-bottom:10px;">
+                <div class="card-body" style="padding:12px 16px;">
+                    <div style="font-weight:700; font-size:.88rem; margin-bottom:8px;">
+                        MABB vs {{ r.adversaire }} · {{ r.date|date('d/m/Y H:i') }}
+                        {% if r.lieu %}<span style="color:var(--mabb-muted); font-size:.78rem; font-weight:400;"> · {{ r.lieu }}</span>{% endif %}
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        {% for roleCode, roleLabel in item.vacants %}
+                            <form method="post" action="{{ path('manager_rencontre_staff_candidater', {id: r.id}) }}" style="display:inline;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('staff_candidater_' ~ r.id) }}">
+                                <input type="hidden" name="role" value="{{ roleCode }}">
+                                <button type="submit" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:8px; padding:5px 12px; font-size:.78rem; font-weight:600; cursor:pointer;">
+                                    <i class="bi bi-hand-index"></i> {{ roleLabel }}
+                                </button>
+                            </form>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="card-mabb" style="text-align:center; padding:20px; opacity:.7;">
+        <i class="bi bi-check-circle" style="font-size:1.8rem; color:#22c55e;"></i>
+        <div style="font-size:.85rem; margin-top:8px; color:var(--mabb-muted);">Tous les postes sont pourvus 👍</div>
+    </div>
+{% endif %}
+
+{% endblock %}

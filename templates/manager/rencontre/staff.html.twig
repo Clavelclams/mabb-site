@@ -1,0 +1,303 @@
+{% extends 'manager/base.html.twig' %}
+{% block title %}Staff — {{ rencontre.adversaire }} · {{ rencontre.date|date('d/m/Y') }}{% endblock %}
+
+{% block body %}
+<style>
+.role-row {
+    display: grid;
+    grid-template-columns: 180px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--mabb-border);
+}
+.role-row:last-child { border-bottom: none; }
+.role-label {
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--mabb-text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.role-label .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.dot-ok     { background: #22c55e; }
+.dot-candidat { background: #f59e0b; }
+.dot-absent { background: #ef4444; }
+.dot-vide   { background: #cbd5e1; }
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 600;
+}
+.chip-assigne  { background: #dcfce7; color: #16a34a; }
+.chip-confirme { background: #d1fae5; color: #065f46; }
+.chip-candidat { background: #fef3c7; color: #b45309; }
+.chip-absent   { background: #fee2e2; color: #dc2626; }
+.chip-vide     { background: #f1f5f9; color: #94a3b8; }
+.candidature-list {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+</style>
+
+{# Header #}
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-person-badge"></i> Staff du match</h1>
+        <p class="subtitle">
+            MABB vs <strong>{{ rencontre.adversaire }}</strong> ·
+            {{ rencontre.date|date('l d F Y') }} à {{ rencontre.date|date('H:i') }}
+            {% if rencontre.lieu %} · {{ rencontre.lieu }}{% endif %}
+        </p>
+    </div>
+    <div style="display:flex; gap:8px;">
+        <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour au match
+        </a>
+        <a href="{{ path('manager_rencontre_staff_mes_missions') }}" class="btn-mabb-ghost">
+            <i class="bi bi-calendar-check"></i> Mes missions
+        </a>
+    </div>
+</div>
+
+{# Alerte rôles vacants #}
+{% if roles_vacants|length > 0 %}
+<div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:10px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+    <i class="bi bi-exclamation-triangle-fill" style="color:#b45309; font-size:1.2rem;"></i>
+    <div>
+        <div style="font-weight:700; color:#92400e; font-size:.88rem;">{{ roles_vacants|length }} rôle(s) non pourvu(s)</div>
+        <div style="font-size:.78rem; color:#b45309;">
+            {% for roleCode in roles_vacants %}
+                {{ roles[roleCode] }}{% if not loop.last %} · {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# Tableau des rôles #}
+<div class="card-mabb" style="margin-bottom:20px;">
+    <div class="card-body" style="padding:0;">
+
+        {% for roleCode, roleLabel in roles %}
+            {% set affList = affectations_by_role[roleCode] ?? [] %}
+            {% set actif = null %}
+            {% set candidatures = [] %}
+            {% for a in affList %}
+                {% if a.isActif() %}
+                    {% set actif = a %}
+                {% elseif a.isCandidature() %}
+                    {% set candidatures = candidatures|merge([a]) %}
+                {% endif %}
+            {% endfor %}
+            {# Vacant = personne n'est assigné/confirmé OU la personne est absente (besoin remplaçant) #}
+            {% set isVacant = actif is null or actif.isAbsent() %}
+
+            <div class="role-row">
+                {# Nom du rôle + indicateur #}
+                <div class="role-label">
+                    {% if actif is not null and actif.isAbsent() %}
+                        <span class="dot dot-absent"></span>
+                    {% elseif actif is not null %}
+                        <span class="dot dot-ok"></span>
+                    {% elseif candidatures|length > 0 %}
+                        <span class="dot dot-candidat"></span>
+                    {% else %}
+                        <span class="dot dot-vide"></span>
+                    {% endif %}
+                    {{ roleLabel }}
+                </div>
+
+                {# Personne assignée ou candidatures #}
+                <div>
+                    {% if actif is not null %}
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            {% if actif.user is not null %}
+                                <span style="font-weight:600; font-size:.88rem;">
+                                    {{ actif.user.prenom }} {{ actif.user.nom|upper }}
+                                </span>
+                            {% else %}
+                                <span style="color:var(--mabb-muted); font-size:.82rem;">Poste réservé</span>
+                            {% endif %}
+
+                            <span class="chip chip-{{ actif.statut|lower }}">
+                                {% if actif.isAssigne() %}
+                                    <i class="bi bi-check2"></i> Assigné
+                                {% elseif actif.isConfirme() %}
+                                    <i class="bi bi-patch-check"></i> Confirmé
+                                {% elseif actif.isAbsent() %}
+                                    <i class="bi bi-x-circle"></i> Absent
+                                {% endif %}
+                            </span>
+
+                            {% if actif.note %}
+                                <span style="font-size:.72rem; color:var(--mabb-muted); font-style:italic;">{{ actif.note }}</span>
+                            {% endif %}
+                        </div>
+
+                        {# Candidatures en attente sur ce même rôle #}
+                        {% if is_admin and candidatures|length > 0 %}
+                            <div class="candidature-list">
+                                {% for c in candidatures %}
+                                    <span class="chip chip-candidat">
+                                        <i class="bi bi-hand-index"></i>
+                                        {{ c.user ? (c.user.prenom ~ ' ' ~ c.user.nom) : '?' }}
+                                    </span>
+                                {% endfor %}
+                                <span style="font-size:.7rem; color:var(--mabb-muted);">en attente</span>
+                            </div>
+                        {% endif %}
+
+                    {% elseif candidatures|length > 0 %}
+                        {# Rôle vacant mais avec candidatures #}
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span class="chip chip-vide"><i class="bi bi-question"></i> Vacant</span>
+                            <div class="candidature-list">
+                                {% for c in candidatures %}
+                                    <span class="chip chip-candidat">
+                                        <i class="bi bi-hand-index"></i>
+                                        {{ c.user ? (c.user.prenom ~ ' ' ~ c.user.nom) : '?' }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <span class="chip chip-vide"><i class="bi bi-question"></i> Vacant</span>
+                    {% endif %}
+                </div>
+
+                {# Actions #}
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+
+                    {# ADMIN : Assigner quelqu'un #}
+                    {% if is_admin %}
+                        <button type="button"
+                                onclick="openAssignModal('{{ roleCode }}', '{{ roleLabel }}')"
+                                class="btn-mabb-ghost btn-sm">
+                            <i class="bi bi-person-plus"></i>
+                            {{ actif is null ? 'Assigner' : 'Changer' }}
+                        </button>
+
+                        {% if actif is not null %}
+                            {# Marquer absent #}
+                            {% if not actif.isAbsent() %}
+                                <form method="post" action="{{ path('manager_rencontre_staff_absent', {aid: actif.id}) }}"
+                                      onsubmit="return confirm('Marquer absent ?');" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('staff_absent_' ~ actif.id) }}">
+                                    <button type="submit" class="btn-sm" style="background:#fee2e2; color:#dc2626; border:none; border-radius:6px; padding:4px 10px; font-size:.72rem; cursor:pointer;">
+                                        <i class="bi bi-x-lg"></i> Absent
+                                    </button>
+                                </form>
+                            {% else %}
+                                {# Réouvrir le poste #}
+                                <form method="post" action="{{ path('manager_rencontre_staff_supprimer', {aid: actif.id}) }}"
+                                      onsubmit="return confirm('Supprimer cette affectation ?');" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('staff_supprimer_' ~ actif.id) }}">
+                                    <button type="submit" class="btn-sm" style="background:#f1f5f9; color:#64748b; border:none; border-radius:6px; padding:4px 10px; font-size:.72rem; cursor:pointer;">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Réouvrir
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+
+                        {# Valider / Rejeter les candidatures #}
+                        {% for c in candidatures %}
+                            <form method="post" action="{{ path('manager_rencontre_staff_valider', {aid: c.id}) }}" style="display:inline;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('staff_valider_' ~ c.id) }}">
+                                <button type="submit" class="btn-sm" style="background:#dcfce7; color:#16a34a; border:none; border-radius:6px; padding:4px 10px; font-size:.72rem; cursor:pointer;" title="Valider {{ c.user ? c.user.prenom : '' }}">
+                                    <i class="bi bi-check-lg"></i> Valider {{ c.user ? c.user.prenom : '' }}
+                                </button>
+                            </form>
+                            <form method="post" action="{{ path('manager_rencontre_staff_rejeter', {aid: c.id}) }}" style="display:inline;" onsubmit="return confirm('Rejeter la candidature ?');">
+                                <input type="hidden" name="_token" value="{{ csrf_token('staff_rejeter_' ~ c.id) }}">
+                                <button type="submit" class="btn-sm" style="background:#fee2e2; color:#dc2626; border:none; border-radius:6px; padding:4px 10px; font-size:.72rem; cursor:pointer;">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        {% endfor %}
+
+                    {% else %}
+                        {# NON-ADMIN : bouton "Je m'inscris" si rôle vacant et pas déjà candidaté #}
+                        {% if isVacant and roleCode not in mes_roles_candidates %}
+                            <form method="post" action="{{ path('manager_rencontre_staff_candidater', {id: rencontre.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('staff_candidater_' ~ rencontre.id) }}">
+                                <input type="hidden" name="role" value="{{ roleCode }}">
+                                <button type="submit" class="btn-sm" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:8px; padding:5px 12px; font-size:.78rem; font-weight:600; cursor:pointer;">
+                                    <i class="bi bi-hand-index"></i> Je m'inscris
+                                </button>
+                            </form>
+                        {% elseif roleCode in mes_roles_candidates %}
+                            <span style="font-size:.75rem; color:#b45309; font-weight:600;">
+                                <i class="bi bi-hourglass-split"></i> En attente
+                            </span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+{# Modal assignation (admin seulement) #}
+{% if is_admin %}
+<div id="assignModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:14px; padding:28px; width:480px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,.2);">
+        <h3 style="margin:0 0 18px; font-size:1.05rem;">
+            Assigner — <span id="modalRoleLabel"></span>
+        </h3>
+        <form method="post" action="{{ path('manager_rencontre_staff_assigner', {id: rencontre.id}) }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('staff_assigner_' ~ rencontre.id) }}">
+            <input type="hidden" name="role" id="modalRoleCode">
+
+            <div style="margin-bottom:14px;">
+                <label style="font-weight:600; font-size:.85rem; display:block; margin-bottom:6px;">Membre du staff</label>
+                <select name="user_id" class="form-select">
+                    <option value="0">— Réserver sans user —</option>
+                    {% for u in users_club %}
+                        <option value="{{ u.id }}">{{ u.prenom }} {{ u.nom|upper }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-bottom:18px;">
+                <label style="font-weight:600; font-size:.85rem; display:block; margin-bottom:6px;">Note (optionnel)</label>
+                <input type="text" name="note" class="form-control" placeholder="Ex: Arrive à 13h30">
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="closeModal()" class="btn-mabb-ghost">Annuler</button>
+                <button type="submit" class="btn-mabb-orange">
+                    <i class="bi bi-check2"></i> Assigner
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openAssignModal(roleCode, roleLabel) {
+    document.getElementById('modalRoleCode').value = roleCode;
+    document.getElementById('modalRoleLabel').textContent = roleLabel;
+    document.getElementById('assignModal').style.display = 'flex';
+}
+function closeModal() {
+    document.getElementById('assignModal').style.display = 'none';
+}
+document.getElementById('assignModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+</script>
+{% endif %}
+
+{% endblock %}

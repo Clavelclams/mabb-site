@@ -25,6 +25,14 @@ class Club
     private ?string $nom = null;
 
     /**
+     * Sigle / acronyme court du club.
+     * Ex: "MABB", "ASVEL", "JSF"…
+     * Nullable : les anciens clubs n'en ont pas encore.
+     */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $sigle = null;
+
+    /**
      * Slug unique : identifiant URL du club.
      * Ex: "mabb", "amiens-basket", etc.
      * Utilisé pour le routing multi-tenant.
@@ -97,6 +105,34 @@ class Club
     {
         $this->nom = $nom;
         return $this;
+    }
+
+    public function getSigle(): ?string
+    {
+        return $this->sigle;
+    }
+
+    public function setSigle(?string $sigle): static
+    {
+        $this->sigle = $sigle !== null ? strtoupper(trim($sigle)) : null;
+        return $this;
+    }
+
+    /**
+     * Retourne le sigle si défini, sinon les initiales du nom (fallback).
+     * Ex: "Amiens Métropole Basket-Ball" → "AMBB" si pas de sigle renseigné.
+     */
+    public function getSigleOuInitiales(): string
+    {
+        if ($this->sigle !== null) {
+            return $this->sigle;
+        }
+        // Fallback : premières lettres de chaque mot capitalisé
+        $mots = preg_split('/\s+/', $this->nom ?? '');
+        return implode('', array_map(
+            static fn($m) => mb_strtoupper(mb_substr($m, 0, 1)),
+            array_filter($mots, static fn($m) => mb_strlen($m) > 2)
+        )) ?: ($this->nom ?? '');
     }
 
     public function getSlug(): ?string

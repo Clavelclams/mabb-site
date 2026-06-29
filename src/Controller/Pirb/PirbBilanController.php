@@ -87,10 +87,10 @@ class PirbBilanController extends AbstractController
      * Accessible uniquement quand le coach a passé le bilan en statut VALIDE.
      */
     #[Route('/bilan/competences', name: 'pirb_bilan_competences', methods: ['GET'])]
-    public function competences(): Response
+    public function competences(\Symfony\Component\HttpFoundation\Request $request): Response
     {
         /** @var User $user */
-        $user = $this->getUser();
+        $user   = $this->getUser();
         $joueur = $this->joueurRepo->findOneBy(['user' => $user]);
 
         if ($joueur === null) {
@@ -98,17 +98,33 @@ class PirbBilanController extends AbstractController
             return $this->redirectToRoute('pirb_dashboard');
         }
 
-        // Dernier bilan validé seulement — les brouillons restent invisibles côté PIRB
-        $bilan = $this->bilanRepo->findDernierValide($joueur);
+        // Tous les bilans VALIDÉS, triés du plus récent au plus ancien
+        $tous = array_values(array_filter(
+            $this->bilanRepo->findByJoueur($joueur),
+            fn($b) => $b->isValide()
+        ));
 
-        // Tous les bilans validés pour historique
-        $historique = $this->bilanRepo->findByJoueur($joueur);
-        $historique  = array_filter($historique, fn($b) => $b->isValide());
+        // Construire la map saison → bilan (1 bilan par saison, le plus récent si plusieurs)
+        $bilanParSaison = [];
+        foreach ($tous as $b) {
+            $bilanParSaison[$b->getSaison()] ??= $b;
+        }
+        // Trier les saisons de la plus récente à la plus ancienne
+        krsort($bilanParSaison);
+
+        // Saison sélectionnée : query param ?saison= ou la plus récente par défaut
+        $saisonSelectionnee = $request->query->get('saison');
+        if ($saisonSelectionnee === null || !isset($bilanParSaison[$saisonSelectionnee])) {
+            $saisonSelectionnee = array_key_first($bilanParSaison);
+        }
+
+        $bilan = isset($saisonSelectionnee) ? ($bilanParSaison[$saisonSelectionnee] ?? null) : null;
 
         return $this->render('pirb/bilan_competences.html.twig', [
-            'joueur'     => $joueur,
-            'bilan'      => $bilan,
-            'historique' => array_values($historique),
+            'joueur'              => $joueur,
+            'bilan'               => $bilan,
+            'bilan_par_saison'    => $bilanParSaison,   // map saison→bilan pour le dropdown
+            'saison_selectionnee' => $saisonSelectionnee,
         ]);
     }
 }

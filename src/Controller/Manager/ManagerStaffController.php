@@ -10,6 +10,7 @@ use App\Entity\Sport\CoachEquipe;
 use App\Entity\Sport\Equipe;
 use App\Repository\Sport\CoachEquipeRepository;
 use App\Repository\Sport\EquipeRepository;
+use App\Repository\Sport\JoueurRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
 use Doctrine\ORM\EntityManagerInterface;
@@ -31,14 +32,23 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 class ManagerStaffController extends AbstractController
 {
-    // Saison courante par défaut (mise à jour chaque année)
-    private const SAISON_COURANTE = '2026-2027';
+    /** Calcule la saison courante (identique à ManagerCoachDashboardController). */
+    private static function saisonCourante(): string
+    {
+        $now   = new \DateTimeImmutable();
+        $annee = (int) $now->format('Y');
+        $mois  = (int) $now->format('n');
+        return $mois >= 9
+            ? $annee . '-' . ($annee + 1)
+            : ($annee - 1) . '-' . $annee;
+    }
 
     public function __construct(
         private readonly TenantResolver $tenantResolver,
         private readonly EntityManagerInterface $em,
         private readonly CoachEquipeRepository $coachEquipeRepository,
         private readonly EquipeRepository $equipeRepository,
+        private readonly JoueurRepository $joueurRepository,
     ) {}
 
     /**
@@ -168,7 +178,7 @@ class ManagerStaffController extends AbstractController
         ]);
 
         // ── CoachEquipe : équipes coachées sur la saison courante ───────────
-        $coachEquipes = $this->coachEquipeRepository->findByCoach($user, self::SAISON_COURANTE);
+        $coachEquipes = $this->coachEquipeRepository->findByCoach($user, self::saisonCourante());
 
         // Équipes disponibles du club (saison courante) pour le formulaire d'affectation
         $equipesDisponibles = $this->em->createQueryBuilder()
@@ -178,7 +188,7 @@ class ManagerStaffController extends AbstractController
             ->andWhere('e.saison = :saison')
             ->orderBy('e.nom', 'ASC')
             ->setParameter('club', $club)
-            ->setParameter('saison', self::SAISON_COURANTE)
+            ->setParameter('saison', self::saisonCourante())
             ->getQuery()
             ->getResult();
 
@@ -198,7 +208,7 @@ class ManagerStaffController extends AbstractController
             'coach_equipes'         => $coachEquipes,
             'equipes_disponibles'   => $equipesDisponibles,
             'equipes_deja_coachs'   => $equipesDejaCoachs,
-            'saison_courante'       => self::SAISON_COURANTE,
+            'saison_courante'       => self::saisonCourante(),
             'coach_roles'           => CoachEquipe::ROLES,
         ]);
     }
@@ -239,7 +249,7 @@ class ManagerStaffController extends AbstractController
             $roleCoach = CoachEquipe::ROLE_PRINCIPAL;
         }
 
-        $saison = self::SAISON_COURANTE;
+        $saison = self::saisonCourante();
 
         // Vérifier doublon
         $existing = $this->em->createQueryBuilder()
@@ -322,5 +332,29 @@ class ManagerStaffController extends AbstractController
         ));
 
         return $this->redirectToRoute('manager_staff_show', ['userId' => $userId ?? 0]);
+    }
+
+    /**
+     * Vue admin : Users du club qui ont créé un compte PIRB mais n'ont pas encore
+     * de fiche Joueur liée. L'admin peut voir une suggestion auto-détectée par email
+     * et lier directement depuis cette page.
+     *
+     * GET manager.mabb.fr/staff/comptes-en-attente
+     */
+    #[Route('/staff/comptes-en-attente', name: 'manager_staff_comptes_en_attente', methods: ['GET'])]
+    public function comptesEnAttente(): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        if ($club === null) {
+            return $this->redirectToRoute('manager_dashboard');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        $entrees = $this->joueurRepository->findUsersWithoutJoueur($club);
+
+        return $this->render('manager/staff/comptes_en_attente.html.twig', [
+            'club'    => $club,
+            'entrees' => $entrees, // array<{user: User, suggestion: Joueur|null}>
+        ]);
     }
 }

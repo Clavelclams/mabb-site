@@ -465,11 +465,11 @@ class EquipeController extends AbstractController
         $annee = (int) $now->format('Y');
         $mois  = (int) $now->format('n');
 
-        // Avant août : on est encore dans la saison qui a commencé l'année précédente
-        if ($mois < 8) {
+        // Avant septembre : on est encore dans la saison qui a commencé l'année précédente
+        if ($mois < 9) {
             return ($annee - 1) . '-' . $annee;
         }
-        // À partir d'août : nouvelle saison
+        // À partir de septembre : nouvelle saison
         return $annee . '-' . ($annee + 1);
     }
 }
