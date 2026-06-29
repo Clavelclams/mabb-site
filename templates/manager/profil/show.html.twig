@@ -3,240 +3,403 @@
 {% block title %}Mon profil{% endblock %}
 
 {% block body %}
-    {# ========================================================
-       HEADER profil : avatar + identité + rôle Symfony
-       ======================================================== #}
-    <div class="page-header">
-        <div style="display:flex; align-items:center; gap: 20px;">
-            <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color: white; display:flex; align-items:center; justify-content:center; font-size: 2rem; font-weight: 800;">
-                {{ user.prenom|first|upper }}{{ user.nom|first|upper }}
-            </div>
-            <div>
-                <h1 style="margin:0;">{{ user.prenom }} {{ user.nom }}</h1>
-                <p class="subtitle" style="margin-top: 6px;">
-                    <i class="bi bi-envelope"></i> {{ user.email }}
-                    {% if club %}
-                        <span style="color:var(--mabb-muted); margin-left:8px;">— Membre de {{ club.nom }}</span>
-                    {% endif %}
-                </p>
-            </div>
-        </div>
-        <a href="{{ path('manager_dashboard') }}" class="btn-mabb-ghost">
-            <i class="bi bi-arrow-left"></i> Retour au tableau de bord
-        </a>
-    </div>
 
-    <div class="row g-3">
-        {# ========================================================
-           Mes rôles dans ce club (UserClubRole)
-           ======================================================== #}
-        <div class="col-md-6">
-            <div class="card-mabb">
-                <div class="card-header"><i class="bi bi-person-badge"></i> Mes rôles dans {{ club.nom ?? 'le club' }}</div>
-                <div class="card-body">
-                    {% if roles_in_club is empty %}
-                        <p style="color:var(--mabb-muted); margin:0;">Aucun rôle actif dans ce club.</p>
-                    {% else %}
-                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                            {% for ucr in roles_in_club %}
-                                {% set color = {
-                                    'DIRIGEANT': '#8b5cf6',
-                                    'COACH': 'var(--mabb-blue)',
-                                    'STAFF': '#0891b2',
-                                    'JOUEUR': 'var(--mabb-orange)',
-                                    'PARENT': '#ec4899',
-                                    'BENEVOLE': '#22c55e'
-                                } %}
-                                <span style="background: {{ color[ucr.role] ?? 'var(--mabb-muted)' }}; color:white; padding:6px 14px; border-radius:20px; font-weight:600; font-size:.85rem;">
-                                    {{ ucr.role|capitalize }}
-                                </span>
-                            {% endfor %}
-                        </div>
-                        <p style="color:var(--mabb-muted); font-size:.8rem; margin: 12px 0 0;">
-                            <i class="bi bi-info-circle"></i> Les rôles déterminent ce que tu peux voir et faire dans Manager.
-                        </p>
-                    {% endif %}
+{# ============================================================
+   HEADER : avatar initiales + identité + bouton modifier
+   ============================================================ #}
+<div class="page-header">
+    <div style="display:flex; align-items:center; gap:20px;">
+        <div style="width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:white; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; flex-shrink:0;">
+            {{ user.prenom|first|upper }}{{ user.nom|first|upper }}
+        </div>
+        <div>
+            <h1 style="margin:0;">{{ user.prenom }} {{ user.nom }}</h1>
+            <p style="margin:4px 0 0; color:var(--mabb-muted); font-size:.9rem;">
+                <i class="bi bi-envelope" style="margin-right:4px;"></i>{{ user.email }}
+                {% if club %}
+                    <span style="margin-left:8px;">· {{ club.nom }}</span>
+                {% endif %}
+            </p>
+            {# Badges rôles #}
+            {% if roles_in_club is not empty %}
+                <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;">
+                    {% set role_colors = {
+                        'DIRIGEANT': '#8b5cf6',
+                        'COACH': 'var(--mabb-blue)',
+                        'STAFF': '#0891b2',
+                        'JOUEUR': 'var(--mabb-orange)',
+                        'PARENT': '#ec4899',
+                        'BENEVOLE': '#22c55e',
+                        'EMPLOYE': '#f59e0b',
+                        'TRESORIER': '#ef4444'
+                    } %}
+                    {% for ucr in roles_in_club %}
+                        <span style="background:{{ role_colors[ucr.role] ?? '#6b7280' }}; color:white; padding:3px 10px; border-radius:20px; font-weight:600; font-size:.75rem;">
+                            {{ ucr.role|capitalize }}
+                        </span>
+                    {% endfor %}
                 </div>
-            </div>
+            {% endif %}
         </div>
+    </div>
+    <a href="{{ path('manager_profil_edit') }}" class="btn-mabb-primary">
+        <i class="bi bi-pencil"></i> Modifier mon profil
+    </a>
+</div>
 
-        {# ========================================================
-           Ma fiche joueuse (si attachée à mon compte)
-           ======================================================== #}
-        <div class="col-md-6">
-            <div class="card-mabb">
-                <div class="card-header"><i class="bi bi-person-bounding-box"></i> Ma fiche joueuse</div>
-                <div class="card-body">
-                    {% if fiche_joueur %}
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
+{% for label, messages in app.flashes(['success', 'warning', 'error', 'info']) %}
+    {% for message in messages %}
+        <div class="alert alert-{{ label == 'error' ? 'danger' : label }}" style="font-size:.88rem; margin-bottom:12px;">{{ message }}</div>
+    {% endfor %}
+{% endfor %}
+
+<div class="row g-3">
+
+{# ============================================================
+   BLOC JOUEUR — visible si rôle JOUEUR ou si une fiche est liée
+   ============================================================ #}
+{% if is_joueur or fiche_joueur %}
+<div class="col-md-6">
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-person-bounding-box"></i> Ma fiche joueuse</div>
+        <div class="card-body">
+            {% if fiche_joueur %}
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                    <div>
+                        <div style="font-weight:700; font-size:1.05rem;">{{ fiche_joueur.prenom }} {{ fiche_joueur.nom }}</div>
+                        <div style="color:var(--mabb-muted); font-size:.88rem; margin-top:3px;">
+                            {% if fiche_joueur.equipe %}
+                                <i class="bi bi-people" style="margin-right:4px;"></i>{{ fiche_joueur.equipe.nom }}
+                            {% else %}
+                                <span style="font-style:italic;">Non affectée à une équipe</span>
+                            {% endif %}
+                            {% if fiche_joueur.poste %} · {{ fiche_joueur.poste }}{% endif %}
+                            {% if fiche_joueur.numeroMaillot is not null %} · N°{{ fiche_joueur.numeroMaillot }}{% endif %}
+                        </div>
+                    </div>
+                    <a href="{{ path('manager_joueur_show', {id: fiche_joueur.id}) }}" class="btn-mabb-primary" style="white-space:nowrap; flex-shrink:0;">
+                        <i class="bi bi-arrow-right"></i> Voir ma fiche
+                    </a>
+                </div>
+                {# Lien PIRB #}
+                <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--mabb-border);">
+                    <a href="https://pirb.mabb.fr/" target="_blank" style="font-size:.82rem; color:var(--mabb-blue); text-decoration:none;">
+                        <i class="bi bi-box-arrow-up-right"></i> Mon espace PIRB (stats, shot chart, rencontres)
+                    </a>
+                </div>
+            {% else %}
+                <p style="color:var(--mabb-muted); margin:0; font-size:.9rem;">
+                    Aucune fiche joueuse rattachée à ton compte.<br>
+                    <small>Demande à un staff de faire le lien sur ta fiche.</small>
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ============================================================
+   BLOC COACH — visible si rôle COACH
+   ============================================================ #}
+{% if is_coach %}
+<div class="col-md-6">
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-whistle"></i> Mes équipes (Coach)</div>
+        <div class="card-body">
+            {% if equipes_coachees is empty %}
+                <p style="color:var(--mabb-muted); margin:0; font-size:.9rem;">
+                    Aucune équipe assignée cette saison.<br>
+                    <small>Un dirigeant doit t'affecter à une équipe dans Gestion des équipes.</small>
+                </p>
+            {% else %}
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    {% for ce in equipes_coachees %}
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:8px; background:var(--mabb-bg-subtle, #f8fafc); border:1px solid var(--mabb-border);">
                             <div>
-                                <div style="font-weight:700; font-size:1.1rem;">{{ fiche_joueur.prenom }} {{ fiche_joueur.nom }}</div>
-                                <div style="color:var(--mabb-muted); font-size:.9rem;">
-                                    {% if fiche_joueur.equipe %}{{ fiche_joueur.equipe.nom }}{% else %}Non affectée{% endif %}
-                                    {% if fiche_joueur.poste %} — {{ fiche_joueur.poste }}{% endif %}
-                                    {% if fiche_joueur.numeroMaillot is not null %} — N° {{ fiche_joueur.numeroMaillot }}{% endif %}
+                                <div style="font-weight:700; font-size:.92rem;">
+                                    {{ ce.equipe.nom }}
+                                    {% if ce.roleCoach == 'PRINCIPAL' %}
+                                        <span style="font-size:.72rem; background:var(--mabb-blue); color:white; border-radius:10px; padding:1px 7px; margin-left:6px;">Principal</span>
+                                    {% else %}
+                                        <span style="font-size:.72rem; background:#6b7280; color:white; border-radius:10px; padding:1px 7px; margin-left:6px;">Assistant</span>
+                                    {% endif %}
                                 </div>
+                                {% if ce.saison %}
+                                    <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:2px;">Saison {{ ce.saison }}{% if ce.saison == saison_courante %} <span style="color:#22c55e; font-weight:600;">· En cours</span>{% endif %}</div>
+                                {% endif %}
                             </div>
-                            <a href="{{ path('manager_joueur_show', {id: fiche_joueur.id}) }}" class="btn-mabb-primary">
-                                <i class="bi bi-arrow-right"></i> Voir ma fiche
+                            <a href="{{ path('manager_equipe_show', {id: ce.equipe.id}) }}" class="btn-mabb-ghost" style="padding:5px 10px; font-size:.8rem;">
+                                <i class="bi bi-people"></i> Effectif
                             </a>
                         </div>
-                    {% else %}
-                        <p style="color:var(--mabb-muted); margin:0;">
-                            Aucune fiche joueuse n'est rattachée à ton compte.
-                            <br><small>Si tu pratiques dans ce club, demande à un coach/dirigeant de te rattacher à ta fiche.</small>
-                        </p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        {# ========================================================
-           Mes infos perso
-           ======================================================== #}
-        <div class="col-md-6">
-            <div class="card-mabb">
-                <div class="card-header"><i class="bi bi-person-vcard"></i> Mes infos personnelles</div>
-                <div class="card-body">
-                    <table class="table-mabb" style="margin:-20px;">
-                        <tbody>
-                            <tr>
-                                <td style="font-weight:600; color:var(--mabb-muted); width:40%;">Email</td>
-                                <td>{{ user.email }}</td>
-                            </tr>
-                            <tr>
-                                <td style="font-weight:600; color:var(--mabb-muted);">Téléphone</td>
-                                <td>{{ user.telephone ?: '—' }}</td>
-                            </tr>
-                            <tr>
-                                <td style="font-weight:600; color:var(--mabb-muted);">Date de naissance</td>
-                                <td>
-                                    {% if user.dateNaissance %}
-                                        {{ user.dateNaissance|date('d/m/Y') }}
-                                    {% else %}—{% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style="font-weight:600; color:var(--mabb-muted);">Membre depuis</td>
-                                <td>{% if user.createdAt %}{{ user.createdAt|date('d/m/Y') }}{% else %}—{% endif %}</td>
-                            </tr>
-                            <tr>
-                                <td style="font-weight:600; color:var(--mabb-muted);">Dernière connexion</td>
-                                <td>{% if user.lastLoginAt %}{{ user.lastLoginAt|date('d/m/Y H:i') }}{% else %}—{% endif %}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        {# ========================================================
-           Bio (si renseignée)
-           ======================================================== #}
-        <div class="col-md-6">
-            <div class="card-mabb">
-                <div class="card-header"><i class="bi bi-chat-quote"></i> À propos de moi</div>
-                <div class="card-body">
-                    {% if user.bio %}
-                        <p style="margin:0; white-space:pre-wrap; line-height:1.6;">{{ user.bio }}</p>
-                    {% else %}
-                        <p style="color:var(--mabb-muted); margin:0; font-style:italic;">Aucune bio. Ajoute une présentation pour les autres membres du club.</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        {# ========================================================
-           Bloc Bilan saison & profil public — partial réutilisé sur fiche joueuse aussi.
-           Sur la page profil, on est TOUJOURS sur son propre compte → is_self = true.
-           Le partial gère le cas où user n'a pas de fiche joueuse rattachée (fiche_joueur null).
-           ======================================================== #}
-        {% include 'manager/_partials/bloc_bilan_profil.html.twig' with {
-            joueur: fiche_joueur,
-            is_self: true
-        } only %}
-
-        {# ========================================================
-           B2 — Sécurité & RGPD (livré 10/06/2026)
-           - Dernière connexion (depuis ConnexionLog)
-           - Mot de passe oublié (lien vers reset password)
-           - Export RGPD (Art. 15 — self-service JSON)
-           - Demande d'effacement (Art. 17 — workflow admin)
-           ======================================================== #}
-        <div class="col-12">
-            <div class="card-mabb">
-                <div class="card-header"><i class="bi bi-shield-lock"></i> Sécurité & confidentialité</div>
-                <div class="card-body">
-
-                    {# === Dernière connexion === #}
-                    {% if derniere_connexion %}
-                        <div style="background: #f8fafc; border-left: 4px solid #1d4ed8; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: .85rem; color: #475569;">
-                            <i class="bi bi-clock-history"></i>
-                            <strong>Dernière connexion réussie</strong> :
-                            {{ derniere_connexion.createdAt|date('d/m/Y à H:i') }}
-                            {% if derniere_connexion.ip %}
-                                — IP : <code style="background:#fff; padding:2px 6px; border-radius:4px;">{{ derniere_connexion.ip }}</code>
-                            {% endif %}
-                            <div style="color: #94a3b8; font-size: .78rem; margin-top: 4px;">
-                                Si tu ne reconnais pas cette connexion, change ton mot de passe immédiatement.
-                            </div>
-                        </div>
-                    {% endif %}
-
-                    {% for label, messages in app.flashes(['success', 'warning', 'error']) %}
-                        {% for message in messages %}
-                            <div class="alert alert-{{ label == 'error' ? 'danger' : label }}" style="font-size:.88rem;">{{ message }}</div>
-                        {% endfor %}
                     {% endfor %}
+                </div>
+                <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--mabb-border);">
+                    <a href="{{ path('manager_seance_index') }}" style="font-size:.82rem; color:var(--mabb-blue); text-decoration:none; margin-right:12px;">
+                        <i class="bi bi-calendar3"></i> Mes séances
+                    </a>
+                    <a href="{{ path('manager_rencontre_index') }}" style="font-size:.82rem; color:var(--mabb-blue); text-decoration:none;">
+                        <i class="bi bi-trophy"></i> Mes rencontres
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
 
-                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom: 18px;">
-                        {# Reset password : on envoie le user vers le workflow B1 #}
-                        <a href="{{ path('manager_reset_password_request') }}" class="btn-mabb-ghost">
-                            <i class="bi bi-key"></i> Changer mon mot de passe
-                        </a>
-                        {# Export RGPD self-service (téléchargement JSON immédiat) #}
-                        <a href="{{ path('manager_profil_rgpd_export') }}" class="btn-mabb-ghost">
-                            <i class="bi bi-download"></i> Télécharger mes données (RGPD)
-                        </a>
-                    </div>
+{# ============================================================
+   BLOC PARENT — visible si rôle PARENT
+   Les stats de l'enfant ne sont affichées que si joueur.profilPublic = true
+   (c'est la joueuse elle-même qui contrôle cette visibilité depuis son profil PIRB).
+   ============================================================ #}
+{% if is_parent %}
+<div class="col-md-{% if enfants|length > 1 %}12{% else %}6{% endif %}">
+    <div class="card-mabb">
+        <div class="card-header">
+            <i class="bi bi-people-fill"></i>
+            {% if enfants|length > 1 %}Mes enfants{% else %}Mon enfant{% endif %}
+        </div>
+        <div class="card-body">
+            {% if enfants is empty %}
+                <p style="color:var(--mabb-muted); margin:0; font-size:.9rem;">
+                    Aucun lien parent-enfant validé pour l'instant.<br>
+                    <small>
+                        Connecte-toi sur <a href="https://pirb.mabb.fr/" target="_blank">pirb.mabb.fr</a>
+                        pour faire une demande de lien avec la fiche de ton enfant.
+                    </small>
+                </p>
+            {% else %}
+                <div style="display:{% if enfants|length > 1 %}grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));{% else %}block;{% endif %} gap:12px;">
+                    {% for lien in enfants %}
+                        {% set j = lien.joueur %}
+                        <div style="border:1px solid var(--mabb-border); border-radius:12px; padding:14px 16px; background:var(--mabb-bg-subtle, #f8fafc);">
+                            {# Identité enfant #}
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                <div style="width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, #ec4899, #8b5cf6); color:white; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1rem; flex-shrink:0;">
+                                    {{ j.prenom|first|upper }}{{ j.nom|first|upper }}
+                                </div>
+                                <div>
+                                    <div style="font-weight:700;">{{ j.prenom }} {{ j.nom }}</div>
+                                    <div style="font-size:.78rem; color:var(--mabb-muted);">
+                                        {% if j.equipe %}{{ j.equipe.nom }}{% else %}Équipe non définie{% endif %}
+                                        {% if j.poste %} · {{ j.poste }}{% endif %}
+                                        {% if j.numeroMaillot is not null %} · N°{{ j.numeroMaillot }}{% endif %}
+                                    </div>
+                                </div>
+                            </div>
 
-                    {# === Effacement compte === #}
-                    <details style="border: 1px solid #fecaca; border-radius: 10px; background: #fff5f5; padding: 14px 16px;">
-                        <summary style="cursor: pointer; font-weight: 700; color: #991b1b;">
-                            <i class="bi bi-trash"></i> Demander la suppression de mon compte
-                        </summary>
-                        <div style="margin-top: 14px; font-size: .88rem; color: #475569; line-height: 1.6;">
-                            <p>
-                                <strong>Important :</strong> ton compte sera <strong>anonymisé</strong> (nom, email,
-                                téléphone, photo effacés), pas supprimé. Cela préserve l'historique du club
-                                (présences, scores) sans qu'aucune donnée perso ne reste exploitable.
-                            </p>
-                            <p>
-                                <strong>Délai légal :</strong> un admin traitera ta demande sous 30 jours
-                                (RGPD Art. 12 §3). Ta demande peut être refusée si tu as des obligations
-                                en cours (litige, comptabilité non clôturée).
-                            </p>
-
-                            {% if rgpd_pending %}
-                                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px 12px; border-radius: 8px; color: #92400e;">
-                                    <i class="bi bi-hourglass-split"></i> Tu as déjà une demande en cours
-                                    (créée le {{ rgpd_pending.requestedAt|date('d/m/Y') }}).
+                            {# Stats : uniquement si la joueuse a mis son profil en public #}
+                            {% if j.profilPublic %}
+                                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+                                    <a href="{{ path('manager_joueur_show', {id: j.id}) }}#stats"
+                                       style="font-size:.8rem; color:var(--mabb-blue); text-decoration:none; background:rgba(29,78,216,.08); padding:4px 10px; border-radius:8px;">
+                                        <i class="bi bi-graph-up"></i> Voir le bilan saison
+                                    </a>
+                                    <a href="{{ path('manager_shot_chart_joueuse', {id: j.id}) }}"
+                                       style="font-size:.8rem; color:var(--mabb-blue); text-decoration:none; background:rgba(29,78,216,.08); padding:4px 10px; border-radius:8px;">
+                                        <i class="bi bi-crosshair"></i> Shot chart
+                                    </a>
                                 </div>
                             {% else %}
-                                <form method="POST" action="{{ path('manager_profil_rgpd_effacement') }}"
-                                      onsubmit="return confirm('Tu es sûr·e ? Cette action est irréversible une fois validée par un admin.');">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('rgpd_effacement_' ~ user.id) }}">
-                                    <textarea name="motif_user" rows="2" placeholder="Motif (optionnel) : pourquoi veux-tu quitter MABB ?"
-                                              style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:.88rem; margin-bottom:10px;"></textarea>
-                                    <button type="submit" class="btn-mabb-ghost" style="background:#991b1b; color:#fff; border-color:#991b1b;">
-                                        <i class="bi bi-send"></i> Envoyer la demande d'effacement
-                                    </button>
-                                </form>
+                                <div style="font-size:.78rem; color:var(--mabb-muted); background:rgba(0,0,0,.04); border-radius:8px; padding:6px 10px; margin-bottom:10px;">
+                                    <i class="bi bi-lock" style="margin-right:4px;"></i>
+                                    Stats non accessibles — ton enfant n'a pas activé le partage public de son profil PIRB.
+                                </div>
+                            {% endif %}
+
+                            {# Lien fiche complète (staff uniquement — on vérifie via is_granted) #}
+                            {% if is_granted('CLUB_STAFF', j) %}
+                                <a href="{{ path('manager_joueur_show', {id: j.id}) }}" class="btn-mabb-ghost" style="font-size:.8rem; padding:5px 10px;">
+                                    <i class="bi bi-arrow-right"></i> Fiche complète
+                                </a>
                             {% endif %}
                         </div>
-                    </details>
+                    {% endfor %}
                 </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ============================================================
+   BLOC ENGAGEMENT — visible si pas JOUEUR ni COACH ni PARENT
+   (Bénévole, Staff, Dirigeant, Trésorier, Employé)
+   ============================================================ #}
+{% if not is_joueur and not is_coach and not is_parent and roles_in_club is not empty %}
+<div class="col-md-6">
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-star"></i> Mon engagement</div>
+        <div class="card-body">
+            <p style="color:var(--mabb-muted); font-size:.88rem; margin:0 0 12px;">
+                En tant que
+                {% for ucr in roles_in_club %}{{ ucr.role|lower }}{% if not loop.last %}, {% endif %}{% endfor %}
+                du club, tu as accès aux fonctions de gestion.
+            </p>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                {% if 'STAFF' in codes_roles or 'COACH' in codes_roles or 'DIRIGEANT' in codes_roles %}
+                    <a href="{{ path('manager_rencontre_index') }}" style="font-size:.82rem; color:var(--mabb-blue); text-decoration:none; background:rgba(29,78,216,.08); padding:5px 12px; border-radius:8px;">
+                        <i class="bi bi-trophy"></i> Rencontres
+                    </a>
+                    <a href="{{ path('manager_seance_index') }}" style="font-size:.82rem; color:var(--mabb-blue); text-decoration:none; background:rgba(29,78,216,.08); padding:5px 12px; border-radius:8px;">
+                        <i class="bi bi-calendar3"></i> Séances
+                    </a>
+                {% endif %}
+                {% if 'DIRIGEANT' in codes_roles or 'STAFF' in codes_roles %}
+                    <a href="{{ path('manager_joueur_index') }}" style="font-size:.82rem; color:var(--mabb-blue); text-decoration:none; background:rgba(29,78,216,.08); padding:5px 12px; border-radius:8px;">
+                        <i class="bi bi-people"></i> Joueuses
+                    </a>
+                {% endif %}
+                {% if 'TRESORIER' in codes_roles %}
+                    <a href="{{ path('manager_cotisations_index') }}" style="font-size:.82rem; color:#166534; text-decoration:none; background:rgba(34,197,94,.1); padding:5px 12px; border-radius:8px;">
+                        <i class="bi bi-piggy-bank"></i> Cotisations
+                    </a>
+                {% endif %}
             </div>
         </div>
     </div>
+</div>
+{% endif %}
+
+{# ============================================================
+   Infos personnelles (lecture seule + lien modifier)
+   ============================================================ #}
+<div class="col-md-6">
+    <div class="card-mabb">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i class="bi bi-person-vcard"></i> Mes infos personnelles</span>
+            <a href="{{ path('manager_profil_edit') }}" style="font-size:.8rem; color:var(--mabb-blue); text-decoration:none;">
+                <i class="bi bi-pencil"></i> Modifier
+            </a>
+        </div>
+        <div class="card-body" style="padding:0;">
+            <table class="table-mabb" style="margin:0;">
+                <tbody>
+                    <tr>
+                        <td style="font-weight:600; color:var(--mabb-muted); width:38%; padding-left:20px;">Prénom</td>
+                        <td style="padding-right:20px;">{{ user.prenom }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; color:var(--mabb-muted); padding-left:20px;">Nom</td>
+                        <td style="padding-right:20px;">{{ user.nom }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; color:var(--mabb-muted); padding-left:20px;">Email</td>
+                        <td style="padding-right:20px;">{{ user.email }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; color:var(--mabb-muted); padding-left:20px;">Téléphone</td>
+                        <td style="padding-right:20px;">{{ user.telephone ?: '—' }}</td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; color:var(--mabb-muted); padding-left:20px;">Date de naissance</td>
+                        <td style="padding-right:20px;">
+                            {% if user.dateNaissance %}{{ user.dateNaissance|date('d/m/Y') }}{% else %}—{% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight:600; color:var(--mabb-muted); padding-left:20px;">Membre depuis</td>
+                        <td style="padding-right:20px;">{% if user.createdAt %}{{ user.createdAt|date('d/m/Y') }}{% else %}—{% endif %}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# ============================================================
+   Bio
+   ============================================================ #}
+<div class="col-md-6">
+    <div class="card-mabb">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <span><i class="bi bi-chat-quote"></i> À propos de moi</span>
+            {% if not user.bio %}
+                <a href="{{ path('manager_profil_edit') }}#bio" style="font-size:.8rem; color:var(--mabb-muted); text-decoration:none;">
+                    <i class="bi bi-plus"></i> Ajouter
+                </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if user.bio %}
+                <p style="margin:0; white-space:pre-wrap; line-height:1.6; font-size:.92rem;">{{ user.bio }}</p>
+            {% else %}
+                <p style="color:var(--mabb-muted); margin:0; font-style:italic; font-size:.88rem;">
+                    Aucune bio. Ajoute une présentation pour les autres membres du club.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ============================================================
+   Bilan saison (si joueuse) — partial existant
+   ============================================================ #}
+{% if fiche_joueur %}
+    {% include 'manager/_partials/bloc_bilan_profil.html.twig' with {
+        joueur: fiche_joueur,
+        is_self: true
+    } only %}
+{% endif %}
+
+{# ============================================================
+   Sécurité & RGPD
+   ============================================================ #}
+<div class="col-12">
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-shield-lock"></i> Sécurité & confidentialité</div>
+        <div class="card-body">
+            {% if derniere_connexion %}
+                <div style="background:#f8fafc; border-left:4px solid var(--mabb-blue); padding:12px 14px; border-radius:8px; margin-bottom:16px; font-size:.85rem; color:#475569;">
+                    <i class="bi bi-clock-history"></i>
+                    <strong>Dernière connexion réussie</strong> :
+                    {{ derniere_connexion.createdAt|date('d/m/Y à H:i') }}
+                    {% if derniere_connexion.ip %}
+                        — IP : <code style="background:#fff; padding:2px 6px; border-radius:4px;">{{ derniere_connexion.ip }}</code>
+                    {% endif %}
+                    <div style="color:#94a3b8; font-size:.78rem; margin-top:4px;">
+                        Si tu ne reconnais pas cette connexion, change ton mot de passe immédiatement.
+                    </div>
+                </div>
+            {% endif %}
+
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
+                <a href="{{ path('manager_reset_password_request') }}" class="btn-mabb-ghost">
+                    <i class="bi bi-key"></i> Changer mon mot de passe
+                </a>
+                <a href="{{ path('manager_profil_rgpd_export') }}" class="btn-mabb-ghost">
+                    <i class="bi bi-download"></i> Télécharger mes données (RGPD)
+                </a>
+            </div>
+
+            <details style="border:1px solid #fecaca; border-radius:10px; background:#fff5f5; padding:14px 16px;">
+                <summary style="cursor:pointer; font-weight:700; color:#991b1b;">
+                    <i class="bi bi-trash"></i> Demander la suppression de mon compte
+                </summary>
+                <div style="margin-top:14px; font-size:.88rem; color:#475569; line-height:1.6;">
+                    <p><strong>Important :</strong> ton compte sera <strong>anonymisé</strong> (nom, email, téléphone effacés), pas supprimé. L'historique du club (présences, scores) est conservé sans données perso.</p>
+                    <p><strong>Délai légal :</strong> traitement sous 30 jours (RGPD Art. 12 §3).</p>
+                    {% if rgpd_pending %}
+                        <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:10px 12px; border-radius:8px; color:#92400e;">
+                            <i class="bi bi-hourglass-split"></i> Demande en cours (créée le {{ rgpd_pending.requestedAt|date('d/m/Y') }}).
+                        </div>
+                    {% else %}
+                        <form method="POST" action="{{ path('manager_profil_rgpd_effacement') }}"
+                              onsubmit="return confirm('Tu es sûr·e ? Cette action est irréversible une fois validée par un admin.');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('rgpd_effacement_' ~ user.id) }}">
+                            <textarea name="motif_user" rows="2" placeholder="Motif (optionnel)"
+                                      style="width:100%; padding:10px; border:1px solid #e2e8f0; border-radius:8px; font-family:inherit; font-size:.88rem; margin-bottom:10px;"></textarea>
+                            <button type="submit" class="btn-mabb-ghost" style="background:#991b1b; color:#fff; border-color:#991b1b;">
+                                <i class="bi bi-send"></i> Envoyer la demande d'effacement
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </details>
+        </div>
+    </div>
+</div>
+
+</div>{# end .row #}
 {% endblock %}

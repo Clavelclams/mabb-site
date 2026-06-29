@@ -1,0 +1,149 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Modifier mon profil{% endblock %}
+
+{% block body %}
+
+<div class="page-header">
+    <div>
+        <h1 style="margin:0;"><i class="bi bi-pencil-square" style="margin-right:8px;"></i>Modifier mon profil</h1>
+        <p style="margin:6px 0 0; color:var(--mabb-muted); font-size:.9rem;">
+            Modifie tes informations personnelles visibles dans le club.
+        </p>
+    </div>
+    <a href="{{ path('manager_profil') }}" class="btn-mabb-ghost">
+        <i class="bi bi-arrow-left"></i> Retour au profil
+    </a>
+</div>
+
+{# Affichage des erreurs globales si POST invalide #}
+{% if errors is defined and errors is not empty %}
+    <div class="alert alert-danger" style="font-size:.88rem; margin-bottom:16px;">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Erreurs dans le formulaire :</strong>
+        <ul style="margin:6px 0 0; padding-left:18px;">
+            {% for field, msg in errors %}
+                <li>{{ msg }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<div class="row g-3" style="max-width:680px;">
+    <div class="col-12">
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-person-vcard"></i> Informations personnelles</div>
+            <div class="card-body">
+
+                <form method="POST" action="{{ path('manager_profil_edit') }}" novalidate>
+                    <input type="hidden" name="_token" value="{{ csrf_token('profil_edit_' ~ user.id) }}">
+
+                    {# ── Prénom ── #}
+                    <div style="margin-bottom:18px;">
+                        <label style="display:block; font-weight:600; font-size:.88rem; margin-bottom:6px; color:var(--mabb-text);">
+                            Prénom <span style="color:#ef4444;">*</span>
+                        </label>
+                        <input type="text"
+                               name="prenom"
+                               value="{{ errors is defined and errors.prenom is defined ? app.request.request.get('prenom') : user.prenom }}"
+                               maxlength="100"
+                               required
+                               style="width:100%; padding:10px 14px; border:1px solid {{ errors is defined and errors.prenom is defined ? '#ef4444' : 'var(--mabb-border)' }}; border-radius:8px; font-size:.92rem; font-family:inherit; box-sizing:border-box;">
+                        {% if errors is defined and errors.prenom is defined %}
+                            <p style="color:#ef4444; font-size:.8rem; margin:4px 0 0;">{{ errors.prenom }}</p>
+                        {% endif %}
+                    </div>
+
+                    {# ── Nom ── #}
+                    <div style="margin-bottom:18px;">
+                        <label style="display:block; font-weight:600; font-size:.88rem; margin-bottom:6px; color:var(--mabb-text);">
+                            Nom <span style="color:#ef4444;">*</span>
+                        </label>
+                        <input type="text"
+                               name="nom"
+                               value="{{ errors is defined and errors.nom is defined ? app.request.request.get('nom') : user.nom }}"
+                               maxlength="100"
+                               required
+                               style="width:100%; padding:10px 14px; border:1px solid {{ errors is defined and errors.nom is defined ? '#ef4444' : 'var(--mabb-border)' }}; border-radius:8px; font-size:.92rem; font-family:inherit; box-sizing:border-box;">
+                        {% if errors is defined and errors.nom is defined %}
+                            <p style="color:#ef4444; font-size:.8rem; margin:4px 0 0;">{{ errors.nom }}</p>
+                        {% endif %}
+                    </div>
+
+                    {# ── Email (lecture seule) ── #}
+                    <div style="margin-bottom:18px;">
+                        <label style="display:block; font-weight:600; font-size:.88rem; margin-bottom:6px; color:var(--mabb-muted);">
+                            Email <span style="font-weight:400; font-size:.78rem;">(non modifiable — identifiant de connexion)</span>
+                        </label>
+                        <input type="email"
+                               value="{{ user.email }}"
+                               disabled
+                               style="width:100%; padding:10px 14px; border:1px solid var(--mabb-border); border-radius:8px; font-size:.92rem; background:#f8fafc; color:var(--mabb-muted); box-sizing:border-box; cursor:not-allowed;">
+                        <p style="font-size:.78rem; color:var(--mabb-muted); margin:4px 0 0;">
+                            Pour changer d'email, contacte un administrateur.
+                        </p>
+                    </div>
+
+                    {# ── Téléphone ── #}
+                    <div style="margin-bottom:18px;">
+                        <label style="display:block; font-weight:600; font-size:.88rem; margin-bottom:6px; color:var(--mabb-text);">
+                            Téléphone <span style="font-weight:400; font-size:.78rem; color:var(--mabb-muted);">(optionnel)</span>
+                        </label>
+                        <input type="tel"
+                               name="telephone"
+                               value="{{ errors is defined and errors.telephone is defined ? app.request.request.get('telephone') : (user.telephone ?: '') }}"
+                               maxlength="20"
+                               placeholder="06 00 00 00 00"
+                               style="width:100%; padding:10px 14px; border:1px solid {{ errors is defined and errors.telephone is defined ? '#ef4444' : 'var(--mabb-border)' }}; border-radius:8px; font-size:.92rem; font-family:inherit; box-sizing:border-box;">
+                        {% if errors is defined and errors.telephone is defined %}
+                            <p style="color:#ef4444; font-size:.8rem; margin:4px 0 0;">{{ errors.telephone }}</p>
+                        {% endif %}
+                    </div>
+
+                    {# ── Date de naissance ── #}
+                    <div style="margin-bottom:18px;">
+                        <label style="display:block; font-weight:600; font-size:.88rem; margin-bottom:6px; color:var(--mabb-text);">
+                            Date de naissance <span style="font-weight:400; font-size:.78rem; color:var(--mabb-muted);">(optionnel)</span>
+                        </label>
+                        <input type="date"
+                               name="dateNaissance"
+                               value="{{ errors is defined and errors.dateNaissance is defined
+                                   ? app.request.request.get('dateNaissance')
+                                   : (user.dateNaissance ? user.dateNaissance|date('Y-m-d') : '') }}"
+                               style="width:100%; padding:10px 14px; border:1px solid {{ errors is defined and errors.dateNaissance is defined ? '#ef4444' : 'var(--mabb-border)' }}; border-radius:8px; font-size:.92rem; font-family:inherit; box-sizing:border-box;">
+                        {% if errors is defined and errors.dateNaissance is defined %}
+                            <p style="color:#ef4444; font-size:.8rem; margin:4px 0 0;">{{ errors.dateNaissance }}</p>
+                        {% endif %}
+                    </div>
+
+                    {# ── Bio ── #}
+                    <div id="bio" style="margin-bottom:24px;">
+                        <label style="display:block; font-weight:600; font-size:.88rem; margin-bottom:6px; color:var(--mabb-text);">
+                            À propos de moi <span style="font-weight:400; font-size:.78rem; color:var(--mabb-muted);">(optionnel — visible par les membres du club)</span>
+                        </label>
+                        <textarea name="bio"
+                                  rows="4"
+                                  maxlength="500"
+                                  placeholder="Présente-toi en quelques mots : ton parcours basket, ton rôle dans le club, tes motivations…"
+                                  style="width:100%; padding:10px 14px; border:1px solid var(--mabb-border); border-radius:8px; font-size:.92rem; font-family:inherit; box-sizing:border-box; resize:vertical; line-height:1.5;">{{ errors is defined ? app.request.request.get('bio') : (user.bio ?: '') }}</textarea>
+                        <p style="font-size:.78rem; color:var(--mabb-muted); margin:4px 0 0;">500 caractères max.</p>
+                    </div>
+
+                    {# ── Actions ── #}
+                    <div style="display:flex; gap:12px;">
+                        <button type="submit" class="btn-mabb-primary">
+                            <i class="bi bi-check-lg"></i> Enregistrer les modifications
+                        </button>
+                        <a href="{{ path('manager_profil') }}" class="btn-mabb-ghost">
+                            Annuler
+                        </a>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
