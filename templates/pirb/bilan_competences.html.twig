@@ -1,0 +1,202 @@
+{% extends 'pirb/base.html.twig' %}
+{% block title %}Mon bilan basket — PIRB MABB{% endblock %}
+
+{% block body %}
+
+<style>
+.bc-section {
+    background: var(--pirb-card);
+    border: 1px solid var(--pirb-border);
+    border-radius: 14px;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+.bc-header {
+    background: rgba(255,255,255,.05);
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: .82rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--pirb-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--pirb-border);
+}
+.bc-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 9px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+    gap: 12px;
+}
+.bc-row:last-child { border-bottom: none; }
+.bc-label { font-size: .85rem; color: var(--pirb-text); }
+.bc-score {
+    min-width: 30px;
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    font-weight: 800;
+    padding: 0 5px;
+}
+.sc-rouge  { background: rgba(239,68,68,.18); color: #fca5a5; }
+.sc-orange { background: rgba(249,115,22,.18); color: #fdba74; }
+.sc-vert   { background: rgba(34,197,94,.15); color: #86efac; }
+.sc-or     { background: rgba(234,179,8,.18); color: #fde047; }
+.sc-vide   { background: rgba(255,255,255,.06); color: rgba(255,255,255,.25); font-size:.7rem; }
+</style>
+
+{# Header #}
+<div class="pirb-card" style="text-align:center; padding:20px 16px;">
+    <div style="font-size:2.2rem; margin-bottom:6px;">📋</div>
+    <h1 style="margin:0; font-size:1.15rem; font-weight:800;">Mon bilan de compétences</h1>
+    <p style="color:var(--pirb-text-muted); font-size:.82rem; margin-top:6px;">
+        Évaluation basketball réalisée par ton coach
+    </p>
+</div>
+
+{% if bilan is null %}
+
+{# Pas encore de bilan validé #}
+<div class="pirb-card" style="text-align:center; padding:32px 20px;">
+    <i class="bi bi-hourglass" style="font-size:2.8rem; opacity:.35;"></i>
+    <h3 style="margin:16px 0 8px; font-size:1rem;">Pas encore de bilan disponible</h3>
+    <p style="color:var(--pirb-text-muted); font-size:.84rem; margin:0; line-height:1.6;">
+        Ton coach n'a pas encore validé de bilan pour toi.<br>
+        Il apparaîtra ici dès qu'il sera prêt. 👊
+    </p>
+</div>
+
+{% else %}
+
+{# Score global #}
+{% set moy = bilan.moyenne %}
+{% if moy is not null %}
+<div style="background: {% if moy >= 7 %}rgba(34,197,94,.1){% elseif moy >= 4 %}rgba(249,115,22,.1){% else %}rgba(239,68,68,.1){% endif %};
+            border: 1px solid {% if moy >= 7 %}rgba(34,197,94,.3){% elseif moy >= 4 %}rgba(249,115,22,.3){% else %}rgba(239,68,68,.3){% endif %};
+            border-radius: 14px; padding: 16px; margin-bottom: 14px; display:flex; align-items:center; gap:16px;">
+    <div style="font-size:2.2rem; font-weight:900; color:{% if moy >= 7 %}#86efac{% elseif moy >= 4 %}#fdba74{% else %}#fca5a5{% endif %}; line-height:1;">
+        {{ moy }}<span style="font-size:.9rem; opacity:.7;">/10</span>
+    </div>
+    <div>
+        <div style="font-weight:700; color:var(--pirb-text); font-size:.92rem;">Score moyen</div>
+        <div style="font-size:.75rem; color:var(--pirb-text-muted);">
+            {{ bilan.nbCriteresRemplis }}/22 critères · {{ bilan.contexte ?: 'Bilan' }} · {{ bilan.saison }}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# Légende compacte #}
+<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; font-size:.7rem;">
+    <span style="background:rgba(239,68,68,.18); color:#fca5a5; padding:2px 8px; border-radius:8px; font-weight:600;">1-3 à développer</span>
+    <span style="background:rgba(249,115,22,.18); color:#fdba74; padding:2px 8px; border-radius:8px; font-weight:600;">4-6 à renforcer</span>
+    <span style="background:rgba(34,197,94,.15); color:#86efac; padding:2px 8px; border-radius:8px; font-weight:600;">7-9 à perfectionner</span>
+    <span style="background:rgba(234,179,8,.18); color:#fde047; padding:2px 8px; border-radius:8px; font-weight:600;">10 ⭐</span>
+</div>
+
+{% macro score_pirb(label, note) %}
+    <div class="bc-row">
+        <span class="bc-label">{{ label }}</span>
+        {% if note is not null %}
+            {% set cls = note <= 3 ? 'sc-rouge' : (note <= 6 ? 'sc-orange' : (note <= 9 ? 'sc-vert' : 'sc-or')) %}
+            <span class="bc-score {{ cls }}">{{ note }}</span>
+        {% else %}
+            <span class="bc-score sc-vide">—</span>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{# Vie quotidienne #}
+<div class="bc-section">
+    <div class="bc-header"><i class="bi bi-house-heart"></i> Vie quotidienne</div>
+    {{ _self.score_pirb('Respect des règles', bilan.vqRespectRegles) }}
+    {{ _self.score_pirb('Ponctualité', bilan.vqPonctualite) }}
+    {{ _self.score_pirb('Discipline', bilan.vqDiscipline) }}
+    {{ _self.score_pirb('Vie de groupe', bilan.vqVieGroupe) }}
+    {{ _self.score_pirb('Rangement / propreté', bilan.vqRangement) }}
+</div>
+
+{# Mentales #}
+<div class="bc-section">
+    <div class="bc-header"><i class="bi bi-lightning-charge"></i> Qualités Mentales</div>
+    {{ _self.score_pirb('Enthousiasme', bilan.qmEnthousiasme) }}
+    {{ _self.score_pirb('Détermination', bilan.qmDetermination) }}
+    {{ _self.score_pirb('Confiance', bilan.qmConfiance) }}
+    {{ _self.score_pirb('Curiosité', bilan.qmCuriosite) }}
+    {{ _self.score_pirb('Autonomie', bilan.qmAutonomie) }}
+    {{ _self.score_pirb('Concentration', bilan.qmConcentration) }}
+</div>
+
+{# Technico-Tactiques #}
+<div class="bc-section">
+    <div class="bc-header"><i class="bi bi-bullseye"></i> Technico-Tactiques</div>
+    {{ _self.score_pirb('Adresse & choix de tirs', bilan.qttAdresse) }}
+    {{ _self.score_pirb('Efficacité près du panier', bilan.qttEfficacitePanier) }}
+    {{ _self.score_pirb('Dribble – Passe', bilan.qttAisance) }}
+    {{ _self.score_pirb('Jeu sans ballon', bilan.qttJeuSansBallons) }}
+    {{ _self.score_pirb('Compréhension du jeu', bilan.qttComprehension) }}
+    {{ _self.score_pirb('Attitude défensive', bilan.qttDefense) }}
+    {{ _self.score_pirb('Rebond — Catcher', bilan.qttRebondCatcher) }}
+    {{ _self.score_pirb('Rebond — Transiter', bilan.qttRebondTransiter) }}
+</div>
+
+{# Physiques #}
+<div class="bc-section">
+    <div class="bc-header"><i class="bi bi-heart-pulse"></i> Qualités Physiques</div>
+    {{ _self.score_pirb('Enchaînement de l\'effort', bilan.qpEnchainement) }}
+    {{ _self.score_pirb('Vitesse / Explosivité', bilan.qpVitesse) }}
+    {{ _self.score_pirb('Soins du corps', bilan.qpSoinsDuCorps) }}
+</div>
+
+{# Synthèse coach (points forts + axes) — visible uniquement si remplis #}
+{% if bilan.pointsForts or bilan.axesTravail %}
+<div class="bc-section">
+    <div class="bc-header"><i class="bi bi-chat-quote"></i> Message du coach</div>
+    <div style="padding:14px 16px; display:flex; flex-direction:column; gap:12px;">
+        {% if bilan.pointsForts %}
+        <div>
+            <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text-muted); margin-bottom:4px;">💪 Tes points forts</div>
+            <p style="font-size:.85rem; color:var(--pirb-text); margin:0; white-space:pre-line; line-height:1.5;">{{ bilan.pointsForts }}</p>
+        </div>
+        {% endif %}
+        {% if bilan.axesTravail %}
+        <div>
+            <div style="font-size:.72rem; font-weight:700; color:var(--pirb-text-muted); margin-bottom:4px;">🎯 Axes à travailler</div>
+            <p style="font-size:.85rem; color:var(--pirb-text); margin:0; white-space:pre-line; line-height:1.5;">{{ bilan.axesTravail }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{# Historique bilans (si plusieurs) #}
+{% if historique|length > 1 %}
+<div class="pirb-card" style="padding:14px 16px;">
+    <div style="font-size:.8rem; font-weight:700; color:var(--pirb-text-muted); margin-bottom:10px;">
+        <i class="bi bi-clock-history"></i> Historique
+    </div>
+    {% for b in historique %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--pirb-border);">
+            <div>
+                <span style="font-size:.83rem; font-weight:600;">{{ b.contexte ?: b.saison }}</span>
+                <span style="font-size:.72rem; color:var(--pirb-text-muted); margin-left:8px;">{{ b.dateEvaluation ? b.dateEvaluation|date('d/m/Y') : b.saison }}</span>
+            </div>
+            {% if b.moyenne is not null %}
+                {% set cls = b.moyenne >= 7 ? '#86efac' : (b.moyenne >= 4 ? '#fdba74' : '#fca5a5') %}
+                <span style="font-weight:800; color:{{ cls }}; font-size:.9rem;">{{ b.moyenne }}/10</span>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}{# end bilan not null #}
+
+{% endblock %}

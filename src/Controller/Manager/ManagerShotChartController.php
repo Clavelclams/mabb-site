@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Controller\Manager;
 
+use App\Entity\Core\Notification;
 use App\Entity\Core\User;
 use App\Entity\Sport\SeanceTir;
 use App\Repository\Sport\SeanceTirRepository;
 use App\Security\Tenant\TenantResolver;
+use App\Service\NotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -33,7 +35,7 @@ use Symfony\Component\Routing\Attribute\Route;
  *   Le coach ne modifie PAS les données saisies (zones).
  *   Il valide ou rejette uniquement.
  *   En cas de rejet, un message court peut être envoyé à la joueuse
- *   (affiché dans son espace PIRB, TODO notification B15).
+ *   (B15 implémenté : notification in-app via NotificationService).
  */
 class ManagerShotChartController extends AbstractController
 {
@@ -41,6 +43,7 @@ class ManagerShotChartController extends AbstractController
         private readonly SeanceTirRepository $seanceTirRepo,
         private readonly EntityManagerInterface $em,
         private readonly TenantResolver $tenantResolver,
+        private readonly NotificationService $notifService,
     ) {}
 
     // =========================================================================
@@ -122,7 +125,23 @@ class ManagerShotChartController extends AbstractController
         }
 
         $seance->valider($coach);
-        $this->em->flush();
+
+        // B15 — Notification in-app à la joueuse
+        $joueur = $seance->getJoueur();
+        if ($joueur?->getUser() !== null && $clubCoach !== null) {
+            $this->notifService->creer(
+                destinataire: $joueur->getUser(),
+                club:         $clubCoach,
+                type:         Notification::TYPE_SHOT_CHART_VALIDEE,
+                message:      sprintf(
+                    'Ta séance du %s a été validée par le coach. Continue comme ça ! 🏀',
+                    $seance->getDateSeance()?->format('d/m/Y') ?? '?'
+                ),
+                lienRoute: 'pirb_shot_chart',
+            );
+        }
+
+        $this->em->flush(); // flush séance.valider() + notification en une transaction
 
         $joueurNom = $seance->getJoueur()?->getNomComplet() ?? 'inconnue';
         $this->addFlash('success', sprintf(
@@ -146,8 +165,7 @@ class ManagerShotChartController extends AbstractController
      *   _token  : CSRF token 'shot_chart_rejeter_{id}'
      *   message : optionnel — texte court expliquant le rejet (affiché à la joueuse)
      *
-     * Pour l'instant : supprime directement la séance (pas d'entité "rejet").
-     * TODO B15 : envoyer une notification in-app à la joueuse avec le message.
+     * Supprime la séance et notifie la joueuse via NotificationService (B15).
      */
     #[Route('/shot-chart/{id}/rejeter', name: 'manager_shot_chart_rejeter', methods: ['POST'])]
     public function rejeter(SeanceTir $seance, Request $request): Response
@@ -174,10 +192,29 @@ class ManagerShotChartController extends AbstractController
 
         $joueurNom = $seance->getJoueur()?->getNomComplet() ?? 'inconnue';
         $date      = $seance->getDateSeance()?->format('d/m/Y') ?? '?';
-        // $message = $request->request->get('message', ''); // TODO B15 notification
+        $motif     = trim($request->request->get('message', ''));
+
+        // B15 — Notification in-app à la joueuse (avant remove pour garder accès à la séance)
+        $joueur = $seance->getJoueur();
+        if ($joueur?->getUser() !== null && $clubCoach !== null) {
+            $messageNotif = sprintf(
+                'Ta séance du %s n\'a pas pu être validée.',
+                $date
+            );
+            if ($motif !== '') {
+                $messageNotif .= ' Motif : ' . $motif;
+            }
+            $this->notifService->creer(
+                destinataire: $joueur->getUser(),
+                club:         $clubCoach,
+                type:         Notification::TYPE_SHOT_CHART_REJETEE,
+                message:      $messageNotif,
+                lienRoute:    'pirb_shot_chart',
+            );
+        }
 
         $this->em->remove($seance);
-        $this->em->flush();
+        $this->em->flush(); // flush notification + remove séance en une transaction
 
         $this->addFlash('warning', sprintf(
             '🗑️ Séance du %s de %s supprimée (rejetée).',

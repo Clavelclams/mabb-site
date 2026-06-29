@@ -1,0 +1,97 @@
+{% extends 'pirb/base.html.twig' %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block body %}
+
+<div style="padding: 16px 16px 0; max-width: 600px; margin: 0 auto;">
+
+    {# ── En-tête ─────────────────────────────────────────────────────── #}
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+        <div>
+            <h2 style="margin:0; font-size:1.15rem; font-weight:700; color:var(--pirb-text);">
+                <i class="bi bi-bell" style="margin-right:6px; color:var(--pirb-accent);"></i>Notifications
+            </h2>
+            <p style="margin:4px 0 0; font-size:.78rem; color:var(--pirb-text-muted);">
+                {{ notifications|length }} notification{% if notifications|length > 1 %}s{% endif %}
+            </p>
+        </div>
+        <a href="{{ path('pirb_dashboard') }}"
+           style="font-size:.78rem; color:var(--pirb-text-muted); text-decoration:none;">
+            ← Retour
+        </a>
+    </div>
+
+    {# ── Liste des notifications ────────────────────────────────────── #}
+    {% if notifications is empty %}
+        <div style="text-align:center; padding:48px 16px; color:var(--pirb-text-muted);">
+            <i class="bi bi-bell-slash" style="font-size:2.4rem; display:block; margin-bottom:12px; opacity:.5;"></i>
+            <p style="font-size:.92rem;">Aucune notification pour l'instant.</p>
+            <p style="font-size:.78rem; opacity:.7;">Tu seras notifiée quand le coach valide ou commente tes séances.</p>
+        </div>
+    {% else %}
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            {% for notif in notifications %}
+                {% set couleur = notif.couleur %}
+                {% set bg_color = couleur == 'success' ? 'rgba(22,163,74,.10)' : (couleur == 'danger' ? 'rgba(239,68,68,.10)' : 'rgba(148,163,184,.08)') %}
+                {% set border_color = couleur == 'success' ? 'rgba(22,163,74,.3)' : (couleur == 'danger' ? 'rgba(239,68,68,.3)' : 'rgba(148,163,184,.2)') %}
+                {% set text_color = couleur == 'success' ? '#86efac' : (couleur == 'danger' ? '#fca5a5' : '#cbd5e1') %}
+
+                <div style="
+                    background: {{ bg_color }};
+                    border: 1px solid {{ border_color }};
+                    border-radius: 12px;
+                    padding: 14px 16px;
+                    position: relative;
+                ">
+                    {# Badge non-lu (visible uniquement sur les notifs non lues — affiché avant le markAllRead) #}
+                    {# Note : toutes seront lues après chargement de cette page, mais le state au moment du rendu est correct #}
+
+                    {# Libellé + date #}
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                        <span style="
+                            font-size:.75rem;
+                            font-weight:700;
+                            color: {{ text_color }};
+                            text-transform:uppercase;
+                            letter-spacing:.04em;
+                        ">
+                            {{ notif.libelle }}
+                        </span>
+                        <span style="font-size:.72rem; color:var(--pirb-text-muted);">
+                            {{ notif.createdAt|date('d/m/Y H:i') }}
+                        </span>
+                    </div>
+
+                    {# Message #}
+                    {% if notif.message %}
+                        <p style="margin:0; font-size:.85rem; color:var(--pirb-text); line-height:1.4;">
+                            {{ notif.message }}
+                        </p>
+                    {% endif %}
+
+                    {# Lien contextuel #}
+                    {% if notif.lienRoute %}
+                        <div style="margin-top:10px;">
+                            <a href="{{ path(notif.lienRoute) }}"
+                               style="
+                                font-size:.78rem;
+                                color: {{ text_color }};
+                                text-decoration:none;
+                                font-weight:600;
+                                display:inline-flex;
+                                align-items:center;
+                                gap:4px;
+                            ">
+                                Voir mes séances →
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

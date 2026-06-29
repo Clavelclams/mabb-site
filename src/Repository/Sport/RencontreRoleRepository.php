@@ -48,4 +48,39 @@ class RencontreRoleRepository extends ServiceEntityRepository
 
         return $map;
     }
+
+    /**
+     * Compte les rôles remplis par rencontre, en une seule requête SQL.
+     * Évite le problème N+1 sur la liste des rencontres.
+     *
+     * Pourquoi une seule requête ?
+     *   Si on laisse Twig faire `r.roles|length` sur une liste de 20 rencontres,
+     *   Doctrine lazy-load la collection pour chacune → 20 requêtes SQL.
+     *   Ici : 1 requête SELECT COUNT(*) GROUP BY rencontre_id pour toutes.
+     *
+     * @param Rencontre[] $rencontres
+     * @return array<int, int>  [rencontre_id => nb_roles_remplis]
+     */
+    public function countByRencontres(array $rencontres): array
+    {
+        if (empty($rencontres)) {
+            return [];
+        }
+
+        // IDENTITY() = accès à la FK brute (rencontre_id) sans JOIN
+        $rows = $this->createQueryBuilder('rr')
+            ->select('IDENTITY(rr.rencontre) AS rencontre_id, COUNT(rr.id) AS nb')
+            ->where('rr.rencontre IN (:rencontres)')
+            ->setParameter('rencontres', $rencontres)
+            ->groupBy('rr.rencontre')
+            ->getQuery()
+            ->getScalarResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['rencontre_id']] = (int) $row['nb'];
+        }
+
+        return $map;
+    }
 }

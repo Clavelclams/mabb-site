@@ -130,6 +130,30 @@
                                 {% else %}
                                     {{ r.adversaire }} vs <strong>{{ r.equipe.nom }}</strong>
                                 {% endif %}
+                                {# Badge postes bénévoles — uniquement sur les matchs non archivés #}
+                                {% if not r.isArchivee %}
+                                    {% set nb_poses = nb_roles_rencontres[r.id] ?? 0 %}
+                                    {% set total = 7 %}
+                                    {% if nb_poses == 0 %}
+                                        <div style="margin-top:3px;">
+                                            <span style="font-size:.72rem; background:#fef2f2; color:#b91c1c; border-radius:8px; padding:2px 7px; font-weight:600;">
+                                                ⚠️ 0/{{ total }} bénévoles
+                                            </span>
+                                        </div>
+                                    {% elseif nb_poses < total %}
+                                        <div style="margin-top:3px;">
+                                            <span style="font-size:.72rem; background:#fff7ed; color:#c2410c; border-radius:8px; padding:2px 7px; font-weight:600;">
+                                                {{ nb_poses }}/{{ total }} postes
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <div style="margin-top:3px;">
+                                            <span style="font-size:.72rem; background:#f0fdf4; color:#166534; border-radius:8px; padding:2px 7px; font-weight:600;">
+                                                ✅ {{ total }}/{{ total }} complet
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
                             </td>
                             <td>{{ r.lieu ?: '—' }}</td>
                             <td>

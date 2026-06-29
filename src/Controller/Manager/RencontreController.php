@@ -120,13 +120,18 @@ class RencontreController extends AbstractController
             ['categorie' => 'ASC']
         );
 
+        // Comptage des rôles bénévoles remplis par rencontre (1 requête SQL groupée,
+        // pas de N+1). Passé au template pour afficher le badge "X/7 postes".
+        $nbRolesParRencontre = $this->rencontreRoleRepository->countByRencontres($rencontres);
+
         return $this->render('manager/rencontre/index.html.twig', [
-            'rencontres'    => $rencontres,
-            'equipes'       => $equipes,
-            'equipe_filtre' => $equipeFiltre,
-            'periode'       => $periode,
-            'voir_archive'  => $voirArchive,
-            'club'          => $club,
+            'rencontres'          => $rencontres,
+            'equipes'             => $equipes,
+            'equipe_filtre'       => $equipeFiltre,
+            'periode'             => $periode,
+            'voir_archive'        => $voirArchive,
+            'club'                => $club,
+            'nb_roles_rencontres' => $nbRolesParRencontre,
         ]);
     }
 

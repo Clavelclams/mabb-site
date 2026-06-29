@@ -1,0 +1,95 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Bilans de compétences{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <h1>📋 Bilans de compétences</h1>
+        <p class="subtitle">Saison {{ saison_courante }} — {{ bilans|length }} bilan(s)</p>
+    </div>
+</div>
+
+{# Filtre saison #}
+{% if saisons|length > 1 %}
+<div class="card-mabb" style="margin-bottom:16px;">
+    <div class="card-body" style="padding:12px 18px;">
+        <form method="get" style="display:flex; gap:12px; align-items:center;">
+            <label style="font-weight:600; margin:0;">Saison :</label>
+            <select name="saison" class="form-select" style="max-width:160px;" onchange="this.form.submit()">
+                {% for s in saisons %}
+                    <option value="{{ s }}" {{ s == saison_courante ? 'selected' : '' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="card-mabb">
+    {% if bilans is empty %}
+        <div class="empty-state">
+            <i class="bi bi-clipboard-x"></i>
+            <h3>Aucun bilan pour cette saison</h3>
+            <p>Accède à la fiche d'une joueuse pour créer son bilan.</p>
+            <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-orange">
+                <i class="bi bi-person-badge"></i> Voir les joueuses
+            </a>
+        </div>
+    {% else %}
+        <table class="table-mabb">
+            <thead>
+                <tr>
+                    <th>Joueuse</th>
+                    <th>Contexte</th>
+                    <th>Date</th>
+                    <th>Score</th>
+                    <th>Statut</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for bilan in bilans %}
+                    <tr>
+                        <td>
+                            <strong>{{ bilan.joueur.nomComplet }}</strong>
+                            {% if bilan.joueur.equipe %}
+                                <div style="font-size:.75rem; color:var(--mabb-muted);">{{ bilan.joueur.equipe.nom }}</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ bilan.contexte ?: '—' }}</td>
+                        <td>{{ bilan.dateEvaluation ? bilan.dateEvaluation|date('d/m/Y') : '—' }}</td>
+                        <td>
+                            {% set moy = bilan.moyenne %}
+                            {% if moy is not null %}
+                                {% set css = moy <= 3 ? 'background:#fee2e2;color:#991b1b;' : (moy <= 6 ? 'background:#fff7ed;color:#c2410c;' : 'background:#f0fdf4;color:#166534;') %}
+                                <span style="font-size:.78rem; padding:2px 8px; border-radius:8px; font-weight:700; {{ css }}">
+                                    {{ moy }}/10
+                                </span>
+                                <span style="font-size:.72rem; color:var(--mabb-muted);">({{ bilan.nbCriteresRemplis }}/22)</span>
+                            {% else %}
+                                <span style="color:var(--mabb-muted); font-size:.78rem;">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if bilan.statut == 'valide' %}
+                                <span class="badge-active"><i class="bi bi-check-circle"></i> Validé</span>
+                            {% else %}
+                                <span style="background:#fef3e2; color:#d97706; padding:3px 10px; border-radius:12px; font-size:.75rem; font-weight:600;">Brouillon</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right;">
+                            <a href="{{ path('manager_bilan_show', {id: bilan.id}) }}" class="btn-mabb-ghost btn-sm">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{{ path('manager_bilan_edit', {id: bilan.id}) }}" class="btn-mabb-ghost btn-sm">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+{% endblock %}

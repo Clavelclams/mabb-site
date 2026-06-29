@@ -1,0 +1,305 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Bilan — {{ bilan.joueur.nomComplet }}{% endblock %}
+
+{% block body %}
+
+<style>
+.bilan-show-section {
+    background: #fff;
+    border: 1px solid var(--mabb-border);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+.bilan-show-header {
+    background: var(--mabb-dark);
+    color: #fff;
+    padding: 10px 18px;
+    font-weight: 700;
+    font-size: .85rem;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.bilan-show-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 8px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 16px;
+}
+.bilan-show-row:last-child { border-bottom: none; }
+.bilan-critere-label {
+    font-size: .88rem;
+    color: var(--mabb-text);
+}
+.score-badge-show {
+    min-width: 32px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+    font-weight: 800;
+    padding: 0 6px;
+}
+.score-vide { background: #f1f5f9; color: #94a3b8; border: 1px dashed #cbd5e1; }
+.score-rouge { background: #fecaca; color: #991b1b; }
+.score-orange { background: #fed7aa; color: #9a3412; }
+.score-vert { background: #bbf7d0; color: #14532d; }
+.score-or { background: #fef08a; color: #713f12; }
+</style>
+
+{# ── Header ── #}
+<div class="page-header">
+    <div>
+        <h1>📋 Bilan de {{ bilan.joueur.nomComplet }}</h1>
+        <p class="subtitle">
+            {{ bilan.contexte ?: 'Contexte non renseigné' }}
+            {% if bilan.dateEvaluation %} · {{ bilan.dateEvaluation|date('d/m/Y') }}{% endif %}
+            · Saison {{ bilan.saison }}
+        </p>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center;">
+        <a href="{{ path('manager_bilan_edit', {id: bilan.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-pencil"></i> Modifier
+        </a>
+        {% if bilan.statut == 'brouillon' %}
+            <form method="POST" action="{{ path('manager_bilan_valider', {id: bilan.id}) }}" style="display:inline;">
+                <input type="hidden" name="_token" value="{{ csrf_token('bilan_valider_' ~ bilan.id) }}">
+                <button type="submit" class="btn-mabb-primary" onclick="return confirm('Valider ce bilan ? La joueuse pourra le voir depuis PIRB.')">
+                    <i class="bi bi-check-circle"></i> Valider le bilan
+                </button>
+            </form>
+        {% else %}
+            <span class="badge-active"><i class="bi bi-check-circle-fill"></i> Bilan validé</span>
+        {% endif %}
+        <a href="{{ path('manager_bilan_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Liste
+        </a>
+    </div>
+</div>
+
+{# Score global #}
+{% set moy = bilan.moyenne %}
+{% if moy is not null %}
+<div style="background: {% if moy <= 3 %}#fee2e2{% elseif moy <= 6 %}#fff7ed{% else %}#f0fdf4{% endif %}; border: 1px solid {% if moy <= 3 %}#fca5a5{% elseif moy <= 6 %}#fed7aa{% else %}#86efac{% endif %}; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; display:flex; align-items:center; gap:20px;">
+    <div style="font-size: 2.5rem; font-weight: 900; color: {% if moy <= 3 %}#991b1b{% elseif moy <= 6 %}#c2410c{% else %}#166534{% endif %};">
+        {{ moy }}<span style="font-size:1rem;">/10</span>
+    </div>
+    <div>
+        <div style="font-weight: 700; color: var(--mabb-text);">Score moyen</div>
+        <div style="font-size: .8rem; color: var(--mabb-muted);">{{ bilan.nbCriteresRemplis }}/22 critères renseignés</div>
+    </div>
+    {% if bilan.coach %}
+    <div style="margin-left:auto; text-align:right;">
+        <div style="font-size:.78rem; color:var(--mabb-muted);">Évalué par</div>
+        <div style="font-weight:600; font-size:.9rem;">{{ bilan.coach.prenom }} {{ bilan.coach.nom }}</div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<div style="display:grid; grid-template-columns: 1fr 280px; gap:20px; align-items:start;">
+
+{# ── COLONNE GAUCHE : critères ── #}
+<div>
+
+{% macro score_show(label, note) %}
+    <div class="bilan-show-row">
+        <span class="bilan-critere-label">{{ label }}</span>
+        {% if note is not null %}
+            {% set cls = note <= 3 ? 'score-rouge' : (note <= 6 ? 'score-orange' : (note <= 9 ? 'score-vert' : 'score-or')) %}
+            <span class="score-badge-show {{ cls }}">{{ note }}</span>
+        {% else %}
+            <span class="score-badge-show score-vide">—</span>
+        {% endif %}
+    </div>
+{% endmacro %}
+
+{# Vie quotidienne #}
+<div class="bilan-show-section">
+    <div class="bilan-show-header"><i class="bi bi-house-heart"></i> Vie quotidienne / Internat</div>
+    {{ _self.score_show('Respect des règles de vie', bilan.vqRespectRegles) }}
+    {{ _self.score_show('Ponctualité', bilan.vqPonctualite) }}
+    {{ _self.score_show('Discipline', bilan.vqDiscipline) }}
+    {{ _self.score_show('Vie de groupe — Intégration et Collaboration', bilan.vqVieGroupe) }}
+    {{ _self.score_show('Rangement et propreté du gymnase', bilan.vqRangement) }}
+</div>
+
+{# Qualités mentales #}
+<div class="bilan-show-section">
+    <div class="bilan-show-header"><i class="bi bi-lightning-charge"></i> Qualités Mentales</div>
+    {{ _self.score_show('Enthousiasme — Motivation', bilan.qmEnthousiasme) }}
+    {{ _self.score_show('Détermination / Goût de l\'effort', bilan.qmDetermination) }}
+    {{ _self.score_show('Confiance et Affirmation de soi', bilan.qmConfiance) }}
+    {{ _self.score_show('Curiosité', bilan.qmCuriosite) }}
+    {{ _self.score_show('Autonomie dans les exercices', bilan.qmAutonomie) }}
+    {{ _self.score_show('Concentration à l\'entraînement', bilan.qmConcentration) }}
+</div>
+
+{# Qualités technico-tactiques #}
+<div class="bilan-show-section">
+    <div class="bilan-show-header"><i class="bi bi-bullseye"></i> Qualités Technico-Tactiques</div>
+    {{ _self.score_show('Adresse — Efficacité des choix de tirs', bilan.qttAdresse) }}
+    {{ _self.score_show('Efficacité proche du panier', bilan.qttEfficacitePanier) }}
+    {{ _self.score_show('Aisance utile : Dribble – Passe', bilan.qttAisance) }}
+    {{ _self.score_show('Jeu sans ballons', bilan.qttJeuSansBallons) }}
+    {{ _self.score_show('Compréhension du jeu (sens basket)', bilan.qttComprehension) }}
+    {{ _self.score_show('Attitude Défensive (posture — gestion des duels)', bilan.qttDefense) }}
+    {{ _self.score_show('Rebond — Catcher / Remonter', bilan.qttRebondCatcher) }}
+    {{ _self.score_show('Rebond — Transiter / Relancer', bilan.qttRebondTransiter) }}
+</div>
+
+{# Qualités physiques #}
+<div class="bilan-show-section">
+    <div class="bilan-show-header"><i class="bi bi-heart-pulse"></i> Qualités Physiques</div>
+    {{ _self.score_show('Enchaînement de l\'effort', bilan.qpEnchainement) }}
+    {{ _self.score_show('Vitesse — Explosivité', bilan.qpVitesse) }}
+    {{ _self.score_show('Soins du corps', bilan.qpSoinsDuCorps) }}
+</div>
+
+{# Observations #}
+{% set has_text = bilan.pointsForts or bilan.alerteMedicale or bilan.pointsVigilance or bilan.axesTravail or bilan.bilanRemarques %}
+{% if has_text %}
+<div class="bilan-show-section">
+    <div class="bilan-show-header"><i class="bi bi-chat-text"></i> Synthèse & Observations</div>
+    <div style="padding:16px 18px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+        {% if bilan.pointsForts %}
+        <div>
+            <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); margin-bottom:6px;">💪 Points forts</div>
+            <p style="font-size:.88rem; color:var(--mabb-text); margin:0; white-space:pre-line;">{{ bilan.pointsForts }}</p>
+        </div>
+        {% endif %}
+
+        {% if bilan.alerteMedicale %}
+        <div style="background:#fff5f5; border:1px solid #fecaca; border-radius:8px; padding:10px 12px;">
+            <div style="font-size:.75rem; font-weight:700; color:#dc2626; margin-bottom:6px;">🚨 Alerte Médicale</div>
+            <p style="font-size:.88rem; color:#7f1d1d; margin:0; white-space:pre-line;">{{ bilan.alerteMedicale }}</p>
+        </div>
+        {% endif %}
+
+        {% if bilan.pointsVigilance %}
+        <div>
+            <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); margin-bottom:6px;">👁️ Points de vigilance</div>
+            <p style="font-size:.88rem; color:var(--mabb-text); margin:0; white-space:pre-line;">{{ bilan.pointsVigilance }}</p>
+        </div>
+        {% endif %}
+
+        {% if bilan.axesTravail %}
+        <div>
+            <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); margin-bottom:6px;">🎯 Axes de travail</div>
+            <p style="font-size:.88rem; color:var(--mabb-text); margin:0; white-space:pre-line;">{{ bilan.axesTravail }}</p>
+        </div>
+        {% endif %}
+
+        {% if bilan.bilanRemarques %}
+        <div style="grid-column: 1 / -1;">
+            <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); margin-bottom:6px;">📝 Remarques</div>
+            <p style="font-size:.88rem; color:var(--mabb-text); margin:0; white-space:pre-line;">{{ bilan.bilanRemarques }}</p>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endif %}
+
+</div>{# fin colonne gauche #}
+
+{# ── COLONNE DROITE : infos contexte ── #}
+<div style="display:flex; flex-direction:column; gap:12px;">
+
+    {# Statut + dates #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Fiche</div>
+        <div class="card-body" style="padding:14px 16px;">
+            <table style="width:100%; border-collapse:collapse;">
+                <tr>
+                    <td style="padding:4px 0; font-size:.75rem; color:var(--mabb-muted);">Statut</td>
+                    <td style="padding:4px 0; text-align:right;">
+                        {% if bilan.statut == 'valide' %}
+                            <span class="badge-active" style="font-size:.72rem;">✅ Validé</span>
+                        {% else %}
+                            <span style="background:#fef3e2; color:#d97706; padding:3px 10px; border-radius:12px; font-size:.72rem; font-weight:600;">Brouillon</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0; font-size:.75rem; color:var(--mabb-muted);">Contexte</td>
+                    <td style="padding:4px 0; text-align:right; font-size:.82rem; font-weight:500;">{{ bilan.contexte ?: '—' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0; font-size:.75rem; color:var(--mabb-muted);">Saison</td>
+                    <td style="padding:4px 0; text-align:right; font-size:.82rem; font-weight:500;">{{ bilan.saison }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0; font-size:.75rem; color:var(--mabb-muted);">Date éval.</td>
+                    <td style="padding:4px 0; text-align:right; font-size:.82rem;">{{ bilan.dateEvaluation ? bilan.dateEvaluation|date('d/m/Y') : '—' }}</td>
+                </tr>
+                <tr>
+                    <td style="padding:4px 0; font-size:.75rem; color:var(--mabb-muted);">Créé le</td>
+                    <td style="padding:4px 0; text-align:right; font-size:.82rem;">{{ bilan.createdAt|date('d/m/Y') }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    {# Participation #}
+    {% if bilan.nbSeances or bilan.presenceType %}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-calendar-check"></i> Participation</div>
+        <div class="card-body" style="padding:14px 16px;">
+            {% if bilan.nbSeances %}<div style="font-size:.88rem;"><strong>{{ bilan.nbSeances }}</strong> séance(s)</div>{% endif %}
+            {% if bilan.presenceType %}<div style="font-size:.82rem; color:var(--mabb-muted);">{{ bilan.presenceType }}</div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Mensurations #}
+    {% if bilan.taille or bilan.poids or bilan.envergure %}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-rulers"></i> Mensurations</div>
+        <div class="card-body" style="padding:14px 16px;">
+            <table style="width:100%; border-collapse:collapse;">
+                {% if bilan.taille %}<tr><td style="font-size:.75rem; color:var(--mabb-muted);">Taille</td><td style="text-align:right; font-size:.85rem; font-weight:600;">{{ bilan.taille }} cm</td></tr>{% endif %}
+                {% if bilan.poids %}<tr><td style="font-size:.75rem; color:var(--mabb-muted);">Poids</td><td style="text-align:right; font-size:.85rem; font-weight:600;">{{ bilan.poids }} kg</td></tr>{% endif %}
+                {% if bilan.envergure %}<tr><td style="font-size:.75rem; color:var(--mabb-muted);">Envergure</td><td style="text-align:right; font-size:.85rem; font-weight:600;">{{ bilan.envergure }} cm</td></tr>{% endif %}
+                {% if bilan.tailleAssise %}<tr><td style="font-size:.75rem; color:var(--mabb-muted);">T. assise</td><td style="text-align:right; font-size:.85rem; font-weight:600;">{{ bilan.tailleAssise }} cm</td></tr>{% endif %}
+                {% if bilan.pointure %}<tr><td style="font-size:.75rem; color:var(--mabb-muted);">Pointure</td><td style="text-align:right; font-size:.85rem; font-weight:600;">{{ bilan.pointure }}</td></tr>{% endif %}
+                {% if bilan.mainForte %}<tr><td style="font-size:.75rem; color:var(--mabb-muted);">Main forte</td><td style="text-align:right; font-size:.85rem; font-weight:600;">{{ bilan.mainForte|lower|capitalize }}</td></tr>{% endif %}
+            </table>
+            {% if bilan.profilDeJeu %}
+                <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--mabb-border); font-size:.82rem; color:var(--mabb-text);">
+                    <span style="font-size:.72rem; color:var(--mabb-muted); display:block;">Profil de jeu</span>
+                    {{ bilan.profilDeJeu }}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# Renseignements #}
+    {% set has_admin = bilan.numeroLicence or bilan.numSecuSociale or bilan.mutuelle or bilan.problemeSante or bilan.allergies %}
+    {% if has_admin %}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-file-earmark-person"></i> Renseignements</div>
+        <div class="card-body" style="padding:14px 16px; font-size:.82rem;">
+            {% if bilan.numeroLicence %}<div><span style="color:var(--mabb-muted);">Licence :</span> {{ bilan.numeroLicence }}</div>{% endif %}
+            {% if bilan.mutuelle %}<div><span style="color:var(--mabb-muted);">Mutuelle :</span> {{ bilan.mutuelle }}</div>{% endif %}
+            {% if bilan.problemeSante %}<div style="margin-top:8px;"><span style="color:var(--mabb-muted);">Santé :</span> {{ bilan.problemeSante }}</div>{% endif %}
+            {% if bilan.allergies %}<div><span style="color:var(--mabb-muted);">Allergies :</span> {{ bilan.allergies }}</div>{% endif %}
+            {% if bilan.regimeAlimentaire %}<div><span style="color:var(--mabb-muted);">Régime :</span> {{ bilan.regimeAlimentaire }}</div>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>{# fin colonne droite #}
+</div>
+
+{% endblock %}

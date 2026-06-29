@@ -6,6 +6,7 @@ namespace App\Controller\Pirb;
 
 use App\Entity\Core\User;
 use App\Gamification\BadgeCatalog;
+use App\Repository\Sport\BilanCompetenceRepository;
 use App\Repository\Sport\JoueurBadgeRepository;
 use App\Repository\Sport\JoueurRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -21,8 +22,9 @@ use Symfony\Component\Routing\Attribute\Route;
 class PirbBilanController extends AbstractController
 {
     public function __construct(
-        private readonly JoueurRepository $joueurRepo,
-        private readonly JoueurBadgeRepository $badgeRepo,
+        private readonly JoueurRepository          $joueurRepo,
+        private readonly JoueurBadgeRepository     $badgeRepo,
+        private readonly BilanCompetenceRepository $bilanRepo,
     ) {}
 
     #[Route('/bilan', name: 'pirb_bilan', methods: ['GET'])]
@@ -75,6 +77,38 @@ class PirbBilanController extends AbstractController
             'axes'   => $axes,
             'total_debloques' => count($codesDebloques),
             'total_disponibles' => count($catalog),
+        ]);
+    }
+
+    /**
+     * B16 — Bilan de compétences basketballistiques (lecture seule).
+     *
+     * Affiche le dernier bilan VALIDÉ de la joueuse connectée.
+     * Accessible uniquement quand le coach a passé le bilan en statut VALIDE.
+     */
+    #[Route('/bilan/competences', name: 'pirb_bilan_competences', methods: ['GET'])]
+    public function competences(): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+        $joueur = $this->joueurRepo->findOneBy(['user' => $user]);
+
+        if ($joueur === null) {
+            $this->addFlash('warning', 'Aucune fiche joueuse associée.');
+            return $this->redirectToRoute('pirb_dashboard');
+        }
+
+        // Dernier bilan validé seulement — les brouillons restent invisibles côté PIRB
+        $bilan = $this->bilanRepo->findDernierValide($joueur);
+
+        // Tous les bilans validés pour historique
+        $historique = $this->bilanRepo->findByJoueur($joueur);
+        $historique  = array_filter($historique, fn($b) => $b->isValide());
+
+        return $this->render('pirb/bilan_competences.html.twig', [
+            'joueur'     => $joueur,
+            'bilan'      => $bilan,
+            'historique' => array_values($historique),
         ]);
     }
 }

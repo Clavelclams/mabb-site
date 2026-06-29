@@ -1,0 +1,249 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Mon tableau de bord coach{% endblock %}
+
+{% block body %}
+
+<style>
+/* ── Cards joueuses ── */
+.joueur-card {
+    background: #fff;
+    border: 1px solid var(--mabb-border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: box-shadow .12s;
+    position: relative;
+}
+.joueur-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.07); }
+.joueur-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--mabb-dark);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: .95rem;
+    flex-shrink: 0;
+}
+.joueur-infos { flex: 1; min-width: 0; }
+.joueur-nom {
+    font-weight: 700;
+    font-size: .88rem;
+    color: var(--mabb-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.joueur-meta { font-size: .72rem; color: var(--mabb-muted); }
+.bilan-chip {
+    font-size: .7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+.bilan-chip-none { background: #f1f5f9; color: #94a3b8; }
+.bilan-chip-brouillon { background: #fef3e2; color: #d97706; }
+.bilan-chip-valide { background: #dcfce7; color: #16a34a; }
+/* Seances upcoming list */
+.seance-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+.seance-item:last-child { border-bottom: none; }
+.seance-date-block {
+    min-width: 44px;
+    text-align: center;
+    background: var(--mabb-orange);
+    color: #fff;
+    border-radius: 8px;
+    padding: 4px 6px;
+    font-size: .72rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+/* Equipe header badge */
+.equipe-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--mabb-orange);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: .78rem;
+    font-weight: 700;
+}
+</style>
+
+{# ── Header ── #}
+<div class="page-header">
+    <div>
+        <h1>🏀 Mon tableau de bord</h1>
+        <p class="subtitle">Saison {{ saison }} · {{ nb_equipes }} équipe(s) coachée(s)</p>
+    </div>
+    <a href="{{ path('manager_bilan_index') }}" class="btn-mabb-ghost">
+        <i class="bi bi-clipboard-check"></i> Tous les bilans
+    </a>
+</div>
+
+{% if equipe_data is empty %}
+    <div class="card-mabb">
+        <div class="empty-state">
+            <i class="bi bi-whistle"></i>
+            <h3>Aucune équipe pour cette saison</h3>
+            <p>Tu n'es pas encore assigné(e) comme coach pour la saison {{ saison }}.<br>
+               Demande à l'admin du club de te rattacher à une équipe.</p>
+        </div>
+    </div>
+{% else %}
+
+{# ── Boucle par équipe ── #}
+{% for data in equipe_data %}
+    {% set equipe = data.equipe %}
+    {% set joueurs = data.joueurs %}
+    {% set seances = data.seances %}
+    {% set bilan_map = data.bilan_map %}
+    {% set ce = data.coach_equipe %}
+
+    <div style="margin-bottom: 32px;">
+
+        {# Équipe header #}
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <h2 style="margin:0; font-size:1.15rem;">{{ equipe.nom }}</h2>
+                <span class="equipe-badge">
+                    <i class="bi bi-whistle"></i>
+                    {{ ce.roleCoach|lower|capitalize }}
+                </span>
+                <span style="font-size:.78rem; color:var(--mabb-muted);">{{ joueurs|length }} joueuse(s)</span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <a href="{{ path('manager_seance_index', {equipe_id: equipe.id}) }}" class="btn-mabb-ghost btn-sm">
+                    <i class="bi bi-calendar3"></i> Séances
+                </a>
+                <a href="{{ path('manager_equipe_show', {id: equipe.id}) }}" class="btn-mabb-ghost btn-sm">
+                    <i class="bi bi-people"></i> Équipe
+                </a>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 260px; gap:20px; align-items:start;">
+
+            {# Joueuses #}
+            <div>
+                <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+                    <i class="bi bi-person-badge"></i> Joueuses
+                </div>
+
+                {% if joueurs is empty %}
+                    <div style="color:var(--mabb-muted); font-size:.85rem; padding:16px; background:#f8fafc; border-radius:8px; text-align:center;">
+                        Aucune joueuse dans cette équipe pour la saison {{ saison }}.
+                    </div>
+                {% else %}
+                    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:8px;">
+                        {% for joueur in joueurs %}
+                            {% set bilan = bilan_map[joueur.id] ?? null %}
+                            {% set initiales = joueur.prenom|slice(0,1)|upper ~ joueur.nom|slice(0,1)|upper %}
+
+                            <div class="joueur-card">
+                                <div class="joueur-avatar">{{ initiales }}</div>
+                                <div class="joueur-infos">
+                                    <div class="joueur-nom">{{ joueur.nomComplet }}</div>
+                                    <div class="joueur-meta">
+                                        {% if joueur.dateNaissance %}
+                                            {{ joueur.dateNaissance|date('Y') }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {# Statut bilan #}
+                                {% if bilan is null %}
+                                    <a href="{{ path('manager_bilan_new', {id: joueur.id}) }}"
+                                       class="bilan-chip bilan-chip-none"
+                                       title="Créer un bilan">+ Bilan</a>
+                                {% elseif bilan.statut == 'valide' %}
+                                    <a href="{{ path('manager_bilan_show', {id: bilan.id}) }}"
+                                       class="bilan-chip bilan-chip-valide">
+                                        {{ bilan.moyenne ? bilan.moyenne ~ '/10' : '✅' }}
+                                    </a>
+                                {% else %}
+                                    <a href="{{ path('manager_bilan_edit', {id: bilan.id}) }}"
+                                       class="bilan-chip bilan-chip-brouillon"
+                                       title="Terminer le brouillon">📝 WIP</a>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    {# Résumé bilans équipe #}
+                    {% set nb_avec_bilan = joueurs|filter(j => bilan_map[j.id] is not null)|length %}
+                    {% set nb_valides = joueurs|filter(j => bilan_map[j.id] is not null and bilan_map[j.id].statut == 'valide')|length %}
+                    <div style="margin-top:10px; font-size:.75rem; color:var(--mabb-muted);">
+                        Bilans : <strong>{{ nb_avec_bilan }}/{{ joueurs|length }}</strong> renseignés,
+                        <strong style="color:#16a34a;">{{ nb_valides }}</strong> validé(s)
+                        {% if nb_avec_bilan < joueurs|length %}
+                            · <a href="{{ path('manager_bilan_index') }}" style="color:var(--mabb-orange);">Compléter</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+
+            {# Prochaines séances #}
+            <div>
+                <div style="font-size:.75rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;">
+                    <i class="bi bi-calendar-event"></i> Prochaines séances
+                </div>
+                <div class="card-mabb">
+                    <div class="card-body" style="padding:12px 14px;">
+                        {% if seances is empty %}
+                            <div style="text-align:center; color:var(--mabb-muted); font-size:.82rem; padding:12px 0;">
+                                <i class="bi bi-calendar-x" style="font-size:1.4rem; opacity:.4;"></i>
+                                <div style="margin-top:6px;">Aucune séance à venir</div>
+                            </div>
+                        {% else %}
+                            {% for seance in seances %}
+                                <div class="seance-item">
+                                    <div class="seance-date-block">
+                                        <div>{{ seance.date|date('d') }}</div>
+                                        <div>{{ seance.date|date('M', locale='fr')|upper }}</div>
+                                    </div>
+                                    <div style="flex:1; min-width:0;">
+                                        <div style="font-size:.83rem; font-weight:600; color:var(--mabb-text);">
+                                            {{ seance.date|date('H:i') }}
+                                            {% if seance.dureeMinutes %}
+                                                <span style="font-size:.72rem; color:var(--mabb-muted); font-weight:400;">({{ seance.dureeMinutes }}min)</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if seance.lieu %}
+                                            <div style="font-size:.72rem; color:var(--mabb-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                <i class="bi bi-geo-alt"></i> {{ seance.lieu }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                        <div style="margin-top:10px;">
+                            <a href="{{ path('manager_seance_new', {equipe_id: equipe.id}) }}" class="btn-mabb-ghost btn-sm" style="width:100%; justify-content:center;">
+                                <i class="bi bi-plus-lg"></i> Nouvelle séance
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    {% if not loop.last %}<hr style="border:none; border-top:1px solid var(--mabb-border); margin-bottom:32px;">{% endif %}
+{% endfor %}
+
+{% endif %}
+{% endblock %}

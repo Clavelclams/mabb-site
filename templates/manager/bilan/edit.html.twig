@@ -1,0 +1,492 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}{{ mode == 'new' ? 'Nouveau bilan' : 'Modifier le bilan' }} — {{ joueur.nomComplet }}{% endblock %}
+
+{% block body %}
+
+<style>
+/* ── Grille bilan ── */
+.bilan-section {
+    background: #fff;
+    border: 1px solid var(--mabb-border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+.bilan-section-header {
+    background: var(--mabb-dark);
+    color: #fff;
+    padding: 10px 18px;
+    font-weight: 700;
+    font-size: .88rem;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.bilan-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 8px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 16px;
+}
+.bilan-row:last-child { border-bottom: none; }
+.bilan-row:hover { background: #f8fafc; }
+.bilan-critere {
+    font-size: .88rem;
+    font-weight: 500;
+    color: var(--mabb-text);
+}
+/* Radios colorés 1-10 */
+.score-radios {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.score-radios input[type="radio"] { display: none; }
+.score-radios label {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1.5px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .12s;
+    color: #94a3b8;
+    background: #f8fafc;
+    user-select: none;
+}
+.score-radios label:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    color: #475569;
+}
+/* 1-3 rouge */
+.score-radios input[value="1"]:checked ~ .labels label[for$="-1"],
+.score-radios input[value="2"]:checked ~ .labels label[for$="-2"],
+.score-radios input[value="3"]:checked ~ .labels label[for$="-3"] {
+    background: #fecaca; color: #991b1b; border-color: #fca5a5;
+}
+/* 4-6 orange */
+.score-radios input[value="4"]:checked ~ .labels label[for$="-4"],
+.score-radios input[value="5"]:checked ~ .labels label[for$="-5"],
+.score-radios input[value="6"]:checked ~ .labels label[for$="-6"] {
+    background: #fed7aa; color: #9a3412; border-color: #fdba74;
+}
+/* 7-9 vert */
+.score-radios input[value="7"]:checked ~ .labels label[for$="-7"],
+.score-radios input[value="8"]:checked ~ .labels label[for$="-8"],
+.score-radios input[value="9"]:checked ~ .labels label[for$="-9"] {
+    background: #bbf7d0; color: #14532d; border-color: #86efac;
+}
+/* 10 or */
+.score-radios input[value="10"]:checked ~ .labels label[for$="-10"] {
+    background: #fef08a; color: #713f12; border-color: #fde047;
+}
+/* légende couleurs */
+.legende-couleurs {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: .75rem;
+    color: var(--mabb-muted);
+    margin-bottom: 12px;
+}
+.legende-couleurs span {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+</style>
+
+<div class="page-header">
+    <div>
+        <h1>{{ mode == 'new' ? '📋 Nouveau bilan' : '✏️ Modifier le bilan' }}</h1>
+        <p class="subtitle">{{ joueur.nomComplet }}{% if joueur.equipe %} · {{ joueur.equipe.nom }}{% endif %} · Saison {{ bilan.saison ?: '—' }}</p>
+    </div>
+    <a href="{{ mode == 'new' ? path('manager_joueur_index') : path('manager_bilan_show', {id: bilan.id}) }}" class="btn-mabb-ghost">
+        <i class="bi bi-arrow-left"></i> Retour
+    </a>
+</div>
+
+{# Légende #}
+<div class="legende-couleurs" style="margin-bottom:16px;">
+    <strong style="color:var(--mabb-text);">Grille :</strong>
+    <span style="background:#fecaca; color:#991b1b;">1-3 à développer</span>
+    <span style="background:#fed7aa; color:#9a3412;">4-6 à renforcer</span>
+    <span style="background:#bbf7d0; color:#14532d;">7-9 à perfectionner</span>
+    <span style="background:#fef08a; color:#713f12;">10 exceptionnel ⭐</span>
+</div>
+
+<form method="POST"
+      action="{{ mode == 'new' ? path('manager_bilan_new', {id: joueur.id}) : path('manager_bilan_edit', {id: bilan.id}) }}"
+      novalidate>
+<input type="hidden" name="_token" value="{{ csrf_token(csrf_id) }}">
+
+<div style="display:grid; grid-template-columns: 1fr 320px; gap:20px; align-items:start;">
+
+{# ── COLONNE GAUCHE : critères ─────────────────────────────────────────── #}
+<div>
+
+{% macro score_radios(name, current_value) %}
+    <div class="score-radios" id="radios-{{ name }}">
+        {# Radios cachés #}
+        {% for i in 1..10 %}
+            <input type="radio" name="{{ name }}" id="{{ name }}-{{ i }}" value="{{ i }}"
+                   {{ current_value == i ? 'checked' : '' }}>
+        {% endfor %}
+        {# Labels cliquables #}
+        <div class="labels" style="display:flex; gap:3px;">
+            {% for i in 1..10 %}
+                <label for="{{ name }}-{{ i }}"
+                       style="{% if current_value == i %}
+                           {% if i <= 3 %}background:#fecaca;color:#991b1b;border-color:#fca5a5;
+                           {% elseif i <= 6 %}background:#fed7aa;color:#9a3412;border-color:#fdba74;
+                           {% elseif i <= 9 %}background:#bbf7d0;color:#14532d;border-color:#86efac;
+                           {% else %}background:#fef08a;color:#713f12;border-color:#fde047;
+                           {% endif %}
+                       {% endif %}">{{ i }}</label>
+            {% endfor %}
+        </div>
+    </div>
+{% endmacro %}
+
+{# ── 1. Vie quotidienne / Internat ─── #}
+<div class="bilan-section">
+    <div class="bilan-section-header"><i class="bi bi-house-heart"></i> Vie quotidienne / Internat</div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Respect des règles de vie</span>
+        {{ _self.score_radios('vq_respect_regles', bilan.vqRespectRegles) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Ponctualité</span>
+        {{ _self.score_radios('vq_ponctualite', bilan.vqPonctualite) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Discipline</span>
+        {{ _self.score_radios('vq_discipline', bilan.vqDiscipline) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Vie de groupe — Intégration et Collaboration</span>
+        {{ _self.score_radios('vq_vie_groupe', bilan.vqVieGroupe) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Rangement et propreté du gymnase</span>
+        {{ _self.score_radios('vq_rangement', bilan.vqRangement) }}
+    </div>
+</div>
+
+{# ── 2. Qualités Mentales ─── #}
+<div class="bilan-section">
+    <div class="bilan-section-header"><i class="bi bi-lightning-charge"></i> Qualités Mentales</div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Enthousiasme — Motivation</span>
+        {{ _self.score_radios('qm_enthousiasme', bilan.qmEnthousiasme) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Détermination / Goût de l'effort</span>
+        {{ _self.score_radios('qm_determination', bilan.qmDetermination) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Confiance et Affirmation de soi</span>
+        {{ _self.score_radios('qm_confiance', bilan.qmConfiance) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Curiosité</span>
+        {{ _self.score_radios('qm_curiosite', bilan.qmCuriosite) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Autonomie dans les exercices</span>
+        {{ _self.score_radios('qm_autonomie', bilan.qmAutonomie) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Concentration à l'entraînement</span>
+        {{ _self.score_radios('qm_concentration', bilan.qmConcentration) }}
+    </div>
+</div>
+
+{# ── 3. Qualités Technico-Tactiques ─── #}
+<div class="bilan-section">
+    <div class="bilan-section-header"><i class="bi bi-bullseye"></i> Qualités Technico-Tactiques</div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Adresse — Efficacité des choix de tirs</span>
+        {{ _self.score_radios('qtt_adresse', bilan.qttAdresse) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Efficacité proche du panier</span>
+        {{ _self.score_radios('qtt_efficacite_panier', bilan.qttEfficacitePanier) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Aisance utile : Dribble – Passe</span>
+        {{ _self.score_radios('qtt_aisance', bilan.qttAisance) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Jeu sans ballons</span>
+        {{ _self.score_radios('qtt_jeu_sans_ballons', bilan.qttJeuSansBallons) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Compréhension du jeu (sens basket)</span>
+        {{ _self.score_radios('qtt_comprehension', bilan.qttComprehension) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Attitude Défensive (posture — gestion des duels)</span>
+        {{ _self.score_radios('qtt_defense', bilan.qttDefense) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Rebond — Catcher / Remonter</span>
+        {{ _self.score_radios('qtt_rebond_catcher', bilan.qttRebondCatcher) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Rebond — Transiter / Relancer</span>
+        {{ _self.score_radios('qtt_rebond_transiter', bilan.qttRebondTransiter) }}
+    </div>
+</div>
+
+{# ── 4. Qualités Physiques ─── #}
+<div class="bilan-section">
+    <div class="bilan-section-header"><i class="bi bi-heart-pulse"></i> Qualités Physiques</div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Enchaînement de l'effort</span>
+        {{ _self.score_radios('qp_enchainement', bilan.qpEnchainement) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Vitesse — Explosivité</span>
+        {{ _self.score_radios('qp_vitesse', bilan.qpVitesse) }}
+    </div>
+    <div class="bilan-row">
+        <span class="bilan-critere">Soins du corps</span>
+        {{ _self.score_radios('qp_soins_du_corps', bilan.qpSoinsDuCorps) }}
+    </div>
+</div>
+
+{# ── Champs texte libres ─── #}
+<div class="bilan-section">
+    <div class="bilan-section-header"><i class="bi bi-chat-text"></i> Synthèse & Observations</div>
+    <div style="padding:16px 18px; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+
+        <div>
+            <label style="font-size:.8rem; font-weight:700; color:var(--mabb-text); display:block; margin-bottom:6px;">
+                💪 Points forts pour produire la performance
+            </label>
+            <textarea name="points_forts" rows="3" style="width:100%; padding:8px 12px; border:1px solid var(--mabb-border); border-radius:8px; font-size:.85rem; font-family:inherit; resize:vertical;">{{ bilan.pointsForts ?: '' }}</textarea>
+        </div>
+
+        <div>
+            <label style="font-size:.8rem; font-weight:700; color:#dc2626; display:block; margin-bottom:6px;">
+                🚨 Alerte Médicale
+            </label>
+            <textarea name="alerte_medicale" rows="3" style="width:100%; padding:8px 12px; border:1px solid #fecaca; border-radius:8px; font-size:.85rem; font-family:inherit; resize:vertical;">{{ bilan.alerteMedicale ?: '' }}</textarea>
+        </div>
+
+        <div>
+            <label style="font-size:.8rem; font-weight:700; color:var(--mabb-text); display:block; margin-bottom:6px;">
+                👁️ Points de vigilance
+            </label>
+            <textarea name="points_vigilance" rows="3" style="width:100%; padding:8px 12px; border:1px solid var(--mabb-border); border-radius:8px; font-size:.85rem; font-family:inherit; resize:vertical;">{{ bilan.pointsVigilance ?: '' }}</textarea>
+        </div>
+
+        <div>
+            <label style="font-size:.8rem; font-weight:700; color:var(--mabb-text); display:block; margin-bottom:6px;">
+                🎯 Axes de travail pour la période
+            </label>
+            <textarea name="axes_travail" rows="3" style="width:100%; padding:8px 12px; border:1px solid var(--mabb-border); border-radius:8px; font-size:.85rem; font-family:inherit; resize:vertical;">{{ bilan.axesTravail ?: '' }}</textarea>
+        </div>
+
+        <div style="grid-column: 1 / -1;">
+            <label style="font-size:.8rem; font-weight:700; color:var(--mabb-text); display:block; margin-bottom:6px;">
+                📝 Bilan — Remarques
+            </label>
+            <textarea name="bilan_remarques" rows="4" style="width:100%; padding:8px 12px; border:1px solid var(--mabb-border); border-radius:8px; font-size:.85rem; font-family:inherit; resize:vertical;">{{ bilan.bilanRemarques ?: '' }}</textarea>
+        </div>
+    </div>
+</div>
+
+</div>{# fin colonne gauche #}
+
+{# ── COLONNE DROITE : sidebar ────────────────────────────────────────────── #}
+<div style="display:flex; flex-direction:column; gap:16px;">
+
+    {# Métadonnées #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Informations</div>
+        <div class="card-body" style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+
+            <div>
+                <label style="font-size:.78rem; font-weight:600; color:var(--mabb-muted); display:block; margin-bottom:4px;">Saison</label>
+                <input type="text" name="saison" value="{{ bilan.saison ?: '2025-2026' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.88rem;">
+            </div>
+
+            <div>
+                <label style="font-size:.78rem; font-weight:600; color:var(--mabb-muted); display:block; margin-bottom:4px;">Contexte</label>
+                <select name="contexte" style="width:100%; padding:7px 10px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.88rem;">
+                    <option value="">— Choisir —</option>
+                    {% for ctx in ["Camp d'entraînement", "Mi-saison", "Fin de saison", "Détection / Sélection"] %}
+                        <option value="{{ ctx }}" {{ bilan.contexte == ctx ? 'selected' : '' }}>{{ ctx }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="font-size:.78rem; font-weight:600; color:var(--mabb-muted); display:block; margin-bottom:4px;">Date d'évaluation</label>
+                <input type="date" name="date_evaluation"
+                       value="{{ bilan.dateEvaluation ? bilan.dateEvaluation|date('Y-m-d') : '' }}"
+                       style="width:100%; padding:7px 10px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.88rem;">
+            </div>
+
+            <div>
+                <label style="font-size:.78rem; font-weight:600; color:var(--mabb-muted); display:block; margin-bottom:4px;">Statut</label>
+                <select name="statut" style="width:100%; padding:7px 10px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.88rem;">
+                    <option value="brouillon" {{ bilan.statut == 'brouillon' ? 'selected' : '' }}>📝 Brouillon (privé)</option>
+                    <option value="valide" {{ bilan.statut == 'valide' ? 'selected' : '' }}>✅ Validé (visible joueuse)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    {# Participation #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-calendar-check"></i> Participation</div>
+        <div class="card-body" style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <div>
+                    <label style="font-size:.75rem; color:var(--mabb-muted); display:block; margin-bottom:4px;">Nb séances</label>
+                    <input type="number" name="nb_seances" min="0" max="200"
+                           value="{{ bilan.nbSeances ?: '' }}"
+                           style="width:100%; padding:6px 8px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.85rem;">
+                </div>
+                <div>
+                    <label style="font-size:.75rem; color:var(--mabb-muted); display:block; margin-bottom:4px;">Type</label>
+                    <select name="presence_type" style="width:100%; padding:6px 8px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.85rem;">
+                        <option value="">—</option>
+                        <option value="Stage" {{ bilan.presenceType == 'Stage' ? 'selected' : '' }}>Stage</option>
+                        <option value="Entraînement" {{ bilan.presenceType == 'Entraînement' ? 'selected' : '' }}>Entraînement</option>
+                        <option value="Camp" {{ bilan.presenceType == 'Camp' ? 'selected' : '' }}>Camp</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Mensurations #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-rulers"></i> Mensurations</div>
+        <div class="card-body" style="padding:14px 16px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                {% set sidebar_fields = [
+                    {name: 'taille',       label: 'Taille (cm)',     val: bilan.taille},
+                    {name: 'poids',        label: 'Poids (kg)',      val: bilan.poids},
+                    {name: 'envergure',    label: 'Envergure (cm)',  val: bilan.envergure},
+                    {name: 'taille_assise',label: 'T. assise (cm)',  val: bilan.tailleAssise},
+                    {name: 'pointure',     label: 'Pointure',        val: bilan.pointure},
+                ] %}
+                {% for f in sidebar_fields %}
+                    <div>
+                        <label style="font-size:.72rem; color:var(--mabb-muted); display:block; margin-bottom:3px;">{{ f.label }}</label>
+                        <input type="number" name="{{ f.name }}" step="0.01" min="0"
+                               value="{{ f.val ?: '' }}"
+                               style="width:100%; padding:5px 8px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.82rem;">
+                    </div>
+                {% endfor %}
+                <div>
+                    <label style="font-size:.72rem; color:var(--mabb-muted); display:block; margin-bottom:3px;">Main forte</label>
+                    <select name="main_forte" style="width:100%; padding:5px 8px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.82rem;">
+                        <option value="">—</option>
+                        <option value="DROITE" {{ bilan.mainForte == 'DROITE' ? 'selected' : '' }}>Droite</option>
+                        <option value="GAUCHE" {{ bilan.mainForte == 'GAUCHE' ? 'selected' : '' }}>Gauche</option>
+                        <option value="AMBIDEXTRE" {{ bilan.mainForte == 'AMBIDEXTRE' ? 'selected' : '' }}>Ambidextre</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top:8px;">
+                <label style="font-size:.72rem; color:var(--mabb-muted); display:block; margin-bottom:3px;">Profil de jeu</label>
+                <textarea name="profil_de_jeu" rows="2"
+                          style="width:100%; padding:6px 8px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.82rem; resize:vertical;">{{ bilan.profilDeJeu ?: '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    {# Renseignements administratifs #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-file-earmark-person"></i> Renseignements</div>
+        <div class="card-body" style="padding:14px 16px; display:flex; flex-direction:column; gap:10px;">
+            {% set admin_fields = [
+                {name: 'numero_licence',   label: 'N° Licence',    val: bilan.numeroLicence,   type:'text'},
+                {name: 'num_secu_sociale', label: 'N° Sécu',       val: bilan.numSecuSociale,  type:'text'},
+                {name: 'mutuelle',         label: 'Mutuelle',      val: bilan.mutuelle,        type:'text'},
+            ] %}
+            {% for f in admin_fields %}
+                <div>
+                    <label style="font-size:.72rem; color:var(--mabb-muted); display:block; margin-bottom:3px;">{{ f.label }}</label>
+                    <input type="{{ f.type }}" name="{{ f.name }}" value="{{ f.val ?: '' }}"
+                           style="width:100%; padding:6px 8px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.82rem;">
+                </div>
+            {% endfor %}
+            {% set admin_textareas = [
+                {name: 'probleme_sante',    label: 'Problèmes de santé', val: bilan.problemeSante},
+                {name: 'allergies',         label: 'Allergies',          val: bilan.allergies},
+                {name: 'regime_alimentaire',label: 'Régime alimentaire', val: bilan.regimeAlimentaire},
+            ] %}
+            {% for f in admin_textareas %}
+                <div>
+                    <label style="font-size:.72rem; color:var(--mabb-muted); display:block; margin-bottom:3px;">{{ f.label }}</label>
+                    <textarea name="{{ f.name }}" rows="2"
+                              style="width:100%; padding:6px 8px; border:1px solid var(--mabb-border); border-radius:6px; font-size:.82rem; resize:vertical;">{{ f.val ?: '' }}</textarea>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Boutons action #}
+    <div style="position:sticky; bottom:20px; display:flex; flex-direction:column; gap:8px;">
+        <button type="submit" class="btn-mabb-primary" style="width:100%; justify-content:center; padding:12px;">
+            <i class="bi bi-check-lg"></i> Enregistrer le bilan
+        </button>
+        <a href="{{ mode == 'new' ? path('manager_joueur_index') : path('manager_bilan_show', {id: bilan.id}) }}"
+           class="btn-mabb-ghost" style="width:100%; justify-content:center;">
+            Annuler
+        </a>
+    </div>
+
+</div>{# fin colonne droite #}
+
+</div>{# fin grid #}
+</form>
+
+{# JS — coloration live des radios au clic #}
+<script>
+document.querySelectorAll('.score-radios').forEach(container => {
+    const radios = container.querySelectorAll('input[type="radio"]');
+    const labels = container.querySelectorAll('label');
+
+    function updateColors() {
+        const checked = container.querySelector('input[type="radio"]:checked');
+        labels.forEach(label => {
+            label.style.background = '';
+            label.style.color = '';
+            label.style.borderColor = '';
+        });
+        if (!checked) return;
+        const val = parseInt(checked.value);
+        const idx = val - 1;
+        const label = labels[idx];
+        if (!label) return;
+        if (val <= 3)      { label.style.background='#fecaca'; label.style.color='#991b1b'; label.style.borderColor='#fca5a5'; }
+        else if (val <= 6) { label.style.background='#fed7aa'; label.style.color='#9a3412'; label.style.borderColor='#fdba74'; }
+        else if (val <= 9) { label.style.background='#bbf7d0'; label.style.color='#14532d'; label.style.borderColor='#86efac'; }
+        else               { label.style.background='#fef08a'; label.style.color='#713f12'; label.style.borderColor='#fde047'; }
+    }
+
+    radios.forEach(radio => radio.addEventListener('change', updateColors));
+    updateColors(); // Appliquer au chargement
+});
+</script>
+
+{% endblock %}
