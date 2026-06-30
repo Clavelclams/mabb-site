@@ -83,17 +83,30 @@
 
 {% if bilan is null %}
 
-{# Pas encore de bilan validé #}
+{# Aucun bilan du tout #}
 <div class="pirb-card" style="text-align:center; padding:32px 20px;">
     <i class="bi bi-hourglass" style="font-size:2.8rem; opacity:.35;"></i>
     <h3 style="margin:16px 0 8px; font-size:1rem;">Pas encore de bilan disponible</h3>
     <p style="color:var(--pirb-text-muted); font-size:.84rem; margin:0; line-height:1.6;">
-        Ton coach n'a pas encore validé de bilan pour toi.<br>
+        Ton coach n'a pas encore créé de bilan pour toi.<br>
         Il apparaîtra ici dès qu'il sera prêt. 👊
     </p>
 </div>
 
 {% else %}
+
+{# Badge brouillon si le bilan n'est pas encore formellement validé #}
+{% if bilan.statut == 'brouillon' %}
+<div style="background:rgba(249,115,22,.1); border:1px solid rgba(249,115,22,.3); border-radius:10px;
+            padding:10px 14px; margin-bottom:12px; display:flex; align-items:center; gap:10px;
+            font-size:.82rem; color:#c2410c;">
+    <i class="bi bi-pencil-square" style="font-size:1.1rem;"></i>
+    <div>
+        <strong>Bilan en cours de préparation</strong><br>
+        <span style="opacity:.8;">Ton coach finalise encore ce bilan. Les données peuvent évoluer.</span>
+    </div>
+</div>
+{% endif %}
 
 {# Score global #}
 {% set moy = bilan.moyenne %}

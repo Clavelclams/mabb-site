@@ -98,11 +98,10 @@ class PirbBilanController extends AbstractController
             return $this->redirectToRoute('pirb_dashboard');
         }
 
-        // Tous les bilans VALIDÉS, triés du plus récent au plus ancien
-        $tous = array_values(array_filter(
-            $this->bilanRepo->findByJoueur($joueur),
-            fn($b) => $b->isValide()
-        ));
+        // Tous les bilans (validés ET brouillon), triés du plus récent au plus ancien.
+        // Un bilan brouillon est affiché avec un badge "en cours de préparation"
+        // pour que la joueuse puisse voir ses données même avant validation formelle.
+        $tous = $this->bilanRepo->findByJoueur($joueur);
 
         // Construire la map saison → bilan (1 bilan par saison, le plus récent si plusieurs)
         $bilanParSaison = [];

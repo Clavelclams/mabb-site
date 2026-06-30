@@ -177,18 +177,21 @@ class ManagerStaffController extends AbstractController
             'club' => $club,
         ]);
 
-        // ── CoachEquipe : équipes coachées sur la saison courante ───────────
-        $coachEquipes = $this->coachEquipeRepository->findByCoach($user, self::saisonCourante());
+        // ── CoachEquipe : toutes les affectations de ce coach (toutes saisons)
+        // On ne filtre PAS par saison ici pour éviter tout mismatch de valeur stockée.
+        // Le template les regroupe par saison s'il y en a plusieurs.
+        $coachEquipes = $this->coachEquipeRepository->findByCoach($user, null);
 
-        // Équipes disponibles du club (saison courante) pour le formulaire d'affectation
+        // Équipes disponibles du club : toutes les équipes actives, sans filtre saison,
+        // pour que l'admin puisse affecter même si la saison en DB diffère du calcul courant.
         $equipesDisponibles = $this->em->createQueryBuilder()
             ->select('e')
             ->from(Equipe::class, 'e')
             ->where('e.club = :club')
-            ->andWhere('e.saison = :saison')
-            ->orderBy('e.nom', 'ASC')
+            ->andWhere('e.isActive = true')
+            ->orderBy('e.saison', 'DESC')
+            ->addOrderBy('e.nom', 'ASC')
             ->setParameter('club', $club)
-            ->setParameter('saison', self::saisonCourante())
             ->getQuery()
             ->getResult();
 

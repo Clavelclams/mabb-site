@@ -32,19 +32,42 @@
         <div class="card-body">
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
 
-                {# === ACTION 1 : Voir le bilan saison === #}
+                {# === ACTION 1 : Bilan de compétences === #}
                 {% if joueur %}
-                    {# TODO V1.1 : créer la route manager_joueur_bilan + sa vue dédiée.
-                       En attendant, on link vers la fiche joueuse (où les stats sont déjà). #}
-                    <a href="{{ path('manager_joueur_show', {id: joueur.id}) }}#stats"
-                       class="bilan-action-card"
-                       style="text-decoration:none; padding:18px; border-radius:10px; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:white; display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s;"
-                       onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 18px rgba(0,98,168,.25)'"
-                       onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
-                        <i class="bi bi-graph-up-arrow" style="font-size:1.5rem;"></i>
-                        <strong style="font-size:1rem;">Voir le bilan saison</strong>
-                        <small style="opacity:.85; font-size:.78rem;">XP, badges, présences, missions</small>
-                    </a>
+                    {% if bilan_recent is defined and bilan_recent is not null %}
+                        {# Bilan existant → lien direct vers la page bilan #}
+                        <a href="{{ path('manager_bilan_show', {id: bilan_recent.id}) }}"
+                           class="bilan-action-card"
+                           style="text-decoration:none; padding:18px; border-radius:10px; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:white; display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s;"
+                           onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 18px rgba(0,98,168,.25)'"
+                           onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <i class="bi bi-clipboard-data" style="font-size:1.5rem;"></i>
+                            <strong style="font-size:1rem;">Voir le bilan</strong>
+                            <small style="opacity:.85; font-size:.78rem;">
+                                {{ bilan_recent.saison }}
+                                {% if bilan_recent.statut == 'brouillon' %}· <i class="bi bi-pencil-square"></i> brouillon{% else %}· <i class="bi bi-check-circle"></i> validé{% endif %}
+                            </small>
+                        </a>
+                    {% else %}
+                        {# Aucun bilan → proposer d'en créer un (STAFF only) #}
+                        {% if is_granted('CLUB_STAFF', joueur) %}
+                            <a href="{{ path('manager_bilan_new', {id: joueur.id}) }}"
+                               class="bilan-action-card"
+                               style="text-decoration:none; padding:18px; border-radius:10px; background:linear-gradient(135deg, var(--mabb-blue), var(--mabb-dark)); color:white; display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s; opacity:.85;"
+                               onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 18px rgba(0,98,168,.25)'"
+                               onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                                <i class="bi bi-clipboard-plus" style="font-size:1.5rem;"></i>
+                                <strong style="font-size:1rem;">Créer un bilan</strong>
+                                <small style="opacity:.85; font-size:.78rem;">Aucun bilan pour cette joueuse</small>
+                            </a>
+                        {% else %}
+                            <div style="padding:18px; border-radius:10px; background:rgba(0,98,168,.1); color:var(--mabb-blue); display:flex; flex-direction:column; gap:6px; opacity:.7;">
+                                <i class="bi bi-clipboard-x" style="font-size:1.5rem;"></i>
+                                <strong style="font-size:1rem;">Pas encore de bilan</strong>
+                                <small style="font-size:.78rem;">Le coach n'a pas encore établi de bilan</small>
+                            </div>
+                        {% endif %}
+                    {% endif %}
                 {% endif %}
 
                 {# === ACTION 2 : Voir le profil PIRB ===

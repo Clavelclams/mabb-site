@@ -87,7 +87,7 @@
 {# ── Ligne 2 : Équipes coachées ───────────────────────────────────────────── #}
 <div class="card-mabb mb-3">
     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <span><i class="bi bi-clipboard-pulse"></i> Équipes coachées — saison {{ saison_courante }}</span>
+        <span><i class="bi bi-clipboard-pulse"></i> Équipes coachées</span>
         <span style="color:var(--mabb-muted); font-size:.82rem;">{{ coach_equipes|length }} équipe{{ coach_equipes|length != 1 ? 's' : '' }}</span>
     </div>
     <div class="card-body">
@@ -95,7 +95,7 @@
         {% if coach_equipes is empty %}
             <p style="color:var(--mabb-muted); text-align:center; padding:20px 0; margin:0;">
                 <i class="bi bi-clipboard-x" style="font-size:1.6rem; display:block; margin-bottom:8px;"></i>
-                Aucune équipe assignée pour cette saison.
+                Aucune équipe assignée.
             </p>
         {% else %}
             <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
@@ -106,6 +106,9 @@
                             <div style="font-size:.78rem; color:{% if ce.isPrincipal() %}#3b82f6{% else %}#0891b2{% endif %}; font-weight:600;">
                                 <i class="bi bi-{% if ce.isPrincipal() %}star-fill{% else %}star{% endif %} me-1"></i>{{ ce.roleCoach }}
                             </div>
+                            {% if ce.saison %}
+                                <div style="font-size:.7rem; color:var(--mabb-muted); margin-top:2px;">{{ ce.saison }}</div>
+                            {% endif %}
                         </div>
                         {% if is_granted('CLUB_STAFF', club) %}
                             <form action="{{ path('manager_staff_retirer_equipe', {coachEquipeId: ce.id}) }}" method="post"
@@ -141,7 +144,7 @@
                                 </option>
                             {% endfor %}
                             {% if equipes_disponibles is empty %}
-                                <option disabled>Aucune équipe pour la saison {{ saison_courante }}</option>
+                                <option disabled>Aucune équipe active dans ce club</option>
                             {% endif %}
                         </select>
                     </div>
