@@ -122,10 +122,13 @@ class FfbbResumeOcrParser
         }
 
         // === 4. Cache joueuses de l'équipe + évals existantes ===
-        $joueuses = $this->joueurRepo->findBy([
-            'equipe' => $rencontre->getEquipe(),
-            'isActive' => true,
-        ]);
+        // On passe par joueur_equipe (affectations) et non Joueur.equipe (champ legacy)
+        // pour inclure les joueuses dont l'équipe principale diffère de l'équipe de la rencontre
+        // (cas doublage, surclassement, ou import trombi sur une équipe différente).
+        $joueuses = $this->joueurRepo->findByEquipeAffectation(
+            $rencontre->getEquipe(),
+            $rencontre->getSaison() ?? '2025-2026',
+        );
         $evalsExistantes = $this->evalRepo->evaluationsRencontre($rencontre);
         $evalsParJoueur = [];
         foreach ($evalsExistantes as $e) {

@@ -2,6 +2,7 @@
 
 namespace App\Repository\Sport;
 
+use App\Entity\Sport\Equipe;
 use App\Entity\Sport\Joueur;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -143,5 +144,31 @@ class JoueurRepository extends ServiceEntityRepository
         }
 
         return $result;
+    }
+
+    /**
+     * Trouve les joueurs actifs d'une équipe via les affectations (joueur_equipe),
+     * indépendamment de Joueur.equipe (champ "principale" legacy).
+     *
+     * Inclut toutes les affectations actives pour cette équipe+saison :
+     * principale, doublage, surclassement, réserve.
+     *
+     * À utiliser partout où on a besoin de "qui joue dans cette équipe cette saison ?"
+     * — notamment le pipeline OCR FFBB.
+     */
+    public function findByEquipeAffectation(Equipe $equipe, string $saison): array
+    {
+        return $this->createQueryBuilder('j')
+            ->join('j.affectations', 'a')
+            ->where('a.equipe = :equipe')
+            ->andWhere('a.saison = :saison')
+            ->andWhere('j.isActive = :active')
+            ->andWhere('a.actif = :aactif')
+            ->setParameter('equipe', $equipe)
+            ->setParameter('saison', $saison)
+            ->setParameter('active', true)
+            ->setParameter('aactif', true)
+            ->getQuery()
+            ->getResult();
     }
 }
