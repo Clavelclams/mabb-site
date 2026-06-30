@@ -64,4 +64,22 @@ class RencontreRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Rencontres d'une saison ayant un PDF positiontir_*.pdf uploadé.
+     * Utilisé par ProcessPositionsTirsCommand pour le traitement en lot.
+     *
+     * @return Rencontre[]
+     */
+    public function findBySaisonWithPositionsPdf(string $saison): array
+    {
+        return $this->createQueryBuilder('r')
+            ->leftJoin('r.equipe', 'eq')->addSelect('eq')
+            ->where('r.saison = :saison')
+            ->andWhere('r.positionsTirsPath IS NOT NULL')
+            ->setParameter('saison', $saison)
+            ->orderBy('r.date', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

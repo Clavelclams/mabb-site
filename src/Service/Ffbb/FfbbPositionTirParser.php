@@ -4,40 +4,52 @@ declare(strict_types=1);
 
 namespace App\Service\Ffbb;
 
+use App\Entity\Sport\Joueur;
 use App\Entity\Sport\Rencontre;
 use App\Entity\Sport\TirFfbb;
 use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\TirFfbbRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Smalot\PdfParser\Parser as PdfParser;
 
 /**
  * [B22c 12/06/2026] Parser du PDF positiontir_*.pdf FFBB.
  *
  * ============================================================================
- * VERSION V1 (12/06/2026) :
- *   - Extraction TEXTE uniquement (nom des joueuses + nombre de tirs marqués)
- *   - Pas d'extraction des coordonnées graphiques X/Y des croix "X"
- *   - Crée 1 ligne TirFfbb par tir avec position NULL
+ * VERSION V2 (30/06/2026) — extraction graphique des tirs via Python + PyMuPDF
+ * ============================================================================
  *
- * VERSION V2 (futur — quand on en aura besoin) :
- *   - Conversion PDF → image (poppler/imagick)
- *   - Détection des "X" via comparaison pixels (chaque mini-terrain isolé)
- *   - Mapping coordonnées pixel → pourcentage 0-100 du terrain
- *   - Stockage position_x / position_y dans TirFfbb
+ * Structure du PDF e-Marque (A4 595×842 pts, 2 joueuses par page) :
+ *   - 1 image 32×32 px = marqueur ⊙ tir réussi, placé à chaque tir
+ *   - 1 image 506×470 px = template terrain (réutilisé ×12/page)
  *
- * Le PDF positiontir contient typiquement :
- *   - Page 1 : terrain global équipe A (tous les tirs marqués)
- *   - Page 2 : terrain global équipe B
- *   - Pages 3+ : mini-terrains par joueuse (1 ou 2 par page) avec les "X"
+ * Le script bin/ffbb_parse_positions.py :
+ *   1. Lit le PDF via PyMuPDF (fitz)
+ *   2. Récupère les positions de l'image 32×32 pour chaque joueuse
+ *   3. Normalise en [0,1] dans le terrain agrégé gauche
+ *   4. OCR du nom via Tesseract (eng)
+ *   5. Sort JSON [{nom, prenom_initial, norm_x, norm_y}, ...]
  *
- * V1 stratégie : on parse le texte pour identifier "X tir réussi pour J. LEFEVRE",
- * on compte, on crée N entrées TirFfbb sans position.
+ * Prérequis sur le serveur :
+ *   python3, pip install pymupdf pytesseract pillow
+ *   tesseract (avec données eng)
+ *
+ * Coordonnées normalisées :
+ *   norm_x = 0 → bord gauche du terrain
+ *   norm_x = 1 → bord droit
+ *   norm_y = 0 → côté panier (haut de la moitié de terrain)
+ *   norm_y = 1 → milieu de terrain (bas)
+ *
+ * Stockage en BDD : position_x/y en entiers 0–100 (smallint).
+ *
+ * ============================================================================
+ * VERSION V1 (12/06/2026) — extraction texte uniquement (ARCHIVÉE)
  * ============================================================================
  */
 class FfbbPositionTirParser
 {
+    private const PYTHON_SCRIPT = 'bin/ffbb_parse_positions.py';
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly TirFfbbRepository $tirRepo,
@@ -46,129 +58,278 @@ class FfbbPositionTirParser
         private readonly string $projectDir,
     ) {}
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // API publique
+    // ─────────────────────────────────────────────────────────────────────────
+
     /**
-     * Parse le PDF positiontir et persiste les TirFfbb (sans coordonnées en V1).
-     * Retourne le nombre de tirs extraits.
+     * Parse le PDF positiontir_*.pdf et persiste les TirFfbb avec positions X/Y.
+     *
+     * Idempotent : supprime les anciens TirFfbb source=ffbb avant réinsertion.
+     * Retourne le nombre de tirs insérés (0 si PDF absent ou Python indisponible).
      */
-    public function parseEtPersister(Rencontre $rencontre): int
+    public function parseEtPersister(Rencontre $rencontre, bool $dryRun = false): int
     {
-        $relativePath = $rencontre->getPositionsTirsPath();
-        if ($relativePath === null) {
+        $pdfPath = $this->resolvePdfPath($rencontre);
+        if ($pdfPath === null) {
             return 0;
         }
 
-        $absolutePath = rtrim($this->projectDir, '/') . '/public/' . ltrim($relativePath, '/');
-        if (!is_file($absolutePath)) {
-            $this->logger->warning('Positiontir PDF introuvable', ['path' => $absolutePath]);
+        // --- Appel Python -------------------------------------------------
+        $rawShots = $this->callPythonParser($pdfPath);
+        if ($rawShots === null) {
+            // Python indisponible → log + 0
+            $this->logger->warning(
+                'FfbbPositionTirParser: Python/PyMuPDF indisponible. '
+                . 'Installer python3 + pymupdf + pytesseract sur le serveur.',
+                ['rencontre_id' => $rencontre->getId()]
+            );
             return 0;
         }
 
-        // Idempotent : supprime les anciens TirFfbb (source=ffbb) pour cette rencontre
-        foreach ($this->tirRepo->findForRencontre($rencontre, TirFfbb::SOURCE_FFBB) as $old) {
-            $this->em->remove($old);
-        }
-        $this->em->flush();
-
-        try {
-            $parser = new PdfParser();
-            $pdf = $parser->parseFile($absolutePath);
-            $texte = $pdf->getText();
-        } catch (\Throwable $e) {
-            $this->logger->error('Échec lecture PDF positiontir', ['error' => $e->getMessage()]);
+        if (empty($rawShots)) {
+            $this->logger->info('Aucun tir trouvé dans le PDF', ['rencontre_id' => $rencontre->getId()]);
             return 0;
         }
 
-        // Extraction texte : on cherche les paterns "NOM Prénom" + nombre de tirs
-        // Format observé : "MILAPIE R. - 4 tirs marqués" ou "LEFEVRE Jody (10) - 6 réussis"
-        $tirs = $this->extraireTirsFromText($texte);
-        $joueursDuClub = $this->joueurRepo->findBy(['club' => $rencontre->getClub(), 'isActive' => true]);
+        // --- Roster MABB --------------------------------------------------
+        $saison = $rencontre->getSaison() ?? '2025-2026';
+        $equipe = $rencontre->getEquipe();
+        $joueurs = $equipe !== null
+            ? $this->joueurRepo->findByEquipeAffectation($equipe, $saison)
+            : $this->joueurRepo->findBy(['club' => $rencontre->getClub(), 'isActive' => true]);
 
-        $count = 0;
-        foreach ($tirs as $tir) {
-            $joueurMatch = $this->matchJoueurParNom($tir['nom'], $joueursDuClub);
-
-            // Crée N entrées (une par tir)
-            for ($i = 0; $i < $tir['nb_tirs']; $i++) {
-                $entry = new TirFfbb();
-                $entry->setRencontre($rencontre);
-                $entry->setNomJoueuse($tir['nom']);
-                $entry->setEstReussi(true);
-                $entry->setSource(TirFfbb::SOURCE_FFBB);
-                $entry->setTypeTir($tir['type'] ?? null);
-                // position_x/y restent NULL en V1
-                if ($joueurMatch !== null) {
-                    $entry->setJoueur($joueurMatch);
-                }
-                $this->em->persist($entry);
-                $count++;
+        // --- Suppression ancienne data ------------------------------------
+        if (!$dryRun) {
+            foreach ($this->tirRepo->findForRencontre($rencontre, TirFfbb::SOURCE_FFBB) as $old) {
+                $this->em->remove($old);
             }
+            $this->em->flush();
         }
 
-        $this->em->flush();
-        $this->logger->info('Parser positiontir FFBB terminé', [
+        // --- Insertion ----------------------------------------------------
+        $count = 0;
+        $warnings = [];
+
+        foreach ($rawShots as $shot) {
+            $nomOcr = $shot['nom'] ?? '';
+            $prenomInit = $shot['prenom_initial'] ?? '';
+
+            $joueur = $this->matchJoueur($nomOcr, $prenomInit, $joueurs);
+            if ($joueur === null) {
+                $warnings[] = "{$nomOcr} {$prenomInit}.";
+                continue;  // Pas une joueuse MABB → skip
+            }
+
+            $entry = new TirFfbb();
+            $entry->setRencontre($rencontre);
+            $entry->setJoueur($joueur);
+            $entry->setNomJoueuse($joueur->getNom() . ' ' . substr($joueur->getPrenom() ?? '', 0, 1) . '.');
+            $entry->setEstReussi(true);
+            $entry->setSource(TirFfbb::SOURCE_FFBB);
+
+            // Transformation coords PDF → coords zone (SVG shot map)
+            // PDF : norm_y=0=panier (haut), norm_y=1=ligne médiane
+            //       norm_x=0=sideline gauche, norm_x=1=sideline droit
+            // Zone: x=depth (0.04=panier, 0.50=ligne médiane)
+            //       y=lateral (0=sideline, 1=sideline opposé)
+            $normX = (float)($shot['norm_x'] ?? 0.5);  // latéral PDF
+            $normY = (float)($shot['norm_y'] ?? 0.5);  // profondeur PDF
+            $zoneX = $normY * 0.46 + 0.04;             // [0.04 – 0.50]
+            $zoneY = $normX;                            // [0.00 – 1.00]
+
+            $entry->setPositionX($this->toInt($zoneX));
+            $entry->setPositionY($this->toInt($zoneY));
+            $entry->setTypeTir($this->classifyShot($zoneX, $zoneY));
+
+            if (!$dryRun) {
+                $this->em->persist($entry);
+            }
+            $count++;
+        }
+
+        if (!$dryRun) {
+            $this->em->flush();
+        }
+
+        if ($warnings) {
+            $this->logger->info(
+                'Tirs sans correspondance joueuse MABB (probablement équipe adverse)',
+                ['non_matchees' => array_unique($warnings), 'rencontre_id' => $rencontre->getId()]
+            );
+        }
+
+        $this->logger->info('FfbbPositionTirParser V2 terminé', [
             'rencontre_id' => $rencontre->getId(),
-            'tirs_extraits' => $count,
+            'tirs_inseres' => $count,
+            'dry_run' => $dryRun,
         ]);
 
         return $count;
     }
 
-    /**
-     * Extrait les paires (nom joueuse, nb tirs) du texte PDF.
-     *
-     * V1 : très approximatif. Tente de matcher des sections du type :
-     *   "MILAPIE R."  ou  "LEFEVRE Jody"
-     * suivies de chiffres dans la même zone.
-     *
-     * Pour avoir une extraction PARFAITE → V2 avec OCR + analyse visuelle.
-     *
-     * @return array<int, array{nom: string, nb_tirs: int, type?: string}>
-     */
-    private function extraireTirsFromText(string $texte): array
+    // ─────────────────────────────────────────────────────────────────────────
+    // Privé
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private function resolvePdfPath(Rencontre $rencontre): ?string
     {
-        $result = [];
-        $rows = preg_split('/\r\n|\r|\n/', $texte) ?: [];
+        $rel = $rencontre->getPositionsTirsPath();
+        if ($rel === null) {
+            return null;
+        }
+        $abs = rtrim($this->projectDir, '/') . '/public/' . ltrim($rel, '/');
+        if (!is_file($abs)) {
+            $this->logger->warning('Positiontir PDF introuvable', ['path' => $abs]);
+            return null;
+        }
+        return $abs;
+    }
 
-        foreach ($rows as $row) {
-            $row = trim($row);
-            if ($row === '') continue;
+    /**
+     * Appelle le script Python et retourne le tableau de tirs décodés.
+     * Retourne null si Python n'est pas disponible ou si le script échoue.
+     *
+     * @return array<int,array{nom:string,prenom_initial:string,norm_x:float,norm_y:float}>|null
+     */
+    private function callPythonParser(string $pdfPath): ?array
+    {
+        $scriptPath = rtrim($this->projectDir, '/') . '/' . self::PYTHON_SCRIPT;
+        if (!is_file($scriptPath)) {
+            $this->logger->error('Script Python introuvable', ['path' => $scriptPath]);
+            return null;
+        }
 
-            // Pattern : NOM Prénom (avec ou sans N°) suivi d'un compteur
-            // Très tolérant car FFBB varie le format
-            if (preg_match('/([A-ZÀ-Ÿ]{2,}[a-zà-ÿ\-\'\s]*[A-Za-zà-ÿ\.]+)\s*[\(\)]?\d*[\)\s]+.*?(\d+)\s*tir/iu', $row, $m)) {
-                $nom = trim($m[1]);
-                $nbTirs = (int) $m[2];
-                if ($nbTirs > 0 && $nbTirs <= 30 && strlen($nom) > 2) {
-                    $result[] = ['nom' => $nom, 'nb_tirs' => $nbTirs];
+        // Chercher python3 dans les emplacements classiques
+        $python = $this->findPython();
+        if ($python === null) {
+            return null;
+        }
+
+        $cmd = sprintf(
+            '%s %s %s 2>/dev/null',
+            escapeshellarg($python),
+            escapeshellarg($scriptPath),
+            escapeshellarg($pdfPath)
+        );
+
+        $output = shell_exec($cmd);
+        if ($output === null || $output === '') {
+            $this->logger->error('Script Python: aucune sortie', ['cmd' => $cmd]);
+            return null;
+        }
+
+        $data = json_decode($output, true);
+        if (!is_array($data)) {
+            $this->logger->error('Script Python: JSON invalide', ['raw' => substr($output, 0, 200)]);
+            return null;
+        }
+
+        return $data;
+    }
+
+    private function findPython(): ?string
+    {
+        foreach (['/usr/bin/python3', '/usr/local/bin/python3', 'python3', 'python'] as $candidate) {
+            $check = shell_exec(sprintf('%s --version 2>/dev/null', escapeshellarg($candidate)));
+            if ($check !== null && str_starts_with($check, 'Python 3')) {
+                return $candidate;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Matche le nom OCR (ex: "LEFEVRE", "J") contre les joueuses du roster.
+     * Stratégie : NOM exact (insensible casse + diacritiques) + initiale prénom.
+     * Fallback Levenshtein sur NOM seul si pas de match exact.
+     *
+     * @param Joueur[] $joueurs
+     */
+    private function matchJoueur(string $nomOcr, string $prenomInit, array $joueurs): ?Joueur
+    {
+        if ($nomOcr === '' || $nomOcr === 'INCONNU') {
+            return null;
+        }
+
+        $nomOcrNorm = $this->norm($nomOcr);
+        $prenomInitNorm = strtolower(trim($prenomInit));
+
+        // Passe 1 : NOM exact + initiale prénom
+        foreach ($joueurs as $j) {
+            if ($this->norm($j->getNom()) === $nomOcrNorm) {
+                if ($prenomInitNorm === '' || strtolower(substr($j->getPrenom() ?? '', 0, 1)) === $prenomInitNorm) {
+                    return $j;
                 }
             }
         }
 
-        return $result;
-    }
-
-    /** @param \App\Entity\Sport\Joueur[] $joueurs */
-    private function matchJoueurParNom(string $nomPdf, array $joueurs): ?\App\Entity\Sport\Joueur
-    {
-        $nomPdfNorm = $this->normaliser($nomPdf);
-        $bestMatch = null;
-        $bestScore = PHP_INT_MAX;
-
-        foreach ($joueurs as $j) {
-            $nomJoueur = $this->normaliser($j->getNom() . ' ' . $j->getPrenom());
-            $distance = levenshtein($nomPdfNorm, $nomJoueur);
-            if ($distance < $bestScore && $distance <= 3) {
-                $bestScore = $distance;
-                $bestMatch = $j;
+        // Passe 2 : NOM exact sans vérif initiale UNIQUEMENT si prenomInit inconnu (vide/?)
+        // → évite LEFEVRE A. (adverse) de matcher LEFEVRE J. (MABB)
+        if ($prenomInitNorm === '') {
+            foreach ($joueurs as $j) {
+                if ($this->norm($j->getNom()) === $nomOcrNorm) {
+                    return $j;
+                }
             }
         }
-        return $bestMatch;
+
+        // Passe 3 : Levenshtein ≤ 2 sur NOM (fautes OCR légères)
+        // Si prenomInit est connu, il doit correspondre pour éviter les faux positifs.
+        $best = null;
+        $bestDist = PHP_INT_MAX;
+        foreach ($joueurs as $j) {
+            $d = levenshtein($nomOcrNorm, $this->norm($j->getNom()));
+            if ($d < $bestDist && $d <= 2) {
+                // Vérifier l'initiale si elle est connue
+                if ($prenomInitNorm !== ''
+                    && strtolower(substr($j->getPrenom() ?? '', 0, 1)) !== $prenomInitNorm) {
+                    continue;
+                }
+                $bestDist = $d;
+                $best = $j;
+            }
+        }
+
+        return $best;
     }
 
-    private function normaliser(string $s): string
+    /**
+     * Classifie le tir selon les coordonnées ZONE (mêmes que autoDetectType en JS).
+     *
+     * Panier à x=0.04, y=0.5 (identique au repère du SVG shot chart).
+     * Rayon arc 3pts ≈ 0.27 dans ce repère normalisé.
+     */
+    private function classifyShot(float $zoneX, float $zoneY): string
+    {
+        $px   = $zoneX - 0.04;
+        $py   = $zoneY - 0.50;
+        $dist = sqrt($px * $px + $py * $py);
+
+        if ($dist < 0.08) return TirFfbb::TYPE_2PT_INT;  // raquette / lay-up
+        if ($dist > 0.27) return TirFfbb::TYPE_3PT;      // derrière l'arc
+        return TirFfbb::TYPE_2PT_EXT;
+    }
+
+    /** Convertit 0.0–1.0 en entier 0–100 pour stockage smallint. */
+    private function toInt(?float $v): ?int
+    {
+        if ($v === null) {
+            return null;
+        }
+        return (int) round(max(0.0, min(1.0, $v)) * 100);
+    }
+
+    private function norm(string $s): string
     {
         $s = strtolower(trim($s));
-        $s = strtr($s, ['é' => 'e', 'è' => 'e', 'ê' => 'e', 'à' => 'a', 'â' => 'a', 'î' => 'i', 'ô' => 'o', 'û' => 'u', 'ç' => 'c']);
-        return preg_replace('/\s+/', ' ', $s);
+        return strtr($s, [
+            'é' => 'e', 'è' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'à' => 'a', 'â' => 'a', 'ä' => 'a',
+            'î' => 'i', 'ï' => 'i',
+            'ô' => 'o', 'ö' => 'o',
+            'û' => 'u', 'ü' => 'u', 'ù' => 'u',
+            'ç' => 'c',
+        ]);
     }
 }
