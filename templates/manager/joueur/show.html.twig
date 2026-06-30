@@ -233,128 +233,166 @@
            Performances Éval FIBA — affiché uniquement si au moins 1 éval saisie.
            Sinon la section reste cachée pour éviter l'effet "page vide".
            VISIBLE STAFF + SELF UNIQUEMENT (RGPD).
+
+           Multi-équipes : si la joueuse joue dans 2+ équipes, un dropdown
+           permet de basculer entre "Toutes équipes" et chaque équipe séparément.
+           Le filtrage est côté serveur (données pré-calculées), l'affichage
+           est géré en JS pur (show/hide des divs) sans rechargement de page.
            ======================================================== #}
+
+        {# Macros réutilisables : tuiles de stats + tableau des derniers matchs.
+           Appelées pour la vue globale ET pour chaque vue par équipe.
+           path() EST disponible dans les macros Twig (c'est une fonction enregistrée
+           via TwigExtension, pas une variable globale — donc pas de problème de scope). #}
+        {% macro perfTuiles(perf) %}
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
+                {% set evalMoy = perf.eval_moyenne %}
+                {% set evalColor = evalMoy is not null
+                    ? (evalMoy >= 15 ? '#16a34a' : (evalMoy >= 5 ? '#f59e0b' : (evalMoy >= 0 ? '#64748b' : '#dc2626')))
+                    : '#94a3b8' %}
+                <div style="background:{{ evalColor }}11; border:1px solid {{ evalColor }}33; padding:14px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:800; color:{{ evalColor }};">{{ evalMoy ?? '—' }}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Eval moy. FIBA</div>
+                </div>
+                <div style="background:#fff7ed; padding:14px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-orange);">{{ perf.points_moyenne ?? '—' }}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Pts / match</div>
+                </div>
+                <div style="background:#eff6ff; padding:14px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:800; color:#0369a1;">{{ perf.rebonds_moyenne ?? '—' }}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Rebonds / match</div>
+                </div>
+                <div style="background:#f0fdf4; padding:14px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:800; color:#15803d;">{{ perf.passes_moyenne ?? '—' }}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Passes déc.</div>
+                </div>
+                <div style="background:#fef3c7; padding:14px; border-radius:10px; text-align:center;">
+                    <div style="font-size:1.8rem; font-weight:800; color:#92400e;">
+                        {% if perf.pourcentage_tirs is not null %}{{ perf.pourcentage_tirs }}<small style="font-size:1rem;">%</small>{% else %}—{% endif %}
+                    </div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">% tirs réussis</div>
+                </div>
+                <div style="background:#fdf4ff; padding:14px; border-radius:10px; text-align:center; border:1px dashed #d8b4fe;">
+                    <div style="font-size:1.8rem; font-weight:800; color:#7c3aed;">{{ perf.meilleure_eval ?? '—' }}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Meilleure éval</div>
+                </div>
+                {% if perf.nb_matchs_dominants > 0 %}
+                    <div style="background:#dcfce7; padding:14px; border-radius:10px; text-align:center;">
+                        <div style="font-size:1.8rem; font-weight:800; color:#15803d;">
+                            {{ perf.nb_matchs_dominants }}<small style="font-size:1rem; color:var(--mabb-muted);">/{{ perf.nb_matchs }}</small>
+                        </div>
+                        <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">🏆 Matchs dominants</div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endmacro %}
+
+        {% macro perfTableau(evals) %}
+            {% if evals|length > 0 %}
+            <h4 style="margin:20px 0 10px; color:var(--mabb-dark); font-size:1rem;">
+                <i class="bi bi-clock-history"></i> Derniers matchs évalués
+            </h4>
+            <div style="overflow-x:auto;">
+                <table class="table-mabb" style="width:100%; font-size:.85rem;">
+                    <thead>
+                        <tr>
+                            <th>Date</th><th>Adversaire</th>
+                            <th style="text-align:center;">Min</th>
+                            <th style="text-align:center;">Pts</th>
+                            <th style="text-align:center;">Reb</th>
+                            <th style="text-align:center;">PD</th>
+                            <th style="text-align:center;">% Tirs</th>
+                            <th style="text-align:center; background:rgba(252,112,42,.1);">EVAL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ev in evals %}
+                            {% set r = ev.rencontre %}
+                            {% set sc = ev.eval %}
+                            {% set cl = sc >= 15 ? '#16a34a' : (sc >= 5 ? '#f59e0b' : (sc >= 0 ? '#64748b' : '#dc2626')) %}
+                            <tr>
+                                <td style="font-size:.78rem; white-space:nowrap;">
+                                    <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none;">
+                                        {{ r.date|date('d/m/Y') }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none; font-weight:600;">
+                                        {{ r.adversaire }}
+                                        {% if not r.domicile %}<small style="color:var(--mabb-muted);">(ext.)</small>{% endif %}
+                                    </a>
+                                    {% if ev.isStarter %}<span title="Titulaire" style="color:var(--mabb-orange);">⭐</span>{% endif %}
+                                </td>
+                                <td style="text-align:center;">{{ ev.minutesJouees }}</td>
+                                <td style="text-align:center; font-weight:600;">{{ ev.points }}</td>
+                                <td style="text-align:center;">{{ ev.rebonds }}</td>
+                                <td style="text-align:center;">{{ ev.passesDecisives }}</td>
+                                <td style="text-align:center;">
+                                    {% if ev.pourcentageTirs is not null %}{{ ev.pourcentageTirs }}%{% else %}—{% endif %}
+                                </td>
+                                <td style="text-align:center; font-weight:800; color:{{ cl }}; background:{{ cl }}0d;">{{ sc }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        {% endmacro %}
+
         {% if can_see_full_stats and performances_saison.nb_matchs > 0 %}
         <div class="col-12">
             <div class="card-mabb">
-                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                {# === En-tête avec dropdown multi-équipes si besoin === #}
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                     <span><i class="bi bi-graph-up-arrow" style="color:var(--mabb-blue);"></i> Performances Éval — Saison {{ gamification.saison }}</span>
-                    <small style="color:var(--mabb-muted); font-weight:500;">
-                        {{ performances_saison.nb_matchs }} match{{ performances_saison.nb_matchs > 1 ? 's' : '' }} évalué{{ performances_saison.nb_matchs > 1 ? 's' : '' }}
-                    </small>
+
+                    {% if performances_par_equipe|length > 1 %}
+                        {# Dropdown équipe — affiche les équipes ayant au moins 1 eval #}
+                        <select id="perf-equipe-select"
+                                onchange="switchPerfEquipe(this.value)"
+                                style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:20px;
+                                       color:var(--mabb-dark); padding:5px 28px 5px 12px; font-size:.8rem;
+                                       font-weight:600; cursor:pointer; appearance:none; -webkit-appearance:none;">
+                            <option value="all">🏀 Toutes équipes ({{ performances_saison.nb_matchs }} matchs)</option>
+                            {% for idx, item in performances_par_equipe %}
+                                {% if item.performances.nb_matchs > 0 %}
+                                    <option value="{{ idx }}">{{ item.equipe.nom }} ({{ item.performances.nb_matchs }} matchs)</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <small style="color:var(--mabb-muted); font-weight:500;">
+                            {{ performances_saison.nb_matchs }} match{{ performances_saison.nb_matchs > 1 ? 's' : '' }} évalué{{ performances_saison.nb_matchs > 1 ? 's' : '' }}
+                        </small>
+                    {% endif %}
                 </div>
+
                 <div class="card-body">
-                    {# === Tuiles de moyennes ===
-                       Grille auto-fit : 1 tuile sur mobile, 4-6 sur desktop selon largeur.
-                       Toujours la même hauteur grâce à display:flex column. #}
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:24px;">
-                        {# Eval moyenne — couleur conditionnelle (le KPI signature) #}
-                        {% set evalMoy = performances_saison.eval_moyenne %}
-                        {% set evalColor = evalMoy >= 15 ? '#16a34a' : (evalMoy >= 5 ? '#f59e0b' : (evalMoy >= 0 ? '#64748b' : '#dc2626')) %}
-                        <div style="background:{{ evalColor }}11; border:1px solid {{ evalColor }}33; padding:14px; border-radius:10px; text-align:center;">
-                            <div style="font-size:1.8rem; font-weight:800; color:{{ evalColor }};">{{ evalMoy }}</div>
-                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Eval moy. FIBA</div>
-                        </div>
-
-                        <div style="background:#fff7ed; padding:14px; border-radius:10px; text-align:center;">
-                            <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-orange);">{{ performances_saison.points_moyenne }}</div>
-                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Pts / match</div>
-                        </div>
-
-                        <div style="background:#eff6ff; padding:14px; border-radius:10px; text-align:center;">
-                            <div style="font-size:1.8rem; font-weight:800; color:#0369a1;">{{ performances_saison.rebonds_moyenne }}</div>
-                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Rebonds / match</div>
-                        </div>
-
-                        <div style="background:#f0fdf4; padding:14px; border-radius:10px; text-align:center;">
-                            <div style="font-size:1.8rem; font-weight:800; color:#15803d;">{{ performances_saison.passes_moyenne }}</div>
-                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Passes déc.</div>
-                        </div>
-
-                        <div style="background:#fef3c7; padding:14px; border-radius:10px; text-align:center;">
-                            <div style="font-size:1.8rem; font-weight:800; color:#92400e;">
-                                {% if performances_saison.pourcentage_tirs is not null %}
-                                    {{ performances_saison.pourcentage_tirs }}<small style="font-size:1rem;">%</small>
-                                {% else %}—{% endif %}
-                            </div>
-                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">% tirs réussis</div>
-                        </div>
-
-                        {# Mises en valeur : meilleure eval + matchs dominants #}
-                        <div style="background:#fdf4ff; padding:14px; border-radius:10px; text-align:center; border:1px dashed #d8b4fe;">
-                            <div style="font-size:1.8rem; font-weight:800; color:#7c3aed;">{{ performances_saison.meilleure_eval }}</div>
-                            <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Meilleure éval</div>
-                        </div>
-
-                        {% if performances_saison.nb_matchs_dominants > 0 %}
-                            <div style="background:#dcfce7; padding:14px; border-radius:10px; text-align:center;">
-                                <div style="font-size:1.8rem; font-weight:800; color:#15803d;">
-                                    {{ performances_saison.nb_matchs_dominants }}<small style="font-size:1rem; color:var(--mabb-muted);">/{{ performances_saison.nb_matchs }}</small>
-                                </div>
-                                <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">🏆 Matchs dominants</div>
-                            </div>
-                        {% endif %}
+                    {# === Vue "Toutes équipes" (toujours visible par défaut) === #}
+                    <div id="perf-view-all">
+                        {{ _self.perfTuiles(performances_saison) }}
+                        {{ _self.perfTableau(evaluations_recentes) }}
                     </div>
 
-                    {# === Tableau des 5 derniers matchs ===
-                       Affichage compact avec eval colorée et stats clés. #}
-                    {% if evaluations_recentes|length > 0 %}
-                        <h4 style="margin:24px 0 12px; color:var(--mabb-dark); font-size:1rem;">
-                            <i class="bi bi-clock-history"></i> Derniers matchs évalués
-                        </h4>
-                        <div style="overflow-x:auto;">
-                            <table class="table-mabb" style="width:100%; font-size:.85rem;">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Adversaire</th>
-                                        <th style="text-align:center;">Min</th>
-                                        <th style="text-align:center;">Pts</th>
-                                        <th style="text-align:center;">Reb</th>
-                                        <th style="text-align:center;">PD</th>
-                                        <th style="text-align:center;">% Tirs</th>
-                                        <th style="text-align:center; background:rgba(252,112,42,.1);">EVAL</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for ev in evaluations_recentes %}
-                                        {% set r = ev.rencontre %}
-                                        {% set evalScore = ev.eval %}
-                                        {% set evalColor = evalScore >= 15 ? '#16a34a' : (evalScore >= 5 ? '#f59e0b' : (evalScore >= 0 ? '#64748b' : '#dc2626')) %}
-                                        <tr>
-                                            <td style="font-size:.78rem;">
-                                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none;">
-                                                    {{ r.date|date('d/m/Y') }}
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none; font-weight:600;">
-                                                    {{ r.adversaire }}
-                                                    {% if not r.domicile %}<small style="color:var(--mabb-muted);">(ext.)</small>{% endif %}
-                                                </a>
-                                                {% if ev.isStarter %}<span title="Titulaire" style="color:var(--mabb-orange);">⭐</span>{% endif %}
-                                            </td>
-                                            <td style="text-align:center;">{{ ev.minutesJouees }}</td>
-                                            <td style="text-align:center; font-weight:600;">{{ ev.points }}</td>
-                                            <td style="text-align:center;">{{ ev.rebonds }}</td>
-                                            <td style="text-align:center;">{{ ev.passesDecisives }}</td>
-                                            <td style="text-align:center;">
-                                                {% if ev.pourcentageTirs is not null %}
-                                                    {{ ev.pourcentageTirs }}%
-                                                {% else %}—{% endif %}
-                                            </td>
-                                            <td style="text-align:center; font-weight:800; color:{{ evalColor }}; background:{{ evalColor }}0d;">
-                                                {{ evalScore }}
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                    {# === Vues par équipe (cachées, activées par le dropdown) === #}
+                    {% if performances_par_equipe|length > 1 %}
+                        {% for idx, item in performances_par_equipe %}
+                            {% if item.performances.nb_matchs > 0 %}
+                            <div id="perf-view-{{ idx }}" style="display:none;">
+                                <div style="margin-bottom:12px; padding:6px 12px; background:rgba(0,98,168,.07);
+                                            border-left:3px solid var(--mabb-blue); border-radius:0 6px 6px 0;
+                                            font-size:.8rem; font-weight:600; color:var(--mabb-blue);">
+                                    <i class="bi bi-shield-fill"></i> {{ item.equipe.nom }}
+                                    — {{ item.performances.nb_matchs }} match{{ item.performances.nb_matchs > 1 ? 's' : '' }}
+                                </div>
+                                {{ _self.perfTuiles(item.performances) }}
+                                {{ _self.perfTableau(item.evaluations_recentes) }}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
                     {% endif %}
 
-                    {# === Message pédagogique anti-réductionnisme ===
-                       Rappel volontaire que l'eval n'est pas LA vérité — c'est UN indicateur. #}
+                    {# === Message pédagogique (toujours visible) === #}
                     <p style="margin:16px 0 0; padding:12px 14px; background:#fef9e7; border-left:3px solid #f59e0b; font-size:.78rem; color:#78350f; border-radius:0 6px 6px 0;">
                         <i class="bi bi-lightbulb"></i>
                         <strong>L'éval ne fait pas tout.</strong> Une joueuse peut avoir une éval faible
@@ -364,6 +402,20 @@
                 </div>
             </div>
         </div>
+
+        {% if performances_par_equipe|length > 1 %}
+        <script>
+        function switchPerfEquipe(val) {
+            // Cache toutes les vues
+            document.querySelectorAll('[id^="perf-view-"]').forEach(function(el) {
+                el.style.display = 'none';
+            });
+            // Affiche la vue sélectionnée
+            var target = document.getElementById('perf-view-' + val);
+            if (target) target.style.display = '';
+        }
+        </script>
+        {% endif %}
         {% endif %}
 
         {# ========================================================
@@ -480,7 +532,8 @@
            ======================================================== #}
         {% include 'manager/_partials/bloc_bilan_profil.html.twig' with {
             joueur: joueur,
-            is_self: joueur.user is not null and app.user is not null and joueur.user.id == app.user.id
+            is_self: joueur.user is not null and app.user is not null and joueur.user.id == app.user.id,
+            bilan_recent: bilan_recent
         } only %}
 
         {# ========================================================

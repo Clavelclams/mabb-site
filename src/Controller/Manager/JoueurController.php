@@ -145,6 +145,7 @@ class JoueurController extends AbstractController
         \App\Repository\Sport\CotisationJoueurRepository $cotisationRepository,
         \App\Repository\Sport\JoueurRepository $joueurRepository,
         \App\Repository\Sport\ParentJoueurRepository $parentJoueurRepository,
+        \App\Repository\Sport\BilanCompetenceRepository $bilanRepo,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $joueur);
 
@@ -227,8 +228,49 @@ class JoueurController extends AbstractController
         // 1 service injecté pour calcul des moyennes (agrégation centralisée),
         // 1 repository pour la liste des derniers matchs (data access pur).
         // Séparation Service/Repository assumée : moy = logique métier, list = data.
+        //
+        // Agrégat global (toutes équipes confondues) — toujours calculé.
         $performancesSaison    = $evaluationCalculator->moyennesSaison($joueur, $saison);
         $evaluationsRecentes   = $evaluationMatchRepository->evaluationsRecentes($joueur, 5);
+
+        // ====================================================================
+        // Perfs multi-équipes : si la joueuse joue dans 2+ équipes, on calcule
+        // les stats PAR équipe pour le dropdown de filtre dans le template.
+        // Équipe principale + affectations actives (surclassement, réserve, etc.)
+        // ====================================================================
+        $toutesEquipesJoueur = [];
+        if ($joueur->getEquipe() !== null) {
+            $toutesEquipesJoueur[] = $joueur->getEquipe();
+        }
+        foreach ($joueur->getAffectations() as $aff) {
+            if ($aff->isActif() && $aff->getEquipe() !== null) {
+                // Dédup au cas où la même équipe serait déjà présente
+                $dejaPresente = false;
+                foreach ($toutesEquipesJoueur as $e) {
+                    if ($e->getId() === $aff->getEquipe()->getId()) {
+                        $dejaPresente = true;
+                        break;
+                    }
+                }
+                if (!$dejaPresente) {
+                    $toutesEquipesJoueur[] = $aff->getEquipe();
+                }
+            }
+        }
+        // Ne construire le tableau par-équipe que si vraiment multi-équipes
+        // (inutile de multiplier les requêtes pour un cas mono-équipe normal)
+        $performancesParEquipe = [];
+        if (count($toutesEquipesJoueur) > 1) {
+            foreach ($toutesEquipesJoueur as $equipeItem) {
+                $perfEquipe  = $evaluationCalculator->moyennesSaison($joueur, $saison, $equipeItem);
+                $evalsEquipe = $evaluationMatchRepository->evaluationsRecentes($joueur, 5, $equipeItem);
+                $performancesParEquipe[] = [
+                    'equipe'                => $equipeItem,
+                    'performances'          => $perfEquipe,
+                    'evaluations_recentes'  => $evalsEquipe,
+                ];
+            }
+        }
 
         // ====================================================================
         // V1.6.1 — Affectations multi-équipes (surclassement / doublage / réserve)
@@ -276,8 +318,9 @@ class JoueurController extends AbstractController
                 'saison'       => $saison,
                 'catalog'      => \App\Gamification\BadgeCatalog::all(),
             ],
-            'performances_saison' => $performancesSaison,
-            'evaluations_recentes' => $evaluationsRecentes,
+            'performances_saison'      => $performancesSaison,
+            'evaluations_recentes'     => $evaluationsRecentes,
+            'performances_par_equipe'  => $performancesParEquipe,
             // D.3.2 — Section "Ma cotisation" sur la fiche
             'cotisation_courante' => $cotisationCourante,
             'is_self'             => $isSelf,
@@ -291,6 +334,8 @@ class JoueurController extends AbstractController
             'type_labels'                   => JoueurEquipe::TYPE_LABELS,
             'type_couleurs'                 => JoueurEquipe::TYPE_COULEURS,
             'saison_courante'               => $saison,
+            // Bilan le plus récent (toutes saisons, tous statuts) — pour le bloc bilan profil
+            'bilan_recent'                  => $bilanRepo->findByJoueur($joueur)[0] ?? null,
             // Liens Parents — tous les ParentJoueur de cette joueuse (actifs + pending)
             'parent_joueurs'                => $parentJoueurRepository->findByJoueur($joueur),
         ]);

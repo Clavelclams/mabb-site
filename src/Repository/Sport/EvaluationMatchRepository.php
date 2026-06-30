@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository\Sport;
 
+use App\Entity\Sport\Equipe;
 use App\Entity\Sport\EvaluationMatch;
 use App\Entity\Sport\Joueur;
 use App\Entity\Sport\Rencontre;
@@ -50,25 +51,31 @@ class EvaluationMatchRepository extends ServiceEntityRepository
     }
 
     /**
-     * Toutes les évals d'une saison pour un joueur, ordonnées par date décroissante
-     * (dernière rencontre en premier).
+     * Toutes les évals d'une saison pour un joueur, ordonnées par date décroissante.
      *
+     * @param Equipe|null $equipe  Si fourni, filtre sur les rencontres de cette équipe
+     *                             uniquement. Utile pour les joueuses multi-équipes.
      * @return EvaluationMatch[]
      */
-    public function evaluationsSaison(Joueur $joueur, string $saison): array
+    public function evaluationsSaison(Joueur $joueur, string $saison, ?Equipe $equipe = null): array
     {
         [$dateDebut, $dateFin] = self::saisonBounds($saison);
 
-        return $this->createQueryBuilder('e')
+        $qb = $this->createQueryBuilder('e')
             ->join('e.rencontre', 'r')
             ->where('e.joueur = :joueur')
             ->andWhere('r.date BETWEEN :debut AND :fin')
             ->setParameter('joueur', $joueur)
             ->setParameter('debut', $dateDebut)
             ->setParameter('fin', $dateFin)
-            ->orderBy('r.date', 'DESC')
-            ->getQuery()
-            ->getResult();
+            ->orderBy('r.date', 'DESC');
+
+        if ($equipe !== null) {
+            $qb->andWhere('r.equipe = :equipe')
+               ->setParameter('equipe', $equipe);
+        }
+
+        return $qb->getQuery()->getResult();
     }
 
     /**
@@ -76,18 +83,24 @@ class EvaluationMatchRepository extends ServiceEntityRepository
      *
      * Utilisée sur la fiche joueuse pour afficher un tableau "5 derniers matchs".
      *
+     * @param Equipe|null $equipe  Si fourni, filtre sur les rencontres de cette équipe.
      * @return EvaluationMatch[]
      */
-    public function evaluationsRecentes(Joueur $joueur, int $limit = 5): array
+    public function evaluationsRecentes(Joueur $joueur, int $limit = 5, ?Equipe $equipe = null): array
     {
-        return $this->createQueryBuilder('e')
+        $qb = $this->createQueryBuilder('e')
             ->join('e.rencontre', 'r')
             ->where('e.joueur = :joueur')
             ->setParameter('joueur', $joueur)
             ->orderBy('r.date', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+
+        if ($equipe !== null) {
+            $qb->andWhere('r.equipe = :equipe')
+               ->setParameter('equipe', $equipe);
+        }
+
+        return $qb->getQuery()->getResult();
     }
 
     /**

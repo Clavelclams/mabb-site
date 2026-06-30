@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use App\Entity\Sport\Equipe;
 use App\Entity\Sport\EvaluationMatch;
 use App\Entity\Sport\Joueur;
 use App\Repository\Sport\EvaluationMatchRepository;
@@ -40,6 +41,8 @@ final class EvaluationCalculator
      * Retourne null pour chaque stat si aucun match joué (= évite "NaN", "0.0", etc.).
      * Le caller (Twig) peut afficher "—" propre.
      *
+     * @param Equipe|null $equipe  Si fourni, filtre sur les rencontres de cette équipe.
+     *                             Utile pour les joueuses multi-équipes.
      * @return array{
      *     nb_matchs: int,
      *     eval_moyenne: float|null,
@@ -54,9 +57,9 @@ final class EvaluationCalculator
      *     meilleure_eval: int|null,
      * }
      */
-    public function moyennesSaison(Joueur $joueur, string $saison): array
+    public function moyennesSaison(Joueur $joueur, string $saison, ?Equipe $equipe = null): array
     {
-        $evals = $this->evaluationMatchRepository->evaluationsSaison($joueur, $saison);
+        $evals = $this->evaluationMatchRepository->evaluationsSaison($joueur, $saison, $equipe);
         return $this->agreger($evals);
     }
 
@@ -65,10 +68,12 @@ final class EvaluationCalculator
      *
      * Utile pour "forme du moment" — un coach veut savoir comment la joueuse
      * tourne sur ses 5 derniers matchs, pas sur toute la saison.
+     *
+     * @param Equipe|null $equipe  Si fourni, filtre sur les rencontres de cette équipe.
      */
-    public function moyennesRecentes(Joueur $joueur, int $limit = 5): array
+    public function moyennesRecentes(Joueur $joueur, int $limit = 5, ?Equipe $equipe = null): array
     {
-        $evals = $this->evaluationMatchRepository->evaluationsRecentes($joueur, $limit);
+        $evals = $this->evaluationMatchRepository->evaluationsRecentes($joueur, $limit, $equipe);
         return $this->agreger($evals);
     }
 
