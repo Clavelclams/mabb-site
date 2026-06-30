@@ -25,20 +25,24 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  *      positiontir_xxxxx.pdf
  *      resume_xxxxx.pdf
  *
- * Le N° de match est extrait du nom du dossier :
- *   - Format détecté : 0080_PRF_A_{NUM}_...   (compet régulière)
- *   - Format détecté : 0002_BPRF_ALLER_A_{NUM}_... (barrage / coupe)
+ * Formats de dossiers supportés :
+ *   - "0080_PRF_A_12_METROPOLE_..."             → division=PRF,  num=12, leg=null
+ *   - "0002_BPRF_ALLER_A_1_ESC_..."             → division=BPRF, num=1,  leg=ALLER
+ *   - "0002_BPRF_RETOUR_A_1_METROPOLE_..."      → division=BPRF, num=1,  leg=RETOUR
+ *   - "0080_DFU15-P2_A_11_METROPOLE_..."        → division=DFU15-P2, num=11, leg=null
  *
- * Logique :
- *   - Pour chaque sous-dossier, match la Rencontre via numero_match + saison + club
- *   - Copie les 3 PDFs dans public/uploads/rencontres/{id}/{type}.pdf
- *   - Update les champs resumePath / feuilleMatchPath / positionsTirsPath
- *   - Idempotent : skip si déjà présent (sauf --force)
+ * Matching DB : division + numeroMatch + saison + club
+ * Pour BPRF ALLER/RETOUR : disambiguation via domicile (ALLER=extérieur, RETOUR=domicile)
  *
  * Usage :
- *   php bin/console app:import-pdfs-ffbb --dir="C:/.../rencontre senior" --saison=2025-2026
- *   php bin/console app:import-pdfs-ffbb --dir=... --dry-run
- *   php bin/console app:import-pdfs-ffbb --dir=... --force
+ *   # Dry-run pour vérifier avant de lancer
+ *   php bin/console app:import-pdfs-ffbb --dir="~/ressource/rencontre senior" --saison=2025-2026 --dry-run
+ *
+ *   # Import réel
+ *   php bin/console app:import-pdfs-ffbb --dir="~/ressource/rencontre senior" --saison=2025-2026
+ *
+ *   # Forcer l'écrasement de PDFs déjà présents
+ *   php bin/console app:import-pdfs-ffbb --dir="~/ressource/rencontre u15b" --saison=2025-2026 --force
  */
 #[AsCommand(
     name: 'app:import-pdfs-ffbb',
@@ -61,7 +65,7 @@ class ImportPdfsFfbbCommand extends Command
             ->addOption('dir',        null, InputOption::VALUE_REQUIRED, 'Dossier ressource contenant les sous-dossiers par match')
             ->addOption('club-slug',  null, InputOption::VALUE_OPTIONAL, 'Slug du club cible', 'mabb')
             ->addOption('saison',     null, InputOption::VALUE_OPTIONAL, 'Saison cible', '2025-2026')
-            ->addOption('dry-run',    null, InputOption::VALUE_NONE,     'Affiche sans copier')
+            ->addOption('dry-run',    null, InputOption::VALUE_NONE,     'Affiche sans copier ni modifier la BDD')
             ->addOption('force',      null, InputOption::VALUE_NONE,     'Écrase les PDFs déjà présents');
     }
 
@@ -91,7 +95,7 @@ class ImportPdfsFfbbCommand extends Command
             mkdir($uploadRoot, 0775, true);
         }
 
-        $stats = ['matched' => 0, 'no_match' => 0, 'copied' => 0, 'skipped' => 0, 'errors' => 0];
+        $stats  = ['matched' => 0, 'no_match' => 0, 'copied' => 0, 'skipped' => 0, 'errors' => 0];
         $rapport = [];
 
         // === Scan des sous-dossiers ===
@@ -110,28 +114,26 @@ class ImportPdfsFfbbCommand extends Command
                 continue;
             }
 
-            // Extract numéro match
-            $numMatch = $this->extractNumeroMatch($entry);
-            if ($numMatch === null) {
-                $io->note("Skip dossier (pas de n° détecté) : {$entry}");
+            // --- Parse le nom du dossier FFBB ---
+            $parsed = $this->parseFolderName($entry);
+            if ($parsed === null) {
+                $io->note("Skip dossier (format non reconnu) : {$entry}");
                 continue;
             }
 
-            // Recherche Rencontre
-            $rencontre = $this->rencontreRepo->findOneBy([
-                'club'        => $club,
-                'numeroMatch' => $numMatch,
-                'saison'      => $saison,
-            ]);
+            ['division' => $division, 'numMatch' => $numMatch, 'leg' => $leg] = $parsed;
+
+            // --- Matching Rencontre en BDD ---
+            $rencontre = $this->findRencontre($club, $division, $numMatch, $saison, $leg);
 
             if ($rencontre === null) {
                 $stats['no_match']++;
-                $rapport[] = ['NO MATCH', "N° $numMatch — dossier : $entry"];
+                $rapport[] = ['NO MATCH', "Division={$division} N°{$numMatch}" . ($leg ? " leg={$leg}" : '') . " — dossier : $entry"];
                 continue;
             }
             $stats['matched']++;
 
-            // Cherche les 3 PDFs
+            // --- Copie des 3 PDFs ---
             $pdfs = [
                 'feuille'   => $this->findPdf($sub, 'feuillematch'),
                 'positions' => $this->findPdf($sub, 'positiontir'),
@@ -145,32 +147,33 @@ class ImportPdfsFfbbCommand extends Command
 
             foreach ($pdfs as $type => $sourcePath) {
                 if ($sourcePath === null) {
-                    $rapport[] = ['MISSING', "N° $numMatch : pas de PDF '$type'"];
+                    $rapport[] = ['MISSING', "Division={$division} N°{$numMatch} : pas de PDF '{$type}'"];
                     continue;
                 }
 
-                // Path relative pour stockage en BDD
-                $relativePath = sprintf('uploads/rencontres/%d/%s.pdf', $rencontre->getId(), $type);
+                // Chemin relatif pour stockage BDD (convention "case 2" dans RencontrePdfUploader)
+                $relativePath   = sprintf('uploads/rencontres/%d/%s.pdf', $rencontre->getId(), $type);
                 $absoluteTarget = $uploadRoot . '/' . $rencontre->getId() . '/' . $type . '.pdf';
 
                 // Skip si déjà uploadé et pas --force
                 $existingPath = $rencontre->getPdfPath($type);
                 if ($existingPath !== null && file_exists($this->projectDir . '/public/' . $existingPath) && !$force) {
                     $stats['skipped']++;
-                    $rapport[] = ['SKIP', "N° $numMatch '$type' déjà uploadé (utilise --force pour écraser)"];
+                    $rapport[] = ['SKIP', "Division={$division} N°{$numMatch} '{$type}' déjà présent (--force pour écraser)"];
                     continue;
                 }
 
                 if (!$dryRun) {
                     if (!copy($sourcePath, $absoluteTarget)) {
                         $stats['errors']++;
-                        $rapport[] = ['ERROR', "Échec copie N° $numMatch '$type'"];
+                        $rapport[] = ['ERROR', "Échec copie Division={$division} N°{$numMatch} '{$type}'"];
                         continue;
                     }
                     $rencontre->setPdfPath($type, $relativePath);
                 }
+
                 $stats['copied']++;
-                $rapport[] = ['COPY', "N° $numMatch '$type' → {$relativePath}"];
+                $rapport[] = ['COPY', "Division={$division} N°{$numMatch} '{$type}' → {$relativePath}" . ($dryRun ? ' [DRY]' : '')];
             }
         }
 
@@ -193,25 +196,64 @@ class ImportPdfsFfbbCommand extends Command
     }
 
     /**
-     * Extrait le N° de match du nom du dossier FFBB.
+     * Parse le nom d'un dossier FFBB et retourne [division, numMatch, leg].
      *
-     * Formats supportés :
-     *   - "0080_PRF_A_12_METROPOLE_AMIENOISE_BASKETBALL_ESC_LONGUEAU_AMIENS_MSBB-3" → "12"
-     *   - "0002_BPRF_ALLER_A_1_ESC_TERGNIER_METROPOLE_AMIENOISE_BASKETBALL"        → "1"
-     *   - "0002_BPRF_RETOUR_A_1_..."                                                → "1"
+     * Regex : {dept}_{division}_[ALLER|RETOUR_]?A_{num}_
      *
-     * Le format est : {code_compet}_{division}_[ALLER|RETOUR]?_A_{N}_...
+     * Exemples :
+     *   "0080_PRF_A_12_METROPOLE_..."         → division=PRF,      num=12, leg=null
+     *   "0002_BPRF_ALLER_A_1_ESC_..."         → division=BPRF,     num=1,  leg=ALLER
+     *   "0002_BPRF_RETOUR_A_1_METROPOLE_..."  → division=BPRF,     num=1,  leg=RETOUR
+     *   "0080_DFU15-P2_A_11_METROPOLE_..."    → division=DFU15-P2, num=11, leg=null
+     *
+     * @return array{division: string, numMatch: string, leg: string|null}|null
      */
-    private function extractNumeroMatch(string $folderName): ?string
+    private function parseFolderName(string $folderName): ?array
     {
-        // Pattern : "_A_NUM_" entouré
-        // On capture N° entre "_A_" et l'underscore suivant
-        if (preg_match('/_A_(\d+)_/', $folderName, $m)) {
-            return $m[1];
+        if (!preg_match('/^\d{4}_([A-Z0-9-]+)_(?:(ALLER|RETOUR)_)?A_(\d+)_/', $folderName, $m)) {
+            return null;
         }
-        return null;
+
+        return [
+            'division' => $m[1],
+            'numMatch' => $m[3],
+            'leg'      => $m[2] !== '' ? $m[2] : null,
+        ];
     }
 
+    /**
+     * Recherche une Rencontre en BDD via division + numeroMatch + saison + club.
+     *
+     * Pour les matchs BPRF avec ALLER/RETOUR (même numéro, même division) :
+     *   - ALLER   → MABB joue à l'extérieur → domicile = false
+     *   - RETOUR  → MABB joue à domicile    → domicile = true
+     *
+     * Pour toutes les autres divisions, la combinaison division+num+saison+club
+     * est unique dans la BDD → findOneBy suffit.
+     */
+    private function findRencontre(object $club, string $division, string $numMatch, string $saison, ?string $leg): ?Rencontre
+    {
+        $criteria = [
+            'club'        => $club,
+            'division'    => $division,
+            'numeroMatch' => $numMatch,
+            'saison'      => $saison,
+        ];
+
+        // BPRF ALLER/RETOUR : même num → disambiguïser par domicile
+        if ($leg === 'ALLER') {
+            $criteria['domicile'] = false;
+        } elseif ($leg === 'RETOUR') {
+            $criteria['domicile'] = true;
+        }
+
+        return $this->rencontreRepo->findOneBy($criteria);
+    }
+
+    /**
+     * Trouve le premier PDF dans $dir dont le nom commence par $prefix.
+     * Retourne null si absent.
+     */
     private function findPdf(string $dir, string $prefix): ?string
     {
         $files = glob($dir . DIRECTORY_SEPARATOR . $prefix . '_*.pdf') ?: [];
