@@ -339,78 +339,92 @@
             {% endif %}
         {% endmacro %}
 
-        {% if can_see_full_stats and performances_saison.nb_matchs > 0 %}
+        {% if can_see_full_stats %}
         <div class="col-12">
             <div class="card-mabb">
                 {# === En-tête avec dropdown multi-équipes si besoin === #}
                 <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                     <span><i class="bi bi-graph-up-arrow" style="color:var(--mabb-blue);"></i> Performances Éval — Saison {{ gamification.saison }}</span>
 
-                    {% if performances_par_equipe|length > 1 %}
-                        {# Dropdown équipe — affiche les équipes ayant au moins 1 eval #}
-                        <select id="perf-equipe-select"
-                                onchange="switchPerfEquipe(this.value)"
-                                style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:20px;
-                                       color:var(--mabb-dark); padding:5px 28px 5px 12px; font-size:.8rem;
-                                       font-weight:600; cursor:pointer; appearance:none; -webkit-appearance:none;">
-                            <option value="all">🏀 Toutes équipes ({{ performances_saison.nb_matchs }} matchs)</option>
-                            {% for idx, item in performances_par_equipe %}
-                                {% if item.performances.nb_matchs > 0 %}
-                                    <option value="{{ idx }}">{{ item.equipe.nom }} ({{ item.performances.nb_matchs }} matchs)</option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                    {% else %}
-                        <small style="color:var(--mabb-muted); font-weight:500;">
-                            {{ performances_saison.nb_matchs }} match{{ performances_saison.nb_matchs > 1 ? 's' : '' }} évalué{{ performances_saison.nb_matchs > 1 ? 's' : '' }}
-                        </small>
+                    {% if performances_saison.nb_matchs > 0 %}
+                        {% if performances_par_equipe|length > 1 %}
+                            {# Dropdown équipe — affiche les équipes ayant au moins 1 eval #}
+                            <select id="perf-equipe-select"
+                                    onchange="switchPerfEquipe(this.value)"
+                                    style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:20px;
+                                           color:var(--mabb-dark); padding:5px 28px 5px 12px; font-size:.8rem;
+                                           font-weight:600; cursor:pointer; appearance:none; -webkit-appearance:none;">
+                                <option value="all">🏀 Toutes équipes ({{ performances_saison.nb_matchs }} matchs)</option>
+                                {% for idx, item in performances_par_equipe %}
+                                    {% if item.performances.nb_matchs > 0 %}
+                                        <option value="{{ idx }}">{{ item.equipe.nom }} ({{ item.performances.nb_matchs }} matchs)</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <small style="color:var(--mabb-muted); font-weight:500;">
+                                {{ performances_saison.nb_matchs }} match{{ performances_saison.nb_matchs > 1 ? 's' : '' }} évalué{{ performances_saison.nb_matchs > 1 ? 's' : '' }}
+                            </small>
+                        {% endif %}
                     {% endif %}
                 </div>
 
                 <div class="card-body">
-                    {# === Vue "Toutes équipes" (toujours visible par défaut) === #}
-                    <div id="perf-view-all">
-                        {{ _self.perfTuiles(performances_saison) }}
-                        {{ _self.perfTableau(evaluations_recentes) }}
-                    </div>
-
-                    {# === Vues par équipe (cachées, activées par le dropdown) === #}
-                    {% if performances_par_equipe|length > 1 %}
-                        {% for idx, item in performances_par_equipe %}
-                            {% if item.performances.nb_matchs > 0 %}
-                            <div id="perf-view-{{ idx }}" style="display:none;">
-                                <div style="margin-bottom:12px; padding:6px 12px; background:rgba(0,98,168,.07);
-                                            border-left:3px solid var(--mabb-blue); border-radius:0 6px 6px 0;
-                                            font-size:.8rem; font-weight:600; color:var(--mabb-blue);">
-                                    <i class="bi bi-shield-fill"></i> {{ item.equipe.nom }}
-                                    — {{ item.performances.nb_matchs }} match{{ item.performances.nb_matchs > 1 ? 's' : '' }}
-                                </div>
-                                {{ _self.perfTuiles(item.performances) }}
-                                {{ _self.perfTableau(item.evaluations_recentes) }}
-                            </div>
+                    {% if performances_saison.nb_matchs == 0 %}
+                        {# === État vide — aucune éval saisie cette saison === #}
+                        <div style="text-align:center; padding:28px 16px; color:var(--mabb-muted);">
+                            <i class="bi bi-clipboard2-x" style="font-size:2.4rem; opacity:.35; display:block; margin-bottom:12px;"></i>
+                            <p style="margin:0; font-size:.88rem;">Aucune évaluation saisie pour cette joueuse cette saison.</p>
+                            {% if is_granted('CLUB_STAFF', joueur) and joueur.equipe %}
+                                <a href="{{ path('manager_rencontre_index') }}?equipe_id={{ joueur.equipe.id }}&periode=passees"
+                                   style="display:inline-block; margin-top:12px; font-size:.8rem; color:var(--mabb-blue); text-decoration:none;">
+                                    <i class="bi bi-arrow-right-circle"></i> Voir les rencontres de {{ joueur.equipe.nom }}
+                                </a>
                             {% endif %}
-                        {% endfor %}
-                    {% endif %}
+                        </div>
+                    {% else %}
+                        {# === Vue "Toutes équipes" (toujours visible par défaut) === #}
+                        <div id="perf-view-all">
+                            {{ _self.perfTuiles(performances_saison) }}
+                            {{ _self.perfTableau(evaluations_recentes) }}
+                        </div>
 
-                    {# === Message pédagogique (toujours visible) === #}
-                    <p style="margin:16px 0 0; padding:12px 14px; background:#fef9e7; border-left:3px solid #f59e0b; font-size:.78rem; color:#78350f; border-radius:0 6px 6px 0;">
-                        <i class="bi bi-lightbulb"></i>
-                        <strong>L'éval ne fait pas tout.</strong> Une joueuse peut avoir une éval faible
-                        et être ESSENTIELLE pour l'équipe (défense, leadership, énergie). C'est un outil
-                        pour discuter, pas pour classer.
-                    </p>
+                        {# === Vues par équipe (cachées, activées par le dropdown) === #}
+                        {% if performances_par_equipe|length > 1 %}
+                            {% for idx, item in performances_par_equipe %}
+                                {% if item.performances.nb_matchs > 0 %}
+                                <div id="perf-view-{{ idx }}" style="display:none;">
+                                    <div style="margin-bottom:12px; padding:6px 12px; background:rgba(0,98,168,.07);
+                                                border-left:3px solid var(--mabb-blue); border-radius:0 6px 6px 0;
+                                                font-size:.8rem; font-weight:600; color:var(--mabb-blue);">
+                                        <i class="bi bi-shield-fill"></i> {{ item.equipe.nom }}
+                                        — {{ item.performances.nb_matchs }} match{{ item.performances.nb_matchs > 1 ? 's' : '' }}
+                                    </div>
+                                    {{ _self.perfTuiles(item.performances) }}
+                                    {{ _self.perfTableau(item.evaluations_recentes) }}
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+
+                        {# === Message pédagogique (visible seulement quand il y a des données) === #}
+                        <p style="margin:16px 0 0; padding:12px 14px; background:#fef9e7; border-left:3px solid #f59e0b; font-size:.78rem; color:#78350f; border-radius:0 6px 6px 0;">
+                            <i class="bi bi-lightbulb"></i>
+                            <strong>L'éval ne fait pas tout.</strong> Une joueuse peut avoir une éval faible
+                            et être ESSENTIELLE pour l'équipe (défense, leadership, énergie). C'est un outil
+                            pour discuter, pas pour classer.
+                        </p>
+                    {% endif %}
                 </div>
             </div>
         </div>
 
-        {% if performances_par_equipe|length > 1 %}
+        {% if performances_par_equipe|length > 1 and performances_saison.nb_matchs > 0 %}
         <script>
         function switchPerfEquipe(val) {
-            // Cache toutes les vues
             document.querySelectorAll('[id^="perf-view-"]').forEach(function(el) {
                 el.style.display = 'none';
             });
-            // Affiche la vue sélectionnée
             var target = document.getElementById('perf-view-' + val);
             if (target) target.style.display = '';
         }
