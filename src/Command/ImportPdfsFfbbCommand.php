@@ -198,27 +198,49 @@ class ImportPdfsFfbbCommand extends Command
     /**
      * Parse le nom d'un dossier FFBB et retourne [division, numMatch, leg].
      *
-     * Regex : {dept}_{division}_[ALLER|RETOUR_]?A_{num}_
+     * DEUX formats supportés :
      *
-     * Exemples :
-     *   "0080_PRF_A_12_METROPOLE_..."         → division=PRF,      num=12, leg=null
-     *   "0002_BPRF_ALLER_A_1_ESC_..."         → division=BPRF,     num=1,  leg=ALLER
-     *   "0002_BPRF_RETOUR_A_1_METROPOLE_..."  → division=BPRF,     num=1,  leg=RETOUR
-     *   "0080_DFU15-P2_A_11_METROPOLE_..."    → division=DFU15-P2, num=11, leg=null
+     * 1. FORMAT SOMME (compétitions départementales) :
+     *    {dept}_{division}_[ALLER|RETOUR_]?A_{journee}_{teams}
+     *    "0080_PRF_A_12_METROPOLE_..."         → division=PRF,      num=12, leg=null
+     *    "0002_BPRF_ALLER_A_1_ESC_..."         → division=BPRF,     num=1,  leg=ALLER
+     *    "0002_BPRF_RETOUR_A_1_METROPOLE_..."  → division=BPRF,     num=1,  leg=RETOUR
+     *    "0080_DFU15-P2_A_11_METROPOLE_..."    → division=DFU15-P2, num=11, leg=null
+     *    Le num = numéro de journée FFBB, ex : 12, 5, 27…
+     *
+     * 2. FORMAT HDF (compétitions régionales Hauts-de-France) :
+     *    HDF_{division}_{phase}_{matchid}_{teams}
+     *    "HDF_RFU13-2_B_5632_METROPOLE_..."        → division=RFU13-2,    num=5632
+     *    "HDF_RFU13_R1-A_6317_METROPOLE_..."       → division=RFU13,      num=6317
+     *    "HDF_IRFU18_J_5418_METROPOLE_..."          → division=IRFU18,     num=5418
+     *    "HDF_RFU15-P2_R1BP2_7567_BEAUVAIS_..."    → division=RFU15-P2,   num=7567
+     *    "HDF_RFU15-P2-P2_R1CL3_8110_BC_..."       → division=RFU15-P2-P2,num=8110
+     *    Le num = ID de match FFBB à 4 chiffres (stocké tel quel dans numero_match).
      *
      * @return array{division: string, numMatch: string, leg: string|null}|null
      */
     private function parseFolderName(string $folderName): ?array
     {
-        if (!preg_match('/^\d{4}_([A-Z0-9-]+)_(?:(ALLER|RETOUR)_)?A_(\d+)_/', $folderName, $m)) {
-            return null;
+        // Format Somme : 0080_PRF_A_12_... ou 0002_BPRF_ALLER_A_1_...
+        if (preg_match('/^\d{4}_([A-Z0-9-]+)_(?:(ALLER|RETOUR)_)?A_(\d+)_/', $folderName, $m)) {
+            return [
+                'division' => $m[1],
+                'numMatch' => $m[3],
+                'leg'      => $m[2] !== '' ? $m[2] : null,
+            ];
         }
 
-        return [
-            'division' => $m[1],
-            'numMatch' => $m[3],
-            'leg'      => $m[2] !== '' ? $m[2] : null,
-        ];
+        // Format HDF : HDF_{division}_{phase}_{matchid}_{teams}
+        // La phase peut contenir des lettres, chiffres et tirets (B, J, R1-A, R1BP2, R2CL2…)
+        if (preg_match('/^HDF_([A-Z0-9-]+)_[A-Z0-9-]+_(\d+)_/', $folderName, $m)) {
+            return [
+                'division' => $m[1],
+                'numMatch' => $m[2],
+                'leg'      => null,
+            ];
+        }
+
+        return null;
     }
 
     /**
