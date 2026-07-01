@@ -264,6 +264,32 @@
     </div>
 </div>
 
+{# ─── Info : précision zones + comment ça marche ──────────────────────────── #}
+<div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:14px 16px; margin-bottom:4px; font-size:.78rem; color:var(--pirb-text-muted); line-height:1.6;">
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <span style="font-size:1rem;">📍</span>
+        <span style="font-weight:700; color:var(--pirb-text); font-size:.82rem;">Comment les tirs arrivent ici ?</span>
+    </div>
+
+    <p style="margin:0 0 8px;">
+        Les tirs de match (points bleus 🔵) viennent des <strong style="color:var(--pirb-text);">feuilles de match FFBB</strong> — ces PDFs que l'arbitre télécharge après chaque rencontre.
+        Un script lit automatiquement les positions des marqueurs sur le terrain imprimé dans le PDF et les place sur ta carte.
+    </p>
+
+    <p style="margin:0 0 10px;">
+        ⚠️ <em>Les zones (2pts int / 2pts ext / 3pts) sont <strong style="color:#f59e0b;">approximatives</strong> pour l'instant</em> — la précision dépend de la qualité du PDF et de la résolution du scan. On cherche encore la meilleure méthode pour affiner ça.
+    </p>
+
+    <div style="display:flex; align-items:center; gap:6px; padding:8px 10px; background:rgba(59,130,246,.1); border-radius:8px; border:1px solid rgba(59,130,246,.2);">
+        <span>💡</span>
+        <span>Pour des stats de match en temps réel et plus précises, le staff utilise
+            <a href="https://manager.mabb.fr/stats-live" target="_blank" rel="noopener"
+               style="color:#3b82f6; font-weight:700; text-decoration:none;">Stats Live →</a>
+            — un outil de saisie pendant les matchs qui arrivera bientôt dans ton espace.
+        </span>
+    </div>
+</div>
+
 {# ─── Courbe de progression (Chart.js) ──────────────────────────────────── #}
 <div class="pirb-card" id="pirb-card-courbe">
     <div class="pirb-card-title">Progression</div>
