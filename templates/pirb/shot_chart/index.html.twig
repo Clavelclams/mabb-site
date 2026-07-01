@@ -119,8 +119,22 @@
                 scrollbar-width: none;
                 padding: 4px 16px 8px;">
 
-        {# Masquer scrollbar webkit #}
-        <style>#match-selector::-webkit-scrollbar { display:none; }</style>
+        {# Scrollbar : cachée sur mobile (touch), fine et visible sur desktop (souris) #}
+        <style>
+            /* Mobile touch → pas de scrollbar */
+            @media (pointer: coarse) {
+                #match-selector { scrollbar-width: none; }
+                #match-selector::-webkit-scrollbar { display: none; }
+            }
+            /* Desktop souris → scrollbar fine discrète */
+            @media (pointer: fine) {
+                #match-selector { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.2) transparent; }
+                #match-selector::-webkit-scrollbar { height: 4px; }
+                #match-selector::-webkit-scrollbar-track { background: transparent; }
+                #match-selector::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 4px; }
+                #match-selector::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.4); }
+            }
+        </style>
 
         {# Carte "Tous" #}
         <div class="match-card" data-rid="all"

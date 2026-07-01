@@ -438,6 +438,14 @@ class PirbShotChartController extends AbstractController
         foreach ($tirs as $tir) {
             $rencontre = $tir->getRencontre();
             if ($rencontre === null) continue;
+
+            // On ne compte que les tirs avec coordonnées — ce sont les seuls
+            // visibles sur la shot map. Les tirs sans coords (extraction PDF ratée)
+            // ne s'affichent pas → les compter fausserait le "N 🏀" affiché.
+            if ($tir->getPositionX() === null || $tir->getPositionY() === null) {
+                continue;
+            }
+
             $rid = $rencontre->getId();
             if (!isset($grouped[$rid])) {
                 $d = $rencontre->getDate();
@@ -456,7 +464,7 @@ class PirbShotChartController extends AbstractController
                 $grouped[$rid]['types'][$type]++;
             }
         }
-        // Trier par date DESC
+        // Trier par date DESC — les matchs sans aucun tir coordonné sont absents
         uasort($grouped, static fn($a, $b) => strcmp($b['date'], $a['date']));
         return array_values($grouped);
     }
