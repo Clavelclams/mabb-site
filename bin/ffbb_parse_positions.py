@@ -119,10 +119,10 @@ def parse_player_header(raw: str) -> dict:
     else:
         player_part = raw
 
-    # Décomposer "NOM F." ou "NOM F"
-    m = re.match(r'^([A-Z]+)\s+([A-Z])\.?\s*$', player_part)
+    # Décomposer "NOM F." ou "NOM COMPOSE F." (noms composés : BEN SALAH O., VAN POELVOORDE S.)
+    m = re.match(r'^(.*\S)\s+([A-Z])\.?\s*$', player_part.strip())
     if m:
-        result["nom"] = m.group(1)
+        result["nom"] = m.group(1).strip()
         result["prenom_initial"] = m.group(2)
     else:
         result["nom"] = player_part  # fallback

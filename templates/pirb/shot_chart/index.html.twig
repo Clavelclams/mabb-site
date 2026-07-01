@@ -81,73 +81,89 @@
 }
 </style>
 
-{# ─── Header ─────────────────────────────────────────────────────────── #}
-<div class="pirb-card" style="text-align:center; padding:18px 16px 12px;">
-    <div style="font-size:2rem; margin-bottom:4px;">🎯</div>
-    <h1 style="margin:0; font-size:1.1rem; font-weight:800;">Shot Chart</h1>
-    <p style="color:var(--pirb-text-muted); font-size:.8rem; margin:4px 0 0;">
-        {{ stats_globales.totalReussis }}/{{ stats_globales.totalTentatives }} tirs
-        {% if stats_globales.pctGlobal %}• {{ stats_globales.pctGlobal }}%{% endif %}
-    </p>
+{# ─── Header compact ──────────────────────────────────────────────────── #}
+<div style="padding:14px 16px 0; display:flex; align-items:center; justify-content:space-between;">
+    <div>
+        <div style="font-size:1.05rem; font-weight:800;">🎯 Shot Chart</div>
+        <div style="font-size:.78rem; color:var(--pirb-text-muted); margin-top:2px;">
+            {% if nb_tirs_ffbb > 0 %}{{ nb_tirs_ffbb }} tirs réussis en match{% endif %}
+            {% if has_seances_validees %}{% if nb_tirs_ffbb > 0 %} · {% endif %}{{ stats_globales.totalReussis }}/{{ stats_globales.totalTentatives }} à l'entraînement{% endif %}
+            {% if nb_tirs_ffbb == 0 and not has_seances_validees %}Aucune donnée{% endif %}
+        </div>
+    </div>
+    <button type="button" id="btn-nouvelle-seance"
+            style="padding:8px 14px; border-radius:20px; border:none; background:var(--pirb-accent);
+                   color:#fff; font-weight:700; font-size:.8rem; cursor:pointer; white-space:nowrap;">
+        ➕ Séance
+    </button>
 </div>
 
-{# ─── Badges stats globales ───────────────────────────────────────────── #}
-{% if stats_globales.totalTentatives > 0 %}
-<div class="pirb-card">
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        {% set couleursBadge = {'3pt': ['#ea580c', 'rgba(234,88,12,.15)'], '2pt_ext': ['#3b82f6', 'rgba(59,130,246,.15)'], '2pt_int': ['#10b981', 'rgba(16,185,129,.15)'], 'lancer': ['#a78bfa', 'rgba(167,139,250,.15)']} %}
-        {% set labelsBadge = {'3pt': '3 pts', '2pt_ext': '2pts ext', '2pt_int': '2pts int', 'lancer': 'Lancer'} %}
-        {% for type, data in stats_globales.parType %}
-            {% if data.tentatives > 0 %}
-            <div class="sc-stat-badge" style="background:{{ couleursBadge[type][1] ?? 'rgba(255,255,255,.06)' }};">
-                <div style="font-size:1.3rem; font-weight:800; color:{{ couleursBadge[type][0] ?? '#fff' }};">
-                    {{ data.pct }}%
-                </div>
-                <div style="font-size:.7rem; color:var(--pirb-text-muted); margin-top:2px;">{{ labelsBadge[type] ?? type }}</div>
-                <div style="font-size:.68rem; color:var(--pirb-text-muted);">{{ data.reussis }}/{{ data.tentatives }}</div>
-            </div>
-            {% endif %}
+{# ─── Sélecteur de match (carousel horizontal) ───────────────────────── #}
+{% if matches_ffbb is not empty %}
+<div style="padding:10px 0 0;">
+    <div id="match-selector"
+         style="display:flex; gap:8px; overflow-x:auto; padding:4px 16px 8px;
+                -webkit-overflow-scrolling:touch; scrollbar-width:none;">
+        {# Carte "Tous" #}
+        <div class="match-card active" data-rid="all"
+             style="flex-shrink:0; min-width:72px; padding:8px 12px; border-radius:10px; cursor:pointer;
+                    background:var(--pirb-accent); text-align:center; border:2px solid transparent;">
+            <div style="font-size:.9rem; font-weight:800; color:#fff;">Tous</div>
+            <div style="font-size:.65rem; color:rgba(255,255,255,.7); margin-top:2px;">{{ nb_tirs_ffbb }} tirs</div>
+        </div>
+        {# Une carte par match #}
+        {% for m in matches_ffbb %}
+        {% set adv = m.adversaire|upper %}
+        {% set adv_short = adv|length > 14 ? adv|slice(0,13) ~ '.' : adv %}
+        <div class="match-card" data-rid="{{ m.id }}"
+             style="flex-shrink:0; min-width:82px; padding:8px 10px; border-radius:10px; cursor:pointer;
+                    background:rgba(255,255,255,.06); border:2px solid transparent; text-align:center;
+                    transition:all .15s;">
+            <div style="font-size:.62rem; color:var(--pirb-text-muted); font-weight:600;">{{ m.date_label }}</div>
+            <div style="font-size:.72rem; font-weight:800; color:var(--pirb-text); margin-top:2px; line-height:1.2;">{{ adv_short }}</div>
+            <div style="font-size:.65rem; color:#3b82f6; margin-top:3px; font-weight:700;">{{ m.nb_tirs }} 🏀</div>
+        </div>
         {% endfor %}
     </div>
 </div>
 {% endif %}
 
-{# ─── Bouton Saisir une séance ─────────────────────────────────────────── #}
-<div class="pirb-card" style="padding:12px 16px;">
-    <button type="button" id="btn-nouvelle-seance"
-            style="width:100%; padding:13px; border-radius:10px; border:none;
-                   background:var(--pirb-accent); color:#fff; font-weight:800; font-size:.95rem; cursor:pointer;">
-        ➕ Saisir une séance de tir
-    </button>
+{# ─── Points forts (cards visuelles) ─────────────────────────────────── #}
+{% set couleursBadge = {'3pt': ['#ea580c', 'rgba(234,88,12,.15)'], '2pt_ext': ['#3b82f6', 'rgba(59,130,246,.15)'], '2pt_int': ['#10b981', 'rgba(16,185,129,.15)'], 'lancer': ['#a78bfa', 'rgba(167,139,250,.15)']} %}
+{% set labelsBadge = {'3pt': '3 pts', '2pt_ext': '2pts ext', '2pt_int': '2pts int', 'lancer': 'Lancers'} %}
+{% set iconsBadge  = {'3pt': '🔥', '2pt_ext': '💪', '2pt_int': '🎯', 'lancer': '🆓'} %}
+{% if stats_globales.totalTentatives > 0 or nb_tirs_ffbb > 0 %}
+<div id="points-forts-section" style="padding:0 16px 4px;">
+    <div style="font-size:.7rem; font-weight:600; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">Tes points forts</div>
+    <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;" id="badges-types">
+        {% for type, data in stats_globales.parType %}
+        {% if data.tentatives > 0 %}
+        <div class="force-badge" data-type="{{ type }}"
+             style="background:{{ couleursBadge[type][1] ?? 'rgba(255,255,255,.06)' }};
+                    border-radius:10px; padding:10px 6px; text-align:center; border:2px solid transparent; cursor:pointer; transition:all .15s;">
+            <div style="font-size:1.2rem; line-height:1;">{{ iconsBadge[type] ?? '📊' }}</div>
+            <div style="font-size:1rem; font-weight:800; color:{{ couleursBadge[type][0] ?? '#fff' }}; margin-top:4px;">
+                {% if has_seances_validees and data.pct is not null %}{{ data.pct }}%{% else %}{{ data.reussis }}{% endif %}
+            </div>
+            <div style="font-size:.6rem; color:var(--pirb-text-muted); margin-top:2px; font-weight:600;">{{ labelsBadge[type] ?? type }}</div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% if not has_seances_validees and nb_tirs_ffbb > 0 %}
+    <p style="font-size:.67rem; color:rgba(255,255,255,.25); margin:6px 0 0; text-align:center;">
+        ⚠️ FFBB = tirs réussis seulement — le % s'affiche quand tu saisis des séances
+    </p>
+    {% endif %}
 </div>
+{% endif %}
 
 {# ─── Shot map (terrain) ──────────────────────────────────────────────── #}
-<div class="pirb-card">
-    <div class="pirb-card-title">
-        Shot map
-        {% if filtre_source or filtre_from or filtre_to %}
-            <span style="font-size:.72rem; color:var(--pirb-accent); font-weight:600; margin-left:6px;">— filtrée</span>
-        {% endif %}
+<div class="pirb-card" style="padding-top:10px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div class="pirb-card-title" style="margin:0;">Shot map</div>
+        <div id="map-label" style="font-size:.72rem; color:#3b82f6; font-weight:600;"></div>
     </div>
-
-    {# Filtres #}
-    <form method="GET" action="{{ path('pirb_shot_chart') }}" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
-        <select name="source" style="flex:1; min-width:110px; padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#1e293b; color:var(--pirb-text); font-size:.8rem;">
-            <option value="" {% if filtre_source == '' %}selected{% endif %}>Tous types</option>
-            <option value="ENTRAINEMENT" {% if filtre_source == 'ENTRAINEMENT' %}selected{% endif %}>Entraînement</option>
-            <option value="MATCH" {% if filtre_source == 'MATCH' %}selected{% endif %}>Match</option>
-        </select>
-        <input type="date" name="from" value="{{ filtre_from }}"
-               style="flex:1; min-width:110px; padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#1e293b; color:var(--pirb-text); font-size:.8rem;"
-               placeholder="Du">
-        <input type="date" name="to" value="{{ filtre_to }}"
-               style="flex:1; min-width:110px; padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.15); background:#1e293b; color:var(--pirb-text); font-size:.8rem;"
-               placeholder="Au">
-        <button type="submit" style="padding:6px 14px; border-radius:7px; border:none; background:var(--pirb-blue); color:#fff; font-size:.82rem; cursor:pointer;">OK</button>
-        {% if filtre_source or filtre_from or filtre_to %}
-            <a href="{{ path('pirb_shot_chart') }}" style="padding:6px 10px; border-radius:7px; background:rgba(255,255,255,.08); color:var(--pirb-text-muted); font-size:.8rem; text-decoration:none;">✕</a>
-        {% endif %}
-    </form>
 
     {# Terrain cliquable — rendu des dots depuis zones_json via JS #}
     <div class="sc-terrain-wrapper" id="sc-terrain">
@@ -186,16 +202,23 @@
     </div>
 
     {# Légende couleurs #}
-    <div style="display:flex; gap:8px; margin-top:10px; justify-content:center; flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--pirb-text-muted);">
-            <div style="width:12px;height:12px;border-radius:50%;background:#ef4444;"></div> &lt;33%
+    <div style="display:flex; gap:10px; margin-top:8px; justify-content:center; flex-wrap:wrap;">
+        {% if has_seances_validees %}
+        <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--pirb-text-muted);">
+            <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></div> &lt;33%
         </div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--pirb-text-muted);">
-            <div style="width:12px;height:12px;border-radius:50%;background:#f59e0b;"></div> 33-66%
+        <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--pirb-text-muted);">
+            <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></div> 33-66%
         </div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:.72rem;color:var(--pirb-text-muted);">
-            <div style="width:12px;height:12px;border-radius:50%;background:#16a34a;"></div> &gt;66%
+        <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--pirb-text-muted);">
+            <div style="width:10px;height:10px;border-radius:50%;background:#16a34a;"></div> &gt;66%
         </div>
+        {% endif %}
+        {% if nb_tirs_ffbb > 0 %}
+        <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--pirb-text-muted);">
+            <div style="width:10px;height:10px;border-radius:50%;background:#3b82f6;"></div> Match officiel
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -443,20 +466,94 @@
     const csrfNouvelle     = '{{ csrf_token('shot_chart_nouvelle') }}';
 
     // ────────────────────────────────────────────────────────────────
-    // Shot map lecture (page principale)
+    // Shot map — rendu des dots + filtrage par match / type
     // ────────────────────────────────────────────────────────────────
-    const terrain     = document.getElementById('sc-terrain');
-    if (terrain && zonesData.length) {
+    const terrain   = document.getElementById('sc-terrain');
+    const mapLabel  = document.getElementById('map-label');
+    let allDots     = [];  // { el, zone } — référence pour le filtrage
+
+    function renderAllDots() {
+        if (!terrain) return;
+        // Supprimer les anciens dots
+        allDots.forEach(d => d.el.remove());
+        allDots = [];
         zonesData.forEach(zone => {
             const dot = document.createElement('div');
             dot.className = 'sc-dot';
             dot.style.left       = (zone.x * 100) + '%';
             dot.style.top        = (zone.y * 100) + '%';
             dot.style.background = zone.couleur;
-            dot.title = `${zone.typeTir} · ${zone.label} (${zone.pct ?? '?'}%) · ${zone.date} · ${zone.source}`;
+            dot.dataset.rid      = zone.rencontreId ?? 'train';
+            dot.dataset.type     = zone.typeTir ?? '';
+            dot.dataset.ffbb     = zone.ffbb ? '1' : '0';
+            const pctStr = zone.ffbb ? 'match FFBB' : (zone.pct !== null ? zone.pct + '%' : '?%');
+            dot.title = `${zone.typeTir} · ${zone.label} · ${pctStr} · ${zone.date}` + (zone.adversaire ? ` · ${zone.adversaire}` : '');
             terrain.appendChild(dot);
+            allDots.push({ el: dot, zone });
         });
     }
+
+    // Filtre actif
+    let activeRid  = 'all';   // 'all' | rencontreId (number)
+    let activeType = 'all';   // 'all' | typeTir string
+
+    function applyFilters() {
+        let visible = 0;
+        allDots.forEach(({ el, zone }) => {
+            const ridMatch  = activeRid  === 'all' || String(zone.rencontreId) === String(activeRid);
+            const typeMatch = activeType === 'all' || zone.typeTir === activeType;
+            el.style.display = (ridMatch && typeMatch) ? '' : 'none';
+            if (ridMatch && typeMatch) visible++;
+        });
+        // Label sur la map
+        if (mapLabel) {
+            if (activeRid !== 'all') {
+                const card = document.querySelector(`.match-card[data-rid="${activeRid}"]`);
+                const adv  = card ? card.querySelector('div:nth-child(2)')?.textContent?.trim() : '';
+                mapLabel.textContent = adv ? `vs ${adv} · ${visible} tirs` : `${visible} tirs`;
+            } else {
+                mapLabel.textContent = visible > 0 ? `${visible} tirs` : '';
+            }
+        }
+    }
+
+    renderAllDots();
+    applyFilters();
+
+    // ── Sélecteur de match ──────────────────────────────────────────
+    document.querySelectorAll('.match-card').forEach(card => {
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.match-card').forEach(c => {
+                c.style.background   = 'rgba(255,255,255,.06)';
+                c.style.borderColor  = 'transparent';
+            });
+            activeRid = card.dataset.rid;
+            if (activeRid === 'all') {
+                card.style.background  = 'var(--pirb-accent)';
+                card.style.borderColor = 'transparent';
+            } else {
+                card.style.background  = 'rgba(59,130,246,.18)';
+                card.style.borderColor = '#3b82f6';
+            }
+            applyFilters();
+        });
+    });
+
+    // ── Filtre par type (clic sur badge "points forts") ─────────────
+    document.querySelectorAll('.force-badge').forEach(badge => {
+        badge.addEventListener('click', () => {
+            const type = badge.dataset.type;
+            if (activeType === type) {
+                activeType = 'all';
+                document.querySelectorAll('.force-badge').forEach(b => b.style.borderColor = 'transparent');
+            } else {
+                activeType = type;
+                document.querySelectorAll('.force-badge').forEach(b => b.style.borderColor = 'transparent');
+                badge.style.borderColor = '#fff';
+            }
+            applyFilters();
+        });
+    });
 
     // ────────────────────────────────────────────────────────────────
     // Courbes de progression Chart.js

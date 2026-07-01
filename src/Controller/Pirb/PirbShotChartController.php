@@ -127,11 +127,9 @@ class PirbShotChartController extends AbstractController
         $zonesSeances = $this->buildZonesJson($seancesValidees);
 
         // --- TirFfbb : tirs des matchs importés depuis FFBB ---
-        // Inclus si le filtre source est '' (tous) ou 'MATCH'
-        // Les TirFfbb sans coordonnées (positionX/Y null) ne peuvent pas être placés sur la map
+        $tirsFfbb  = $this->tirFfbbRepo->findForJoueur($joueur);
         $zonesFfbb = [];
         if ($source === '' || $source === SeanceTir::SOURCE_MATCH) {
-            $tirsFfbb = $this->tirFfbbRepo->findForJoueur($joueur);
             $zonesFfbb = $this->buildZonesJsonFromTirFfbb($tirsFfbb, $fromDate, $toDate);
         }
 
@@ -140,17 +138,24 @@ class PirbShotChartController extends AbstractController
         // --- Stats globales (badges résumé) — inclut les tirs FFBB ---
         $statsGlobales = $this->buildStatsGlobales($seancesValidees, $zonesFfbb);
 
+        // --- Liste des matchs FFBB pour le sélecteur (toujours chargée, sans filtre date) ---
+        $matchesFfbb = $this->buildMatchesList($tirsFfbb);
+
         return $this->render('pirb/shot_chart/index.html.twig', [
-            'joueur'            => $joueur,
-            'seances_validees'  => $seancesValidees,
-            'seances_en_attente'=> array_values($seancesEnAttente),
-            'zones_json'        => json_encode($zonesJson),
-            'progression_data'  => json_encode($progressionData),
-            'stats_globales'    => $statsGlobales,
+            'joueur'               => $joueur,
+            'seances_validees'     => $seancesValidees,
+            'seances_en_attente'   => array_values($seancesEnAttente),
+            'zones_json'           => json_encode($zonesJson),
+            'progression_data'     => json_encode($progressionData),
+            'stats_globales'       => $statsGlobales,
+            'matches_ffbb'         => $matchesFfbb,
+            // FFBB : données partielles (tirs réussis uniquement → pas de % fiable)
+            'has_seances_validees' => count($seancesValidees) > 0,
+            'nb_tirs_ffbb'         => count($zonesFfbb),
             // Filtres actuels (pour pré-remplir les inputs)
-            'filtre_source'     => $source,
-            'filtre_from'       => $from,
-            'filtre_to'         => $to,
+            'filtre_source'        => $source,
+            'filtre_from'          => $from,
+            'filtre_to'            => $to,
         ]);
     }
 
@@ -397,29 +402,63 @@ class PirbShotChartController extends AbstractController
                 if ($toDate   !== null && $dateMatch > $toDate)   continue;
             }
 
-            $reussi = $tir->isEstReussi() ? 1 : 0;
-            $pct    = (float) ($reussi * 100);
-
-            // Couleur : hsl(hue, 80%, 45%) — miroir de ZoneTir::getCouleurHsl()
-            $hue    = (int) round($pct * 1.2); // 0% → 0° (rouge), 100% → 120° (vert)
-            $couleur = sprintf('hsl(%d, 80%%, 45%%)', $hue);
-
+            // FFBB : tirs réussis uniquement → pas de % calculable (tentatives inconnues)
+            // Couleur bleue fixe pour distinguer des séances entraînement (rouge/vert selon %)
             $result[] = [
-                'seanceId'   => null,  // pas de SeanceTir — tir FFBB
-                'date'       => $dateMatch?->format('Y-m-d') ?? '',
-                'source'     => SeanceTir::SOURCE_MATCH,
-                'x'          => $posX / 100.0,
-                'y'          => $posY / 100.0,
-                'typeTir'    => $tir->getTypeTir(),
-                'reussis'    => $reussi,
-                'tentatives' => 1,
-                'pct'        => $pct,
-                'couleur'    => $couleur,
-                'label'      => $reussi . '/1',
+                'seanceId'    => null,   // pas de SeanceTir — tir FFBB
+                'rencontreId' => $tir->getRencontre()?->getId(), // pour filtrage JS par match
+                'ffbb'        => true,   // flag pour le JS (affichage différencié)
+                'adversaire'  => $tir->getRencontre()?->getAdversaire() ?? '',
+                'date'        => $dateMatch?->format('Y-m-d') ?? '',
+                'source'      => SeanceTir::SOURCE_MATCH,
+                'x'           => $posX / 100.0,
+                'y'           => $posY / 100.0,
+                'typeTir'     => $tir->getTypeTir(),
+                'reussis'     => 1,
+                'tentatives'  => null,   // inconnu
+                'pct'         => null,   // pas calculable
+                'couleur'     => '#3b82f6', // bleu fixe
+                'label'       => '✓',
             ];
         }
 
         return $result;
+    }
+
+    /**
+     * Construit la liste des matchs FFBB pour le sélecteur de match.
+     * Groupé par rencontre, trié date DESC.
+     *
+     * @param TirFfbb[] $tirs
+     * @return array<int, array{id:int, date:string, date_label:string, adversaire:string, nb_tirs:int, types:array}>
+     */
+    private function buildMatchesList(array $tirs): array
+    {
+        $grouped = [];
+        foreach ($tirs as $tir) {
+            $rencontre = $tir->getRencontre();
+            if ($rencontre === null) continue;
+            $rid = $rencontre->getId();
+            if (!isset($grouped[$rid])) {
+                $d = $rencontre->getDate();
+                $grouped[$rid] = [
+                    'id'          => $rid,
+                    'date'        => $d?->format('Y-m-d') ?? '',
+                    'date_label'  => $d?->format('d/m') ?? '??',
+                    'adversaire'  => $rencontre->getAdversaire() ?? '?',
+                    'nb_tirs'     => 0,
+                    'types'       => ['2pt_int' => 0, '2pt_ext' => 0, '3pt' => 0, 'lancer' => 0],
+                ];
+            }
+            $grouped[$rid]['nb_tirs']++;
+            $type = $tir->getTypeTir() ?? '2pt_ext';
+            if (isset($grouped[$rid]['types'][$type])) {
+                $grouped[$rid]['types'][$type]++;
+            }
+        }
+        // Trier par date DESC
+        uasort($grouped, static fn($a, $b) => strcmp($b['date'], $a['date']));
+        return array_values($grouped);
     }
 
     /**
