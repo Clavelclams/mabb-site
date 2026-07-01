@@ -179,7 +179,8 @@
              style="background:{{ couleursBadge[type][1] ?? 'rgba(255,255,255,.06)' }};
                     border-radius:10px; padding:10px 6px; text-align:center; border:2px solid transparent; cursor:pointer; transition:all .15s;">
             <div style="font-size:1.2rem; line-height:1;">{{ iconsBadge[type] ?? '📊' }}</div>
-            <div style="font-size:1rem; font-weight:800; color:{{ couleursBadge[type][0] ?? '#fff' }}; margin-top:4px;">
+            <div class="force-val" data-init="{{ data.reussis }}"
+                 style="font-size:1rem; font-weight:800; color:{{ couleursBadge[type][0] ?? '#fff' }}; margin-top:4px;">
                 {% if has_seances_validees and data.pct is not null %}{{ data.pct }}%{% else %}{{ data.reussis }}{% endif %}
             </div>
             <div style="font-size:.6rem; color:var(--pirb-text-muted); margin-top:2px; font-weight:600;">{{ labelsBadge[type] ?? type }}</div>
@@ -536,12 +537,31 @@
 
     function applyFilters() {
         let visible = 0;
+        const countsByType = {};
+
         allDots.forEach(({ el, zone }) => {
             const ridMatch  = activeRid  === 'all' || String(zone.rencontreId) === String(activeRid);
             const typeMatch = activeType === 'all' || zone.typeTir === activeType;
-            el.style.display = (ridMatch && typeMatch) ? '' : 'none';
-            if (ridMatch && typeMatch) visible++;
+            const show = ridMatch && typeMatch;
+            el.style.display = show ? '' : 'none';
+            if (show) {
+                visible++;
+                const t = zone.typeTir || '';
+                countsByType[t] = (countsByType[t] || 0) + 1;
+            }
         });
+
+        // Mettre à jour les badges "points forts" selon les dots visibles
+        document.querySelectorAll('.force-badge').forEach(badge => {
+            const type   = badge.dataset.type;
+            const valEl  = badge.querySelector('.force-val');
+            if (!valEl) return;
+            const count = countsByType[type] || 0;
+            valEl.textContent = count;
+            // Masquer le badge si aucun tir visible de ce type (avec filtre actif)
+            badge.style.opacity = count > 0 ? '1' : '0.25';
+        });
+
         // Label sur la map
         if (mapLabel) {
             if (activeRid !== 'all') {
