@@ -90,8 +90,41 @@
         <h1>🏀 Mon tableau de bord</h1>
         <p class="subtitle">Saison {{ saison }} · {{ nb_equipes }} équipe(s) coachée(s)</p>
     </div>
-    <a href="{{ path('manager_bilan_index') }}" class="btn-mabb-ghost">
-        <i class="bi bi-clipboard-check"></i> Tous les bilans
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <a href="{{ path('manager_shot_chart_validation') }}" class="btn-mabb-ghost">
+            <i class="bi bi-bullseye"></i> Shot Chart
+        </a>
+        <a href="{{ path('manager_bilan_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-clipboard-check"></i> Tous les bilans
+        </a>
+    </div>
+</div>
+
+{# ── Accès rapide shot chart (toujours visible, peu importe les équipes) ── #}
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-bottom:24px;">
+    <a href="{{ path('manager_shot_chart_validation') }}" style="text-decoration:none;">
+        <div class="card-mabb" style="cursor:pointer; display:flex; align-items:center; gap:14px; padding:16px 20px; transition:box-shadow .15s;"
+             onmouseover="this.style.boxShadow='0 4px 18px rgba(234,88,12,.15)'"
+             onmouseout="this.style.boxShadow=''">
+            <i class="bi bi-bullseye" style="font-size:2rem; color:#ea580c; flex-shrink:0;"></i>
+            <div>
+                <div style="font-weight:700; color:var(--mabb-dark); font-size:.95rem;">Shot Chart</div>
+                <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:2px;">Valider les séances de tir des joueuses</div>
+            </div>
+            <i class="bi bi-arrow-right-short" style="margin-left:auto; font-size:1.4rem; color:var(--mabb-muted);"></i>
+        </div>
+    </a>
+    <a href="{{ path('manager_bilan_index') }}" style="text-decoration:none;">
+        <div class="card-mabb" style="cursor:pointer; display:flex; align-items:center; gap:14px; padding:16px 20px; transition:box-shadow .15s;"
+             onmouseover="this.style.boxShadow='0 4px 18px rgba(0,98,168,.12)'"
+             onmouseout="this.style.boxShadow=''">
+            <i class="bi bi-clipboard-data" style="font-size:2rem; color:var(--mabb-blue); flex-shrink:0;"></i>
+            <div>
+                <div style="font-weight:700; color:var(--mabb-dark); font-size:.95rem;">Bilans</div>
+                <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:2px;">Consulter tous les bilans de compétences</div>
+            </div>
+            <i class="bi bi-arrow-right-short" style="margin-left:auto; font-size:1.4rem; color:var(--mabb-muted);"></i>
+        </div>
     </a>
 </div>
 
