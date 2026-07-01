@@ -491,13 +491,16 @@ class PirbShotChartController extends AbstractController
         }
 
         // Tirs FFBB importés (source: match officiel)
+        // tentatives est null pour les tirs FFBB (FFBB ne fournit que les réussites).
+        // On n'ajoute PAS aux tentatives pour ne pas inventer un taux de réussite
+        // → pct restera null pour les types purement FFBB, ce que la template gère.
         foreach ($extraZones as $z) {
-            $totTentatives += $z['tentatives'];
-            $totReussis    += $z['reussis'];
-            $t = $z['typeTir'];
+            $reussis = (int) ($z['reussis'] ?? 1);
+            $totReussis += $reussis; // total paniers inclut les matchs officels
+            $t = $z['typeTir'] ?? '';
             if (isset($parType[$t])) {
-                $parType[$t]['tentatives'] += $z['tentatives'];
-                $parType[$t]['reussis']    += $z['reussis'];
+                $parType[$t]['reussis'] += $reussis; // pour affichage compte
+                // tentatives non incrémentées → pct calculé uniquement depuis les séances
             }
         }
 

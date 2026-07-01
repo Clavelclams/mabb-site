@@ -100,30 +100,53 @@
 
 {# ─── Sélecteur de match (carousel horizontal) ───────────────────────── #}
 {% if matches_ffbb is not empty %}
-<div style="padding:10px 0 0;">
+<div style="padding:10px 0 0; position:relative;">
+
+    {# Gradient indicateur "scroll à droite" — disparaît quand on a scrollé #}
+    <div id="carousel-fade-right"
+         style="position:absolute; right:0; top:0; bottom:8px; width:40px; z-index:2; pointer-events:none;
+                background:linear-gradient(to right, transparent, var(--pirb-bg, #0f172a));
+                border-radius:0 10px 10px 0; transition:opacity .2s;"></div>
+
     <div id="match-selector"
-         style="display:flex; gap:8px; overflow-x:auto; padding:4px 16px 8px;
-                -webkit-overflow-scrolling:touch; scrollbar-width:none;">
+         style="display:flex; gap:8px;
+                overflow-x: scroll;
+                overflow-y: hidden;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-x: contain;
+                touch-action: pan-x;
+                scroll-snap-type: x proximity;
+                scrollbar-width: none;
+                padding: 4px 16px 8px;">
+
+        {# Masquer scrollbar webkit #}
+        <style>#match-selector::-webkit-scrollbar { display:none; }</style>
+
         {# Carte "Tous" #}
-        <div class="match-card active" data-rid="all"
+        <div class="match-card" data-rid="all"
              style="flex-shrink:0; min-width:72px; padding:8px 12px; border-radius:10px; cursor:pointer;
-                    background:var(--pirb-accent); text-align:center; border:2px solid transparent;">
+                    background:var(--pirb-accent); text-align:center; border:2px solid transparent;
+                    scroll-snap-align:start;">
             <div style="font-size:.9rem; font-weight:800; color:#fff;">Tous</div>
             <div style="font-size:.65rem; color:rgba(255,255,255,.7); margin-top:2px;">{{ nb_tirs_ffbb }} tirs</div>
         </div>
-        {# Une carte par match #}
+
+        {# Une carte par match — les plus récents d'abord (triés côté PHP) #}
         {% for m in matches_ffbb %}
         {% set adv = m.adversaire|upper %}
         {% set adv_short = adv|length > 14 ? adv|slice(0,13) ~ '.' : adv %}
         <div class="match-card" data-rid="{{ m.id }}"
-             style="flex-shrink:0; min-width:82px; padding:8px 10px; border-radius:10px; cursor:pointer;
+             style="flex-shrink:0; min-width:88px; padding:8px 10px; border-radius:10px; cursor:pointer;
                     background:rgba(255,255,255,.06); border:2px solid transparent; text-align:center;
-                    transition:all .15s;">
-            <div style="font-size:.62rem; color:var(--pirb-text-muted); font-weight:600;">{{ m.date_label }}</div>
+                    transition:background .15s, border-color .15s; scroll-snap-align:start;">
+            <div style="font-size:.62rem; color:var(--pirb-text-muted); font-weight:600; letter-spacing:.02em;">{{ m.date_label }}</div>
             <div style="font-size:.72rem; font-weight:800; color:var(--pirb-text); margin-top:2px; line-height:1.2;">{{ adv_short }}</div>
-            <div style="font-size:.65rem; color:#3b82f6; margin-top:3px; font-weight:700;">{{ m.nb_tirs }} 🏀</div>
+            <div style="font-size:.68rem; color:#3b82f6; margin-top:3px; font-weight:700;">{{ m.nb_tirs }} 🏀</div>
         </div>
         {% endfor %}
+
+        {# Spacer final pour que la dernière carte soit scrollable jusqu'au bord #}
+        <div style="flex-shrink:0; width:8px;"></div>
     </div>
 </div>
 {% endif %}
@@ -137,7 +160,7 @@
     <div style="font-size:.7rem; font-weight:600; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">Tes points forts</div>
     <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;" id="badges-types">
         {% for type, data in stats_globales.parType %}
-        {% if data.tentatives > 0 %}
+        {% if data.tentatives > 0 or data.reussis > 0 %}
         <div class="force-badge" data-type="{{ type }}"
              style="background:{{ couleursBadge[type][1] ?? 'rgba(255,255,255,.06)' }};
                     border-radius:10px; padding:10px 6px; text-align:center; border:2px solid transparent; cursor:pointer; transition:all .15s;">
@@ -299,7 +322,7 @@
                     {# Stats par type en mini-badges #}
                     <div style="display:flex; gap:5px; margin-top:6px; flex-wrap:wrap;">
                         {% for type, data in seance.statsByType %}
-                            {% if data.tentatives > 0 %}
+                            {% if data.tentatives > 0 or data.reussis > 0 %}
                             <span style="background:rgba(255,255,255,.06); padding:2px 7px; border-radius:4px; font-size:.68rem; color:var(--pirb-text-muted);">
                                 {{ {'3pt':'3pts','2pt_ext':'2ext','2pt_int':'2int','lancer':'LF'}[type] ?? type }}
                                 {{ data.reussis }}/{{ data.tentatives }}{% if data.pct %} ({{ data.pct }}%){% endif %}
@@ -519,6 +542,18 @@
 
     renderAllDots();
     applyFilters();
+
+    // ── Gradient carousel : disparaît quand on est à la fin ────────
+    const selector    = document.getElementById('match-selector');
+    const fadeRight   = document.getElementById('carousel-fade-right');
+    if (selector && fadeRight) {
+        const updateFade = () => {
+            const atEnd = selector.scrollLeft + selector.clientWidth >= selector.scrollWidth - 4;
+            fadeRight.style.opacity = atEnd ? '0' : '1';
+        };
+        selector.addEventListener('scroll', updateFade, { passive: true });
+        updateFade(); // état initial
+    }
 
     // ── Sélecteur de match ──────────────────────────────────────────
     document.querySelectorAll('.match-card').forEach(card => {
