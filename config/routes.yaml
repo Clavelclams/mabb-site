@@ -18,12 +18,13 @@ pirb:
     resource: routes/pirb.yaml
 
 # Saison — sélecteur global accessible depuis tous les espaces (manager + pirb)
-# Pas de host constraint : le contrôleur répond sur tous les subdomains.
-saison_controllers:
-    resource:
-        path: ../src/Controller/SaisonController.php
-        namespace: App\Controller
-    type: attribute
+# Déclaration explicite (pas de host constraint = répond sur tous les subdomains).
+# On n'utilise PAS resource/{path,namespace} car ce format attend un répertoire,
+# pas un fichier unique — ça provoquerait une RouteNotFoundException en prod.
+saison_changer:
+    path: /saison/changer
+    controller: App\Controller\SaisonController::changer
+    methods: [POST]
 
 # API (pas de contrainte host — securise par JWT)
 api_controllers:
