@@ -295,19 +295,30 @@ class FfbbPositionTirParser
     }
 
     /**
-     * Classifie le tir selon les coordonnées ZONE (mêmes que autoDetectType en JS).
+     * Classifie le tir selon les coordonnées ZONE (mêmes que le SVG shot chart).
      *
-     * Panier à x=0.04, y=0.5 (identique au repère du SVG shot chart).
-     * Rayon arc 3pts ≈ 0.27 dans ce repère normalisé.
+     * Repère : panier à (zoneX=0.04, zoneY=0.50).
+     *
+     * Raquette (2pt_int) → vérification rectangulaire alignée sur le SVG :
+     *   rect SVG x="1" y="65" width="80" height="70" dans viewBox 374×200
+     *   → zoneX ∈ [0, 81/374=0.217] et zoneY ∈ [65/200=0.325, 135/200=0.675]
+     *   L'ancienne approche (dist < 0.08) ne couvrait qu'un cercle minuscule autour
+     *   du panier et classait les tirs dans la raquette en dehors de ce rayon en 2pt_ext.
+     *
+     * Arc 3pts → rayon 100px dans le SVG → 100/374 ≈ 0.267 en zone normalisé.
      */
     private function classifyShot(float $zoneX, float $zoneY): string
     {
+        // Raquette : check rectangulaire correspondant au rect SVG de la paint
+        if ($zoneX <= 0.217 && $zoneY >= 0.325 && $zoneY <= 0.675) {
+            return TirFfbb::TYPE_2PT_INT;
+        }
+
         $px   = $zoneX - 0.04;
         $py   = $zoneY - 0.50;
         $dist = sqrt($px * $px + $py * $py);
 
-        if ($dist < 0.08) return TirFfbb::TYPE_2PT_INT;  // raquette / lay-up
-        if ($dist > 0.27) return TirFfbb::TYPE_3PT;      // derrière l'arc
+        if ($dist > 0.267) return TirFfbb::TYPE_3PT;  // derrière l'arc 3pts (rayon 100/374)
         return TirFfbb::TYPE_2PT_EXT;
     }
 
