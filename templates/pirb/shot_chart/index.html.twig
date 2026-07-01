@@ -557,6 +557,28 @@
     renderAllDots();
     applyFilters();
 
+    // ── Drag-to-scroll souris sur le carousel ───────────────────────
+    (function() {
+        const el = document.getElementById('match-selector');
+        if (!el) return;
+        let isDown = false, startX = 0, scrollLeft = 0;
+        el.addEventListener('mousedown', e => {
+            isDown   = true;
+            startX   = e.pageX - el.offsetLeft;
+            scrollLeft = el.scrollLeft;
+            el.style.cursor = 'grabbing';
+        });
+        el.addEventListener('mouseleave', () => { isDown = false; el.style.cursor = ''; });
+        el.addEventListener('mouseup',    () => { isDown = false; el.style.cursor = ''; });
+        el.addEventListener('mousemove', e => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x    = e.pageX - el.offsetLeft;
+            const walk = (x - startX) * 1.2;
+            el.scrollLeft = scrollLeft - walk;
+        });
+    })();
+
     // ── Gradient carousel : disparaît quand on est à la fin ────────
     const selector    = document.getElementById('match-selector');
     const fadeRight   = document.getElementById('carousel-fade-right');
