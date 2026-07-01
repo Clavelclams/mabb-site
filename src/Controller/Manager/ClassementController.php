@@ -11,6 +11,7 @@ use App\Repository\Sport\JoueurBadgeRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
+use App\Service\SaisonService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,6 +35,7 @@ class ClassementController extends AbstractController
         private readonly EquipeRepository $equipeRepository,
         private readonly XpCalculator $xpCalculator,
         private readonly JoueurBadgeRepository $badgeRepository,
+        private readonly SaisonService $saisonService,
     ) {}
 
     #[Route('/classement', name: 'manager_classement', methods: ['GET'])]
@@ -45,6 +47,10 @@ class ClassementController extends AbstractController
             return $this->redirectToRoute('manager_dashboard');
         }
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
+
+        // Saison active (depuis la session, via SaisonService)
+        $saisonActive    = $this->saisonService->getSaisonActive();
+        $saisonPrecedente = $this->saisonService->getSaisonPrecedente($saisonActive);
 
         // Filtres
         $equipeId = (int) ($request->query->get('equipe_id') ?? 0);
@@ -60,29 +66,45 @@ class ClassementController extends AbstractController
         }
         $joueurs = $this->joueurRepository->findBy($criteres);
 
-        // Calcul XP pour chaque joueur (peut être lourd sur gros effectif —
+        // Calcul XP saison active pour chaque joueur (peut être lourd sur gros effectif —
         // V2 : cache Redis ou colonne matérialisée)
         $classement = [];
         foreach ($joueurs as $joueur) {
             $xp = $portee === 'tout'
                 ? $this->xpCalculator->xpTotal($joueur)
-                : $this->xpCalculator->xpSaison($joueur);
+                : $this->xpCalculator->xpSaison($joueur, $saisonActive);
             $niveau = NiveauCatalog::depuisXp($xp);
             $nbBadges = count($this->badgeRepository->codesBadgesPourJoueur(
                 $joueur,
-                $portee === 'tout' ? null : $this->saisonCourante()
+                $portee === 'tout' ? null : $saisonActive
             ));
 
             $classement[] = [
-                'joueur'   => $joueur,
-                'xp'       => $xp,
-                'niveau'   => $niveau,
+                'joueur'    => $joueur,
+                'xp'        => $xp,
+                'niveau'    => $niveau,
                 'nb_badges' => $nbBadges,
             ];
         }
 
         // Tri par XP desc
         usort($classement, fn($a, $b) => $b['xp'] <=> $a['xp']);
+
+        // Classement saison précédente (top 10 uniquement — évite de surcharger la page)
+        $classementPrecedent = [];
+        // On ne calcule que si la saison précédente est dans la liste valide
+        if ($this->saisonService->isValide($saisonPrecedente)) {
+            foreach ($joueurs as $joueur) {
+                $xp = $this->xpCalculator->xpSaison($joueur, $saisonPrecedente);
+                $classementPrecedent[] = [
+                    'joueur' => $joueur,
+                    'xp'     => $xp,
+                    'niveau' => NiveauCatalog::depuisXp($xp),
+                ];
+            }
+            usort($classementPrecedent, fn($a, $b) => $b['xp'] <=> $a['xp']);
+            $classementPrecedent = array_slice($classementPrecedent, 0, 10);
+        }
 
         // Liste équipes pour le dropdown filtre
         $equipes = $this->equipeRepository->findBy(
@@ -91,20 +113,16 @@ class ClassementController extends AbstractController
         );
 
         return $this->render('manager/classement/index.html.twig', [
-            'club'        => $club,
-            'classement'  => $classement,
-            'equipes'     => $equipes,
-            'equipe_id'   => $equipeId,
-            'portee'      => $portee,
-            'saison'      => $this->saisonCourante(),
+            'club'                 => $club,
+            'classement'           => $classement,
+            'classement_precedent' => $classementPrecedent,
+            'equipes'              => $equipes,
+            'equipe_id'            => $equipeId,
+            'portee'               => $portee,
+            'saison'               => $saisonActive,
+            'saison_active'        => $saisonActive,
+            'saison_precedente'    => $saisonPrecedente,
         ]);
     }
 
-    private function saisonCourante(): string
-    {
-        $now = new \DateTimeImmutable();
-        $mois = (int) $now->format('n');
-        $anneeDebut = $mois >= 9 ? (int) $now->format('Y') : (int) $now->format('Y') - 1;
-        return $anneeDebut . '-' . ($anneeDebut + 1);
-    }
 }

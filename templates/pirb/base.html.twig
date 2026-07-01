@@ -417,6 +417,17 @@
         <a href="{{ path('pirb_dashboard') }}" class="brand">
             🏀 MABB <span class="sub">PIRB</span>
         </a>
+        {# ── Sélecteur de saison ── #}
+        {% if app.user %}
+            <form method="post" action="{{ path('saison_changer') }}" style="display:inline-flex;align-items:center;margin-right:4px;">
+                <input type="hidden" name="_token" value="{{ csrf_token('saison_changer') }}">
+                <select name="saison" onchange="this.form.submit()" style="background:var(--pirb-card-hover);color:var(--pirb-text);border:1px solid var(--pirb-border);border-radius:6px;padding:3px 8px;font-size:0.75rem;cursor:pointer;font-family:inherit;">
+                    {% for s in saisons_disponibles() %}
+                        <option value="{{ s }}" {% if s == saison_active() %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        {% endif %}
         {# ── Cloche notifications ── #}
         {% if app.user %}
             {% set _nb_notif = pirb_unread_count() %}

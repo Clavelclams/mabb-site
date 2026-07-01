@@ -766,6 +766,14 @@
 
     <div class="user-zone">
         {% if app.user %}
+            <form method="post" action="{{ path('saison_changer') }}" style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;">
+                <input type="hidden" name="_token" value="{{ csrf_token('saison_changer') }}">
+                <select name="saison" onchange="this.form.submit()" style="background:#2d2d2d;color:#fff;border:1px solid #555;border-radius:4px;padding:2px 6px;font-size:0.8rem;cursor:pointer;">
+                    {% for s in saisons_disponibles() %}
+                        <option value="{{ s }}" {% if s == saison_active() %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </form>
             <a href="{{ path('manager_profil') }}" class="user-name" style="text-decoration:none; color:rgba(255,255,255,0.9); display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; transition: background .15s;"
                onmouseover="this.style.background='rgba(255,255,255,0.12)'"
                onmouseout="this.style.background='transparent'"
