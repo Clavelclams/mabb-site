@@ -75,16 +75,36 @@ class FfbbPositionTirParser
             return 0;
         }
 
-        // --- Appel Python -------------------------------------------------
-        $rawShots = $this->callPythonParser($pdfPath);
-        if ($rawShots === null) {
-            // Python indisponible → log + 0
-            $this->logger->warning(
-                'FfbbPositionTirParser: Python/PyMuPDF indisponible. '
-                . 'Installer python3 + pymupdf + pytesseract sur le serveur.',
-                ['rencontre_id' => $rencontre->getId()]
-            );
-            return 0;
+        // --- [V2.4b 06/07/2026] SIDECAR JSON — parse hors serveur ---------
+        // L'hébergement mutualisé OVH n'a PAS Tesseract (les pages du PDF
+        // e-Marque sont des images rasterisées : l'OCR est obligatoire pour
+        // les noms). Solution : le parse Python peut être exécuté AILLEURS
+        // (PC local, sandbox IA) et son résultat déposé à côté du PDF sous
+        // la forme "{pdf}.json" (sortie brute du script ffbb_parse_positions.py).
+        // Si ce fichier existe, on l'utilise directement — pas de Python requis.
+        $sidecar = $pdfPath . '.json';
+        if (is_file($sidecar)) {
+            $rawShots = json_decode((string) file_get_contents($sidecar), true);
+            if (!is_array($rawShots)) {
+                $this->logger->warning('Sidecar JSON illisible', ['path' => $sidecar]);
+                return 0;
+            }
+            $this->logger->info('Positions tirs chargées depuis le sidecar JSON', [
+                'rencontre_id' => $rencontre->getId(), 'nb' => count($rawShots),
+            ]);
+        } else {
+            // --- Appel Python (comportement historique) -------------------
+            $rawShots = $this->callPythonParser($pdfPath);
+            if ($rawShots === null) {
+                // Python indisponible → log + 0
+                $this->logger->warning(
+                    'FfbbPositionTirParser: Python/PyMuPDF indisponible. '
+                    . 'Installer python3 + pymupdf + pytesseract sur le serveur, '
+                    . 'OU déposer un sidecar {pdf}.json (parse effectué ailleurs).',
+                    ['rencontre_id' => $rencontre->getId()]
+                );
+                return 0;
+            }
         }
 
         if (empty($rawShots)) {

@@ -57,8 +57,29 @@
         {% if equipes is empty %}
             <div class="empty-state">
                 <i class="bi bi-people"></i>
-                <h3>Aucune équipe pour l'instant</h3>
-                <p>Crée la première équipe de ton club pour commencer.</p>
+                {% if saison_filtre == saison_courante and saisons_disponibles|length > 1 %}
+                    {# [06/07/2026] Début de saison : les équipes de la saison
+                       précédente existent mais pas encore celles-ci #}
+                    <h3>Nouvelle saison {{ saison_courante }} : on repart de zéro 🏀</h3>
+                    <p>
+                        Tes joueuses sont toujours là, il ne reste qu'à recomposer les équipes.
+                        Les saisons passées restent consultables via le filtre ci-dessus.
+                    </p>
+                    <p style="font-size:.82rem; color:var(--mabb-muted);">
+                        Astuce : la commande <code>app:passage-saison --to={{ saison_courante }}</code>
+                        recrée les équipes de l'an dernier et réaffecte chaque joueuse
+                        dans sa catégorie d'âge automatiquement (U10 devient U11, etc.).
+                        Ou crée-les à la main avec le bouton ci-dessous.
+                    </p>
+                    {% if is_granted('CLUB_STAFF', club) %}
+                        <a href="{{ path('manager_equipe_new') }}" class="btn-mabb-orange">
+                            <i class="bi bi-plus-lg"></i> Créer une équipe
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <h3>Aucune équipe pour l'instant</h3>
+                    <p>Crée la première équipe de ton club pour commencer.</p>
+                {% endif %}
             </div>
         {% else %}
             <table class="table-mabb">

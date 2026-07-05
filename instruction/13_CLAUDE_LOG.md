@@ -10,6 +10,39 @@
 
 ---
 
+### 2026-07-06 (ter) — Page Équipes alignée sur le sélecteur de saison global
+
+- Objectif : la page Équipes affichait toujours "2025-2026" alors que le sélecteur global (navbar) disait "2026-2027" — dernier vestige des logiques saison dupliquées.
+- Actions réalisées :
+  1. `EquipeController::getSaisonCourante()` délègue à `SaisonService::getSaisonActive()` (source unique : bascule auto 1er juillet + choix manuel respecté). Impacte : filtre par défaut de la liste + saison pré-remplie à la création d'équipe.
+  2. `categorieAgeJoueur()` (page Composer) : l'âge est calculé via `CategorieCalculator::ageReference()` pour la SAISON ACTIVE — en basculant sur 2026-2027, une U10 de 2025-2026 apparaît U11 (catégories qui suivent l'âge, demande explicite de Clavel). Tranches d'affichage club (U14/U16/U17) inchangées.
+  3. Le sélecteur de saisons de la page inclut TOUJOURS la saison active même sans équipe créée dedans ; nouvel empty state "Nouvelle saison : on repart de zéro" qui explique la recomposition et pointe la commande `app:passage-saison`.
+- Fichiers modifiés : `src/Controller/Manager/EquipeController.php`, `templates/manager/equipe/index.html.twig`
+- Décisions : pas d'ADR. Reste UNE logique saison locale assumée : `CotisationJoueur::getSaisonCourante()` (statique, domaine cotisations) — à unifier plus tard.
+- Points de vigilance : en début de saison la liste est VIDE par défaut (voulu — archives accessibles via le filtre). Le staff doit lancer `app:passage-saison --to=2026-2027 --apply` (après dry-run) ou créer les équipes à la main.
+
+- Objectif : corriger les retours de Clavel sur pirb.mabb.fr/shot-chart : (1) la carte séances affichait "vs ADVERSAIRE · 0 tirs" quand un match était sélectionné alors qu'elle ne montre que des séances, (2) le chiffre 🏀 des mini-cards ne correspondait pas visuellement aux points bleus, (3) wording robotique (tirets cadratins), (4) ligne à 3 points du SVG à la mauvaise distance.
+- Actions réalisées :
+  1. **Filtre match découplé** : la sélection d'un match ne filtre plus QUE les points FFBB — la carte séances n'est plus jamais vidée/labellisée "vs X". Son label devient "N zones de tir".
+  2. **Cohérence 🏀 = points bleus** : `buildMatchesList()` consomme désormais les MÊMES zones JSON que le rendu terrain (une seule source de vérité, plus de divergence possible) + anti-superposition JS (spirale déterministe) pour les paniers marqués au même endroit qui s'empilaient visuellement. Explication du chiffre ajoutée sous le carrousel + title sur les cards.
+  3. **Géométrie SVG corrigée à l'échelle réelle** (374×200 = 28×15 m, 13,357 px/m) sur les DEUX terrains paysage (carte séances + modal Nouvelle séance) : panier 1,575 m → x=21 (avant 16), arc 3 pts 6,75 m → r=90 (avant 100 = 7,5 m !), coins 0,9 m → y=12/188, raquette 5,8×4,9 m, planche à 1,2 m. Le modal avait en plus un arc totalement cassé (départ à x=16). `autoDetectType()` refait en pixels du viewBox (l'ancien mélangeait les échelles x/y → cercle de détection ovale).
+  4. **Wording humanisé** : titres sans tirets cadratins ("🎯 Tes séances de shoot", "🏀 Tes paniers en match"), bloc explicatif réécrit (l'avertissement "zones approximatives" était périmé depuis le terrain FFBB fidèle), labels "N paniers".
+- Fichiers modifiés : `src/Controller/Pirb/PirbShotChartController.php`, `templates/pirb/shot_chart/index.html.twig`
+- Décisions : pas d'ADR (corrections UX/géométrie).
+- Points de vigilance : `autoDetectType` ne resservira que pour les NOUVELLES saisies de séances — les zones déjà saisies gardent leur type. Si un jour les proportions du SVG changent, resynchroniser autoDetectType.
+
+---
+
+### 2026-07-06 — Sidecar JSON pour le parse des positions FFBB (OVH sans Tesseract)
+
+- Objectif : le re-parse `app:process-positions-tirs` échoue sur OVH mutualisé (Python sans PyMuPDF, et surtout Tesseract non installable — or les pages des PDF e-Marque sont des IMAGES rasterisées 1260×1260, l'OCR est obligatoire pour lire les noms des joueuses).
+- Actions réalisées : `FfbbPositionTirParser::parseEtPersister()` accepte désormais un **sidecar `{pdf}.json`** (sortie brute de `bin/ffbb_parse_positions.py`) posé à côté du PDF : s'il existe, il est utilisé directement — aucun Python requis sur le serveur. Workflow : télécharger les PDFs d'OVH → parser sur une machine avec Python+Tesseract (PC local ou sandbox IA, pipeline validé sur le PDF Tergnier : noms OCR + positions OK) → renvoyer les JSON sur OVH → relancer la commande.
+- Fichiers modifiés : `src/Service/Ffbb/FfbbPositionTirParser.php`, `instruction/13_CLAUDE_LOG.md`
+- Décisions : pas d'ADR (mécanisme de contournement infra, logique métier inchangée — le matching joueuse reste 100 % côté PHP).
+- Points de vigilance : les sidecars doivent être régénérés si de nouveaux PDFs sont uploadés (nouveau match) ; à terme, évaluer un VPS ou une GitHub Action qui parse et pousse les JSON automatiquement.
+
+---
+
 ### 2026-07-05 (quater) — Passage de saison automatique (catégories) + CMS vitrine bloc par bloc
 
 - Objectif : (1) répondre à la question "les catégories des joueuses sont-elles recalculées automatiquement au changement de saison ?" (réponse : NON, tout était manuel) et construire l'automatisation ; (2) démarrer le CMS vitrine : l'admin modifie textes, chiffres et photos du site sans toucher au code.

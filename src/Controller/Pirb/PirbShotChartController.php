@@ -142,8 +142,12 @@ class PirbShotChartController extends AbstractController
         // --- Stats globales (badges résumé) — inclut les tirs FFBB ---
         $statsGlobales = $this->buildStatsGlobales($seancesValidees, $zonesFfbb);
 
-        // --- Liste des matchs FFBB pour le sélecteur (toujours chargée, sans filtre date) ---
-        $matchesFfbb = $this->buildMatchesList($tirsFfbb);
+        // --- Liste des matchs FFBB pour le sélecteur ---
+        // [V2.4b 06/07/2026] Construite depuis $zonesFfbb (la MÊME liste que
+        // les points affichés sur le terrain) et non plus depuis $tirsFfbb :
+        // garantit par construction que le chiffre 🏀 de chaque mini-card
+        // == le nombre de points bleus visibles pour ce match.
+        $matchesFfbb = $this->buildMatchesList($zonesFfbb);
 
         return $this->render('pirb/shot_chart/index.html.twig', [
             'joueur'               => $joueur,
@@ -452,37 +456,34 @@ class PirbShotChartController extends AbstractController
      * Construit la liste des matchs FFBB pour le sélecteur de match.
      * Groupé par rencontre, trié date DESC.
      *
-     * @param TirFfbb[] $tirs
+     * [V2.4b] Consomme les ZONES JSON (sortie de buildZonesJsonFromTirFfbb)
+     * — exactement les points rendus sur le terrain — et non plus les
+     * entités TirFfbb : le compteur 🏀 des cards et le nombre de points
+     * bleus ne peuvent plus diverger (une seule source de vérité).
+     *
+     * @param array $zones Zones FFBB au format JSON (cf. buildZonesJsonFromTirFfbb)
      * @return array<int, array{id:int, date:string, date_label:string, adversaire:string, nb_tirs:int, types:array}>
      */
-    private function buildMatchesList(array $tirs): array
+    private function buildMatchesList(array $zones): array
     {
         $grouped = [];
-        foreach ($tirs as $tir) {
-            $rencontre = $tir->getRencontre();
-            if ($rencontre === null) continue;
+        foreach ($zones as $z) {
+            $rid = $z['rencontreId'] ?? null;
+            if ($rid === null) continue;
 
-            // On ne compte que les tirs avec coordonnées — ce sont les seuls
-            // visibles sur la shot map. Les tirs sans coords (extraction PDF ratée)
-            // ne s'affichent pas → les compter fausserait le "N 🏀" affiché.
-            if ($tir->getPositionX() === null || $tir->getPositionY() === null) {
-                continue;
-            }
-
-            $rid = $rencontre->getId();
             if (!isset($grouped[$rid])) {
-                $d = $rencontre->getDate();
+                $dateIso = (string) ($z['date'] ?? '');
                 $grouped[$rid] = [
                     'id'          => $rid,
-                    'date'        => $d?->format('Y-m-d') ?? '',
-                    'date_label'  => $d?->format('d/m') ?? '??',
-                    'adversaire'  => $rencontre->getAdversaire() ?? '?',
+                    'date'        => $dateIso,
+                    'date_label'  => $dateIso !== '' ? date('d/m', strtotime($dateIso)) : '??',
+                    'adversaire'  => $z['adversaire'] ?? '?',
                     'nb_tirs'     => 0,
                     'types'       => ['2pt_int' => 0, '2pt_ext' => 0, '3pt' => 0, 'lancer' => 0],
                 ];
             }
             $grouped[$rid]['nb_tirs']++;
-            $type = $tir->getTypeTir() ?? '2pt_ext';
+            $type = $z['typeTir'] ?? '2pt_ext';
             if (isset($grouped[$rid]['types'][$type])) {
                 $grouped[$rid]['types'][$type]++;
             }

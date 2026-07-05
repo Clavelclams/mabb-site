@@ -34,6 +34,8 @@ class EquipeController extends AbstractController
         private readonly TenantResolver $tenantResolver,
         private readonly EquipeRepository $equipeRepository,
         private readonly EntityManagerInterface $em,
+        private readonly \App\Service\SaisonService $saisonService,
+        private readonly \App\Service\Sport\CategorieCalculator $categorieCalculator,
     ) {}
 
     /**
@@ -96,6 +98,14 @@ class EquipeController extends AbstractController
             ->orderBy('e.saison', 'DESC')
             ->getQuery()
             ->getSingleColumnResult();
+
+        // [FIX 06/07/2026] La saison active doit TOUJOURS être proposée,
+        // même si aucune équipe n'existe encore dedans (début de saison :
+        // on repart de zéro et on recompose — les saisons passées restent
+        // consultables comme archives via ce même sélecteur).
+        if (!in_array($saisonCourante, $saisonsDisponibles, true)) {
+            array_unshift($saisonsDisponibles, $saisonCourante);
+        }
 
         return $this->render('manager/equipe/index.html.twig', [
             'equipes'             => $equipes,
@@ -426,18 +436,18 @@ class EquipeController extends AbstractController
      */
     private function categorieAgeJoueur(Joueur $joueur): ?string
     {
-        $dn = $joueur->getDateNaissance();
-        if (!$dn) {
+        // [FIX 06/07/2026] L'âge est calculé pour la SAISON ACTIVE du
+        // sélecteur (via CategorieCalculator, règle FFBB) et non plus pour
+        // une saison locale recalculée. Effet attendu par Clavel : en
+        // basculant sur 2026-2027, une U10 de l'an dernier apparaît U11 —
+        // les catégories suivent l'âge automatiquement, saison par saison.
+        $age = $this->categorieCalculator->ageReference(
+            $joueur,
+            $this->saisonService->getSaisonActive()
+        );
+        if ($age === null) {
             return null;
         }
-
-        $now = new \DateTimeImmutable();
-        $mois = (int) $now->format('n');
-        $anneeFinSaison = $mois >= 7
-            ? (int) $now->format('Y') + 1
-            : (int) $now->format('Y');
-
-        $age = $anneeFinSaison - (int) $dn->format('Y');
 
         if ($age >= 19) {
             // Sans champ sexe sur Joueur, on ne peut pas distinguer F/H ici.
@@ -455,21 +465,16 @@ class EquipeController extends AbstractController
     }
 
     /**
-     * Retourne la saison sportive courante au format "YYYY-YYYY".
-     * En France, une saison de basket court d'août à juillet.
-     * Exemple : du 1er août 2025 au 31 juillet 2026 → "2025-2026"
+     * [FIX 06/07/2026] Délègue à SaisonService::getSaisonActive().
+     *
+     * AVANT : logique locale à bascule septembre → la page Équipes affichait
+     * "2025-2026" alors que le sélecteur global de la navbar disait
+     * "2026-2027". C'était LE bug signalé par Clavel. Désormais UNE seule
+     * source de vérité : le sélecteur global (bascule auto au 1er juillet,
+     * choix manuel respecté).
      */
     private function getSaisonCourante(): string
     {
-        $now = new \DateTimeImmutable();
-        $annee = (int) $now->format('Y');
-        $mois  = (int) $now->format('n');
-
-        // Avant septembre : on est encore dans la saison qui a commencé l'année précédente
-        if ($mois < 9) {
-            return ($annee - 1) . '-' . $annee;
-        }
-        // À partir de septembre : nouvelle saison
-        return $annee . '-' . ($annee + 1);
+        return $this->saisonService->getSaisonActive();
     }
 }
