@@ -1,6 +1,7 @@
 # Roadmap globale — MABB / PIRB
 
-> Dernière mise à jour : 2026-03-13
+> Dernière mise à jour : 2026-07-05
+> ⚠️ Le tableau "État d'avancement V1" ci-dessous date de mars 2026 et est OBSOLÈTE par rapport à la prod (cf. 19_AUDIT_FEATURES_2026-06-29.md pour l'état réel). Dérive déjà signalée le 04/07 — remise à niveau à planifier.
 
 ## Stack technique
 Symfony 7.4 (cf. ADR-0005), PHP 8.2+, Doctrine ORM, MySQL 8, Twig + Symfony UX (Stimulus/Turbo), API Platform (à installer Phase 3), JWT via LexikJWTAuthenticationBundle (à installer Phase 1).
@@ -34,3 +35,9 @@ V3 = extension strategique (mobile, comite, SaaS)
 | Phase 6 (sem 23-26) | System | A FAIRE | Securite, tests, optimisation, documentation |
 
 **Rappel** : Tout module manipulant des donnees metier doit respecter le filtrage multi-tenant par `club_id` (cf. ADR-0003, RT-0001).
+
+## Évolutions transverses actées (post-V1)
+
+| Date | Évolution | Modules impactés | Références |
+|------|-----------|------------------|------------|
+| 2026-07-05 | Stats Live V2.3 — match interne à deux équipes A/B : composition de l'effectif club en 2 équipes, écran live 2 colonnes, moyennes de saison filtrées par type de rencontre (OFFICIEL par défaut) | Stats + PIRB (fiche joueuse) | ADR-0008, RT-0010, 13_CLAUDE_LOG (2026-07-05) |

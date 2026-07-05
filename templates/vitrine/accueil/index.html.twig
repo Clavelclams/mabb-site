@@ -13,17 +13,17 @@
 		<div class="container position-relative">
 			<div class="row align-items-center g-5">
 				<div class="col-lg-6">
+					{# [CMS V2] Blocs éditables depuis /admin/contenus — le texte
+					   ci-dessous est le DÉFAUT, remplacé si l'admin a saisi mieux #}
 					<span class="badge-label mb-3">
 						<i class="bi bi-star-fill"></i>
-						Triple label FFBB 3 étoiles</span>
+						{{ cms('accueil.hero.badge', 'Triple label FFBB 3 étoiles') }}</span>
 					<h1 class="display-4 fw-bold mb-3 hero-title">
-						Amiens Métropole<br>
-						<span class="text-mabb-orange">Basket Ball</span>
+						{{ cms('accueil.hero.titre_ligne1', 'Amiens Métropole') }}<br>
+						<span class="text-mabb-orange">{{ cms('accueil.hero.titre_ligne2', 'Basket Ball') }}</span>
 					</h1>
 					<p class="lead mb-4 hero-desc">
-						Club de basket-ball exclusivement féminin implanté sur le territoire
-																		d'Amiens Métropole. De l'initiation à la performance, nous formons
-																		les championnes de demain.
+						{{ cms('accueil.hero.description', "Club de basket-ball exclusivement féminin implanté sur le territoire d'Amiens Métropole. De l'initiation à la performance, nous formons les championnes de demain.", 'long') }}
 					</p>
 					<div class="d-flex flex-wrap gap-3">
 						<a href="{{ path('vitrine_compte_se_connecter') }}" class="btn btn-mabb btn-lg">
@@ -44,7 +44,8 @@
 				</div>
 				<div class="col-lg-6 text-center">
 					<div class="p-3 bg-white rounded-4 shadow-lg d-inline-block hero-photo-wrap">
-						<img src="{{ asset('images/manar.jpg') }}" alt="Joueuse MABB" class="img-fluid rounded-3 hero-photo">
+						{# [CMS V2] Photo du hero remplaçable depuis /admin/contenus #}
+						<img src="{{ asset(cms_img('accueil.hero.photo', 'images/manar.jpg')) }}" alt="Joueuse MABB" class="img-fluid rounded-3 hero-photo">
 					</div>
 				</div>
 			</div>
@@ -130,17 +131,12 @@
     <div class="container">
         <div class="row align-items-center g-5">
             <div class="col-lg-6">
-                <h2 class="section-title text-white">Un club engagé pour <span>le basket féminin</span></h2>
+                <h2 class="section-title text-white">{{ cms('accueil.engage.titre_avant', 'Un club engagé pour') }} <span>{{ cms('accueil.engage.titre_accent', 'le basket féminin') }}</span></h2>
                 <p class="text-white-force">
-                    La MABB porte un projet sportif, éducatif et citoyen structuré. Nous accueillons
-                    les jeunes filles de 3 à 25+ ans dans un cadre bienveillant et exigeant.
-                    Notre mission dépasse le terrain : nous faisons du basketball un levier
-                    d'émancipation et de rayonnement du sport féminin.
+                    {{ cms('accueil.engage.paragraphe1', "La MABB porte un projet sportif, éducatif et citoyen structuré. Nous accueillons les jeunes filles de 3 à 25+ ans dans un cadre bienveillant et exigeant. Notre mission dépasse le terrain : nous faisons du basketball un levier d'émancipation et de rayonnement du sport féminin.", 'long') }}
                 </p>
                 <p class="text-white-force">
-                    Le club mène toute l'année des actions d'intérêt général dans les établissements
-                    scolaires et les quartiers prioritaires d'Amiens : école de mini-basket,
-                    aide aux devoirs, stages gratuits Génération Basket, tournois 3x3.
+                    {{ cms('accueil.engage.paragraphe2', "Le club mène toute l'année des actions d'intérêt général dans les établissements scolaires et les quartiers prioritaires d'Amiens : école de mini-basket, aide aux devoirs, stages gratuits Génération Basket, tournois 3x3.", 'long') }}
                 </p>
                 {# ===== Lien Google Avis — URL "Donner un avis" directement =====
                    Pour pointer DIRECTEMENT sur le formulaire d'avis Google, utiliser :
@@ -164,7 +160,7 @@
                 </div>
             </div>
             <div class="col-lg-6 text-center">
-                <img src="{{ asset('images/panierGonflable.jpeg') }}"
+                <img src="{{ asset(cms_img('accueil.engage.photo', 'images/panierGonflable.jpeg')) }}"
                      alt="Panier de basket MABB"
                      class="img-fluid"
                      style="border:4px solid #fff;border-radius:16px;box-shadow:0 8px 24px rgba(0,0,0,.3);max-height:420px;object-fit:cover;width:100%">

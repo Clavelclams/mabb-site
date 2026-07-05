@@ -36,6 +36,7 @@ class ManagerCoachDashboardController extends AbstractController
         private readonly SeanceRepository         $seanceRepo,
         private readonly BilanCompetenceRepository $bilanRepo,
         private readonly TenantResolver           $tenantResolver,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     #[Route('/coach/dashboard', name: 'manager_coach_dashboard', methods: ['GET'])]
@@ -89,14 +90,12 @@ class ManagerCoachDashboardController extends AbstractController
         ]);
     }
 
-    /** Retourne la saison courante au format "YYYY-YYYY+1". */
+    /**
+     * [V2.4 05/07/2026] Délègue à SaisonService (sélecteur global +
+     * bascule auto 1er juillet) — fin de la logique dupliquée.
+     */
     private function saisonCourante(): string
     {
-        $now  = new \DateTimeImmutable();
-        $annee = (int) $now->format('Y');
-        $mois  = (int) $now->format('n');
-        return $mois >= 9
-            ? $annee . '-' . ($annee + 1)
-            : ($annee - 1) . '-' . $annee;
+        return $this->saisonService->getSaisonActive();
     }
 }

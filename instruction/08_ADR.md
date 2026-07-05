@@ -63,3 +63,39 @@ Chaque ADR suit le format : Date / Contexte / Options / Decision / Consequences.
   - La `role_hierarchy` de security.yaml reste utilisee pour la hierarchie globale, mais les roles effectifs sont resolus depuis ClubUserRole selon le club courant
   - Contraintes DB : UNIQUE(user_id, club_id) sur ClubUser, UNIQUE(code) sur Role, UNIQUE(club_user_id, role_id) sur ClubUserRole
 - Alternative rejetee : (A) JSON — plus simple mais pas d'audit, pas de catalogue centralise, difficulte a lister "tous les coachs du club X" efficacement
+
+---
+
+> **Note numérotation** : ADR-0007 est RÉSERVÉ au brouillon "architecture PIRB Mobile" (cf. `20_ANALYSE_ARCHI_PIRB_MOBILE_2026-07-04.md`), à coller ici après validation. Ne pas réutiliser ce numéro.
+
+---
+
+### ADR-0008 — Match interne à deux équipes : composition A/B en JSON, type de match par jointure
+- Date : 2026-07-05
+- Contexte : Le module Stats Live doit permettre de statter SIMULTANÉMENT deux équipes composées de joueuses du même club (entraînement interne / amical intra-club), avec conservation des stats des deux côtés et possibilité de filtrer les moyennes de saison pour ne pas les gonfler avec des matchs internes. Le type de rencontre (`Rencontre.typeRencontre` : OFFICIEL/AMICAL/ENTRAINEMENT_INTERNE/EXHIBITION) existe déjà depuis B23/V2.2 — la décision porte sur (1) le stockage de la répartition A/B et (2) le rattachement des stats au type de match.
+- Options :
+  - **(1) Stockage composition A/B** :
+    - (A) Colonne JSON nullable `composition_interne` sur `rencontre` (`{"equipeA": {"nom", "joueurs": [ids]}, "equipeB": {...}}`)
+    - (B) Table pivot `rencontre_composition` (rencontre_id, joueur_id, cote ENUM A/B, UNIQUE(rencontre, joueur))
+  - **(2) Rattachement des stats au type de match** :
+    - (C) Champ `type_match` dénormalisé sur `action_match` / `evaluation_match`
+    - (D) Jointure sur `rencontre.typeRencontre` (pas de nouveau champ)
+- Décision : **(A) + (D)**.
+  - (A) JSON : précédent établi sur la même entité (`joueursNonConvoques`, `joueursExternes` sont déjà des JSON) ; donnée strictement scoped à UNE rencontre, jamais requêtée en SQL cross-rencontres (rendu 2 colonnes et validations faits en PHP) ; une seule colonne ALTER au lieu d'une table + FK + repository. L'exclusivité A/B est garantie par `Rencontre::setCompositionInterne()` (une joueuse dans A est retirée de B).
+  - (D) Jointure : le type vit sur `rencontre`, UNE SEULE source de vérité. Si le staff corrige le type après coup (ex : amical requalifié officiel), toutes les stats suivent automatiquement — un champ dénormalisé aurait divergé. Coût : un `JOIN rencontre` dans les requêtes d'agrégation, négligeable (index PK).
+- Conséquences :
+  - Migration `Version20260705100000` : `ALTER TABLE rencontre ADD composition_interne JSON DEFAULT NULL`. NULL = comportement historique → zéro régression sur les rencontres existantes.
+  - `JoueurStatsAggregator::statsSaison()` filtre désormais par défaut sur `typeRencontre = OFFICIEL` (convention FFBB : moyennes de saison = compétition). **Changement de comportement assumé** : avant, TOUT comptait (y compris internes — moyennes gonflées, bug corrigé) ; après, les amicaux/internes/exhibitions sont consultables via le paramètre `$typesRencontre` mais exclus des moyennes par défaut.
+  - Anti-IDOR adapté : en mode interne A/B, le critère "joueuse ∈ équipe de la rencontre" devient "joueuse ∈ composition A∪B" (plus strict que club-scoped).
+  - L'écran live bascule en 2 colonnes si `isInterneDeuxEquipes()` (type non officiel + au moins 1 joueuse de chaque côté) — le moteur de saisie (ActionMatch, sessions, terrain) est inchangé.
+- Alternatives rejetées : (B) table pivot — sur-modélisation pour une donnée d'organisation d'écran sans besoin SQL ; (C) dénormalisation — risque de désynchronisation type rencontre / type stat, sans gain mesurable.
+
+---
+
+### ADR-0009 — Shot chart FFBB : coordonnées brutes + terrain fidèle au doc e-Marque
+- Date : 2026-07-05
+- Contexte : Les points des tirs FFBB étaient visiblement décalés sur la shot map PIRB. Cause : le parser transformait les coordonnées du PDF (repère portrait 15×14 m, panier en haut) vers le terrain paysage de l'app via un mapping affine approximatif (`zoneX = normY*0.46 + 0.04`) puis un arrondi entier 0-100, et le terrain paysage n'a pas les mêmes proportions que le dessin FFBB.
+- Options : (A) Corriger/calibrer la transformation vers le terrain paysage (B) Stocker les coordonnées BRUTES du repère PDF (pour-mille) et les afficher sur un terrain SVG aux proportions IDENTIQUES au doc FFBB, séparé de la shot map d'entraînement.
+- Décision : **(B)**. Colonnes `tir_ffbb.ffbb_x/ffbb_y` (SMALLINT 0-1000, migration Version20260705110000), parser inchangé pour les champs legacy + remplissage des bruts, nouveau terrain "FFBB officiel" (portrait, cotes FIBA exactes : raquette 4,9×5,8 m, LF r=1,8 m, panier à 1,575 m, 3 pts r=6,75 m + coins 0,9 m) dans PIRB. Zéro transformation à l'affichage = zéro décalage. La shot map paysage reste dédiée aux séances d'entraînement/stats live (sources séparées, demande utilisateur).
+- Conséquences : anciennes lignes sans ffbb_x → fallback par transformation inverse (précision dégradée) jusqu'au re-parse (`app:process-positions-tirs`). Sélecteur de match et badges filtrent les DEUX terrains.
+- Alternative rejetée : (A) — même calibrée, la projection vers un terrain aux proportions différentes reste une source d'erreur permanente ; et mélanger sources FFBB/entraînement sur une seule carte nuit à la lecture.

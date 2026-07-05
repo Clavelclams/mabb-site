@@ -137,6 +137,30 @@ class StatsLiveController extends AbstractController
             $sessionCourante = $this->sessionPromoteur->obtenirOuCreerSessionPourUser($rencontre, $user);
         }
 
+        // [V2.3] MODE INTERNE À DEUX ÉQUIPES — la source des joueuses n'est
+        // plus l'équipe de la rencontre mais la composition A/B (effectif
+        // du CLUB entier, multi-catégorie possible). On garde le même
+        // pipeline en aval (comptages, historique, terrain) : seule la
+        // SOURCE change, pas le moteur — réutilisation maximale.
+        $modeInterneAB    = $rencontre->isInterneDeuxEquipes();
+        $joueusesEquipeA  = [];
+        $joueusesEquipeB  = [];
+        if ($modeInterneAB) {
+            // Chargement club-scoped : même si un ID étranger s'était glissé
+            // dans le JSON, il serait ignoré ici (double barrière d'isolation).
+            $effectifClub = $this->joueurRepository->findEffectifClubPourComposition(
+                (int) $rencontre->getClub()?->getId()
+            );
+            $parId = [];
+            foreach ($effectifClub as $j) { $parId[(int) $j->getId()] = $j; }
+            foreach ($rencontre->getEquipeAIds() as $id) {
+                if (isset($parId[$id])) { $joueusesEquipeA[] = $parId[$id]; }
+            }
+            foreach ($rencontre->getEquipeBIds() as $id) {
+                if (isset($parId[$id])) { $joueusesEquipeB[] = $parId[$id]; }
+            }
+        }
+
         // Joueuses actives de l'équipe — affichées dans la sidebar
         // [V2.2] isTemporaire=false : on ne veut pas les éphémères d'autres rencontres
         $joueusesActives = $this->joueurRepository->findBy(
@@ -158,10 +182,17 @@ class StatsLiveController extends AbstractController
         $idsNonConvoquees = array_map('intval', $rencontre->getJoueursNonConvoques());
 
         // Joueuses officielles convoquées
-        $joueuses = array_values(array_filter(
-            $joueusesActives,
-            fn(Joueur $j) => !in_array((int) $j->getId(), $idsNonConvoquees, true)
-        ));
+        // [V2.3] En mode interne A/B, la composition FAIT OFFICE de
+        // convocation : la liste de travail = A ∪ B (le filtre
+        // "non convoquées" ne s'applique pas, la répartition est explicite).
+        if ($modeInterneAB) {
+            $joueuses = array_merge($joueusesEquipeA, $joueusesEquipeB);
+        } else {
+            $joueuses = array_values(array_filter(
+                $joueusesActives,
+                fn(Joueur $j) => !in_array((int) $j->getId(), $idsNonConvoquees, true)
+            ));
+        }
 
         // [V2.2] Les éphémères adverse ne sont pas "convoquées" au sens classique,
         // on les ajoute toutes (pas de filtre non-convoquées sur elles)
@@ -246,7 +277,116 @@ class StatsLiveController extends AbstractController
             // [V2.2] Joueuses éphémères de CETTE rencontre (notre côté + adversaires)
             'joueuses_ephemeres_notres'   => $joueusesEphemeresNotres,
             'joueuses_ephemeres_adverses' => $joueusesEphemeresAdverses,
+            // [V2.3] Match interne à deux équipes — sidebar coupée en 2 colonnes
+            'mode_interne_ab'             => $modeInterneAB,
+            'joueuses_equipe_a'           => $joueusesEquipeA,
+            'joueuses_equipe_b'           => $joueusesEquipeB,
         ]);
+    }
+
+    // ====================================================================
+    // [V2.3 05/07/2026] COMPOSITION A/B — match interne à deux équipes
+    // ====================================================================
+
+    /**
+     * Page de composition des équipes A et B depuis l'effectif du club.
+     *
+     *   GET manager.mabb.fr/rencontres/{id}/composition-interne
+     *
+     * Réservée aux types ENTRAINEMENT_INTERNE et AMICAL (un match officiel
+     * n'a qu'une équipe du club face à un adversaire externe).
+     *
+     * ISOLATION : l'effectif proposé = joueuses actives non temporaires
+     * du club COURANT uniquement (findEffectifClubPourComposition).
+     */
+    #[Route('/rencontres/{id}/composition-interne', name: 'manager_rencontre_composition_interne', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function compositionInterne(Rencontre $rencontre): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        if (!$rencontre->peutComposerDeuxEquipes()) {
+            $this->addFlash('warning', 'La composition A/B n\'est disponible que pour les entraînements internes et amicaux.');
+            return $this->redirectToRoute('manager_rencontre_stats_live', ['id' => $rencontre->getId()]);
+        }
+
+        $effectif = $this->joueurRepository->findEffectifClubPourComposition(
+            (int) $rencontre->getClub()?->getId()
+        );
+
+        return $this->render('manager/stats_live/composition_interne.html.twig', [
+            'rencontre' => $rencontre,
+            'effectif'  => $effectif,
+            'ids_a'     => $rencontre->getEquipeAIds(),
+            'ids_b'     => $rencontre->getEquipeBIds(),
+        ]);
+    }
+
+    /**
+     * Enregistre la composition A/B.
+     *
+     *   POST manager.mabb.fr/rencontres/{id}/composition-interne
+     *
+     * Form POST classique (pas d'AJAX : c'est une étape de préparation,
+     * pas de saisie temps réel). CSRF token dédié.
+     *
+     * VALIDATIONS SERVEUR (le JS n'est qu'un confort, jamais une sécurité) :
+     *   1. Type de rencontre compatible
+     *   2. Tous les IDs ∈ effectif actif non temporaire du club courant
+     *      (anti-IDOR : un ID d'un autre club est silencieusement écarté)
+     *   3. Exclusivité A/B garantie par Rencontre::setCompositionInterne()
+     */
+    #[Route('/rencontres/{id}/composition-interne', name: 'manager_rencontre_composition_interne_save', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function compositionInterneSave(Request $request, Rencontre $rencontre): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        if (!$rencontre->peutComposerDeuxEquipes()) {
+            $this->addFlash('warning', 'La composition A/B n\'est disponible que pour les entraînements internes et amicaux.');
+            return $this->redirectToRoute('manager_rencontre_stats_live', ['id' => $rencontre->getId()]);
+        }
+
+        if (!$this->isCsrfTokenValid('composition_interne_' . $rencontre->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_rencontre_composition_interne', ['id' => $rencontre->getId()]);
+        }
+
+        // Bouton "Vider la composition" : retour explicite au mode classique
+        if ($request->request->get('reset')) {
+            $rencontre->viderCompositionInterne();
+            $this->em->flush();
+            $this->addFlash('success', 'Composition A/B vidée — la rencontre repasse en mode classique.');
+            return $this->redirectToRoute('manager_rencontre_composition_interne', ['id' => $rencontre->getId()]);
+        }
+
+        // Whitelist des IDs autorisés = effectif du club courant
+        $idsAutorises = array_map(
+            fn(Joueur $j) => (int) $j->getId(),
+            $this->joueurRepository->findEffectifClubPourComposition((int) $rencontre->getClub()?->getId())
+        );
+
+        $idsA = array_intersect(array_map('intval', (array) $request->request->all('equipe_a')), $idsAutorises);
+        $idsB = array_intersect(array_map('intval', (array) $request->request->all('equipe_b')), $idsAutorises);
+
+        $rencontre->setCompositionInterne(
+            $idsA,
+            $idsB,
+            (string) $request->request->get('nom_a', ''),
+            (string) $request->request->get('nom_b', '')
+        );
+        $this->em->flush();
+
+        if ($rencontre->isInterneDeuxEquipes()) {
+            $this->addFlash('success', sprintf(
+                'Composition enregistrée : %s (%d joueuses) vs %s (%d joueuses).',
+                $rencontre->getEquipeANom(), count($rencontre->getEquipeAIds()),
+                $rencontre->getEquipeBNom(), count($rencontre->getEquipeBIds())
+            ));
+            return $this->redirectToRoute('manager_rencontre_stats_live', ['id' => $rencontre->getId()]);
+        }
+
+        // Composition incomplète (une équipe vide) → on reste sur la page
+        $this->addFlash('warning', 'Il faut au moins une joueuse dans CHAQUE équipe pour activer le mode deux équipes.');
+        return $this->redirectToRoute('manager_rencontre_composition_interne', ['id' => $rencontre->getId()]);
     }
 
     /**
@@ -300,6 +440,14 @@ class StatsLiveController extends AbstractController
         if ($joueur->getClub()?->getId() !== $rencontre->getClub()?->getId()) {
             // Anti-IDOR : on refuse une action pour une joueuse d'un autre club
             return $this->jsonError('Joueuse hors club.', Response::HTTP_FORBIDDEN);
+        }
+        // [V2.3] Mode interne A/B : en plus du club, la joueuse (non éphémère)
+        // doit appartenir à la composition A∪B. Une joueuse du club mais hors
+        // composition ne joue pas ce match — refuser évite les stats orphelines.
+        if ($rencontre->isInterneDeuxEquipes()
+            && !$joueur->isTemporaire()
+            && !$rencontre->estDansComposition((int) $joueur->getId())) {
+            return $this->jsonError('Joueuse hors composition A/B.', Response::HTTP_FORBIDDEN);
         }
 
         // === Validation du type d'action ===
@@ -461,8 +609,18 @@ class StatsLiveController extends AbstractController
         if (!$joueur instanceof Joueur) {
             return $this->jsonError('Joueuse introuvable.', Response::HTTP_NOT_FOUND);
         }
-        // Anti-IDOR : la joueuse doit être dans l'équipe de la rencontre
-        if ($joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
+        // Anti-IDOR — la règle dépend du mode de la rencontre :
+        //   - Classique : la joueuse doit être dans l'équipe de la rencontre
+        //     (comportement historique, inchangé).
+        //   - [V2.3] Interne A/B : la composition peut mélanger PLUSIEURS
+        //     équipes du club (U15+U18+Séniors) → le critère devient
+        //     "joueuse ∈ composition A∪B" (plus strict que club-scoped :
+        //     une joueuse du club hors composition est aussi refusée).
+        if ($rencontre->isInterneDeuxEquipes()) {
+            if (!$rencontre->estDansComposition((int) $joueur->getId())) {
+                return $this->jsonError('Joueuse hors composition A/B.', Response::HTTP_FORBIDDEN);
+            }
+        } elseif ($joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
             return $this->jsonError('Joueuse hors équipe.', Response::HTTP_FORBIDDEN);
         }
 

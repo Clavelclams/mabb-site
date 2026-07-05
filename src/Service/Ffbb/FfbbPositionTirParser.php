@@ -142,6 +142,12 @@ class FfbbPositionTirParser
             $entry->setPositionY($this->toInt($zoneY));
             $entry->setTypeTir($this->classifyShot($zoneX, $zoneY));
 
+            // [V2.4 05/07/2026] Coordonnées BRUTES repère FFBB en pour-mille
+            // — AUCUNE transformation. Affichées telles quelles sur le
+            // terrain SVG identique au doc e-Marque → précision maximale.
+            $entry->setFfbbX((int) round($normX * 1000));
+            $entry->setFfbbY((int) round($normY * 1000));
+
             if (!$dryRun) {
                 $this->em->persist($entry);
             }

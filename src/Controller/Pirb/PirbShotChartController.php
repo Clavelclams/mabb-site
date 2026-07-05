@@ -133,7 +133,11 @@ class PirbShotChartController extends AbstractController
             $zonesFfbb = $this->buildZonesJsonFromTirFfbb($tirsFfbb, $fromDate, $toDate);
         }
 
-        $zonesJson = array_merge($zonesSeances, $zonesFfbb);
+        // [V2.4 05/07/2026] Les tirs FFBB ne sont PLUS fusionnés dans la shot
+        // map d'entraînement : ils ont leur propre terrain "FFBB officiel"
+        // (proportions identiques au doc e-Marque → placement précis).
+        // zones_json = séances uniquement ; zones_ffbb_json = matchs FFBB.
+        $zonesJson = $zonesSeances;
 
         // --- Stats globales (badges résumé) — inclut les tirs FFBB ---
         $statsGlobales = $this->buildStatsGlobales($seancesValidees, $zonesFfbb);
@@ -146,6 +150,7 @@ class PirbShotChartController extends AbstractController
             'seances_validees'     => $seancesValidees,
             'seances_en_attente'   => array_values($seancesEnAttente),
             'zones_json'           => json_encode($zonesJson),
+            'zones_ffbb_json'      => json_encode($zonesFfbb),
             'progression_data'     => json_encode($progressionData),
             'stats_globales'       => $statsGlobales,
             'matches_ffbb'         => $matchesFfbb,
@@ -402,6 +407,22 @@ class PirbShotChartController extends AbstractController
                 if ($toDate   !== null && $dateMatch > $toDate)   continue;
             }
 
+            // [V2.4] Coordonnées repère FFBB (fx/fy, 0-1) pour le terrain
+            // "FFBB officiel" (portrait, panier en haut) :
+            //   - ffbbX/ffbbY présents (lignes re-parsées) → valeurs brutes,
+            //     précision maximale (pour-mille).
+            //   - sinon FALLBACK : inversion de l'ancienne transformation
+            //     zoneX = normY*0.46+0.04 / zoneY = normX (précision dégradée
+            //     par l'arrondi 0-100 historique, mais affichable en attendant
+            //     un re-parse : app:process-positions-tirs).
+            if ($tir->getFfbbX() !== null && $tir->getFfbbY() !== null) {
+                $fx = $tir->getFfbbX() / 1000.0;
+                $fy = $tir->getFfbbY() / 1000.0;
+            } else {
+                $fx = $posY / 100.0;
+                $fy = max(0.0, min(1.0, ($posX / 100.0 - 0.04) / 0.46));
+            }
+
             // FFBB : tirs réussis uniquement → pas de % calculable (tentatives inconnues)
             // Couleur bleue fixe pour distinguer des séances entraînement (rouge/vert selon %)
             $result[] = [
@@ -413,6 +434,8 @@ class PirbShotChartController extends AbstractController
                 'source'      => SeanceTir::SOURCE_MATCH,
                 'x'           => $posX / 100.0,
                 'y'           => $posY / 100.0,
+                'fx'          => round($fx, 4),
+                'fy'          => round($fy, 4),
                 'typeTir'     => $tir->getTypeTir(),
                 'reussis'     => 1,
                 'tentatives'  => null,   // inconnu

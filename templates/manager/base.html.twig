@@ -56,8 +56,23 @@
             display: flex;
             gap: 4px;
             list-style: none;
-            margin: 0;
             padding: 0;
+            /* [UI 05/07/2026] La navbar compte 11 modules : même en desktop
+               1024-1300px elle peut déborder. min-width:0 + flex:1 laisse la
+               rangée rétrécir, overflow-x:auto la rend scrollable au lieu de
+               casser la ligne ou pousser la user-zone hors écran. */
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.2) transparent;
+            margin: 0 12px;
+        }
+        .topbar .nav-modules::-webkit-scrollbar { height: 4px; }
+        .topbar .nav-modules::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
         }
         .topbar .nav-modules a {
             color: rgba(255,255,255,0.85);
@@ -67,7 +82,12 @@
             padding: 8px 14px;
             border-radius: 8px;
             transition: background .15s;
+            white-space: nowrap;   /* jamais de lien sur 2 lignes */
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
+        .topbar .user-zone { flex-shrink: 0; }
         .topbar .nav-modules a:hover,
         .topbar .nav-modules a.active {
             background: rgba(255,255,255,0.12);
@@ -81,6 +101,111 @@
         }
         .topbar .user-zone .user-name {
             color: rgba(255,255,255,0.9);
+        }
+
+        /* ═══════════════════════════════════════════════════════════
+           [UI 05/07/2026] Menu utilisateur <details> (profil + saison
+           + déconnexion). Pure CSS — pas de dépendance Bootstrap JS.
+           ═══════════════════════════════════════════════════════════ */
+        .user-menu { position: relative; }
+        .user-menu > summary {
+            list-style: none;             /* enlève le triangle natif */
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255,255,255,0.92);
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.25);
+            font-weight: 600;
+            font-size: .85rem;
+            transition: background .15s;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .user-menu > summary::-webkit-details-marker { display: none; }
+        .user-menu > summary:hover,
+        .user-menu[open] > summary { background: rgba(255,255,255,0.14); }
+        .user-menu > summary .chev { font-size: .7rem; transition: transform .15s; }
+        .user-menu[open] > summary .chev { transform: rotate(180deg); }
+        .user-menu .saison-chip {
+            background: rgba(252,112,42,.9);
+            color: #fff;
+            font-size: .68rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 999px;
+            letter-spacing: .02em;
+        }
+        .user-menu-panel {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            min-width: 240px;
+            background: #fff;
+            border: 1px solid var(--mabb-border);
+            border-radius: 12px;
+            box-shadow: 0 12px 32px rgba(14,42,84,.22);
+            z-index: 1050;
+            overflow: hidden;
+            padding: 6px;
+        }
+        .user-menu-head {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--mabb-border);
+            margin-bottom: 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .user-menu-head strong { color: var(--mabb-dark); font-size: .9rem; }
+        .user-menu-head small { color: var(--mabb-muted); font-size: .75rem; word-break: break-all; }
+        .user-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            color: var(--mabb-text);
+            text-decoration: none;
+            font-size: .88rem;
+            font-weight: 500;
+        }
+        a.user-menu-item:hover { background: #f1f5f9; color: var(--mabb-dark); }
+        .user-menu-logout { color: #b91c1c; }
+        a.user-menu-logout:hover { background: #fef2f2; color: #991b1b; }
+        .user-menu-saison {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+            cursor: default;
+        }
+        .user-menu-saison label {
+            font-size: .72rem;
+            font-weight: 700;
+            color: var(--mabb-muted);
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 0;
+        }
+        .user-menu-saison select {
+            width: 100%;
+            border: 1.5px solid var(--mabb-border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: .88rem;
+            cursor: pointer;
+            background: #fff;
+            color: var(--mabb-text);
+        }
+        .user-menu-saison select:focus {
+            outline: none;
+            border-color: var(--mabb-orange);
+            box-shadow: 0 0 0 3px rgba(252,112,42,.15);
         }
 
         /* ───── Contenu ───── */
@@ -601,9 +726,14 @@
             .topbar .user-zone {
                 font-size: .78rem;
             }
-            .topbar .user-zone .user-name span,
-            .topbar .user-zone .user-name .username-text {
-                display: none;          /* on cache le prénom, garde juste l'avatar/icône */
+            /* [UI 05/07/2026] Smartphone : on cache le prénom dans le bouton
+               du menu user, on garde avatar + chip saison + chevron */
+            .user-menu .username-text {
+                display: none;
+            }
+            .user-menu > summary {
+                padding: 6px 10px;
+                gap: 6px;
             }
             main.container-app {
                 padding: 14px 10px;
@@ -708,6 +838,112 @@
             }
             /* Tooltip si label nav caché : on lit aria-label / title (déjà géré par browser) */
         }
+
+        /* ═══════════════════════════════════════════════════════════════
+           [UI 05/07/2026] BLINDAGE RESPONSIVE GLOBAL — anti scroll horizontal
+           Constat : plusieurs pages débordent en mobile car
+             1. des tables .table-mabb (min-width:600px) sont posées
+                DIRECTEMENT dans .card-mabb sans .card-body — or le scroll
+                interne n'était géré QUE sur .card-body → la table poussait
+                toute la page (long scroll horizontal).
+             2. aucune barrière au niveau du document : le moindre élément
+                trop large élargissait <body>.
+             3. les grids inline repeat(auto-fill, minmax(280px+…)) peuvent
+                déborder sur les écrans < 400px.
+           Correctifs CENTRALISÉS ici (une seule source, 0 template modifié).
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* 2. Barrière document : rien ne peut élargir la page.
+           `clip` (et non `hidden`) : ne crée pas de contexte de scroll,
+           ne casse pas position:sticky des enfants. */
+        html, body {
+            max-width: 100%;
+            overflow-x: clip;
+        }
+
+        /* Les médias ne débordent jamais du contenu */
+        main.container-app img,
+        main.container-app video,
+        main.container-app canvas {
+            max-width: 100%;
+            height: auto;
+        }
+
+        @media (max-width: 1023px) {
+            /* 1. Toute card contenant DIRECTEMENT une table devient son
+               propre conteneur de scroll (le reste de la page ne bouge pas).
+               :has() est supporté par tous les navigateurs actuels
+               (Chrome/Edge 105+, Safari 15.4+, Firefox 121+). */
+            .card-mabb:has(> .table-mabb),
+            .card-mabb:has(> table),
+            .card-mabb:has(> .table-responsive > table) {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            /* Idem pour les tables Bootstrap .table posées nues dans une card */
+            .card-mabb > table {
+                margin-bottom: 0;
+            }
+        }
+
+        @media (max-width: 767px) {
+            /* min-width des tables : 600px est trop agressif pour les petites
+               tables 2-3 colonnes → on ne force le min-width QUE si la table
+               a beaucoup de colonnes ne sert à rien en CSS pur ; à la place,
+               on laisse 600px par défaut mais les tables marquées "compacte"
+               peuvent s'y soustraire. */
+            .table-mabb.table-compacte { min-width: 0; }
+        }
+
+        @media (max-width: 399px) {
+            /* 3. Grids inline auto-fill/auto-fit avec minmax ≥ 200px :
+               sur très petit écran on force UNE colonne. Sélecteur par
+               substring d'attribut style — évite de retoucher ~20 templates. */
+            main [style*="minmax(360px"],
+            main [style*="minmax(340px"],
+            main [style*="minmax(320px"],
+            main [style*="minmax(300px"],
+            main [style*="minmax(280px"],
+            main [style*="minmax(260px"],
+            main [style*="minmax(240px"],
+            main [style*="minmax(220px"],
+            main [style*="minmax(200px"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+
+        /* iPad portrait (600-820px) : les grids "larges" passent à 2 colonnes max
+           via la même technique, uniquement pour les très larges (320px+) */
+        @media (min-width: 600px) and (max-width: 820px) {
+            main [style*="minmax(360px"],
+            main [style*="minmax(340px"] {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+        }
+
+        /* Grids inline à colonnes FIXES (1fr 1fr, 1fr 2fr, 2fr 1fr…) :
+           jamais responsive par construction → on les empile sur mobile.
+           NB : "1fr 1fr 1fr" contient "1fr 1fr" → couvert aussi (voulu). */
+        @media (max-width: 600px) {
+            main [style*="grid-template-columns:1fr 1fr"],
+            main [style*="grid-template-columns: 1fr 1fr"],
+            main [style*="grid-template-columns:1fr 2fr"],
+            main [style*="grid-template-columns: 1fr 2fr"],
+            main [style*="grid-template-columns:2fr 1fr"],
+            main [style*="grid-template-columns: 2fr 1fr"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        /* Grids "label fixe + valeur" (140px/170px 1fr) : empilées sur
+           smartphone étroit, le label au-dessus de la valeur */
+        @media (max-width: 479px) {
+            main [style*="grid-template-columns:140px"],
+            main [style*="grid-template-columns: 140px"],
+            main [style*="grid-template-columns:170px"],
+            main [style*="grid-template-columns: 170px"] {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 
     {% block stylesheets %}{% endblock %}
@@ -764,26 +1000,47 @@
         {% endif %}
     </ul>
 
+    {# ═══════════════════════════════════════════════════════════════
+       [UI 05/07/2026] MENU UTILISATEUR — <details> natif, ZÉRO JS requis
+       (Bootstrap JS n'est pas chargé dans Manager, les dropdowns
+       data-bs-* ne fonctionneraient pas).
+       Le sélecteur de SAISON vit désormais ICI et non plus inline dans
+       la topbar : il gonflait la user-zone et cassait le responsive
+       (wrap + scroll horizontal en mobile).
+       ═══════════════════════════════════════════════════════════════ #}
     <div class="user-zone">
         {% if app.user %}
-            <form method="post" action="{{ path('saison_changer') }}" style="display:inline-flex;align-items:center;gap:4px;margin-right:8px;">
-                <input type="hidden" name="_token" value="{{ csrf_token('saison_changer') }}">
-                <select name="saison" onchange="this.form.submit()" style="background:#2d2d2d;color:#fff;border:1px solid #555;border-radius:4px;padding:2px 6px;font-size:0.8rem;cursor:pointer;">
-                    {% for s in saisons_disponibles() %}
-                        <option value="{{ s }}" {% if s == saison_active() %}selected{% endif %}>{{ s }}</option>
-                    {% endfor %}
-                </select>
-            </form>
-            <a href="{{ path('manager_profil') }}" class="user-name" style="text-decoration:none; color:rgba(255,255,255,0.9); display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; transition: background .15s;"
-               onmouseover="this.style.background='rgba(255,255,255,0.12)'"
-               onmouseout="this.style.background='transparent'"
-               title="Voir mon profil">
-                <i class="bi bi-person-circle"></i>
-                {{ app.user.prenom }} {{ app.user.nom }}
-            </a>
-            <a href="{{ path('manager_logout') }}" class="btn btn-sm btn-outline-light rounded-pill">
-                <i class="bi bi-box-arrow-right"></i> Déconnexion
-            </a>
+            <details class="user-menu" id="userMenu">
+                <summary title="Compte, saison, déconnexion">
+                    <i class="bi bi-person-circle"></i>
+                    <span class="username-text">{{ app.user.prenom }}</span>
+                    <span class="saison-chip">{{ saison_active() }}</span>
+                    <i class="bi bi-chevron-down chev"></i>
+                </summary>
+                <div class="user-menu-panel">
+                    <div class="user-menu-head">
+                        <strong>{{ app.user.prenom }} {{ app.user.nom }}</strong>
+                        <small>{{ app.user.email }}</small>
+                    </div>
+                    <a href="{{ path('manager_profil') }}" class="user-menu-item">
+                        <i class="bi bi-person"></i> Mon profil
+                    </a>
+                    <div class="user-menu-item user-menu-saison">
+                        <label for="saisonSelect"><i class="bi bi-calendar3"></i> Saison</label>
+                        <form method="post" action="{{ path('saison_changer') }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('saison_changer') }}">
+                            <select id="saisonSelect" name="saison" onchange="this.form.submit()">
+                                {% for s in saisons_disponibles() %}
+                                    <option value="{{ s }}" {% if s == saison_active() %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                    <a href="{{ path('manager_logout') }}" class="user-menu-item user-menu-logout">
+                        <i class="bi bi-box-arrow-right"></i> Déconnexion
+                    </a>
+                </div>
+            </details>
         {% endif %}
     </div>
 </div>
@@ -801,6 +1058,35 @@
 
     {% block body %}{% endblock %}
 </main>
+
+{# ═══ [UI 05/07/2026] JS global léger — vanilla, aucune lib ═══ #}
+<script>
+(function () {
+    // 1. Menu utilisateur <details> : fermeture au clic extérieur + Échap.
+    //    (comportement natif : <details> reste ouvert sinon)
+    const menu = document.getElementById('userMenu');
+    if (menu) {
+        document.addEventListener('click', (e) => {
+            if (menu.hasAttribute('open') && !menu.contains(e.target)) {
+                menu.removeAttribute('open');
+            }
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') menu.removeAttribute('open');
+        });
+    }
+
+    // 2. Boutons de fermeture des alertes Bootstrap (.btn-close).
+    //    Bootstrap JS n'est PAS chargé dans Manager : les data-bs-dismiss
+    //    étaient morts. Délégation minimale : clic → on retire l'alerte.
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.btn-close, [data-bs-dismiss="alert"]');
+        if (!btn) return;
+        const alerte = btn.closest('.alert, .flash');
+        if (alerte) alerte.remove();
+    });
+})();
+</script>
 
 {% block javascripts %}{% endblock %}
 

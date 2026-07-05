@@ -25,7 +25,42 @@
        5. Bouton Annuler sur chaque action récente → DELETE
 
     JS pur vanilla, pas de framework. Tout dans ce fichier pour rester simple.
+
+    [V2.3 05/07/2026] MODE INTERNE À DEUX ÉQUIPES :
+       Si rencontre.isInterneDeuxEquipes(), la colonne JOUEUSES est coupée
+       en deux verticalement (Équipe A à gauche / Équipe B à droite) et les
+       deux scores du header sont calculés depuis les actions (A vs B).
+       Le reste du moteur (terrain, actions, historique, sessions) est
+       strictement identique — même markup .joueuse-item, même JS.
 #}
+
+{# [V2.3] Carte joueuse — factorisation pour les colonnes A et B.
+   Markup identique aux cartes classiques : les sélecteurs JS existants
+   (data-joueur-id, data-joueur-pts, data-badge-joueur…) restent valides. #}
+{% macro carte_joueuse(j, comptages, est_sur_terrain) %}
+    {% set pts = ((comptages.tir_2pt_int_reussi ?? 0) + (comptages.tir_2pt_ext_reussi ?? 0)) * 2
+               + (comptages.tir_3pt_reussi ?? 0) * 3
+               + (comptages.lancer_reussi ?? 0) %}
+    <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
+         data-joueur-id="{{ j.id }}"
+         data-pts="{{ pts }}"
+         data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}">
+        <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
+            <span class="dot"></span>
+            <span class="badge-label">{{ est_sur_terrain ? 'ON' : 'OFF' }}</span>
+        </span>
+        <div class="joueuse-avatar">
+            {% if j.numeroMaillot is not null %}{{ j.numeroMaillot }}{% else %}{{ j.prenom|first|upper }}{% endif %}
+        </div>
+        <div class="joueuse-info">
+            <div class="joueuse-name">{{ j.prenom }} {{ j.nom }}</div>
+            <div class="joueuse-stats">
+                <span class="pts" data-joueur-pts="{{ j.id }}">{{ pts }}</span> pts
+                · <span class="temps-jeu" data-temps-jeu="{{ j.id }}">00:00</span>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
 
 {% block stylesheets %}
     {{ parent() }}
@@ -1875,6 +1910,41 @@
             .stats-nav-btn .nav-label { font-size: 0.62rem; }
             .stats-nav-btn .nav-icon { font-size: 1.3rem; }
         }
+
+        /* ================================================================
+           [V2.3 05/07/2026] MATCH INTERNE À DEUX ÉQUIPES — sidebar A/B
+           La div "liste des joueuses" est coupée en deux VERTICALEMENT :
+           Équipe A à gauche (bleu), Équipe B à droite (rouge).
+           Les .joueuse-item gardent exactement le même markup → tout le JS
+           existant (sélection, compteurs, ON/OFF terrain) fonctionne tel quel.
+        ================================================================ */
+        .ab-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            align-items: start;
+        }
+        .ab-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+        .ab-col-header {
+            position: sticky; top: 0; z-index: 2;
+            font-size: .72rem; font-weight: 800; text-transform: uppercase;
+            letter-spacing: .05em; padding: 6px 8px; border-radius: 8px;
+            text-align: center; backdrop-filter: blur(4px);
+        }
+        .ab-col-a .ab-col-header { color: #3b82f6; background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.35); }
+        .ab-col-b .ab-col-header { color: #ef4444; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.35); }
+        .ab-col-a .joueuse-item { border-left: 3px solid #3b82f6; }
+        .ab-col-b .joueuse-item { border-left: 3px solid #ef4444; }
+        /* Cartes plus compactes : 2 colonnes dans un espace prévu pour 1 */
+        .ab-split .joueuse-item { padding: 8px 8px; }
+        .ab-split .joueuse-avatar { width: 26px; height: 26px; font-size: .72rem; }
+        .ab-split .joueuse-name { font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Mobile portrait : on garde les 2 colonnes côte à côte (exigence
+           fonctionnelle : statter A et B en même temps), on compacte encore */
+        @media (max-width: 499px) {
+            .ab-split { grid-template-columns: 1fr 1fr !important; }
+            .ab-split .joueuse-name { font-size: .7rem; }
+        }
     </style>
 {% endblock %}
 
@@ -1957,7 +2027,8 @@
             </button>
 
             <div class="score-block score-block-mabb">
-                <div class="score-team">{{ rencontre.equipe.nom }}</div>
+                {# [V2.3] Mode interne A/B : le bloc gauche devient le score de l'Équipe A #}
+                <div class="score-team">{{ mode_interne_ab ? rencontre.equipeANom : rencontre.equipe.nom }}</div>
                 <div class="score-value" id="scoreMabb">0</div>
             </div>
 
@@ -1988,7 +2059,13 @@
             </div>
 
             <div class="score-block score-block-adv">
-                <div class="score-team">{{ rencontre.adversaire }}</div>
+                {# [V2.3] Mode interne A/B : le bloc droit devient le score de l'Équipe B,
+                   CALCULÉ depuis les actions saisies (comme le score A) — les boutons
+                   manuels −/+ n'ont plus de sens et sont masqués. #}
+                <div class="score-team">{{ mode_interne_ab ? rencontre.equipeBNom : rencontre.adversaire }}</div>
+                {% if mode_interne_ab %}
+                    <div class="score-value" id="scoreAdverseDisplay" style="color:#ef4444;">0</div>
+                {% else %}
                 {# V2.1n — Boutons − / + autour du score pour ajustement rapide #}
                 <div class="adv-score-row">
                     <button type="button" class="adverse-btn adv-tiny-btn" data-delta="-1" title="−1 point">−</button>
@@ -2002,6 +2079,7 @@
                     <button type="button" class="adverse-btn" data-delta="3" title="+3 points (à 3 pts)">+3</button>
                     <button type="button" class="adverse-btn adverse-btn-undo" data-delta="-1" title="Corriger (-1)">−1</button>
                 </div>
+                {% endif %}
             </div>
 
             {# V2.1j — Info session courante à droite (pas d'icone, juste texte) #}
@@ -2031,6 +2109,36 @@
 
             {# ===== COLONNE 1 : LISTE DES JOUEUSES ===== #}
             <div class="joueuses-list" id="joueusesList">
+            {% if mode_interne_ab %}
+                {# ============================================================
+                   [V2.3] MATCH INTERNE — liste coupée en 2 verticalement.
+                   Équipe A à gauche, Équipe B à droite. Pas de carte
+                   "adversaire" : les deux équipes sont du club, chaque
+                   action est saisie nominativement sur une joueuse.
+                ============================================================ #}
+                <div class="ab-split">
+                    <div class="ab-col ab-col-a" id="colEquipeA">
+                        <div class="ab-col-header">{{ rencontre.equipeANom }}</div>
+                        {% for j in joueuses_equipe_a %}
+                            {{ _self.carte_joueuse(j, comptages_par_joueur[j.id] ?? {}, j.id in ids_sur_terrain) }}
+                        {% else %}
+                            <p style="color:#94a3b8; padding:8px; font-size:.8rem;">Aucune joueuse.</p>
+                        {% endfor %}
+                    </div>
+                    <div class="ab-col ab-col-b" id="colEquipeB">
+                        <div class="ab-col-header">{{ rencontre.equipeBNom }}</div>
+                        {% for j in joueuses_equipe_b %}
+                            {{ _self.carte_joueuse(j, comptages_par_joueur[j.id] ?? {}, j.id in ids_sur_terrain) }}
+                        {% else %}
+                            <p style="color:#94a3b8; padding:8px; font-size:.8rem;">Aucune joueuse.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                <a href="{{ path('manager_rencontre_composition_interne', {id: rencontre.id}) }}"
+                   style="display:block; text-align:center; font-size:.75rem; color:#94a3b8; margin-top:8px;">
+                    ✏️ Modifier la composition A/B
+                </a>
+            {% else %}
                 {# V2.1g.2 — Carte ADVERSAIRE (visible en mode Débutant uniquement) #}
                 <div class="joueuse-adversaire" id="cardAdversaire" data-adversaire="1">
                     <i class="bi bi-shield-shaded"></i>
@@ -2147,6 +2255,7 @@
                     {% endif %}
 
                 {% endif %}
+            {% endif %}{# fin mode_interne_ab #}
             </div>
 
             {# ===== COLONNE 2 : TERRAIN SVG ===== #}
@@ -2295,10 +2404,13 @@
             <span class="nav-icon">📋</span>
             <span class="nav-label">Effectif</span>
         </button>
+        {# [V2.3] Pas de score adverse manuel en mode interne A/B (calculé) #}
+        {% if not mode_interne_ab %}
         <button type="button" class="stats-nav-btn" data-sheet="adversaire" aria-label="Score adversaire">
             <span class="nav-icon">🔴</span>
             <span class="nav-label">Score adv.</span>
         </button>
+        {% endif %}
         <button type="button" class="stats-nav-btn" data-sheet="plus" aria-label="Plus d'actions">
             <span class="nav-icon">⋯</span>
             <span class="nav-label">Plus</span>
@@ -2419,6 +2531,9 @@
         // ====================================================================
         const RENCONTRE_ID = {{ rencontre.id }};
         const CSRF_TOKEN = '{{ csrf_token('stats_live_' ~ rencontre.id) }}';
+        // [V2.3] Match interne à deux équipes : bascule le calcul des scores
+        // du header en mode "somme par colonne A/B" (voir updateScoreEquipe).
+        const MODE_INTERNE_AB = {{ mode_interne_ab ? 'true' : 'false' }};
         const URL_ACTION_CREATE = '{{ path('manager_rencontre_stats_live_action_create', {id: rencontre.id}) }}';
         const URL_ACTION_DELETE_BASE = '{{ path('manager_rencontre_stats_live_action_delete', {id: rencontre.id, actionId: 0}) }}'.replace(/\/0$/, '/');
 
@@ -3409,10 +3524,15 @@
         });
 
         // ─── Bind : click adversaire ───
-        document.getElementById('cardAdversaire').addEventListener('click', () => {
-            if (!wrapper.classList.contains('mode-debutant')) return;
-            workflowAdversaire();
-        });
+        // [V2.3] Garde null : la carte adversaire n'existe pas en mode
+        // interne A/B (les deux équipes sont du club, pas d'adversaire).
+        const cardAdv = document.getElementById('cardAdversaire');
+        if (cardAdv) {
+            cardAdv.addEventListener('click', () => {
+                if (!wrapper.classList.contains('mode-debutant')) return;
+                workflowAdversaire();
+            });
+        }
 
         // ─── V2.1g.7 — Click badge ON/OFF : event delegation au document ───
         // Bind sur DOCUMENT en useCapture : s'exécute en TOUT PREMIER dans la
@@ -3506,6 +3626,22 @@
         }
 
         function updateScoreEquipe() {
+            // [V2.3] Mode interne A/B : chaque score du header = somme des
+            // points des joueuses de SA colonne. Le score B n'est plus le
+            // "score adverse" saisi manuellement — il est calculé comme le A.
+            if (MODE_INTERNE_AB) {
+                let totalA = 0, totalB = 0;
+                document.querySelectorAll('#colEquipeA [data-joueur-pts]').forEach(el => {
+                    totalA += parseInt(el.textContent, 10) || 0;
+                });
+                document.querySelectorAll('#colEquipeB [data-joueur-pts]').forEach(el => {
+                    totalB += parseInt(el.textContent, 10) || 0;
+                });
+                document.getElementById('scoreMabb').textContent = totalA;
+                const advDisplay = document.getElementById('scoreAdverseDisplay');
+                if (advDisplay) advDisplay.textContent = totalB;
+                return;
+            }
             // Somme des pts de toutes les joueuses (depuis le DOM)
             let total = 0;
             document.querySelectorAll('[data-joueur-pts]').forEach(el => {

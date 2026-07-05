@@ -28,6 +28,32 @@ class JoueurRepository extends ServiceEntityRepository
     }
 
     /**
+     * [V2.3 05/07/2026] Effectif du club éligible à la composition A/B
+     * d'un match interne : joueuses ACTIVES et NON temporaires, toutes
+     * équipes confondues (un match interne peut mélanger U15/U18/Séniors).
+     *
+     * MULTI-TENANT : filtré par club_id — aucune joueuse d'un autre club
+     * ne peut apparaître dans la composition (exigence d'isolation).
+     *
+     * Tri : équipe puis nom, pour un affichage groupé lisible.
+     *
+     * @return Joueur[]
+     */
+    public function findEffectifClubPourComposition(int $clubId): array
+    {
+        return $this->createQueryBuilder('j')
+            ->leftJoin('j.equipe', 'e')->addSelect('e')
+            ->andWhere('j.club = :club')
+            ->andWhere('j.isActive = true')
+            ->andWhere('j.isTemporaire = false')
+            ->setParameter('club', $clubId)
+            ->orderBy('e.categorie', 'ASC')
+            ->addOrderBy('j.nom', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * V1.4a — Cherche des Users CLUB_MEMBER actifs du club, candidats au lien
      * avec la fiche Joueur donnée. Exclut les users déjà liés à une autre
      * fiche Joueur du même club.

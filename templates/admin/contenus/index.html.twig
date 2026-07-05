@@ -1,0 +1,95 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{% block title %}Contenus du site — Admin MABB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container">
+        <h1>Contenus du site</h1>
+        <p style="color:rgba(255,255,255,.75)">
+            Modifier les textes, chiffres et photos du site, bloc par bloc — sans toucher au code.
+        </p>
+    </div>
+</div>
+
+<section class="section section-gray">
+    <div class="container">
+
+        {% for label, messages in app.flashes %}
+            {% for msg in messages %}
+                <div class="alert alert-{{ label == 'success' ? 'success' : 'danger' }} rounded-3 mb-3">{{ msg }}</div>
+            {% endfor %}
+        {% endfor %}
+
+        {% if groupes is empty %}
+            <div class="alert alert-info rounded-3">
+                Aucun bloc pour l'instant. Les blocs apparaissent automatiquement
+                après une première visite des pages du site (ouvre la page d'accueil
+                publique puis recharge cette page).
+            </div>
+        {% endif %}
+
+        {% for page, blocs in groupes %}
+            <h2 style="font-size:1.15rem; font-weight:800; margin:28px 0 12px; text-transform:capitalize;">
+                📄 {{ page }}
+            </h2>
+
+            <div class="row g-3">
+                {% for bloc in blocs %}
+                <div class="col-lg-6" id="bloc-{{ bloc.id }}">
+                    <div class="card rounded-4 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <code style="font-size:.78rem;">{{ bloc.cle }}</code>
+                                <span class="badge {{ bloc.valeur is null ? 'bg-secondary' : 'bg-success' }}" style="font-size:.68rem;">
+                                    {{ bloc.valeur is null ? 'texte d\'origine' : 'personnalisé' }}
+                                </span>
+                            </div>
+
+                            <form method="post"
+                                  action="{{ path('admin_contenus_edit', {id: bloc.id}) }}"
+                                  {% if bloc.type == 'image' %}enctype="multipart/form-data"{% endif %}>
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token('bloc_edit_' ~ bloc.id) }}">
+
+                                {% if bloc.type == 'image' %}
+                                    <div class="mb-2">
+                                        <img src="{{ asset(bloc.rendu) }}" alt="{{ bloc.cle }}"
+                                             style="max-width:100%; max-height:140px; border-radius:8px; object-fit:cover;"
+                                             onerror="this.style.display='none'">
+                                    </div>
+                                    <input type="file" name="image" accept="image/*" class="form-control form-control-sm mb-2">
+                                {% elseif bloc.type == 'long' %}
+                                    <textarea name="valeur" rows="4" class="form-control form-control-sm mb-2"
+                                              placeholder="{{ bloc.defaut }}">{{ bloc.valeur }}</textarea>
+                                {% else %}
+                                    <input type="text" name="valeur" class="form-control form-control-sm mb-2"
+                                           value="{{ bloc.valeur }}" placeholder="{{ bloc.defaut }}">
+                                {% endif %}
+
+                                {% if bloc.type != 'image' and bloc.defaut %}
+                                    <div style="font-size:.72rem; color:#94a3b8;" class="mb-2">
+                                        Origine : « {{ bloc.defaut|length > 120 ? bloc.defaut|slice(0, 120) ~ '…' : bloc.defaut }} »
+                                    </div>
+                                {% endif %}
+
+                                <button type="submit" class="btn btn-sm btn-primary">💾 Enregistrer</button>
+                            </form>
+
+                            {% if bloc.valeur is not null %}
+                                <form method="post" action="{{ path('admin_contenus_reset', {id: bloc.id}) }}"
+                                      style="display:inline-block; margin-top:6px;"
+                                      onsubmit="return confirm('Revenir au texte d\'origine ?');">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('bloc_reset_' ~ bloc.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">↩️ Revenir à l'origine</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+    </div>
+</section>
+{% endblock %}

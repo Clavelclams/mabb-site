@@ -52,6 +52,27 @@ class TirFfbb
     #[ORM\Column(type: 'smallint', nullable: true)]
     private ?int $positionY = null;
 
+    // ====================================================================
+    // [V2.4 05/07/2026] COORDONNÉES FFBB BRUTES — précision maximale
+    //
+    // positionX/positionY (ci-dessus) sont le résultat d'une TRANSFORMATION
+    // avec perte (mapping affine approximatif vers le terrain paysage +
+    // arrondi 0-100) → points décalés par rapport aux zones dessinées.
+    //
+    // ffbbX / ffbbY stockent la position TELLE QUE PARSÉE dans le repère du
+    // terrain du PDF e-Marque (portrait, panier en HAUT), en pour-mille :
+    //   ffbbX : 0 = sideline gauche  … 1000 = sideline droite  (15 m)
+    //   ffbbY : 0 = ligne de fond    … 1000 = ligne médiane    (14 m)
+    // Affichées sur un terrain SVG aux proportions IDENTIQUES au doc FFBB
+    // → zéro transformation à l'affichage = zéro décalage.
+    // ====================================================================
+
+    #[ORM\Column(type: 'smallint', nullable: true)]
+    private ?int $ffbbX = null;
+
+    #[ORM\Column(type: 'smallint', nullable: true)]
+    private ?int $ffbbY = null;
+
     #[ORM\Column(length: 20, nullable: true)]
     private ?string $typeTir = null;
 
@@ -80,6 +101,12 @@ class TirFfbb
     public function setPositionX(?int $x): self { $this->positionX = $x; return $this; }
     public function getPositionY(): ?int { return $this->positionY; }
     public function setPositionY(?int $y): self { $this->positionY = $y; return $this; }
+
+    // [V2.4] Coordonnées brutes repère FFBB (pour-mille)
+    public function getFfbbX(): ?int { return $this->ffbbX; }
+    public function setFfbbX(?int $x): self { $this->ffbbX = $x; return $this; }
+    public function getFfbbY(): ?int { return $this->ffbbY; }
+    public function setFfbbY(?int $y): self { $this->ffbbY = $y; return $this; }
     public function getTypeTir(): ?string { return $this->typeTir; }
     public function setTypeTir(?string $t): self { $this->typeTir = $t; return $this; }
     public function isEstReussi(): bool { return $this->estReussi; }

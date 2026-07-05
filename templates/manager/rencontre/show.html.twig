@@ -44,6 +44,15 @@
                     <i class="bi bi-broadcast"></i> Stats LIVE
                 </a>
                 {% endif %}
+                {# [V2.3] Composition A/B — entraînement interne / amical intra-club #}
+                {% if rencontre.peutComposerDeuxEquipes() %}
+                <a href="{{ path('manager_rencontre_composition_interne', {id: rencontre.id}) }}"
+                   class="btn-mabb-ghost"
+                   title="Répartir l'effectif du club en Équipe A / Équipe B (match interne à deux équipes)">
+                    <i class="bi bi-people"></i>
+                    {{ rencontre.isInterneDeuxEquipes() ? 'Équipes A/B ✓' : 'Composer A/B' }}
+                </a>
+                {% endif %}
                 {# V2.1d — Lien vers la page de gestion des sessions de saisie #}
                 <a href="{{ path('manager_rencontre_sessions', {id: rencontre.id}) }}"
                    class="btn-mabb-ghost"

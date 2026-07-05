@@ -77,6 +77,21 @@
         .planning-grid { font-size: .7rem; }
         .planning-block { font-size: .65rem; padding: 3px 5px; }
     }
+
+    /* [UI 05/07/2026] Mobile : 7 jours dans 360px = illisible (≈41px/jour).
+       On donne à la grille une largeur minimale utilisable et on scrolle
+       horizontalement DANS la grille (la page, elle, ne bouge pas —
+       body est en overflow-x:clip depuis base.html.twig). */
+    @media (max-width: 767px) {
+        .planning-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 12px;
+        }
+        .planning-grid {
+            min-width: 700px;   /* ≈ 90px/jour : blocs lisibles */
+        }
+    }
 </style>
 {% endblock %}
 
@@ -147,6 +162,8 @@
             </div>
         </div>
     {% else %}
+        {# [UI 05/07/2026] Wrapper de scroll horizontal mobile (voir CSS) #}
+        <div class="planning-scroll">
         <div class="planning-grid">
             {# Header : vide + 7 jours #}
             <div class="planning-header"></div>
@@ -182,6 +199,7 @@
                 {% endfor %}
             {% endfor %}
         </div>
+        </div>{# fin .planning-scroll #}
 
         {# Légende #}
         <div style="margin-top:16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center;">

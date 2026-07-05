@@ -10,6 +10,123 @@
 
 ---
 
+### 2026-07-05 (quater) — Passage de saison automatique (catégories) + CMS vitrine bloc par bloc
+
+- Objectif : (1) répondre à la question "les catégories des joueuses sont-elles recalculées automatiquement au changement de saison ?" (réponse : NON, tout était manuel) et construire l'automatisation ; (2) démarrer le CMS vitrine : l'admin modifie textes, chiffres et photos du site sans toucher au code.
+- Actions réalisées :
+  1. **`CategorieCalculator`** (`src/Service/Sport/`) — règle FFBB : âge de référence = année de fin de saison − année de naissance → catégorie (U7/U9/U11/U13/U15/U18/Senior). Helpers `estCompatible()` (âge ≤ borne équipe, informatif jamais bloquant) et `estSurclassement()`.
+  2. **Commande `app:passage-saison --to=YYYY-YYYY [--apply]`** — duplique les équipes actives vers la nouvelle saison (idempotent) puis ré-affecte chaque joueuse active par catégorie CALCULÉE : match exact d'abord, sinon plus proche catégorie supérieure compatible. Crée `JoueurEquipe` principale + met à jour `Joueur.equipe`. DRY-RUN par défaut ; rapport des cas à arbitrer (sans date de naissance, sans équipe compatible, plusieurs équipes A/B).
+  3. **CMS V2 — blocs de contenu** : entité `BlocContenu` (clé unique `page.section.champ`, types texte/long/image, `valeur` NULL = défaut du template conservé), migration `Version20260705120000` (table `bloc_contenu`), repository.
+  4. **`CmsExtension`** — fonctions Twig `cms(cle, defaut, type)` et `cms_img(cle, defaut)` : renvoient la valeur admin sinon le défaut ; AUTO-ENREGISTREMENT des clés au premier rendu (zéro fixture) ; try/catch intégral → la vitrine ne casse jamais à cause du CMS (table absente = défauts affichés).
+  5. **`AdminContenusController`** (`/admin/contenus`, ROLE_SUPER_ADMIN, même modèle que l'admin existant) — liste groupée par page, édition inline (input/textarea/upload image vers `uploads/cms/`), bouton "Revenir à l'origine" (valeur → NULL). Template `admin/contenus/index.html.twig`, lien "Contenus" dans la nav admin vitrine.
+  6. **Premier câblage accueil** : hero (badge, titre 2 lignes, description, photo) + section "Un club engagé" (titres, 2 paragraphes, photo) passés en `cms()`/`cms_img()`.
+- Fichiers modifiés/créés :
+  - `src/Service/Sport/CategorieCalculator.php` (nouveau), `src/Command/PassageSaisonCommand.php` (nouveau)
+  - `src/Entity/Vitrine/BlocContenu.php`, `src/Repository/Vitrine/BlocContenuRepository.php`, `migrations/Version20260705120000.php`, `src/Twig/CmsExtension.php`, `src/Controller/Admin/AdminContenusController.php`, `templates/admin/contenus/index.html.twig` (nouveaux)
+  - `templates/vitrine/accueil/index.html.twig`, `templates/vitrine/base.html.twig`
+- Décisions (ADR si applicable) : pas d'ADR — extensions du modèle CMS existant (PageContenu/Article/Media) et service+commande sans impact structurel. Choix notable documenté en code : `cms()` auto-enregistre les clés au premier rendu (writes-on-read assumé, table minuscule, jamais bloquant).
+- Points de vigilance / risques :
+  - **Migration à jouer** : `doctrine:migrations:migrate` (3 en attente : composition_interne, ffbb_x/y, bloc_contenu).
+  - **Passage de saison** : lancer d'abord SANS --apply et lire le rapport ; la commande n'affecte PAS les joueuses aux équipes de niveau (A vs B) — arbitrage humain listé.
+  - Le câblage cms() ne couvre que l'accueil (hero + club engagé) — généraliser page par page (club, contact, victoires…).
+  - `php -l`/`lint:twig` à exécuter en local (pas de PHP sandbox).
+
+- Objectif : (1) réparer la page 500 au clic "Créer bilan" sur une joueuse, (2) supprimer le décalage des points bleus du shot chart PIRB via un terrain identique au doc FFBB (proposition validée par Clavel, doc e-Marque fourni en exemple), (3) automatiser le passage à la saison suivante sur les deux sites.
+- Actions réalisées :
+  1. **FIX Créer bilan** — `ManagerBilanController::nouveau()` appelait `$joueur->getLicenceNumero()` qui N'EXISTE PAS sur `Joueur` (méthode réelle : `getLicence()`) → fatal error. Corrigé.
+  2. **Shot chart FFBB précis (ADR-0009)** — cause du décalage : transformation affine approximative (`zoneX = normY*0.46+0.04`) + arrondi 0-100 vers un terrain paysage aux proportions ≠ du doc FFBB. Correctif : colonnes `tir_ffbb.ffbb_x/ffbb_y` (pour-mille, coordonnées BRUTES du repère PDF — migration `Version20260705110000`), parser rempli les bruts, nouveau terrain SVG "FFBB officiel" dans PIRB (portrait 15/14, cotes FIBA exactes), points placés sans transformation. Fallback inverse pour les lignes non re-parsées. Shot map paysage désormais réservée aux séances d'entraînement (sources séparées). Sélecteur de match + badges filtrent les deux terrains.
+  3. **Saisons dynamiques** — `SaisonService` refondu : plus AUCUNE saison en dur (avant : liste const + défaut '2026-2027' hardcodé). Saisons générées de 2023-2024 à courante+1 ; saison active = choix session sinon saison CALCULÉE avec bascule au **1er juillet** (début administratif FFBB — préserve le comportement du défaut bumpé manuellement en juillet). Passage à la saison d'après = automatique, Manager + PIRB (service partagé), zéro déploiement annuel.
+  4. **Déduplication saisonCourante()** — ManagerBilanController, ManagerCoachDashboardController, ManagerStaffController (était static), ProfilController délèguent désormais à `SaisonService::getSaisonActive()` (respect du sélecteur global). **Choix documenté** : `PirbEquipeController` (affectations) et la Gamification (XP/badges) GARDENT la saison sportive à bascule septembre — sinon en juillet/août les joueuses n'auraient plus d'équipe ni d'XP affichés.
+- Fichiers modifiés :
+  - `src/Controller/Manager/ManagerBilanController.php` (fix + saison service)
+  - `src/Entity/Sport/TirFfbb.php`, `migrations/Version20260705110000.php` (nouveau), `src/Service/Ffbb/FfbbPositionTirParser.php`
+  - `src/Controller/Pirb/PirbShotChartController.php`, `templates/pirb/shot_chart/index.html.twig`
+  - `src/Service/SaisonService.php` (refonte), `src/Controller/Manager/{ManagerCoachDashboardController,ManagerStaffController,ProfilController}.php`
+  - `instruction/08_ADR.md` (ADR-0009), `instruction/13_CLAUDE_LOG.md`
+- Décisions (ADR si applicable) : **ADR-0009** (coordonnées brutes + terrain FFBB fidèle). Saisons : pas d'entité `Saison` créée (chantier backlog inchangé) — refonte du service uniquement, réversible.
+- Points de vigilance / risques :
+  - **Migrations à exécuter** : `php bin/console doctrine:migrations:migrate` (2 nouvelles : composition_interne + ffbb_x/y).
+  - **Re-parse recommandé** pour la précision maximale : `php bin/console app:process-positions-tirs --saison=2025-2026` (les anciennes lignes utilisent le fallback inversé en attendant).
+  - Bascule saison au 1er juillet : les bilans/staff/profil créés en juillet-août sont tagués sur la NOUVELLE saison. Si indésirable pour un cas précis, l'utilisateur peut re-sélectionner l'ancienne saison dans le menu (le tag suit le sélecteur).
+  - PHP non exécutable dans la sandbox : `php -l` + `lint:twig` + test manuel à faire depuis le terminal local.
+
+---
+
+### 2026-07-05 (bis) — Refonte responsive Manager + fix scroll horizontal PIRB
+
+- Objectif : (1) sortir le sélecteur de saison de la topbar Manager (il cassait le responsive), (2) éliminer le scroll horizontal DE PAGE en mobile/iPad tout en préservant les carrousels voulus (ex: sélecteur de match du shot chart PIRB), (3) durcir le responsive globalement sans retoucher ~20 templates un par un.
+- Actions réalisées :
+  1. **Menu utilisateur `<details>` natif (Manager topbar)** — nouveau dropdown pure CSS (AUCUNE dépendance Bootstrap JS, qui n'est d'ailleurs PAS chargé dans Manager) regroupant : profil, **sélecteur de saison** (déplacé ici depuis la topbar inline), déconnexion. Chip saison visible dans le bouton. Prénom masqué < 480px.
+  2. **Navbar élastique** — `.nav-modules` : `flex:1 + min-width:0 + overflow-x:auto` à TOUTES les largeurs (11 modules débordaient déjà en desktop 1024-1300px), liens `white-space:nowrap`.
+  3. **Barrière document Manager** — `html, body { overflow-x: clip }` (clip et non hidden : ne casse pas `position:sticky`). Médias `max-width:100%` dans `main`.
+  4. **Tables débordantes** — cause racine identifiée : ~18 templates posent `.table-mabb` (min-width:600px) DIRECTEMENT dans `.card-mabb` sans `.card-body`, or le scroll interne n'était géré QUE sur card-body → page entière scrollait. Correctif centralisé via `:has()` : toute card contenant directement une table devient son propre conteneur de scroll (≤1023px).
+  5. **Grids inline non responsives** — correctifs centralisés par sélecteur d'attribut `[style*=...]` : auto-fill/auto-fit minmax(200-360px) → 1 colonne <400px, 2 colonnes en iPad portrait pour les très larges ; grids fixes `1fr 1fr`/`1fr 2fr`/`2fr 1fr` empilées ≤600px ; grids label/valeur `140px|170px 1fr` empilées <480px.
+  6. **Planning hebdo** — grille 7 jours illisible à 360px : wrapper `.planning-scroll` (scroll horizontal DANS le conteneur) + `min-width:700px` sur la grille.
+  7. **Staff rencontre** — `.role-row` (180px|1fr|auto) empilée ≤600px (label pleine largeur).
+  8. **PIRB fix scroll page** — `.pirb-content` avait `overflow-y:auto` SANS overflow-x → coercé en auto : le panneau entier scrollait latéralement au moindre débordement. Correctif : `overflow-x:hidden` sur le panneau ; les carrousels internes (match-selector du shot chart) gardent leur propre scroll. Médias bornés à 100%.
+  9. **Alertes réparées** — les `.btn-close` / `data-bs-dismiss="alert"` étaient MORTS partout dans Manager (Bootstrap JS absent). JS vanilla délégué ajouté dans base : clic → suppression de l'alerte. + fermeture du menu user au clic extérieur/Échap.
+- Fichiers modifiés :
+  - `templates/manager/base.html.twig` (topbar + user-menu + blindage responsive + JS léger)
+  - `templates/pirb/base.html.twig` (overflow-x du panneau contenu)
+  - `templates/manager/planning/index.html.twig` (wrapper scroll grille)
+  - `templates/manager/rencontre/staff.html.twig` (role-row responsive)
+- Décisions (ADR si applicable) : aucune ADR (UI uniquement, pas de modèle de données). Choix technique notable : correctifs responsive CENTRALISÉS dans base.html.twig via `:has()` et sélecteurs `[style*=]` plutôt que 20 templates modifiés — moins de diff, une seule source. `:has()` requiert Chrome/Edge 105+, Safari 15.4+, Firefox 121+ (OK pour l'usage club 2026).
+- Points de vigilance / risques :
+  - Tester visuellement : topbar desktop/iPad/mobile, menu saison (changement de saison = POST → reload), planning mobile, page staff mobile, shot chart PIRB (carrousel doit glisser, page ne doit plus bouger).
+  - Les sélecteurs `[style*="minmax(...)"]` sont sensibles à l'espacement exact des styles inline — variantes avec/sans espace couvertes, mais un nouveau template avec un espacement exotique ne serait pas attrapé.
+  - `overflow-x:hidden` sur `.pirb-content` CLIPPE tout enfant plus large sans scroll propre — si une future page PIRB a une vraie table large, lui donner un wrapper `overflow-x:auto` dédié.
+
+---
+
+### 2026-07-05 — Stats Live V2.3 : match interne à deux équipes (A/B)
+
+- Objectif : Permettre de statter DEUX équipes composées de l'effectif du club sur le même écran live (entraînement interne / amical intra-club), avec conservation des stats des deux côtés, rattachement au type de match et moyennes de saison non gonflées par les matchs internes.
+- Constat préalable (Étape 0) : le type de match (`Rencontre.typeRencontre` — OFFICIEL/AMICAL/ENTRAINEMENT_INTERNE/EXHIBITION) existait DÉJÀ (B23/V2.2), ainsi que le mode stats et les joueuses éphémères. Manquaient : la répartition A/B de l'effectif, l'écran 2 colonnes, et surtout le filtrage des moyennes de saison (bug : `statsSaison()` agrégeait TOUT, internes compris). Aucun conflit doc → pas de STOP.
+- Actions réalisées :
+  1. **Entité `Rencontre`** : colonne JSON nullable `composition_interne` + helpers (`isInterneDeuxEquipes()`, `setCompositionInterne()` avec exclusivité A/B garantie, `coteJoueur()`, `estDansComposition()`, `peutComposerDeuxEquipes()` — réservé ENTRAINEMENT_INTERNE + AMICAL).
+  2. **Migration `Version20260705100000`** : `ALTER TABLE rencontre ADD composition_interne JSON DEFAULT NULL`. NULL = comportement historique, zéro donnée migrée, zéro régression.
+  3. **`JoueurRepository::findEffectifClubPourComposition()`** : joueuses actives non temporaires du club courant, toutes équipes (match interne multi-catégorie possible), tri équipe/nom.
+  4. **`StatsLiveController`** : routes GET/POST `/rencontres/{id}/composition-interne` (page de répartition + save avec CSRF, whitelist club, validation type) ; `index()` charge les joueuses depuis la composition en mode A/B ; anti-IDOR adapté (`createAction` et `entrerSurTerrain` : joueuse ∈ composition A∪B).
+  5. **Template `composition_interne.html.twig`** (nouveau) : répartition — / A / B par boutons radio (exclusivité native), noms d'équipes personnalisables, compteurs, revalidation serveur systématique.
+  6. **`stats-live.html.twig`** : sidebar joueuses coupée en 2 verticalement (A gauche/bleu, B droite/rouge) via macro `carte_joueuse` (markup identique → JS existant inchangé) ; scores du header calculés par colonne (A vs B) ; carte adversaire et boutons score adverse manuels masqués en mode A/B ; garde null sur `cardAdversaire`.
+  7. **`JoueurStatsAggregator::statsSaison()`** : filtre par type de rencontre, défaut = OFFICIEL uniquement (correction du gonflage des moyennes — changement de comportement assumé et documenté).
+  8. **`rencontre/show.html.twig`** : bouton "Composer A/B" pour les types éligibles.
+- Fichiers modifiés :
+  - `src/Entity/Sport/Rencontre.php`
+  - `src/Repository/Sport/JoueurRepository.php`
+  - `src/Controller/Manager/StatsLiveController.php`
+  - `src/Service/Stats/JoueurStatsAggregator.php`
+  - `migrations/Version20260705100000.php` (nouveau)
+  - `templates/manager/stats_live/composition_interne.html.twig` (nouveau)
+  - `templates/manager/evaluation/stats-live.html.twig`
+  - `templates/manager/rencontre/show.html.twig`
+  - `instruction/08_ADR.md` (ADR-0008 + note réservation ADR-0007), `instruction/06_REGISTRE_TECHNIQUE.md` (RT-0010), `instruction/02_ROADMAP_GLOBALE.md`, `instruction/13_CLAUDE_LOG.md`
+- Décisions (ADR si applicable) : **ADR-0008** — composition A/B en JSON sur `rencontre` (précédent `joueursNonConvoques`), type de match rattaché aux stats par JOINTURE (pas de dénormalisation). ADR-0007 laissé réservé au brouillon PIRB Mobile (20_ANALYSE du 04/07).
+- Points de vigilance / risques :
+  - **Migration à exécuter** : `php bin/console doctrine:migrations:migrate` (local puis prod).
+  - **Changement de comportement fiche joueuse PIRB** : les moyennes de saison n'incluent plus que les matchs OFFICIELS. Les anciens amicaux mal typés "OFFICIEL" (défaut B23) continuent de compter — retyper à la main si besoin.
+  - Modal "Composer le 5" et sheet "Effectif" non adaptés au mode A/B (fonctionnels mais pensés mono-équipe) — les badges ON/OFF individuels couvrent le besoin.
+  - `ShotChartCalculator` agrège encore tous types de rencontres (choix à acter, cf. RT-0010).
+
+---
+
+### 2026-07-04 — Analyse décisionnelle architecture PIRB Mobile (analyse seule, zéro code)
+
+- Objectif : Analyser le projet existant (code + instruction/) et trancher l'architecture de l'app mobile PIRB (backend, stack mobile, mode vision, priorisation). Livrable = analyse décisionnelle, aucun code applicatif.
+- Actions réalisées :
+  1. Scan complet du code : composer.json (Symfony 7.4/PHP 8.3, **API Platform et LexikJWT ABSENTS**, `src/Controller/Api/` vide, firewall `api` en stub jwt commenté), Voters réels (ClubVoter/NoteFraisVoter/TresorerieVoter), TenantResolver, 61 migrations, Gamification/Feed déjà codés serveur, shot chart PIRB V2.3 en prod, google/cloud-vision = OCR PDFs FFBB uniquement.
+  2. Lecture intégrale de instruction/ (gouvernance, roadmaps, ADR 0001-0006, backlog 26/06, audit features 29/06, CHANTIERS 10/06) + des 3 documents fournis (Vision Produit V5, CDC fonctionnel écosystème, rapport PIRB Scouting).
+  3. Rédaction de l'analyse : reco = API Platform+LexikJWT sur le monolithe (chantier B4, pas de backend Node), client Expo/React Native TS en dev builds Android d'abord, vision auto HORS périmètre pré-soutenance (fallback mode practice manuel + spike pose estimation borné), ordre = P0 web (tests) → B4 API → mobile socle M1-M3.
+- Fichiers modifiés :
+  - `instruction/20_ANALYSE_ARCHI_PIRB_MOBILE_2026-07-04.md` (nouveau — livrable de l'analyse, contient un brouillon ADR-0007)
+  - `instruction/13_CLAUDE_LOG.md` (cette entrée)
+  - Roadmaps NON modifiées : aucune décision actée tant que Clavel n'a pas validé (analyse seulement).
+- Décisions (ADR si applicable) : aucune actée. Brouillon **ADR-0007** fourni dans le livrable, à coller dans `08_ADR.md` après validation.
+- Points de vigilance / risques :
+  - **Conflit signalé** : le prompt référençait `Instruction/03_CLAUDE_LOG.md` (inexistant — 03 = ROADMAP_V1) → log écrit ici (13). Le prompt supposait aussi une API Platform « existante » : faux dans le code.
+  - Dérives doc à corriger : `01_LIRE_AVANT_TOUT.md` (noms de Voters obsolètes), `02_ROADMAP_GLOBALE.md` (état mars 2026 obsolète vs prod), dossier doublon `instructions/` (contient seulement le CDC PDF).
+  - Le mode vision type HomeCourt n'apparaît dans aucun document acté : si retenu, exige entrée ADR + mise à jour roadmap V3.
+
 ### 2026-03-26 (session 41) — Sprint 1 Sécurité : firewalls + access_control + login controllers
 
 - Objectif : Activer la sécurité Symfony sur les 3 espaces (admin mabb.fr, manager.mabb.fr, pirb.mabb.fr)

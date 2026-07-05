@@ -39,6 +39,7 @@ class ManagerBilanController extends AbstractController
         private readonly JoueurRepository          $joueurRepo,
         private readonly TenantResolver            $tenantResolver,
         private readonly EntityManagerInterface    $em,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     // =========================================================================
@@ -127,7 +128,10 @@ class ManagerBilanController extends AbstractController
               ->setCoach($user)
               ->setClub($club)
               ->setSaison($this->saisonCourante())
-              ->setNumeroLicence($joueur->getLicenceNumero())
+              // [FIX 05/07/2026] getLicenceNumero() n'existe pas sur Joueur
+              // (la propriété s'appelle `licence`) → fatal error, page 500
+              // au clic sur "Créer bilan". C'était LE bug.
+              ->setNumeroLicence($joueur->getLicence())
               ->setDateEvaluation(new \DateTimeImmutable());
 
         return $this->render('manager/bilan/edit.html.twig', [
@@ -307,15 +311,13 @@ class ManagerBilanController extends AbstractController
         return $int === false ? null : (int) $int;
     }
 
-    /** "2025-2026" si on est après août, "2024-2025" sinon. */
+    /**
+     * [V2.4 05/07/2026] Délègue à SaisonService : un bilan créé pendant que
+     * l'utilisateur regarde la saison X est tagué X (respect du sélecteur),
+     * et la bascule vers la saison suivante est automatique (1er juillet).
+     */
     private function saisonCourante(): string
     {
-        $now = new \DateTimeImmutable();
-        $annee = (int) $now->format('Y');
-        $mois  = (int) $now->format('n');
-        if ($mois >= 9) {
-            return $annee . '-' . ($annee + 1);
-        }
-        return ($annee - 1) . '-' . $annee;
+        return $this->saisonService->getSaisonActive();
     }
 }

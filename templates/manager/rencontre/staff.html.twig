@@ -49,6 +49,20 @@
     flex-wrap: wrap;
     gap: 4px;
 }
+
+/* [UI 05/07/2026] Mobile : la grille 180px|1fr|auto écrase la colonne
+   du milieu → on empile : label en pleine largeur, contenu dessous,
+   action alignée à droite. */
+@media (max-width: 600px) {
+    .role-row {
+        grid-template-columns: 1fr auto;
+        row-gap: 6px;
+        padding: 12px 14px;
+    }
+    .role-label {
+        grid-column: 1 / -1;
+    }
+}
 </style>
 
 {# Header #}

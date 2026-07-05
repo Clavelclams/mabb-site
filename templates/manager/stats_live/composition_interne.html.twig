@@ -1,0 +1,154 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Composition A/B — {{ rencontre.adversaire }}{% endblock %}
+
+{% block body %}
+
+{#
+    [V2.3 05/07/2026] COMPOSITION A/B — MATCH INTERNE À DEUX ÉQUIPES
+
+    Principe UX : une seule liste de l'effectif du club, avec pour chaque
+    joueuse 3 états mutuellement exclusifs (—, A, B) via des boutons radio
+    stylés. Le JS ne fait que du confort visuel (compteurs live) : toute la
+    validation (exclusivité, whitelist club) est REFAITE côté serveur.
+
+    Les inputs s'appellent equipe_a[] / equipe_b[] : Symfony les lit avec
+    $request->request->all('equipe_a').
+#}
+
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-people-fill" style="color:#f97316;"></i> Composition des équipes</h1>
+        <p class="subtitle">
+            {{ rencontre.adversaire }} · {{ rencontre.date ? rencontre.date|date('d/m/Y H:i') : '—' }}
+            · <span class="badge bg-warning text-dark">{{ rencontre.typeRencontre == 'ENTRAINEMENT_INTERNE' ? 'Entraînement interne' : 'Amical' }}</span>
+        </p>
+    </div>
+    <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Retour au live
+    </a>
+</div>
+
+{% for msg in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>{{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endfor %}
+{% for msg in app.flashes('warning') %}
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endfor %}
+{% for msg in app.flashes('error') %}
+    <div class="alert alert-danger alert-dismissible" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+{% endfor %}
+
+<form method="post" action="{{ path('manager_rencontre_composition_interne_save', {id: rencontre.id}) }}">
+    <input type="hidden" name="_token" value="{{ csrf_token('composition_interne_' ~ rencontre.id) }}">
+
+    {# ── Noms des équipes + compteurs ─────────────────────────────────── #}
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px;">
+        <div class="card-mabb" style="padding:14px 18px; border-left:4px solid #3b82f6;">
+            <label style="font-size:.8rem; font-weight:700; color:#3b82f6;">ÉQUIPE A
+                — <span id="countA">{{ ids_a|length }}</span> joueuse(s)</label>
+            <input type="text" name="nom_a" class="form-control form-control-sm mt-1"
+                   maxlength="50" placeholder="Équipe A"
+                   value="{{ rencontre.equipeANom != 'Équipe A' ? rencontre.equipeANom : '' }}">
+        </div>
+        <div class="card-mabb" style="padding:14px 18px; border-left:4px solid #ef4444;">
+            <label style="font-size:.8rem; font-weight:700; color:#ef4444;">ÉQUIPE B
+                — <span id="countB">{{ ids_b|length }}</span> joueuse(s)</label>
+            <input type="text" name="nom_b" class="form-control form-control-sm mt-1"
+                   maxlength="50" placeholder="Équipe B"
+                   value="{{ rencontre.equipeBNom != 'Équipe B' ? rencontre.equipeBNom : '' }}">
+        </div>
+    </div>
+
+    {# ── Effectif du club — répartition ───────────────────────────────── #}
+    <div class="card-mabb" style="padding:0; overflow:hidden;">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="padding-left:18px;">Joueuse</th>
+                    <th>Équipe d'origine</th>
+                    <th style="width:220px; text-align:center;">Affectation</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% set equipe_courante = null %}
+            {% for j in effectif %}
+                {% set cote = j.id in ids_a ? 'A' : (j.id in ids_b ? 'B' : '') %}
+                <tr>
+                    <td style="padding-left:18px;">
+                        <strong>{% if j.numeroMaillot is not null %}#{{ j.numeroMaillot }} {% endif %}{{ j.prenom }} {{ j.nom }}</strong>
+                    </td>
+                    <td style="color:var(--mabb-muted); font-size:.85rem;">
+                        {{ j.equipe ? j.equipe.nom ~ ' (' ~ j.equipe.categorie ~ ')' : '—' }}
+                    </td>
+                    <td style="text-align:center;">
+                        {# 3 boutons radio (— / A / B) par joueuse : l'exclusivité
+                           est native au radio group (name=cote_{id}), impossible de
+                           cocher A et B en même temps côté UI. Les radios pilotent
+                           2 checkboxes cachées equipe_a[]/equipe_b[] (un radio ne
+                           peut pas alimenter deux tableaux POST distincts, d'où ce
+                           relais JS). Le serveur revalide de toute façon. #}
+                        <div class="btn-group" role="group" aria-label="Affectation {{ j.prenom }} {{ j.nom }}">
+                            <input type="radio" class="btn-check js-cote" name="cote_{{ j.id }}" id="cote_{{ j.id }}_none" value="" {{ cote == '' ? 'checked' }} data-joueur="{{ j.id }}">
+                            <label class="btn btn-sm btn-outline-secondary" for="cote_{{ j.id }}_none">—</label>
+
+                            <input type="radio" class="btn-check js-cote" name="cote_{{ j.id }}" id="cote_{{ j.id }}_a" value="A" {{ cote == 'A' ? 'checked' }} data-joueur="{{ j.id }}">
+                            <label class="btn btn-sm btn-outline-primary" for="cote_{{ j.id }}_a">A</label>
+
+                            <input type="radio" class="btn-check js-cote" name="cote_{{ j.id }}" id="cote_{{ j.id }}_b" value="B" {{ cote == 'B' ? 'checked' }} data-joueur="{{ j.id }}">
+                            <label class="btn btn-sm btn-outline-danger" for="cote_{{ j.id }}_b">B</label>
+                        </div>
+                        {# Checkboxes cachées réellement soumises — cochées/décochées par le JS.
+                           Un radio HTML ne peut pas alimenter deux tableaux distincts,
+                           d'où ce relais. Le serveur revalide tout (whitelist + exclusivité). #}
+                        <input type="checkbox" name="equipe_a[]" value="{{ j.id }}" id="hidden_a_{{ j.id }}" {{ cote == 'A' ? 'checked' }} hidden>
+                        <input type="checkbox" name="equipe_b[]" value="{{ j.id }}" id="hidden_b_{{ j.id }}" {{ cote == 'B' ? 'checked' }} hidden>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="3" style="text-align:center; color:var(--mabb-muted); padding:24px;">
+                    Aucune joueuse active dans l'effectif du club.
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
+        {% if rencontre.compositionInterne is not null %}
+            {# Le serveur détecte name="reset" et vide la composition (mode classique) #}
+            <button type="submit" name="reset" value="1" class="btn btn-outline-secondary"
+                    onclick="return confirm('Vider la composition et repasser en mode classique ?');">
+                Vider la composition
+            </button>
+        {% endif %}
+        <button type="submit" class="btn-mabb-orange">
+            <i class="bi bi-check-lg"></i> Enregistrer et aller au live
+        </button>
+    </div>
+</form>
+
+<script>
+// Relais radio → checkboxes soumises + compteurs live.
+// Confort uniquement : le serveur revalide exclusivité et appartenance club.
+document.querySelectorAll('.js-cote').forEach(radio => {
+    radio.addEventListener('change', () => {
+        const id = radio.dataset.joueur;
+        document.getElementById('hidden_a_' + id).checked = (radio.value === 'A');
+        document.getElementById('hidden_b_' + id).checked = (radio.value === 'B');
+        document.getElementById('countA').textContent = document.querySelectorAll('input[name="equipe_a[]"]:checked').length;
+        document.getElementById('countB').textContent = document.querySelectorAll('input[name="equipe_b[]"]:checked').length;
+    });
+});
+</script>
+
+{% endblock %}

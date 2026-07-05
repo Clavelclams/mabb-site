@@ -94,3 +94,12 @@ Lister les sujets qui peuvent casser le projet si mal geres (DB, perfs, infra, d
 - Decision : Implementer un TenantContext (ou equivalent) qui identifie le club courant (depuis l'URL, le token JWT, ou la session). Creer un RoleResolver qui interroge ClubUserRole pour le club courant et fournit les roles effectifs au SecurityBundle. Les Voters doivent utiliser les roles resolus, pas les roles globaux du token. Cf. ADR-0006.
 - Impact : code (TenantContext, RoleResolver, adaptation Voters + authenticators) + DB (tables Role, ClubUserRole avec index)
 - Statut : a faire (Phase 1, apres creation des entites User/Club/ClubUser)
+
+---
+
+### RT-0010 — Stats de saison filtrées par type de rencontre + composition interne A/B
+- Date : 2026-07-05
+- Risque : (1) Moyennes de saison FAUSSÉES si les matchs non officiels (entraînements internes, exhibitions, amicaux) alimentent la fiche joueuse — c'était le cas avant V2.3 : `statsSaison()` agrégeait toutes les `EvaluationMatch` sans filtre. (2) Fuite inter-clubs si la composition A/B accepte des IDs de joueuses d'un autre club.
+- Décision : (1) `JoueurStatsAggregator::statsSaison()` filtre par `rencontre.typeRencontre` (défaut : OFFICIEL uniquement, cf. ADR-0008). Toute NOUVELLE requête d'agrégation multi-rencontres DOIT décider explicitement quels types elle inclut. (2) Double barrière : whitelist serveur à l'enregistrement de la composition (`findEffectifClubPourComposition` = joueuses actives non temporaires du club courant) + re-filtrage au chargement de l'écran live (un ID étranger dans le JSON serait ignoré). Anti-IDOR sur `createAction`/`entrerSurTerrain` : joueuse ∈ composition A∪B en mode interne.
+- Impact : code (`JoueurStatsAggregator`, `StatsLiveController`, `JoueurRepository`) + DB (colonne `rencontre.composition_interne` JSON, migration Version20260705100000)
+- Statut : fait (V2.3, 05/07/2026). Point ouvert : `ShotChartCalculator::positionsTirs()` agrège encore tous types confondus (choix à acter — un shot chart d'entraînement a une valeur pédagogique).

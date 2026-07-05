@@ -46,6 +46,7 @@ class ProfilController extends AbstractController
         private readonly LoggerInterface         $logger,
         private readonly CoachEquipeRepository   $coachEquipeRepo,
         private readonly ParentJoueurRepository  $parentJoueurRepo,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     // =========================================================================
@@ -290,11 +291,12 @@ class ProfilController extends AbstractController
      * La saison commence en septembre (mois ≥ 9 → on est dans l'année de début).
      * Ex : août 2026 → saison 2025-2026 | novembre 2026 → saison 2026-2027
      */
+    /**
+     * [V2.4 05/07/2026] Délègue à SaisonService (sélecteur global +
+     * bascule auto 1er juillet) — fin de la logique dupliquée.
+     */
     private function saisonCourante(): string
     {
-        $now = new \DateTimeImmutable();
-        $mois = (int) $now->format('n');
-        $anneeDebut = $mois >= 9 ? (int) $now->format('Y') : (int) $now->format('Y') - 1;
-        return $anneeDebut . '-' . ($anneeDebut + 1);
+        return $this->saisonService->getSaisonActive();
     }
 }

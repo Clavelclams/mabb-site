@@ -32,15 +32,14 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 class ManagerStaffController extends AbstractController
 {
-    /** Calcule la saison courante (identique à ManagerCoachDashboardController). */
-    private static function saisonCourante(): string
+    /**
+     * [V2.4 05/07/2026] Délègue à SaisonService : respecte le sélecteur de
+     * saison global + bascule automatique au 1er juillet (fin des logiques
+     * dupliquées à bascule septembre, incohérentes avec le sélecteur).
+     */
+    private function saisonCourante(): string
     {
-        $now   = new \DateTimeImmutable();
-        $annee = (int) $now->format('Y');
-        $mois  = (int) $now->format('n');
-        return $mois >= 9
-            ? $annee . '-' . ($annee + 1)
-            : ($annee - 1) . '-' . $annee;
+        return $this->saisonService->getSaisonActive();
     }
 
     public function __construct(
@@ -49,6 +48,7 @@ class ManagerStaffController extends AbstractController
         private readonly CoachEquipeRepository $coachEquipeRepository,
         private readonly EquipeRepository $equipeRepository,
         private readonly JoueurRepository $joueurRepository,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     /**
@@ -211,7 +211,7 @@ class ManagerStaffController extends AbstractController
             'coach_equipes'         => $coachEquipes,
             'equipes_disponibles'   => $equipesDisponibles,
             'equipes_deja_coachs'   => $equipesDejaCoachs,
-            'saison_courante'       => self::saisonCourante(),
+            'saison_courante'       => $this->saisonCourante(),
             'coach_roles'           => CoachEquipe::ROLES,
         ]);
     }
@@ -252,7 +252,7 @@ class ManagerStaffController extends AbstractController
             $roleCoach = CoachEquipe::ROLE_PRINCIPAL;
         }
 
-        $saison = self::saisonCourante();
+        $saison = $this->saisonCourante();
 
         // Vérifier doublon
         $existing = $this->em->createQueryBuilder()

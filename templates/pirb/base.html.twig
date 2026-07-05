@@ -138,11 +138,26 @@
             flex: 1;
             min-height: 0;
             overflow-y: auto;
+            /* [UI 05/07/2026] FIX SCROLL HORIZONTAL DE PAGE :
+               overflow-y:auto seul coerce overflow-x en "auto" → le PANNEAU
+               ENTIER scrollait horizontalement dès qu'un enfant débordait.
+               overflow-x:hidden = le panneau ne bouge jamais latéralement ;
+               les carrousels VOULUS (ex: sélecteur de match du shot chart)
+               gardent leur propre overflow-x:auto et glissent DANS leur
+               conteneur, comme prévu. */
+            overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             padding: 16px 14px;
             /* [15/06/2026] padding-bottom large pour dégager la nav fixed
                + safe-area pour iPhone X+ (encoche notch en bas) */
             padding-bottom: calc(90px + env(safe-area-inset-bottom));
+        }
+        /* Médias : jamais plus larges que le panneau */
+        .pirb-content img,
+        .pirb-content video,
+        .pirb-content canvas {
+            max-width: 100%;
+            height: auto;
         }
         @media (min-width: 700px) {
             .pirb-content {

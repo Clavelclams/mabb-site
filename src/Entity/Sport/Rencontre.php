@@ -275,6 +275,36 @@ class Rencontre implements ClubAwareInterface
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $joueursNonConvoques = [];
 
+    // ====================================================================
+    // [V2.3 05/07/2026] MATCH INTERNE À DEUX ÉQUIPES
+    // ====================================================================
+    //
+    // Pour un ENTRAINEMENT_INTERNE ou un AMICAL intra-club, l'effectif du
+    // club est réparti en deux équipes A et B stattées SIMULTANÉMENT sur
+    // le même écran live (sidebar coupée en 2 colonnes).
+    //
+    // POURQUOI UN JSON ET PAS UNE TABLE PIVOT (décision ADR-0008) :
+    //   - Précédent établi dans CETTE entité : joueursNonConvoques et
+    //     joueursExternes sont déjà des JSON — cohérence de conception.
+    //   - La donnée est strictement scoped à UNE rencontre, jamais requêtée
+    //     en SQL cross-rencontres (le rendu 2 colonnes et la validation se
+    //     font en PHP). Une table pivot n'apporterait que des jointures.
+    //   - Les stats ne dépendent PAS de ce champ : chaque ActionMatch reste
+    //     rattachée à la joueuse + à la rencontre (dont typeRencontre).
+    //     La composition est une donnée d'AFFICHAGE/ORGANISATION du live.
+    //
+    // Structure :
+    //   {
+    //     "equipeA": {"nom": "Équipe A", "joueurs": [12, 47]},
+    //     "equipeB": {"nom": "Équipe B", "joueurs": [33, 89]}
+    //   }
+    // Invariant : une joueuse est dans A OU B, jamais les deux
+    // (garanti par setCompositionInterne()).
+    //
+    // NULL = rencontre classique (une seule liste, comportement inchangé).
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $compositionInterne = null;
+
     /**
      * Rôles bénévoles internes (arbitres, marqueur, chrono, e-marque, stats…).
      * Voir entité RencontreRole pour le détail. Chaque rôle peut être pris
@@ -561,4 +591,112 @@ class Rencontre implements ClubAwareInterface
     public function accepteStatsLive(): bool { return $this->modeStats !== self::MODE_STATS_NONE; }
     /** True si le mode light est activé (interface simplifiée). */
     public function isModeLightStats(): bool { return $this->modeStats === self::MODE_STATS_LIGHT; }
+
+    // ====================================================================
+    // [V2.3 05/07/2026] Composition interne A/B — helpers
+    // ====================================================================
+
+    /**
+     * True si la rencontre est un match interne à DEUX équipes du club :
+     * type non officiel + composition A/B renseignée avec au moins
+     * une joueuse de chaque côté. C'est CE test qui bascule l'écran live
+     * en mode 2 colonnes — pas le typeRencontre seul (un entraînement
+     * interne "classique" sans composition garde l'écran habituel).
+     */
+    public function isInterneDeuxEquipes(): bool
+    {
+        // Même garde que peutComposerDeuxEquipes() : si le staff requalifie
+        // la rencontre en OFFICIEL/EXHIBITION après coup, l'écran live
+        // retombe automatiquement en mode classique (la composition JSON
+        // reste en base mais devient inerte — pas de suppression de donnée).
+        return $this->peutComposerDeuxEquipes()
+            && count($this->getEquipeAIds()) > 0
+            && count($this->getEquipeBIds()) > 0;
+    }
+
+    /** True si le type de rencontre autorise la composition A/B. */
+    public function peutComposerDeuxEquipes(): bool
+    {
+        return in_array($this->typeRencontre, [
+            self::TYPE_ENTRAINEMENT_INTERNE,
+            self::TYPE_AMICAL,
+        ], true);
+    }
+
+    public function getCompositionInterne(): ?array { return $this->compositionInterne; }
+
+    /**
+     * Enregistre la composition A/B avec garantie d'EXCLUSIVITÉ :
+     * si un ID apparaît dans les deux équipes, il est retiré de B
+     * (A prioritaire — comportement déterministe et documenté plutôt
+     * qu'une exception, pour ne jamais perdre une saisie live en cours).
+     *
+     * @param int[] $idsA IDs joueuses équipe A
+     * @param int[] $idsB IDs joueuses équipe B
+     */
+    public function setCompositionInterne(array $idsA, array $idsB, ?string $nomA = null, ?string $nomB = null): self
+    {
+        $a = array_values(array_unique(array_map('intval', $idsA)));
+        $b = array_values(array_unique(array_map('intval', $idsB)));
+        // Exclusivité : une joueuse ne peut pas être dans A ET B
+        $b = array_values(array_diff($b, $a));
+        sort($a);
+        sort($b);
+
+        if ($a === [] && $b === []) {
+            $this->compositionInterne = null; // composition vide = retour au mode classique
+            return $this;
+        }
+
+        $this->compositionInterne = [
+            'equipeA' => ['nom' => $nomA !== null && trim($nomA) !== '' ? trim($nomA) : 'Équipe A', 'joueurs' => $a],
+            'equipeB' => ['nom' => $nomB !== null && trim($nomB) !== '' ? trim($nomB) : 'Équipe B', 'joueurs' => $b],
+        ];
+        return $this;
+    }
+
+    public function viderCompositionInterne(): self
+    {
+        $this->compositionInterne = null;
+        return $this;
+    }
+
+    /** @return int[] IDs des joueuses de l'équipe A (toujours des int). */
+    public function getEquipeAIds(): array
+    {
+        return array_map('intval', $this->compositionInterne['equipeA']['joueurs'] ?? []);
+    }
+
+    /** @return int[] IDs des joueuses de l'équipe B. */
+    public function getEquipeBIds(): array
+    {
+        return array_map('intval', $this->compositionInterne['equipeB']['joueurs'] ?? []);
+    }
+
+    public function getEquipeANom(): string
+    {
+        return $this->compositionInterne['equipeA']['nom'] ?? 'Équipe A';
+    }
+
+    public function getEquipeBNom(): string
+    {
+        return $this->compositionInterne['equipeB']['nom'] ?? 'Équipe B';
+    }
+
+    /**
+     * Côté ('A'|'B'|null) d'une joueuse dans la composition interne.
+     * null = joueuse hors composition (ou rencontre classique).
+     */
+    public function coteJoueur(int $joueurId): ?string
+    {
+        if (in_array($joueurId, $this->getEquipeAIds(), true)) { return 'A'; }
+        if (in_array($joueurId, $this->getEquipeBIds(), true)) { return 'B'; }
+        return null;
+    }
+
+    /** True si la joueuse fait partie de la composition A∪B. */
+    public function estDansComposition(int $joueurId): bool
+    {
+        return $this->coteJoueur($joueurId) !== null;
+    }
 }

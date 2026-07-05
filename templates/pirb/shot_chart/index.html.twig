@@ -196,10 +196,62 @@
 </div>
 {% endif %}
 
-{# ─── Shot map (terrain) ──────────────────────────────────────────────── #}
+{# ═══════════════════════════════════════════════════════════════════════
+   [V2.4 05/07/2026] TERRAIN FFBB OFFICIEL — matchs (source e-Marque)
+   Reproduction EXACTE du demi-terrain du PDF "positions de tirs" FFBB :
+   portrait, panier en HAUT, 15 m × 14 m (viewBox 750×700, échelle ×50).
+   Les points sont placés aux coordonnées BRUTES du parse (fx/fy) dans le
+   MÊME repère que le PDF → aucune transformation → aucun décalage.
+   Cotes FIBA dessinées : raquette 4,9 × 5,8 m ; cercle LF r=1,8 m ;
+   panier à 1,575 m de la ligne de fond ; arc 3 pts r=6,75 m avec segments
+   de coin à 0,90 m des sidelines ; demi-cercle no-charge r=1,25 m.
+   ═══════════════════════════════════════════════════════════════════════ #}
+{% if nb_tirs_ffbb > 0 %}
 <div class="pirb-card" style="padding-top:10px;">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-        <div class="pirb-card-title" style="margin:0;">Shot map</div>
+        <div class="pirb-card-title" style="margin:0;">🏀 Tirs en match officiel <span style="font-size:.68rem; color:var(--pirb-text-muted); font-weight:500;">(terrain FFBB)</span></div>
+        <div id="ffbb-map-label" style="font-size:.72rem; color:#3b82f6; font-weight:600;"></div>
+    </div>
+
+    <div class="sc-terrain-ffbb-wrapper" id="sc-terrain-ffbb"
+         style="position:relative; width:100%; max-width:420px; margin:0 auto; aspect-ratio:15/14;">
+        <svg viewBox="0 0 750 700" xmlns="http://www.w3.org/2000/svg"
+             style="position:absolute; top:0; left:0; width:100%; height:100%;">
+            {# Fond #}
+            <rect width="750" height="700" fill="#1a5c34"/>
+            {# Contour : ligne de fond (haut), sidelines, ligne médiane (bas) #}
+            <rect x="2" y="2" width="746" height="696" fill="none" stroke="#fff" stroke-width="3"/>
+            {# Raquette 4,9 m × 5,8 m — centrée #}
+            <rect x="252.5" y="2" width="245" height="290" fill="rgba(255,255,255,.05)" stroke="#fff" stroke-width="2.5"/>
+            {# Cercle des lancers francs r=1,8 m centré à 5,8 m #}
+            <circle cx="375" cy="292" r="90" fill="none" stroke="#fff" stroke-width="2.5"/>
+            {# Demi-cercle no-charge r=1,25 m sous le panier #}
+            <path d="M 312.5,78.75 A 62.5,62.5 0 0 0 437.5,78.75" fill="none" stroke="#fff" stroke-width="2"/>
+            {# 3 pts : segments de coin à 0,90 m + arc r=6,75 m centré panier #}
+            <line x1="45" y1="2" x2="45" y2="149.5" stroke="#fff" stroke-width="2.5"/>
+            <line x1="705" y1="2" x2="705" y2="149.5" stroke="#fff" stroke-width="2.5"/>
+            <path d="M 45,149.5 A 337.5,337.5 0 0 0 705,149.5" fill="none" stroke="#fff" stroke-width="2.5"/>
+            {# Planche (1,8 m à 1,2 m de la ligne de fond) + anneau (1,575 m) #}
+            <line x1="330" y1="60" x2="420" y2="60" stroke="#fff" stroke-width="4"/>
+            <circle cx="375" cy="78.75" r="11" fill="none" stroke="#ea580c" stroke-width="4"/>
+            {# Demi-cercle central (bas) r=1,8 m #}
+            <path d="M 285,700 A 90,90 0 0 1 465,700" fill="none" stroke="#fff" stroke-width="2.5"/>
+        </svg>
+        {# Les points FFBB (bleus) sont injectés ici par le JS, en % du
+           conteneur — même repère que le PDF (x: gauche→droite, y: fond→médiane) #}
+    </div>
+
+    <p style="font-size:.65rem; color:var(--pirb-text-muted); text-align:center; margin:8px 0 0;">
+        Positions officielles e-Marque — tirs <strong style="color:#3b82f6;">réussis</strong> uniquement.
+        Filtre par match via le sélecteur ci-dessus.
+    </p>
+</div>
+{% endif %}
+
+{# ─── Shot map (terrain) — SÉANCES DE TIR & ENTRAÎNEMENT ─────────────── #}
+<div class="pirb-card" style="padding-top:10px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div class="pirb-card-title" style="margin:0;">Shot map — entraînement</div>
         <div id="map-label" style="font-size:.72rem; color:#3b82f6; font-weight:600;"></div>
     </div>
 
@@ -256,11 +308,8 @@
             <div style="width:10px;height:10px;border-radius:50%;background:#16a34a;"></div> &gt;66%
         </div>
         {% endif %}
-        {% if nb_tirs_ffbb > 0 %}
-        <div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--pirb-text-muted);">
-            <div style="width:10px;height:10px;border-radius:50%;background:#3b82f6;"></div> Match officiel
-        </div>
-        {% endif %}
+        {# [V2.4] Les tirs FFBB (bleus) ont leur propre terrain fidèle ci-dessus
+           — plus de points bleus sur la map d'entraînement #}
     </div>
 </div>
 
@@ -533,21 +582,27 @@
     // Données côté PHP → JS
     // ────────────────────────────────────────────────────────────────
     const zonesData        = {{ zones_json|raw }};
+    // [V2.4] Tirs FFBB séparés — rendus sur le terrain FFBB fidèle (portrait)
+    const zonesFfbbData    = {{ zones_ffbb_json|default('[]')|raw }};
     const progressionData  = {{ progression_data|raw }};
     const csrfNouvelle     = '{{ csrf_token('shot_chart_nouvelle') }}';
 
     // ────────────────────────────────────────────────────────────────
     // Shot map — rendu des dots + filtrage par match / type
     // ────────────────────────────────────────────────────────────────
-    const terrain   = document.getElementById('sc-terrain');
-    const mapLabel  = document.getElementById('map-label');
-    let allDots     = [];  // { el, zone } — référence pour le filtrage
+    const terrain     = document.getElementById('sc-terrain');
+    const terrainFfbb = document.getElementById('sc-terrain-ffbb');
+    const mapLabel    = document.getElementById('map-label');
+    const ffbbLabel   = document.getElementById('ffbb-map-label');
+    let allDots       = [];  // { el, zone } — référence pour le filtrage
 
     function renderAllDots() {
         if (!terrain) return;
         // Supprimer les anciens dots
         allDots.forEach(d => d.el.remove());
         allDots = [];
+
+        // ── Séances d'entraînement → shot map paysage (inchangé) ──
         zonesData.forEach(zone => {
             const dot = document.createElement('div');
             dot.className = 'sc-dot';
@@ -556,12 +611,32 @@
             dot.style.background = zone.couleur;
             dot.dataset.rid      = zone.rencontreId ?? 'train';
             dot.dataset.type     = zone.typeTir ?? '';
-            dot.dataset.ffbb     = zone.ffbb ? '1' : '0';
-            const pctStr = zone.ffbb ? 'match FFBB' : (zone.pct !== null ? zone.pct + '%' : '?%');
-            dot.title = `${zone.typeTir} · ${zone.label} · ${pctStr} · ${zone.date}` + (zone.adversaire ? ` · ${zone.adversaire}` : '');
+            dot.dataset.ffbb     = '0';
+            const pctStr = zone.pct !== null ? zone.pct + '%' : '?%';
+            dot.title = `${zone.typeTir} · ${zone.label} · ${pctStr} · ${zone.date}`;
             terrain.appendChild(dot);
             allDots.push({ el: dot, zone });
         });
+
+        // ── [V2.4] Tirs FFBB → terrain FFBB fidèle (portrait, panier haut) ──
+        // fx/fy = coordonnées brutes du PDF e-Marque (0-1), placées en % du
+        // conteneur qui a EXACTEMENT les proportions du terrain du PDF (15/14)
+        // → le point tombe pile où la FFBB l'a imprimé.
+        if (terrainFfbb) {
+            zonesFfbbData.forEach(zone => {
+                const dot = document.createElement('div');
+                dot.className = 'sc-dot';
+                dot.style.left       = ((zone.fx ?? zone.y) * 100) + '%';
+                dot.style.top        = ((zone.fy ?? zone.x) * 100) + '%';
+                dot.style.background = zone.couleur;
+                dot.dataset.rid      = zone.rencontreId ?? 'train';
+                dot.dataset.type     = zone.typeTir ?? '';
+                dot.dataset.ffbb     = '1';
+                dot.title = `${zone.typeTir} · match FFBB · ${zone.date}` + (zone.adversaire ? ` · ${zone.adversaire}` : '');
+                terrainFfbb.appendChild(dot);
+                allDots.push({ el: dot, zone });
+            });
+        }
     }
 
     // Filtre actif
@@ -570,6 +645,7 @@
 
     function applyFilters() {
         let visible = 0;
+        let visibleFfbb = 0;   // [V2.4] compteur séparé terrain FFBB
         const countsByType = {};
 
         allDots.forEach(({ el, zone }) => {
@@ -578,11 +654,22 @@
             const show = ridMatch && typeMatch;
             el.style.display = show ? '' : 'none';
             if (show) {
-                visible++;
+                if (zone.ffbb) { visibleFfbb++; } else { visible++; }
                 const t = zone.typeTir || '';
                 countsByType[t] = (countsByType[t] || 0) + 1;
             }
         });
+
+        // [V2.4] Label du terrain FFBB
+        if (ffbbLabel) {
+            if (activeRid !== 'all') {
+                const card = document.querySelector(`.match-card[data-rid="${activeRid}"]`);
+                const adv  = card ? card.querySelector('div:nth-child(2)')?.textContent?.trim() : '';
+                ffbbLabel.textContent = adv ? `vs ${adv} · ${visibleFfbb} tirs` : `${visibleFfbb} tirs`;
+            } else {
+                ffbbLabel.textContent = visibleFfbb > 0 ? `${visibleFfbb} tirs réussis` : '';
+            }
+        }
 
         // Mettre à jour les badges "points forts" selon les dots visibles
         document.querySelectorAll('.force-badge').forEach(badge => {

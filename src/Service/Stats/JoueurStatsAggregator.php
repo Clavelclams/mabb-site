@@ -28,8 +28,31 @@ class JoueurStatsAggregator
         private readonly EvaluationMatchRepository $evalRepo,
     ) {}
 
-    public function statsSaison(Joueur $joueur, ?string $saison = null): array
-    {
+    /**
+     * [V2.3 05/07/2026] FILTRE PAR TYPE DE RENCONTRE.
+     *
+     * AVANT : toutes les EvaluationMatch comptaient dans les moyennes de
+     * saison, y compris les entraînements internes et exhibitions — les
+     * moyennes étaient donc GONFLÉES dès qu'un match interne était statté.
+     *
+     * APRÈS : par défaut, seuls les matchs OFFICIELS alimentent la fiche
+     * joueuse (convention FFBB : les moyennes de saison = compétition).
+     * Le paramètre $typesRencontre permet de consulter les autres types
+     * (ex: ['ENTRAINEMENT_INTERNE'] pour un bilan d'entraînement, ou
+     * [] pour tout inclure comme avant).
+     *
+     * POURQUOI FILTRER PAR JOINTURE ET PAS PAR UN CHAMP SUR L'ÉVAL :
+     * le type vit sur Rencontre (une seule source de vérité). Pas de
+     * dénormalisation = pas de risque de désynchronisation si le staff
+     * corrige le type d'une rencontre après coup (cf. ADR-0008).
+     *
+     * @param string[] $typesRencontre Types inclus ([] = tous les types)
+     */
+    public function statsSaison(
+        Joueur $joueur,
+        ?string $saison = null,
+        array $typesRencontre = [\App\Entity\Sport\Rencontre::TYPE_OFFICIEL],
+    ): array {
         $qb = $this->em->createQueryBuilder()
             ->select('e')
             ->from(\App\Entity\Sport\EvaluationMatch::class, 'e')
@@ -37,6 +60,11 @@ class JoueurStatsAggregator
             ->where('e.joueur = :j')
             ->setParameter('j', $joueur)
             ->orderBy('r.date', 'DESC');
+
+        if ($typesRencontre !== []) {
+            $qb->andWhere('r.typeRencontre IN (:types)')
+               ->setParameter('types', $typesRencontre);
+        }
 
         // TODO : si on a une entité Saison (B6), filtrer ici par saison
         // Pour V1 : on prend tout
