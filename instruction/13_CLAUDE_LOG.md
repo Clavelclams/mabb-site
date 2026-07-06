@@ -10,6 +10,21 @@
 
 ---
 
+### 2026-07-06 (octies) — Tests du cœur multi-tenant : ClubVoter + TenantResolver (P0 audit 29/06)
+
+- Objectif : couvrir de tests le cœur d'autorisation multi-tenant, resté à ~0 test et qualifié « indéfendable jury CDA » par l'audit du 29/06 (P0). Aucun code de prod modifié : uniquement de nouveaux tests unitaires purs (pas de base de données).
+- Actions réalisées :
+  1. **`tests/Unit/Security/Voter/ClubVoterTest.php`** (nouveau) — 18 cas : garde-fous (attribut non supporté → abstain, subject non-Club → abstain, token anonyme → deny, entité ClubAware sans club → deny), court-circuit `ROLE_SUPER_ADMIN`, chaque attribut (MEMBER/COACH/ADMIN/STAFF/JOUEUR/STAFF_ELARGI) avec un cas accepté et un cas refusé, rejet des rôles `pending` et désactivés, extraction du club via `ClubAwareInterface`. **Test central : `testCoachDuClubANeVotePasPourLeClubB`** (anti-fuite inter-club) + `testEntiteDunAutreClubRefusee`.
+  2. **`tests/Unit/Security/Tenant/TenantResolverTest.php`** (nouveau) — 15 cas : `userBelongsToClub` (valide / pending / désactivé / autre club), `getUserClubs` (exclusion pending + club inactif + dédoublonnage), `getCurrentClub` (pas d'user → null, auto-sélection mono-club, multi-club → null, club choisi en session respecté), `setCurrentClub` (refus si non affilié / accept si affilié), `hasPendingMembership`, `getCurrentUserRoles`/`hasRole`. **Test sécurité central : `testSessionForgeeVersUnAutreClubEstIgnoree`** (un `active_club_id` forgé vers un club non affilié n'est jamais servi).
+- Fichiers modifiés : 2 fichiers de test créés + cette entrée. **AUCUN fichier de src/ touché. AUCUN commit** (Clavel commit lui-même).
+- Décisions (ADR si applicable) : aucune. Choix de test : unitaires purs (TestCase, sans Kernel/DB) pour rapidité et déterminisme ; IDs posés par réflexion (les entités n'ont pas de setId) ; `Security` et `ClubRepository` mockés, session réelle via `MockArraySessionStorage` (même pattern que `SaisonServiceTest`).
+- Points de vigilance / risques :
+  - **À lancer sur le PC** (PHP absent du sandbox) : `php bin/phpunit --filter 'ClubVoterTest|TenantResolverTest'`. Le lint et l'exécution n'ont pas pu être faits ici.
+  - Un seul point à confirmer au premier run : le mock de `Symfony\Bundle\SecurityBundle\Security` (OK tant que la classe n'est pas `final` — cas standard). Si souci, remplacer par un double simple.
+  - Reste au P0 audit après ça : mailer Brevo prod et bugs ouverts (hors périmètre de cette session).
+
+---
+
 ### 2026-07-06 (septies) — B4 PHASE 1 : l'API mobile PIRB est née (les données Manager arrivent dans l'app)
 
 - Objectif : valider le chantier B4 de bout en bout — l'app PIRB Mobile (dépôt « Pirb store », Expo/palier P0) consomme les données RÉELLES de Manager. Contrainte : pas de Composer en sandbox → implémentation SANS nouvelle dépendance (ADR-0010).
