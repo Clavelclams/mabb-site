@@ -39,9 +39,9 @@ final class ClubVoterTest extends TestCase
         // elle ne touche ni la session ni la base. On lui passe donc des
         // dépendances mockées qui ne seront jamais appelées.
         $resolver = new TenantResolver(
-            $this->createMock(RequestStack::class),
-            $this->createMock(ClubRepository::class),
-            $this->createMock(Security::class),
+            $this->createStub(RequestStack::class),
+            $this->createStub(ClubRepository::class),
+            $this->createStub(Security::class),
         );
         $this->voter = new ClubVoter($resolver);
     }
@@ -89,7 +89,7 @@ final class ClubVoterTest extends TestCase
 
     private function token(?object $user): TokenInterface
     {
-        $token = $this->createMock(TokenInterface::class);
+        $token = $this->createStub(TokenInterface::class);
         $token->method('getUser')->willReturn($user);
         return $token;
     }

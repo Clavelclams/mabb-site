@@ -87,14 +87,14 @@ final class TenantResolverTest extends TestCase
         $stack = new RequestStack();
         $stack->push($request);
 
-        $security = $this->createMock(Security::class);
+        $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
         $map = [];
         foreach ($clubsConnus as $c) {
             $map[$c->getId()] = $c;
         }
-        $repo = $this->createMock(ClubRepository::class);
+        $repo = $this->createStub(ClubRepository::class);
         $repo->method('find')->willReturnCallback(fn ($id) => $map[$id] ?? null);
 
         return new TenantResolver($stack, $repo, $security);

@@ -3,6 +3,7 @@
 namespace App\Tests\Unit\Entity\Core;
 
 use App\Entity\Core\UserClubRole;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -14,9 +15,7 @@ use PHPUnit\Framework\TestCase;
  */
 class UserClubRoleTest extends TestCase
 {
-    /**
-     * @dataProvider provideValidRoles
-     */
+    #[DataProvider('provideValidRoles')]
     public function testIsValidRoleAcceptsAllValidValues(string $role): void
     {
         $this->assertTrue(

@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Service\Sport;
 
 use App\Entity\Sport\Joueur;
 use App\Service\Sport\CategorieCalculator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -47,9 +48,7 @@ final class CategorieCalculatorTest extends TestCase
 
     // ── Catégorie ────────────────────────────────────────────────────────
 
-    /**
-     * @dataProvider provideCategories
-     */
+    #[DataProvider('provideCategories')]
     public function testCategorieParAnneeDeNaissance(string $naissance, string $saison, string $attendue): void
     {
         $j = $this->joueuseNee($naissance);
