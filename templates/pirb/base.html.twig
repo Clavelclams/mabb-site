@@ -463,6 +463,25 @@
     {% endblock %}
 
     <main class="pirb-content">
+        {# [B-102 06/07/2026] Flashes rendus GLOBALEMENT sur toutes les pages
+           PIRB (avant : seul le dashboard les affichait, et sans le type
+           'warning' → "match terminé, tu ne peux plus t'inscrire" et autres
+           retours d'action étaient invisibles selon la page d'atterrissage). #}
+        {% for label, messages in app.flashes %}
+            {% for message in messages %}
+                {% set flash_color = {
+                    'success': '#16a34a', 'error': '#ef4444', 'danger': '#ef4444',
+                    'warning': '#f59e0b', 'info': '#3b82f6'
+                }[label] ?? '#3b82f6' %}
+                <div class="pirb-card" style="padding:12px 14px; margin-bottom:12px;
+                        border-left:4px solid {{ flash_color }};
+                        background: color-mix(in srgb, {{ flash_color }} 10%, transparent);
+                        font-size:.88rem;">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endfor %}
+
         {% block body %}{% endblock %}
 
         {# === V1.2a — Footer dédicace à @pirb_scouting ===
@@ -485,8 +504,11 @@
         <a href="{{ path('pirb_equipe') }}" class="pirb-nav-tab {{ route == 'pirb_equipe' ? 'active' : '' }}">
             <i class="bi bi-people"></i> Équipe
         </a>
-        <a href="{{ path('pirb_seances_index') }}" class="pirb-nav-tab {{ route starts with 'pirb_seances' ? 'active' : '' }}">
-            <i class="bi bi-calendar-week"></i> Séances
+        {# [V2.4d 06/07/2026] "Séances" remplacé par "Mes tirs" (shot chart)
+           dans la bottom nav — demande Clavel. Les séances restent
+           accessibles via le drawer profil. #}
+        <a href="{{ path('pirb_shot_chart') }}" class="pirb-nav-tab {{ route starts with 'pirb_shot_chart' ? 'active' : '' }}">
+            <i class="bi bi-bullseye"></i> Mes tirs
         </a>
         {# [15/06/2026] Stats : activée — la route pirb_stats existe depuis B10/B11.
            Mauvais oubli de fin de sprint qui laissait l'onglet en disabled. #}

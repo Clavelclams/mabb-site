@@ -1,0 +1,94 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{% block title %}Politique de confidentialité — MABB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container">
+        <h1>Politique de confidentialité</h1>
+        <p style="color:rgba(255,255,255,.75)">Comment nous traitons tes données personnelles (RGPD)</p>
+    </div>
+</div>
+
+<section class="section">
+    <div class="container" style="max-width:820px;">
+
+        <h2 class="h5 fw-bold mt-2">Qui est responsable du traitement ?</h2>
+        <p>
+            L'association <strong>{{ cms('legal.editeur.nom', 'MABB — Amiens Métropole Basket Ball') }}</strong>
+            est responsable du traitement des données collectées sur mabb.fr, manager.mabb.fr et pirb.mabb.fr.<br>
+            Contact pour toute question relative aux données :
+            {{ cms('legal.rgpd.contact', 'contact@mabb.fr') }}
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Quelles données collectons-nous, et pourquoi ?</h2>
+        <p>
+            <strong>Comptes utilisateurs</strong> (prénom, nom, email, mot de passe chiffré) :
+            nécessaires à la création et à la sécurisation de ton espace personnel.
+            Base légale : exécution du contrat (utilisation de la plateforme).
+        </p>
+        <p>
+            <strong>Fiches joueuses</strong> (identité, date de naissance, numéro de licence FFBB,
+            équipe, photo) : gestion sportive du club (effectifs, convocations, compétitions FFBB).
+            Base légale : intérêt légitime de l'association et obligations fédérales.
+        </p>
+        <p>
+            <strong>Données sportives</strong> (statistiques de match, présences, évaluations,
+            bilans de compétences) : suivi sportif et pédagogique des joueuses.
+            Ces données ne sont visibles que par le staff du club et la joueuse concernée
+            (et ses représentants légaux si elle est mineure).
+        </p>
+        <p>
+            <strong>Données de santé éventuelles</strong> (allergies, problèmes de santé signalés
+            dans les bilans) : saisies uniquement avec accord, accessibles au seul staff encadrant,
+            dans l'intérêt de la protection de la joueuse.
+        </p>
+        <p>
+            <strong>Formulaire de contact</strong> : les informations envoyées servent uniquement
+            à répondre à ta demande.
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Cookies</h2>
+        <p>
+            Les sites utilisent uniquement des <strong>cookies techniques de session</strong>
+            (connexion, préférence de saison). Aucun cookie publicitaire, aucun traceur tiers,
+            aucune revente de données. C'est pourquoi aucun bandeau de consentement n'est requis.
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Combien de temps ?</h2>
+        <p>
+            Les comptes et fiches sont conservés pendant la durée d'adhésion au club,
+            puis {{ cms('legal.rgpd.duree', 'archivés au maximum 3 saisons' ) }} pour les besoins
+            d'historique sportif, avant suppression ou anonymisation.
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Tes droits</h2>
+        <p>
+            Conformément au RGPD, tu disposes d'un droit d'accès, de rectification,
+            d'effacement, de limitation et d'opposition sur tes données.
+        </p>
+        <p>
+            Depuis ton espace connecté, la page <strong>Profil → Mes données (RGPD)</strong>
+            te permet d'exporter tes données (format JSON) et de demander la suppression
+            de ton compte directement, sans passer par un email.
+            Pour toute autre demande : {{ cms('legal.rgpd.contact', 'contact@mabb.fr') }}.
+        </p>
+        <p>
+            Si tu estimes que tes droits ne sont pas respectés, tu peux saisir la CNIL :
+            <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">cnil.fr/fr/plaintes</a>.
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Mineures</h2>
+        <p>
+            Le club étant majoritairement composé de joueuses mineures, les comptes PIRB
+            des mineures sont créés et supervisés avec l'implication des représentants
+            légaux (système de liaison parent–joueuse intégré à la plateforme).
+            Les photos et données des mineures ne sont jamais publiées sans autorisation parentale.
+        </p>
+
+        <p class="text-muted mt-4" style="font-size:.85rem;">
+            Dernière mise à jour : {{ cms('legal.rgpd.maj', 'juillet 2026') }}
+        </p>
+    </div>
+</section>
+{% endblock %}

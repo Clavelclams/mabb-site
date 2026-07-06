@@ -148,8 +148,21 @@
     {% if message %}
         <div class="pirb-card" style="text-align:center; padding:32px 20px;">
             <div style="font-size:3rem; margin-bottom:8px;">👥</div>
-            <h2 style="margin:0 0 8px 0; font-size:1.1rem;">Mon équipe</h2>
+            <h2 style="margin:0 0 8px 0; font-size:1.1rem;">Mon équipe
+                {% if saison is defined and saison %}
+                    <span style="font-size:.7rem; color:var(--pirb-text-muted); font-weight:600;">· {{ saison }}</span>
+                {% endif %}
+            </h2>
             <p style="color:var(--pirb-text-muted); font-size:0.9rem; margin:0;">{{ message }}</p>
+            {# [V2.4c] Nouvelle saison pas encore composée → revoir la saison passée #}
+            {% if saison_precedente is defined and saison_precedente %}
+                <a href="{{ path('pirb_equipe', {saison: saison_precedente}) }}"
+                   style="display:inline-block; margin-top:14px; padding:8px 16px; border-radius:20px;
+                          background:rgba(59,130,246,.12); border:1px solid rgba(59,130,246,.3);
+                          color:#3b82f6; font-weight:700; font-size:.8rem; text-decoration:none;">
+                    👀 Revoir mon équipe {{ saison_precedente }}
+                </a>
+            {% endif %}
         </div>
 
     {% else %}
@@ -157,6 +170,15 @@
         {# === Hero équipe principale === #}
         <div class="pirb-card equipe-hero">
             <div style="font-size:2.5rem; margin-bottom:4px;">🏀</div>
+            {# [V2.4c] Badge saison + retour saison courante si on consulte une archive #}
+            {% if saison is defined and saison %}
+                <div style="font-size:.68rem; color:var(--pirb-text-muted); font-weight:700; margin-bottom:4px;">
+                    Saison {{ saison }}
+                    {% if app.request.query.get('saison') %}
+                        · <a href="{{ path('pirb_equipe') }}" style="color:#3b82f6; text-decoration:none;">retour à aujourd'hui</a>
+                    {% endif %}
+                </div>
+            {% endif %}
             {% if autres_equipes is defined and autres_equipes|length > 0 %}
                 <div style="font-size:0.7rem; color:var(--pirb-text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;">
                     Mon équipe de référence

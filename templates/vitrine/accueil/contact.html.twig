@@ -112,20 +112,22 @@
 						<span>pratiques</span>
 					</h2>
 
+					{# [CMS V2 06/07/2026] Coordonnées éditables dans /admin/contenus
+					   (un déménagement de gymnase ne doit pas exiger un déploiement) #}
 					<div class="card card-mabb p-4 mb-4">
 						<h5 class="fw-bold mb-3">
 							<i class="bi bi-geo-alt-fill text-mabb-orange me-2"></i>Gymnase principal</h5>
-						<p class="mb-1 fw-semibold">Gymnase Émile Moiroud</p>
-						<p class="text-muted mb-3">Quartier Étouvie, Amiens</p>
+						<p class="mb-1 fw-semibold">{{ cms('contact.gymnase.nom', 'Gymnase Émile Moiroud') }}</p>
+						<p class="text-muted mb-3">{{ cms('contact.gymnase.adresse', 'Quartier Étouvie, Amiens') }}</p>
 
 						<h5 class="fw-bold mb-3">
 							<i class="bi bi-building text-mabb-orange me-2"></i>Siège social</h5>
-						<p class="text-muted mb-3">12 rue d'Artois, 80000 Amiens</p>
+						<p class="text-muted mb-3">{{ cms('contact.siege.adresse', "12 rue d'Artois, 80000 Amiens") }}</p>
 
 						<h5 class="fw-bold mb-3">
 							<i class="bi bi-envelope-fill text-mabb-orange me-2"></i>Email</h5>
 						<p class="mb-3">
-							<a href="mailto:contact@mabb.fr" class="text-mabb-blue fw-semibold">contact@mabb.fr</a>
+							<a href="mailto:{{ cms('contact.email', 'contact@mabb.fr') }}" class="text-mabb-blue fw-semibold">{{ cms('contact.email', 'contact@mabb.fr') }}</a>
 						</p>
 
 						<h5 class="fw-bold mb-3">

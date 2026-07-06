@@ -88,20 +88,33 @@ class MissionController extends AbstractController
                 $this->em->persist($mission);
                 $this->em->flush();
 
-                // Recalcule l'XP + badges après ajout pour feedback immédiat
-                $nouveauxBadges = $this->badgeChecker->syncBadges($joueur);
-                $xpDetails      = $this->xpCalculator->detailsSaison($joueur);
-
-                $this->addFlash('success', sprintf(
-                    'Mission "%s" ajoutée pour %s %s. %s%s',
-                    Mission::TYPE_LIBELLES[$type] ?? $type,
-                    $joueur->getPrenom(),
-                    $joueur->getNom(),
-                    sprintf('🎯 XP saison actuel : %d.', $xpDetails['xp_total']),
-                    count($nouveauxBadges) > 0
-                        ? sprintf(' 🏆 %d nouveau(x) badge(s) débloqué(s) !', count($nouveauxBadges))
-                        : ''
-                ));
+                // [B-205 06/07/2026] La gamification post-création est mise en
+                // DÉFENSE : si BadgeChecker/XpCalculator lèvent une exception
+                // (donnée inattendue, saison sans data…), la mission est DÉJÀ
+                // enregistrée — on ne doit jamais renvoyer une 500 pour un
+                // bonus d'affichage. Cause la plus plausible du bug historique.
+                try {
+                    $nouveauxBadges = $this->badgeChecker->syncBadges($joueur);
+                    $xpDetails      = $this->xpCalculator->detailsSaison($joueur);
+                    $this->addFlash('success', sprintf(
+                        'Mission "%s" ajoutée pour %s %s. %s%s',
+                        Mission::TYPE_LIBELLES[$type] ?? $type,
+                        $joueur->getPrenom(),
+                        $joueur->getNom(),
+                        sprintf('🎯 XP saison actuel : %d.', $xpDetails['xp_total']),
+                        count($nouveauxBadges) > 0
+                            ? sprintf(' 🏆 %d nouveau(x) badge(s) débloqué(s) !', count($nouveauxBadges))
+                            : ''
+                    ));
+                } catch (\Throwable $e) {
+                    $this->addFlash('success', sprintf(
+                        'Mission "%s" ajoutée pour %s %s. (Le recalcul XP/badges a échoué : %s — il se refera au prochain passage.)',
+                        Mission::TYPE_LIBELLES[$type] ?? $type,
+                        $joueur->getPrenom(),
+                        $joueur->getNom(),
+                        $e->getMessage()
+                    ));
+                }
                 return $this->redirectToRoute('manager_joueur_show', ['id' => $joueur->getId()]);
             }
         }

@@ -156,6 +156,24 @@
 
                             {# Actions #}
                             <td style="padding:11px 16px; text-align:right; white-space:nowrap;">
+                                {# [B-201 06/07/2026] Valider officielle DIRECTEMENT depuis
+                                   cette liste : une session COMPLETE attend la validation du
+                                   coach — avant il fallait naviguer jusqu'à la page Sessions.
+                                   POST + CSRF (même token que la page Sessions), confirm JS. #}
+                                {% if is_staff and session and session.complete %}
+                                    <form method="post"
+                                          action="{{ path('manager_session_promouvoir', {id: session.id}) }}"
+                                          style="display:inline;"
+                                          onsubmit="return confirm('Valider cette session comme OFFICIELLE ?\nSes stats alimenteront les fiches joueuses.');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('promouvoir_session_' ~ session.id) }}">
+                                        <button type="submit" class="btn-mabb-orange"
+                                                style="font-size:.78rem; padding:4px 10px;"
+                                                title="Promouvoir cette session en OFFICIELLE (alimente les fiches joueuses)">
+                                            <i class="bi bi-patch-check"></i> Valider officielle
+                                        </button>
+                                    </form>
+                                {% endif %}
+
                                 {# Accès stats live #}
                                 <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}"
                                    class="btn-mabb-ghost"
@@ -163,6 +181,14 @@
                                    title="{{ session and session.enCours ? 'Reprendre les stats' : 'Ouvrir stats live' }}">
                                     <i class="bi bi-lightning-charge{{ session and session.enCours ? '-fill' : '' }}"></i>
                                     {{ session and session.enCours ? 'Reprendre' : 'Stats live' }}
+                                </a>
+
+                                {# Sessions de saisie (comparer / archiver) #}
+                                <a href="{{ path('manager_rencontre_sessions', {id: rencontre.id}) }}"
+                                   class="btn-mabb-ghost"
+                                   style="font-size:.78rem; padding:4px 10px;"
+                                   title="Voir toutes les sessions de saisie de ce match">
+                                    <i class="bi bi-collection"></i>
                                 </a>
 
                                 {# Voir la rencontre #}

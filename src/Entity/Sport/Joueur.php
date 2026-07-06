@@ -401,6 +401,47 @@ class Joueur implements ClubAwareInterface
         return $this;
     }
 
+    // ====================================================================
+    // [V2.4c 06/07/2026] ÉQUIPE PAR SAISON
+    //
+    // Joueur.equipe est un lien DIRECT (rétrocompat) qui pointe sur la
+    // dernière équipe connue — en début de nouvelle saison il montre donc
+    // encore l'équipe de la saison PASSÉE, ce qui est faux à l'écran.
+    // La vérité saison par saison vit dans les affectations JoueurEquipe.
+    // ====================================================================
+
+    /**
+     * Équipe PRINCIPALE de la joueuse pour une saison donnée.
+     *
+     * Ordre de résolution :
+     *   1. Affectation JoueurEquipe principale active de cette saison
+     *   2. Fallback historique : le lien direct Joueur.equipe, UNIQUEMENT
+     *      si son équipe appartient à la saison demandée (couvre les
+     *      données d'avant la table pivot)
+     *   3. null = pas d'équipe cette saison (ex: saison qui démarre,
+     *      équipes pas encore composées)
+     */
+    public function equipePourSaison(string $saison): ?Equipe
+    {
+        foreach ($this->affectations as $aff) {
+            if ($aff->isActif()
+                && $aff->getSaison() === $saison
+                && $aff->isPrincipale()) {
+                return $aff->getEquipe();
+            }
+        }
+        if ($this->equipe !== null && $this->equipe->getSaison() === $saison) {
+            return $this->equipe;
+        }
+        return null;
+    }
+
+    /** True si la joueuse a une équipe (affectation ou legacy) sur la saison. */
+    public function aUneEquipeEnSaison(string $saison): bool
+    {
+        return $this->equipePourSaison($saison) !== null;
+    }
+
     public function getUser(): ?User { return $this->user; }
     public function setUser(?User $user): static { $this->user = $user; return $this; }
     public function isActive(): bool { return $this->isActive; }

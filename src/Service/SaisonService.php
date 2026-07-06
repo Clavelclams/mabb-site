@@ -45,16 +45,20 @@ class SaisonService
     public function __construct(private RequestStack $requestStack) {}
 
     /**
-     * Saisons proposées dans le sélecteur : de la plus récente
-     * (courante + 1, pour préparer la saison suivante) à PREMIERE_SAISON.
+     * Saisons proposées dans le sélecteur : de la saison COURANTE
+     * (calculée par la date, bascule 1er juillet) à PREMIERE_SAISON.
+     *
+     * [06/07/2026] AUCUNE saison future : on ne peut pas sélectionner
+     * 2027-2028 tant qu'elle n'a pas commencé (demande explicite de
+     * Clavel — tout est piloté par le calendrier réel). La saison
+     * suivante apparaîtra automatiquement le 1er juillet.
      *
      * @return string[] ex: ['2026-2027', '2025-2026', '2024-2025', '2023-2024']
      */
     public function getSaisonsDisponibles(): array
     {
         $premiereAnnee = (int) explode('-', self::PREMIERE_SAISON)[0];
-        $courante      = $this->getSaisonCourante();
-        $derniereAnnee = (int) explode('-', $courante)[0] + 1; // saison suivante incluse
+        $derniereAnnee = (int) explode('-', $this->getSaisonCourante())[0];
 
         $saisons = [];
         for ($a = $derniereAnnee; $a >= $premiereAnnee; $a--) {

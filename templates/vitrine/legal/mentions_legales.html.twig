@@ -1,0 +1,61 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{% block title %}Mentions légales — MABB{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container">
+        <h1>Mentions légales</h1>
+    </div>
+</div>
+
+<section class="section">
+    <div class="container" style="max-width:820px;">
+
+        <h2 class="h5 fw-bold mt-2">Éditeur du site</h2>
+        <p>
+            Le site <strong>mabb.fr</strong> (ainsi que les espaces manager.mabb.fr et pirb.mabb.fr)
+            est édité par l'association <strong>{{ cms('legal.editeur.nom', 'MABB — Amiens Métropole Basket Ball') }}</strong>,
+            association loi 1901.<br>
+            Siège social : {{ cms('legal.editeur.adresse', 'Amiens (adresse complète à renseigner dans Admin → Contenus)') }}<br>
+            SIRET : {{ cms('legal.editeur.siret', '490 778 909 00021') }} ·
+            Agrément Jeunesse et Sport : {{ cms('legal.editeur.agrement', 'D80S1069') }}<br>
+            Contact : <a href="{{ path('vitrine_contact') }}">{{ cms('legal.editeur.email', 'contact@mabb.fr') }}</a>
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Directeur de la publication</h2>
+        <p>{{ cms('legal.publication.directeur', 'Le·la président·e de l\'association MABB (nom à renseigner dans Admin → Contenus)') }}</p>
+
+        <h2 class="h5 fw-bold mt-4">Hébergement</h2>
+        <p>
+            OVH SAS — 2 rue Kellermann, 59100 Roubaix, France<br>
+            Téléphone : 1007 · <a href="https://www.ovhcloud.com" target="_blank" rel="noopener">www.ovhcloud.com</a>
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Propriété intellectuelle</h2>
+        <p>
+            L'ensemble des contenus de ce site (textes, photographies, logos, charte graphique)
+            est la propriété de l'association MABB ou de ses partenaires, sauf mention contraire.
+            Toute reproduction, même partielle, est soumise à autorisation préalable.
+            Les photographies de joueuses mineures sont publiées avec l'autorisation
+            de leurs représentants légaux.
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Données personnelles</h2>
+        <p>
+            Le traitement des données personnelles est détaillé dans notre
+            <a href="{{ path('vitrine_confidentialite') }}">politique de confidentialité</a>.
+        </p>
+
+        <h2 class="h5 fw-bold mt-4">Réalisation</h2>
+        <p>
+            Site conçu et développé par Clavel NDEMA MOUSSA —
+            <a href="https://velito.fr" target="_blank" rel="noopener">VENA</a>.
+        </p>
+
+        <p class="text-muted mt-4" style="font-size:.85rem;">
+            Dernière mise à jour : {{ cms('legal.mentions.maj', 'juillet 2026') }}
+        </p>
+    </div>
+</section>
+{% endblock %}

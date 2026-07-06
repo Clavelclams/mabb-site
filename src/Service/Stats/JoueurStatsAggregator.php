@@ -66,8 +66,18 @@ class JoueurStatsAggregator
                ->setParameter('types', $typesRencontre);
         }
 
-        // TODO : si on a une entité Saison (B6), filtrer ici par saison
-        // Pour V1 : on prend tout
+        // [V2.4d 06/07/2026] FILTRE SAISON implémenté (le TODO historique).
+        // Par PLAGE DE DATES réelles et non par le champ rencontre.saison
+        // (nullable, pas rempli sur les rencontres créées à la main) :
+        // saison "2025-2026" = du 01/07/2025 au 30/06/2026 (bascule juillet,
+        // cohérente avec SaisonService). null = toutes saisons confondues.
+        if ($saison !== null && preg_match('/^(\d{4})-(\d{4})$/', $saison, $m)) {
+            $qb->andWhere('r.date >= :saisonDebut')
+               ->andWhere('r.date < :saisonFin')
+               ->setParameter('saisonDebut', new \DateTimeImmutable($m[1] . '-07-01'))
+               ->setParameter('saisonFin',   new \DateTimeImmutable($m[2] . '-07-01'));
+        }
+
         $evals = $qb->getQuery()->getResult();
 
         return $this->compute($evals);

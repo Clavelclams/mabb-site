@@ -46,8 +46,10 @@ class PirbStatsController extends AbstractController
     ) {}
 
     #[Route('/stats', name: 'pirb_stats', methods: ['GET'])]
-    public function index(\App\Repository\Sport\RencontreRepository $rencontreRepo): Response
-    {
+    public function index(
+        \App\Repository\Sport\RencontreRepository $rencontreRepo,
+        \App\Service\SaisonService $saisonService,
+    ): Response {
         /** @var User $user */
         $user = $this->getUser();
         $joueur = $this->joueurRepo->findOneBy(['user' => $user]);
@@ -57,18 +59,29 @@ class PirbStatsController extends AbstractController
             return $this->redirectToRoute('pirb_dashboard');
         }
 
-        $stats = $this->aggregator->statsSaison($joueur);
+        // [V2.4d 06/07/2026] La page respecte ENFIN le sélecteur de saison
+        // du header PIRB (avant : le dropdown changeait la session mais la
+        // page affichait toujours tout, donc "toujours 2025-2026").
+        $saison = $saisonService->getSaisonActive();
 
-        // [15/06/2026] Rajouter la liste des matchs de l'équipe pour que la joueuse
-        // puisse cliquer dessus et accéder au badge ✓ FFBB + PDF même sans EvaluationMatch.
-        // Sinon la page Stats est vide tant qu'aucune éval n'a été saisie.
+        $stats = $this->aggregator->statsSaison($joueur, $saison);
+
+        // [15/06/2026] Liste des matchs de l'équipe pour accéder aux PDFs FFBB.
+        // [V2.4d] Équipe résolue PAR SAISON (affectations) + matchs bornés
+        // aux dates de la saison sélectionnée. Saison passée sans équipe ni
+        // matchs → le template affiche "pas de données".
         $matchsEquipe = [];
-        if ($joueur->getEquipe() !== null) {
+        $equipeSaison = $joueur->equipePourSaison($saison) ?? $joueur->getEquipe();
+        if ($equipeSaison !== null && preg_match('/^(\d{4})-(\d{4})$/', $saison, $m)) {
             $matchsEquipe = $rencontreRepo->createQueryBuilder('r')
                 ->where('r.equipe = :eq')
                 ->andWhere('r.date < :now')
-                ->setParameter('eq', $joueur->getEquipe())
+                ->andWhere('r.date >= :debut')
+                ->andWhere('r.date < :fin')
+                ->setParameter('eq', $equipeSaison)
                 ->setParameter('now', new \DateTimeImmutable())
+                ->setParameter('debut', new \DateTimeImmutable($m[1] . '-07-01'))
+                ->setParameter('fin',   new \DateTimeImmutable($m[2] . '-07-01'))
                 ->orderBy('r.date', 'DESC')
                 ->setMaxResults(20)
                 ->getQuery()
@@ -79,6 +92,7 @@ class PirbStatsController extends AbstractController
             'joueur'        => $joueur,
             'stats'         => $stats,
             'matchs_equipe' => $matchsEquipe,
+            'saison'        => $saison,
         ]);
     }
 

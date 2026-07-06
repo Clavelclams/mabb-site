@@ -21,7 +21,8 @@
         <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin-top:6px;">
             {{ stats.nb_matchs }} match{{ stats.nb_matchs > 1 ? 's' : '' }} joué{{ stats.nb_matchs > 1 ? 's' : '' }}
             {% if stats.titulaire > 0 %} · {{ stats.titulaire }} titularisation{{ stats.titulaire > 1 ? 's' : '' }}{% endif %}
-            · saison {{ joueur.equipe.saisonCourante ?? '2025-2026' }}
+            {# [V2.4d] Saison réellement filtrée (suit le sélecteur du header) #}
+            · saison {{ saison ?? saison_active() }}
         </p>
     </div>
 
@@ -36,8 +37,10 @@
     {% if stats.nb_matchs == 0 %}
         <div class="pirb-card" style="text-align:center; padding:24px;">
             <p style="margin:0; color:var(--pirb-text-muted); font-size:0.9rem;">
-                Aucune évaluation individuelle saisie pour l'instant.<br>
-                <small>Les stats détaillées apparaîtront après import OCR FFBB ou saisie coach.</small>
+                Pas de données pour la saison {{ saison ?? saison_active() }}.<br>
+                <small>Change de saison avec le sélecteur en haut de page pour
+                revoir tes stats passées. Les stats de cette saison apparaîtront
+                après tes premiers matchs.</small>
             </p>
         </div>
     {% else %}
@@ -267,7 +270,8 @@
     {% else %}
         <div class="pirb-card" style="text-align:center; padding:20px;">
             <p style="margin:0; color:var(--pirb-text-muted); font-size:0.85rem;">
-                Aucun match enregistré pour ton équipe sur cette saison.
+                Pas de match enregistré pour la saison {{ saison ?? saison_active() }}.<br>
+                <small>Tu peux changer de saison avec le sélecteur en haut de page.</small>
             </p>
         </div>
     {% endif %}

@@ -26,13 +26,16 @@ saison_changer:
     controller: App\Controller\SaisonController::changer
     methods: [POST]
 
-# API (pas de contrainte host — securise par JWT)
+# API (pas de contrainte host — sécurisée par Bearer token, cf. firewall api)
+# [B4 06/07/2026] prefix /api RETIRÉ : les contrôleurs Api déclarent leurs
+# chemins complets (#[Route('/api/...')]) — plus lisible, et cumulé au prefix
+# ça aurait produit des routes /api/api/... Le dossier était VIDE avant B4 :
+# aucune route existante impactée.
 api_controllers:
     resource:
         path: ../src/Controller/Api/
         namespace: App\Controller\Api
     type: attribute
-    prefix: /api
 # Admin — sécurisé dans le controller (SUPER_ADMIN uniquement)
 admin_controllers:
     resource:

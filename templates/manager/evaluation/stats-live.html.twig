@@ -2829,26 +2829,52 @@
         const modalValidate = document.getElementById('modalCinqValidate');
 
         let modalSelection = new Set();
+        // [V2.4e 06/07/2026] Mode interne A/B : côté de chaque joueuse
+        // (déduit du DOM à l'ouverture) pour imposer 5 par ÉQUIPE et non
+        // 5 au total — un match interne aligne 2×5 joueuses.
+        let modalCotes = {};
+
+        function coteDe(jid) { return modalCotes[jid] ?? null; }
+        function compteCote(cote) {
+            let n = 0;
+            modalSelection.forEach(id => { if (coteDe(id) === cote) n++; });
+            return n;
+        }
 
         function openModalCinq() {
             // Régénère la grille à chaque ouverture (joueuses + sélection = celles actuellement sur terrain)
             modalSelection = new Set(surTerrain.keys());
+            modalCotes = {};
             modalGrid.innerHTML = '';
+            const titre = document.querySelector('#modalCinq .modal-title');
+            if (titre) titre.textContent = MODE_INTERNE_AB ? 'Composer les deux 5 (A et B)' : 'Composer le 5 de départ';
             document.querySelectorAll('.joueuse-item').forEach(item => {
                 const jid = parseInt(item.dataset.joueurId, 10);
                 const nom = item.querySelector('.joueuse-name').textContent.trim();
                 const num = item.querySelector('.joueuse-avatar').textContent.trim();
+                // Côté A/B via la colonne parente (mode interne uniquement)
+                const cote = item.closest('.ab-col-a') ? 'A' : (item.closest('.ab-col-b') ? 'B' : null);
+                modalCotes[jid] = cote;
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'modal-joueuse-btn' + (modalSelection.has(jid) ? ' selected' : '');
                 btn.dataset.joueurId = jid;
-                btn.innerHTML = '<strong>#' + num + '</strong> · ' + nom;
+                const chip = cote
+                    ? '<span style="font-size:.65rem; font-weight:800; padding:1px 6px; border-radius:6px; margin-right:4px; background:' +
+                      (cote === 'A' ? 'rgba(59,130,246,.25); color:#3b82f6' : 'rgba(239,68,68,.25); color:#ef4444') + ';">' + cote + '</span>'
+                    : '';
+                btn.innerHTML = chip + '<strong>#' + num + '</strong> · ' + nom;
                 btn.addEventListener('click', () => {
                     if (modalSelection.has(jid)) {
                         modalSelection.delete(jid);
                         btn.classList.remove('selected');
                     } else {
-                        if (modalSelection.size >= 5) {
+                        if (MODE_INTERNE_AB && cote) {
+                            if (compteCote(cote) >= 5) {
+                                toast('Maximum 5 joueuses sur le terrain pour l\'équipe ' + cote + '.', true);
+                                return;
+                            }
+                        } else if (modalSelection.size >= 5) {
                             toast('Maximum 5 joueuses sur le terrain.', true);
                             return;
                         }
@@ -2864,6 +2890,17 @@
         }
 
         function refreshModalCounter() {
+            if (MODE_INTERNE_AB) {
+                const nA = compteCote('A'), nB = compteCote('B');
+                modalCounter.textContent = 'Équipe A : ' + nA + '/5 · Équipe B : ' + nB + '/5';
+                const complet = (nA === 5 && nB === 5);
+                modalCounter.classList.toggle('complete', complet);
+                // On autorise la validation dès qu'aucune équipe ne dépasse 5
+                // et qu'au moins une joueuse est sélectionnée (une équipe peut
+                // avoir moins de 5 joueuses en interne — le coach décide).
+                modalValidate.disabled = (modalSelection.size === 0 || nA > 5 || nB > 5);
+                return;
+            }
             const n = modalSelection.size;
             modalCounter.textContent = n + ' / 5 sélectionnées';
             modalCounter.classList.toggle('complete', n === 5);
@@ -2965,6 +3002,14 @@
         let modalEffectifJouent = new Set();
 
         function openModalEffectif() {
+            // [V2.4e 06/07/2026] Mode interne A/B : l'effectif du match EST la
+            // composition A/B (le modal classique liste l'équipe de la rencontre,
+            // hors sujet pour un match interne multi-catégorie) → on envoie vers
+            // la page de composition, qui est l'outil adapté.
+            if (MODE_INTERNE_AB) {
+                window.location.href = '{{ path('manager_rencontre_composition_interne', {id: rencontre.id}) }}';
+                return;
+            }
             // Par défaut TOUTES les joueuses jouent SAUF celles dans nonConvoqueesActuelles
             modalEffectifJouent = new Set(
                 EFFECTIF_COMPLET

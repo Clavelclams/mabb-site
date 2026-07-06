@@ -7,8 +7,8 @@
 {# ===== PAGE HEADER ===== #}
 <div class="page-header">
     <div class="container text-center">
-        <h1>Nos Victoires</h1>
-        <p style="color:rgba(255,255,255,.75)">Saison 2024 · 2025 — une saison d'exception</p>
+        <h1>{{ cms('victoires.header.titre', 'Nos Victoires') }}</h1>
+        <p style="color:rgba(255,255,255,.75)">{{ cms('victoires.header.soustitre', "Saison 2024 · 2025 — une saison d'exception") }}</p>
         <nav aria-label="breadcrumb" class="mt-3">
             <ol class="breadcrumb justify-content-center">
                 <li class="breadcrumb-item"><a href="{{ path('vitrine_accueil') }}" style="color:#fff">Accueil</a></li>
@@ -26,11 +26,13 @@
 <section class="section section-gray">
     <div class="container">
         <div class="row g-3 justify-content-center mb-2">
+            {# [CMS V2 06/07/2026] Chiffres éditables saison par saison
+               depuis /admin/contenus — plus de redéploiement pour une mise à jour #}
             {% set stats = [
-                {n: '373',  label: 'Licenciées',          icon: 'bi-people-fill'},
-                {n: '12 811', label: 'Heures d\'activités', icon: 'bi-clock-fill'},
-                {n: '31 247', label: 'Participants touchés', icon: 'bi-people'},
-                {n: '45',   label: 'Tournois 3×3',        icon: 'bi-dribbble'},
+                {n: cms('victoires.chiffres.licenciees', '373'),  label: 'Licenciées',          icon: 'bi-people-fill'},
+                {n: cms('victoires.chiffres.heures', '12 811'), label: 'Heures d\'activités', icon: 'bi-clock-fill'},
+                {n: cms('victoires.chiffres.participants', '31 247'), label: 'Participants touchés', icon: 'bi-people'},
+                {n: cms('victoires.chiffres.tournois3x3', '45'),   label: 'Tournois 3×3',        icon: 'bi-dribbble'},
             ] %}
             {% for s in stats %}
             <div class="col-6 col-md-3">

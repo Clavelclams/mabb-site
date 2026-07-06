@@ -66,7 +66,12 @@ Chaque ADR suit le format : Date / Contexte / Options / Decision / Consequences.
 
 ---
 
-> **Note numérotation** : ADR-0007 est RÉSERVÉ au brouillon "architecture PIRB Mobile" (cf. `20_ANALYSE_ARCHI_PIRB_MOBILE_2026-07-04.md`), à coller ici après validation. Ne pas réutiliser ce numéro.
+### ADR-0007 — App mobile PIRB : client Expo/React Native consommant l'API du monolithe
+- Date : 2026-07-06 (brouillon du 04/07 officialisé — analyse complète dans `20_ANALYSE_ARCHI_PIRB_MOBILE_2026-07-04.md`)
+- Contexte : PIRB doit exister en mobile (V3) ; le mode vision type HomeCourt est demandé.
+- Options : (A) Backend Node séparé + RN bare (B) API Platform/LexikJWT sur le monolithe + Expo (C) PWA seule (D) Flutter.
+- Décision : **(B)**. L'API est posée par le chantier B4 sur le monolithe (une seule source de vérité métier, conforme ADR-0004). Client Expo + TypeScript en development builds, Android d'abord. Vision automatique exclue du périmètre pré-soutenance ; mode practice manuel en V1 mobile ; pose estimation = spike isolé optionnel.
+- Conséquences : pas de duplication de logique métier ; refresh tokens requis ; résolution du tenant par claim JWT (corrigera structurellement la lacune TenantResolver côté PIRB) ; coût stores : 25 $ Android, iOS différé (99 $/an). Prérequis : chantier B4 (composer require api-platform + lexik/jwt — à exécuter depuis un poste de dev avec Composer, pas depuis une session IA sandbox).
 
 ---
 
@@ -95,7 +100,17 @@ Chaque ADR suit le format : Date / Contexte / Options / Decision / Consequences.
 ### ADR-0009 — Shot chart FFBB : coordonnées brutes + terrain fidèle au doc e-Marque
 - Date : 2026-07-05
 - Contexte : Les points des tirs FFBB étaient visiblement décalés sur la shot map PIRB. Cause : le parser transformait les coordonnées du PDF (repère portrait 15×14 m, panier en haut) vers le terrain paysage de l'app via un mapping affine approximatif (`zoneX = normY*0.46 + 0.04`) puis un arrondi entier 0-100, et le terrain paysage n'a pas les mêmes proportions que le dessin FFBB.
-- Options : (A) Corriger/calibrer la transformation vers le terrain paysage (B) Stocker les coordonnées BRUTES du repère PDF (pour-mille) et les afficher sur un terrain SVG aux proportions IDENTIQUES au doc FFBB, séparé de la shot map d'entraînement.
-- Décision : **(B)**. Colonnes `tir_ffbb.ffbb_x/ffbb_y` (SMALLINT 0-1000, migration Version20260705110000), parser inchangé pour les champs legacy + remplissage des bruts, nouveau terrain "FFBB officiel" (portrait, cotes FIBA exactes : raquette 4,9×5,8 m, LF r=1,8 m, panier à 1,575 m, 3 pts r=6,75 m + coins 0,9 m) dans PIRB. Zéro transformation à l'affichage = zéro décalage. La shot map paysage reste dédiée aux séances d'entraînement/stats live (sources séparées, demande utilisateur).
-- Conséquences : anciennes lignes sans ffbb_x → fallback par transformation inverse (précision dégradée) jusqu'au re-parse (`app:process-positions-tirs`). Sélecteur de match et badges filtrent les DEUX terrains.
-- Alternative rejetée : (A) — même calibrée, la projection vers un terrain aux proportions différentes reste une source d'erreur permanente ; et mélanger sources FFBB/entraînement sur une seule carte nuit à la lecture.
+- Options : (A) Corriger/calibrer la transformation vers le terrain paysage (B) Stocker les coordonnées BRUTES du repère PDF (pour-mille) et les afficher sur un terrain SVG aux proportions IDENTIQUES au do
+---
+
+### ADR-0010 — B4 phase 1 : API mobile en Symfony natif (access_token opaque), API Platform/JWT différés
+- Date : 2026-07-06
+- Contexte : L'app PIRB Mobile (dépôt « Pirb store », palier P0) a besoin des données réelles de Manager. ADR-0007 prévoit API Platform + LexikJWT, mais l'installation de dépendances Composer est impossible depuis les sessions IA (sandbox sans PHP) et risquée sans exécution locale. Il faut pourtant valider le flux de bout en bout MAINTENANT.
+- Options : (A) Attendre une session poste de dev pour installer API Platform + LexikJWT (B) Contrôleurs JSON natifs + authenticator `access_token` intégré à Symfony 6.2+ (jetons opaques hashés en base) (C) Exposer les données sans auth (inacceptable).
+- Décision : **(B)** comme PHASE 1. Zéro dépendance nouvelle : entité `ApiToken` (hash SHA-256, expiration 30 j, révocable), `ApiTokenHandler` (AccessTokenHandlerInterface), firewall `api` en `access_token`, `POST /api/auth/login` public, 5 endpoints `/api/pirb/*` (profil, stats/saison, shot-chart, badges, niveau) dont le CONTRAT est fixé par `Pirb store/src/types/pirb.ts`. Pas de paramètre {id} : chaque endpoint sert le user du jeton (isolation par construction).
+- Conséquences :
+  - Le point structurant d'ADR-0007 (API SUR LE MONOLITHE, une seule source de vérité métier) est respecté ; seul le véhicule d'auth diffère temporairement.
+  - Jeton opaque > JWT sur un point : révocation immédiate (logout supprime la ligne). En revanche pas de refresh token en phase 1 : l'app re-loguera à expiration.
+  - Phase 2 (poste de dev) : installer API Platform + LexikJWT, remplacer `access_token` par `jwt: ~` — les contrôleurs et le client mobile ne changent pas (le header Bearer reste identique).
+  - Migration `Version20260706100000` (table api_token). Prefix routes `/api` retiré de routes.yaml (doublonnait les attributs, dossier Api vide avant B4).
+- Alternatives rejetées : (A) retarde la validation du flux sans bénéfice ; (C) évident.

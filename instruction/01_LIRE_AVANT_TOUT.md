@@ -17,7 +17,11 @@ Voir 08_ADR.md (ADR-0001 a ADR-0004) pour les decisions structurantes.
 ## Regle multi-tenant
 Toute donnee metier est filtree par club_id cote serveur.
 Aucune requete ne doit retourner de donnees d'un autre club.
-Implementation : Voters Symfony (ClubScopeVoter, OwnershipVoter, TeamCoachVoter).
+Implementation reelle (corrige 06/07/2026, la liste precedente etait erronee) :
+Voters Symfony ClubVoter (6 attributs), NoteFraisVoter, TresorerieVoter
++ TenantResolver (session active_club_id) cote Manager.
+Cote PIRB : isolation par Joueur.user + verifs club/equipe par route
+(refonte structurelle prevue via claim JWT, cf. ADR-0007).
 
 ## Structure code
 - Controllers : src/Controller/{Vitrine,Manager,Pirb,Api}/

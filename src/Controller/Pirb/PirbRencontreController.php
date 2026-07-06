@@ -52,10 +52,21 @@ class PirbRencontreController extends AbstractController
         string $role,
         RencontreRoleRepository $rencontreRoleRepo,
         EntityManagerInterface $em,
+        \App\Repository\Sport\JoueurRepository $joueurRepo,
     ): Response {
         $user = $this->getUser();
         if (!$user instanceof User) {
             return $this->redirectToRoute('pirb_login');
+        }
+
+        // [SÉCU 06/07/2026 — audit 29/06] ISOLATION MULTI-CLUB : cette route
+        // acceptait N'IMPORTE QUEL id de rencontre — une joueuse du club A
+        // pouvait s'inscrire bénévole sur un match du club B (IDOR).
+        // Règle : la rencontre doit appartenir au club de la joueuse connectée.
+        $monJoueur = $joueurRepo->findOneBy(['user' => $user]);
+        if ($monJoueur === null
+            || $monJoueur->getClub()?->getId() !== $rencontre->getClub()?->getId()) {
+            throw $this->createAccessDeniedException('Ce match ne concerne pas ton club.');
         }
 
         // Vérification du rôle — seulement les rôles ouverts aux joueuses

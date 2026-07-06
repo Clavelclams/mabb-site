@@ -115,8 +115,17 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if joueur.equipe %}
-                                    <span class="badge-categorie">{{ joueur.equipe.nom }}</span>
+                                {# [V2.4c 06/07/2026] Équipe DE LA SAISON ACTIVE (affectations),
+                                   plus le lien direct qui montrait encore l'équipe de la saison
+                                   passée en début de nouvelle saison. #}
+                                {% set equipe_saison = joueur.equipePourSaison(saison_active()) %}
+                                {% if equipe_saison %}
+                                    <span class="badge-categorie">{{ equipe_saison.nom }}</span>
+                                {% elseif joueur.equipe %}
+                                    <span style="color:var(--mabb-muted); font-size:.85rem;"
+                                          title="Équipe {{ joueur.equipe.saison }} : {{ joueur.equipe.nom }} — pas encore affectée pour {{ saison_active() }}">
+                                        À affecter ({{ saison_active() }})
+                                    </span>
                                 {% else %}
                                     <span style="color:var(--mabb-muted); font-size:.85rem;">Non affectée</span>
                                 {% endif %}

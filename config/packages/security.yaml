@@ -34,15 +34,28 @@ security:
             security: false
 
         # -----------------------------------------------------------------
-        # 2. API JWT — Phase 2+, NE PAS TOUCHER
-        #    Stateless = pas de session (chaque requête porte son token JWT)
-        #    jwt: ~ sera décommenté quand LexikJWTAuthenticationBundle sera installé
+        # 2a. API LOGIN — POST /api/auth/login (public, délivre le jeton)
+        #     security: false : c'est LE point d'entrée, le contrôleur vérifie
+        #     lui-même email+mot de passe via le PasswordHasher.
+        # -----------------------------------------------------------------
+        api_login:
+            pattern: ^/api/auth/login
+            stateless: true
+            security: false
+
+        # -----------------------------------------------------------------
+        # 2b. API — [B4 phase 1, 06/07/2026] authenticator NATIF access_token
+        #     (jetons opaques hashés en base, cf. ApiToken + ADR-0010).
+        #     Chaque requête porte "Authorization: Bearer <jeton>".
+        #     LexikJWT (phase 2) remplacera token_handler par jwt: ~ le jour
+        #     où API Platform sera installé — le reste ne bougera pas.
         # -----------------------------------------------------------------
         api:
             pattern: ^/api
             stateless: true
             provider: app_user_provider
-            # jwt: ~   # décommenter quand LexikJWT sera installé
+            access_token:
+                token_handler: App\Security\ApiTokenHandler
 
         # -----------------------------------------------------------------
         # 3. VITRINE ADMIN — /admin sur mabb.fr
@@ -162,6 +175,14 @@ security:
     # PUBLIC_ACCESS = accessible sans être connecté (Symfony 6+)
     # =========================================================================
     access_control:
+
+        # -----------------------------------------------------------------
+        # API mobile PIRB — [B4 phase 1, 06/07/2026]
+        # /api/auth/login public (délivre le jeton), tout le reste exige
+        # un Bearer token valide (401 sinon, géré par access_token).
+        # -----------------------------------------------------------------
+        - { path: ^/api/auth/login$, roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
 
         # -----------------------------------------------------------------
         # Admin mabb.fr

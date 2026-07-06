@@ -75,3 +75,22 @@ Centraliser les obligations de securite + RGPD (tracabilite, conservation, droit
 - Regle : Tout utilisateur peut demander la suppression de son compte. Les donnees personnelles sont supprimees ou anonymisees. Les donnees sportives (stats, presences) sont anonymisees plutot que supprimees pour preserver l'integrite historique. Cf. CDC section 8.3.
 - Implementation : Commande ou service d'anonymisation : remplacer nom/prenom/email par des valeurs generiques, conserver les stats avec player_id anonymise. Soft delete du compte.
 - Statut : a faire (Phase 6)
+
+---
+
+### SEC-0009 — IDOR inscription bénévole PIRB (corrigé) + état de l'isolation PIRB
+- Categorie : Securite
+- Date : 2026-07-06
+- Constat (audit route par route des controleurs PIRB) : la plupart des routes `{id}` verifient l'appartenance (equipe/club/proprietaire). UNE faille reelle trouvee : `PirbRencontreController::sInscrire` acceptait n'importe quel id de rencontre — une joueuse du club A pouvait s'inscrire benevole sur un match du club B.
+- Correction : verification `joueur.club === rencontre.club` avant toute inscription (AccessDenied sinon).
+- Reste ouvert : l'isolation PIRB reste basee sur `Joueur.user` + verifs par route (pattern "V1 mono-club"). La refonte structurelle (tenant par claim JWT) est actée par ADR-0007 et arrivera avec le chantier B4. D'ici la, TOUTE nouvelle route PIRB avec un parametre d'entite DOIT verifier l'appartenance club/equipe/proprietaire.
+- Statut : corrige (faille) / regle permanente (nouvelles routes)
+
+---
+
+### RGPD-0009 — Pages legales publiees (LCEN + RGPD)
+- Categorie : RGPD
+- Date : 2026-07-06
+- Regle : mentions legales et politique de confidentialite accessibles depuis le footer de la vitrine (/mentions-legales, /politique-confidentialite). Contenu variable (adresse, president, contact) editable via le CMS (/admin/contenus) — cle prefixe `legal.*`.
+- Points couverts : editeur/hebergeur, donnees collectees et finalites, cookies techniques uniquement (pas de bandeau requis), durees, droits RGPD (renvoi vers l'export/effacement integres au profil), mineures, recours CNIL.
+- Statut : fait — a relire par le bureau (adresse siege et nom du president a completer dans Admin → Contenus)

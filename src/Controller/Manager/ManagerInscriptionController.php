@@ -38,6 +38,18 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 class ManagerInscriptionController extends AbstractController
 {
+    /**
+     * [B-206 06/07/2026] Alias historique : d'anciens liens/favoris pointaient
+     * sur manager.mabb.fr/signup (404). Le lien fautif côté PIRB pointe déjà
+     * vers /inscription — cette redirection permanente attrape le reste
+     * (favoris, vieux emails, moteurs de recherche).
+     */
+    #[Route('/signup', name: 'manager_signup_legacy', methods: ['GET'])]
+    public function signupLegacy(): Response
+    {
+        return $this->redirectToRoute('manager_inscription', [], Response::HTTP_MOVED_PERMANENTLY);
+    }
+
     #[Route('/inscription', name: 'manager_inscription', methods: ['GET', 'POST'])]
     public function inscription(
         Request $request,

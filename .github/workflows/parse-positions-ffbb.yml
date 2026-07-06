@@ -1,0 +1,83 @@
+# ═══════════════════════════════════════════════════════════════════════
+# [06/07/2026] PARSE AUTOMATIQUE DES PDFs "POSITIONS DE TIRS" FFBB
+#
+# Pourquoi : l'hébergement mutualisé OVH n'a ni PyMuPDF ni Tesseract
+# (les pages e-Marque sont des images rasterisées → OCR obligatoire pour
+# lire les noms des joueuses). Ce workflow fait le travail à la place du
+# serveur : il rapatrie les PDFs, les parse ici (Ubuntu + Tesseract), et
+# renvoie les sidecars {pdf}.json que FfbbPositionTirParser lit nativement.
+#
+# SECRETS À CONFIGURER (Settings → Secrets and variables → Actions) :
+#   OVH_SSH_HOST  → ssh.cluster102.hosting.ovh.net
+#   OVH_SSH_USER  → mabbzzyo
+#   OVH_SSH_KEY   → clé PRIVÉE ed25519 dédiée (générer : ssh-keygen -t ed25519,
+#                   puis coller la clé PUBLIQUE dans ~/.ssh/authorized_keys sur OVH)
+#
+# Déclenchement : manuel (bouton "Run workflow") ou chaque lundi 6h
+# (après le week-end de matchs).
+# ═══════════════════════════════════════════════════════════════════════
+name: Parse positions tirs FFBB
+
+on:
+  workflow_dispatch:
+    inputs:
+      saison:
+        description: "Saison à réimporter (ex: 2025-2026)"
+        required: false
+        default: "2025-2026"
+  schedule:
+    - cron: "0 5 * * 1"   # lundi 05:00 UTC ≈ 6h/7h Paris
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout (pour bin/ffbb_parse_positions.py)
+        uses: actions/checkout@v4
+
+      - name: Installer Tesseract + dépendances Python
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q tesseract-ocr
+          pip install --quiet pymupdf pytesseract pillow
+
+      - name: Configurer la clé SSH OVH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OVH_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.OVH_SSH_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Rapatrier les PDFs positions depuis OVH
+        run: |
+          mkdir -p pdfs
+          rsync -az --include='*/' --include='positions.pdf' --exclude='*' \
+            "${{ secrets.OVH_SSH_USER }}@${{ secrets.OVH_SSH_HOST }}:mabb-site/public/uploads/rencontres/" \
+            pdfs/
+          echo "PDFs récupérés : $(find pdfs -name positions.pdf | wc -l)"
+
+      - name: Parser chaque PDF → sidecar JSON
+        run: |
+          ok=0; ko=0
+          for pdf in $(find pdfs -name positions.pdf); do
+            if python3 bin/ffbb_parse_positions.py "$pdf" --club "METROPOLE AMIENOISE" > "$pdf.json" 2>/dev/null; then
+              ok=$((ok+1))
+            else
+              ko=$((ko+1)); rm -f "$pdf.json"
+              echo "⚠ Échec parse : $pdf"
+            fi
+          done
+          echo "Sidecars générés : $ok · échecs : $ko"
+
+      - name: Renvoyer les sidecars sur OVH
+        run: |
+          rsync -az --include='*/' --include='positions.pdf.json' --exclude='*' \
+            pdfs/ \
+            "${{ secrets.OVH_SSH_USER }}@${{ secrets.OVH_SSH_HOST }}:mabb-site/public/uploads/rencontres/"
+
+      - name: Réimporter en base (commande Symfony sur OVH)
+        run: |
+          ssh "${{ secrets.OVH_SSH_USER }}@${{ secrets.OVH_SSH_HOST }}" \
+            "cd ~/mabb-site && php bin/console app:process-positions-tirs --saison='${{ github.event.inputs.saison || '2025-2026' }}'"

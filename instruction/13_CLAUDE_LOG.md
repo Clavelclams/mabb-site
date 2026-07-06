@@ -10,6 +10,82 @@
 
 ---
 
+### 2026-07-06 (septies) — B4 PHASE 1 : l'API mobile PIRB est née (les données Manager arrivent dans l'app)
+
+- Objectif : valider le chantier B4 de bout en bout — l'app PIRB Mobile (dépôt « Pirb store », Expo/palier P0) consomme les données RÉELLES de Manager. Contrainte : pas de Composer en sandbox → implémentation SANS nouvelle dépendance (ADR-0010).
+- Actions réalisées (côté mabb-site) :
+  1. **Auth par jetons opaques** : entité `ApiToken` (hash SHA-256 seul en base, expiration 30 j, révocable, libellé appareil) + `ApiTokenRepository` + migration `Version20260706100000` (table api_token).
+  2. **`ApiTokenHandler`** (AccessTokenHandlerInterface) branché sur l'authenticator NATIF `access_token` de Symfony — firewall `api` reconfiguré (le stub `# jwt: ~` de 2026-02 prend enfin vie), firewall `api_login` public, access_control ^/api → IS_AUTHENTICATED_FULLY.
+  3. **`ApiAuthController`** : POST /api/auth/login (mêmes comptes que pirb.mabb.fr, message anti-énumération, jeton montré une seule fois) + POST /api/auth/logout (révocation).
+  4. **`PirbApiController`** : 5 endpoints au CONTRAT EXACT de `Pirb store/src/types/pirb.ts` — /api/pirb/profil (équipe par saison, photo en URL absolue), /stats/saison (mapping snake→camel de JoueurStatsAggregator), /shot-chart (tirs LIVE via ShotChartCalculator + tirs FFBB via ffbb_x/y pour-mille, 8 zones agrégées), /badges (catalogue complet + dates de déblocage), /niveau (XpCalculator + NiveauCatalog). AUCUN paramètre {id} : chaque endpoint sert le user du Bearer (isolation par construction).
+  5. **routes.yaml** : prefix /api retiré de l'import api_controllers (aurait doublonné en /api/api/… ; dossier vide avant B4).
+- Actions réalisées (côté « Pirb store » — gouvernance locale respectée, AUCUN commit) :
+  6. **`ApiPirbDataService`** implémentant l'interface `PirbDataService` : 5 domaines cœur via fetch+Bearer avec re-login auto sur 401 ; le reste du contrat (social/practice/carte) délégué au mock interne tant que les endpoints n'existent pas — écrans inchangés, promesse de l'architecture tenue.
+  7. **Factory** : case 'api' activé (EXPO_PUBLIC_DATA_SOURCE=api + EXPO_PUBLIC_API_URL), erreur bruyante si URL manquante. `.env.example` mis à jour (URL prod/dev + identifiants de TEST P0 avec avertissement sécurité).
+- Décisions (ADR) : **ADR-0010** — B4 phase 1 en Symfony natif (access_token opaque), API Platform/LexikJWT = phase 2 depuis un poste de dev ; le point structurant d'ADR-0007 (API sur le monolithe) est respecté.
+- Points de vigilance / risques :
+  - **Migration à jouer** : `doctrine:migrations:migrate` (api_token) + cache:clear.
+  - **Test rapide serveur** : `curl -X POST https://pirb.mabb.fr/api/auth/login -H 'Content-Type: application/json' -d '{"email":"…","password":"…"}'` puis `curl https://pirb.mabb.fr/api/pirb/profil -H 'Authorization: Bearer <token>'`.
+  - **Identifiants en .env côté app = P0 test uniquement** — l'écran de connexion (avec expo-secure-store) est LE prérequis avant toute distribution.
+  - Pas de refresh token en phase 1 : re-login à expiration (30 j), assumé.
+  - Typecheck TS impossible en sandbox (copies montées tronquées) : `npm run typecheck` à lancer sur le PC.
+
+---
+
+### 2026-07-06 (sexies) — Lot chantiers courts + fond : bugs, légal, B-201, CMS, A/B, tests, sécu PIRB, CI, doc
+
+- Objectif : traiter le lot confié par Clavel — chantiers courts (bugs B-102/205/206, pages légales, B-201, CMS généralisé, Composer le 5 A/B), chantiers de fond faisables en sandbox (tests unitaires, passe sécurité PIRB, GitHub Action parse PDFs) et dette documentaire (roadmap, ADR-0007).
+- Actions réalisées :
+  1. **B-205** — cause exacte non reproductible sans stack trace ; le point fragile (recalcul XP/badges post-création de mission) est mis sous try/catch : la mission est toujours enregistrée, plus jamais de 500 pour un bonus d'affichage.
+  2. **B-206** — plus aucun lien `/signup` dans le code ; redirection 301 `/signup` → `/inscription` ajoutée pour les favoris/liens externes.
+  3. **B-102** — le flash existait mais PIRB ne rendait les flashes QUE sur le dashboard et SANS le type `warning`. Rendu des flashes centralisé dans `pirb/base.html.twig` (tous types, toutes pages), bloc local du dashboard retiré.
+  4. **Pages légales** — `LegalController` + `/mentions-legales` + `/politique-confidentialite`, liens footer vitrine. Parties variables en blocs `cms()` (`legal.*`) → adresse/président complétables dans Admin → Contenus. Entrée RGPD-0009 au registre.
+  5. **B-201** — bouton "✓ Valider officielle" directement dans la liste `/stats-live` pour toute session COMPLETE (POST + CSRF + confirm, route de promotion existante réutilisée) + lien vers la page Sessions.
+  6. **CMS généralisé** — club (histoire 3 paragraphes + photo), contact (gymnase, siège, email), victoires (titre, sous-titre saison, 4 chiffres clés).
+  7. **Composer le 5 en mode A/B** — 5 par ÉQUIPE (2×5), chips A/B colorées dans le modal, compteur "A : n/5 · B : n/5" ; sheet Effectif redirigée vers la page de composition (l'effectif d'un match interne EST la composition).
+  8. **Tests unitaires** (tests/Unit) : `CategorieCalculatorTest` (règle FFBB, surclassement, bornes — data provider), `SaisonServiceTest` (invariants, pas de saison future, session vs calcul), `RencontreCompositionInterneTest` (exclusivité A/B, activation du mode, helpers). À exécuter en local : `php bin/phpunit`.
+  9. **Sécurité PIRB** — audit route par route : 1 vraie faille (IDOR inscription bénévole cross-club) CORRIGÉE (`PirbRencontreController::sInscrire` vérifie désormais le club). Constat + règle permanente au registre (SEC-0009).
+  10. **GitHub Action** `.github/workflows/parse-positions-ffbb.yml` — rapatrie les PDFs d'OVH, parse (Tesseract + PyMuPDF sur le runner), renvoie les sidecars JSON, relance l'import Symfony. 3 secrets à configurer (OVH_SSH_HOST/USER/KEY) — remplace le workflow scp manuel.
+  11. **Doc** — ADR-0007 (mobile Expo + API monolithe) officialisée dans 08_ADR ; `02_ROADMAP_GLOBALE` réécrite sur l'état réel prod (dérive de mars résolue) ; liste des Voters corrigée dans `01_LIRE_AVANT_TOUT` (conflit n°3 du 04/07).
+- Volontairement NON traité (honnêteté de périmètre) :
+  - **Chantier B4 (API Platform + JWT)** : requiert Composer + exécution PHP, indisponibles en sandbox — à faire depuis le poste de dev (l'ADR-0007 en fixe le cadre).
+  - **Entité Saison dédiée** : grosse migration structurante, mérite une session dédiée avec dry-run BDD.
+- Fichiers modifiés/créés : MissionController, ManagerInscriptionController, PirbRencontreController, LegalController (nouveau), templates légal ×2 (nouveaux), pirb/base + dashboard (flashes), vitrine/base (footer), stats_live/index (B-201), club/contact/victoires (CMS), stats-live.html.twig (modal 2×5), tests ×3 (nouveaux), workflow GitHub (nouveau), 01/02/07/08_*.md, 13_CLAUDE_LOG.
+- Points de vigilance :
+  - Compléter dans Admin → Contenus : adresse du siège, nom du·de la président·e (pages légales).
+  - `php bin/phpunit` + `lint:twig` à lancer en local avant push (pas de PHP sandbox).
+  - GitHub Action : générer une clé ed25519 dédiée et créer les 3 secrets avant le premier run.
+
+---
+
+### 2026-07-06 (quinquies) — PIRB : nav "Mes tirs", stats filtrées par saison, plus de saison future
+
+- Objectif : (1) bottom nav PIRB : remplacer l'onglet Séances par "Mes tirs" (shot chart), (2) le sélecteur de saison PIRB changeait la session mais la page Stats affichait toujours tout ("toujours 2025-2026"), (3) interdire la sélection d'une saison future (piloté par le calendrier réel).
+- Actions réalisées :
+  1. **Bottom nav PIRB** : onglet Séances → 🎯 "Mes tirs" (`pirb_shot_chart`). Les séances restent accessibles via le drawer profil (lien déjà présent).
+  2. **`JoueurStatsAggregator::statsSaison()`** : le paramètre $saison (TODO historique) est IMPLÉMENTÉ — filtre par PLAGE DE DATES réelles (01/07/N → 30/06/N+1, cohérent avec la bascule juillet de SaisonService) et non par le champ `rencontre.saison` (nullable, non fiable).
+  3. **`PirbStatsController::index`** : stats + liste des matchs filtrées sur la SAISON ACTIVE du sélecteur ; équipe résolue par saison (`equipePourSaison`) avec fallback legacy ; empty states "Pas de données pour la saison X, change de saison avec le sélecteur" (stats et matchs). Le libellé de saison du header de page suit enfin le sélecteur (avant : `joueur.equipe.saisonCourante ?? '2025-2026'`, propriété inexistante + hardcode).
+  4. **`SaisonService::getSaisonsDisponibles()`** : plus de saison courante+1 — le dropdown s'arrête à la saison EN COURS calculée par la date (demande explicite : pas de 2027-2028 sélectionnable avant le 01/07/2027 ; elle apparaîtra automatiquement ce jour-là).
+- Fichiers modifiés : `templates/pirb/base.html.twig`, `templates/pirb/stats.html.twig`, `src/Controller/Pirb/PirbStatsController.php`, `src/Service/Stats/JoueurStatsAggregator.php`, `src/Service/SaisonService.php`
+- Décisions : pas d'ADR. Le filtre saison par dates est réutilisable pour les autres pages PIRB (shot chart saison, dashboard présences) — à généraliser au besoin.
+- Points de vigilance : le retrait du "+1" retire aussi la préparation ANTICIPÉE de la saison suivante côté Manager (avant le 1er juillet). Si ce besoin revient, réintroduire le +1 uniquement pour les rôles staff.
+
+---
+
+### 2026-07-06 (quater) — Affichage de l'équipe des joueuses par SAISON (Manager + PIRB)
+
+- Objectif : en nouvelle saison non composée, les joueuses ne doivent PLUS apparaître affectées à leur équipe de l'an passé (le lien direct `Joueur.equipe` pointait encore dessus). Par défaut on affiche la saison active ("pas encore d'équipe"), et la saison passée reste consultable.
+- Actions réalisées :
+  1. **`Joueur::equipePourSaison(saison)`** (+ `aUneEquipeEnSaison()`) — résolution : affectation `JoueurEquipe` principale active de la saison, sinon fallback legacy `Joueur.equipe` si son équipe appartient à la saison demandée, sinon null.
+  2. **Manager — liste Joueuses** : colonne Équipe = équipe de la saison active ; sinon badge "À affecter (2026-2027)" avec l'ancienne équipe en tooltip.
+  3. **Manager — fiche joueuse** : idem en tête de fiche ("À affecter pour 2026-2027 (ex-U13 Féminine A)").
+  4. **PIRB — Mon équipe** : saison active par défaut (SaisonService, plus de calcul local bascule septembre) ; en nouvelle saison non composée → message "Les équipes de la saison X ne sont pas encore composées" + bouton "👀 Revoir mon équipe 2025-2026" (`?saison=`) ; badge saison + "retour à aujourd'hui" quand on consulte une archive ; coéquipières résolues via affectations de la saison FUSIONNÉES avec le legacy (dédupliqué) ; "autres équipes" filtrées sur la même saison.
+- Fichiers modifiés : `src/Entity/Sport/Joueur.php`, `src/Controller/Pirb/PirbEquipeController.php`, `templates/manager/joueur/index.html.twig`, `templates/manager/joueur/show.html.twig`, `templates/pirb/equipe.html.twig`
+- Décisions : pas d'ADR — le modèle (pivot JoueurEquipe + FK legacy) existait, on corrige les AFFICHAGES pour qu'ils lisent le pivot par saison. `Joueur.equipe` reste la "dernière équipe connue" (rétrocompat).
+- Points de vigilance : la consultation d'une saison archivée dépend des lignes `joueur_equipe` de cette saison ; si l'historique pivot est incomplet ET que `Joueur.equipe` a été déplacé sur la nouvelle saison (passage-saison --apply), l'archive peut être partielle. Gamification/affectations XP inchangées (saison sportive).
+
+---
+
 ### 2026-07-06 (ter) — Page Équipes alignée sur le sélecteur de saison global
 
 - Objectif : la page Équipes affichait toujours "2025-2026" alors que le sélecteur global (navbar) disait "2026-2027" — dernier vestige des logiques saison dupliquées.

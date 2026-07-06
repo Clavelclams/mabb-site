@@ -20,8 +20,18 @@
             <div>
                 <h1 style="margin:0;">{{ joueur.prenom }} {{ joueur.nom }}</h1>
                 <p class="subtitle" style="margin-top: 6px;">
-                    {% if joueur.equipe %}
-                        <span class="badge-categorie">{{ joueur.equipe.nom }}</span>
+                    {# [V2.4c 06/07/2026] Équipe de la SAISON ACTIVE — si pas
+                       encore affectée cette saison, on le dit clairement en
+                       montrant l'équipe passée à titre d'info #}
+                    {% set equipe_saison = joueur.equipePourSaison(saison_active()) %}
+                    {% if equipe_saison %}
+                        <span class="badge-categorie">{{ equipe_saison.nom }}</span>
+                    {% elseif joueur.equipe %}
+                        <span style="color: var(--mabb-muted);"
+                              title="Dernière équipe connue : {{ joueur.equipe.nom }} ({{ joueur.equipe.saison }})">
+                            À affecter pour {{ saison_active() }}
+                            <small>(ex-{{ joueur.equipe.nom }})</small>
+                        </span>
                     {% else %}
                         <span style="color: var(--mabb-muted);">Non affectée à une équipe</span>
                     {% endif %}

@@ -1,7 +1,6 @@
 # Roadmap globale — MABB / PIRB
 
-> Dernière mise à jour : 2026-07-05
-> ⚠️ Le tableau "État d'avancement V1" ci-dessous date de mars 2026 et est OBSOLÈTE par rapport à la prod (cf. 19_AUDIT_FEATURES_2026-06-29.md pour l'état réel). Dérive déjà signalée le 04/07 — remise à niveau à planifier.
+> Dernière mise à jour : 2026-07-06 (remise à niveau complète depuis 19_AUDIT_FEATURES_2026-06-29 + 09_BACKLOG — la dérive signalée les 04-05/07 est résolue)
 
 ## Stack technique
 Symfony 7.4 (cf. ADR-0005), PHP 8.2+, Doctrine ORM, MySQL 8, Twig + Symfony UX (Stimulus/Turbo), API Platform (à installer Phase 3), JWT via LexikJWTAuthenticationBundle (à installer Phase 1).
@@ -20,21 +19,21 @@ V3 = extension strategique (mobile, comite, SaaS)
 - Vitrine (CMS pages, articles, galerie, calendrier, contact, SEO)
 - System (logs, audit actions sensibles, RGPD de base)
 
-## Etat d'avancement V1
+## État d'avancement (réel, constaté en prod — 06/07/2026)
 
-> Note : Phase 1 et Phase 5 ont ete demarrees en parallele (socle technique + pages statiques vitrine).
-> Voir 03_ROADMAP_V1.md pour le detail du perimetre V1.
+> Le produit est EN PRODUCTION sur OVH : mabb.fr, manager.mabb.fr, pirb.mabb.fr.
+> Détail feature par feature : `19_AUDIT_FEATURES_2026-06-29.md` ; priorités : `09_BACKLOG.md`.
 
-| Phase | Module | Statut | Detail |
-|-------|--------|--------|--------|
-| Phase 1 (sem 1-4) | Core | EN COURS | Entites User/Club/UserClubRole creees, ClubVoter + TenantResolver implementes. Reste : JWT, security.yaml, migration, OwnershipVoter, rate limiting |
-| Phase 2 (sem 5-8) | Sport | A FAIRE | Saisons, equipes, joueurs, evenements, presences |
-| Phase 3 (sem 9-14) | Stats | A FAIRE | Saisie match, shot tracking, timeline, validation (necessite API Platform) |
-| Phase 4 (sem 15-18) | PIRB | A FAIRE | Dashboard, shot chart, feedback anonyme |
-| Phase 5 (sem 19-22) | Vitrine | EN COURS | Pages statiques OK (8 pages + compte/connexion + compte/inscription), navbar Connexion+Inscription, CMS back-office a faire |
-| Phase 6 (sem 23-26) | System | A FAIRE | Securite, tests, optimisation, documentation |
+| Module | Statut | Détail |
+|--------|--------|--------|
+| Core (auth, multi-tenant, rôles) | ✅ PROD | 7 firewalls par host, ClubVoter (6 attributs), TenantResolver, RGPD (export + oubli), logs connexion, anti-brute-force. Reste : rate limiter Symfony, sélecteur UI multi-club |
+| Sport (équipes, joueuses, séances, rencontres) | ✅ PROD | CRUD complets, imports FFBB (trombinoscope, rencontres, PDFs), convocations, présences, missions. Saisons dynamiques + passage de saison auto par catégorie d'âge (V2.4). Reste : entité Saison dédiée |
+| Stats (live, shot chart, évaluations) | ✅ PROD | Stats Live multi-sessions (validation officielle V2.1d + bouton direct B-201), match interne A/B (V2.3, ADR-0008), shot chart FFBB précis (V2.4, ADR-0009), agrégation saison filtrée par type et saison |
+| PIRB (espace joueuse) | ✅ PROD | Dashboard, équipe par saison, stats filtrées, mes tirs, badges/XP, documents avec workflow d'accès, bilans. ⚠️ Isolation par Joueur.user (IDOR bénévole corrigé 06/07) — refonte TenantResolver structurelle via JWT (ADR-0007/B4) |
+| Vitrine (site public) | ✅ PROD | Pages publiques, articles, galerie, admin (articles/pages/médias/rôles), CMS bloc par bloc (V2 06-07/07), mentions légales + politique de confidentialité (06/07). Reste : sitemap.xml, fil d'Ariane |
+| System (tests, CI, infra) | 🟡 PARTIEL | Tests unitaires entités + services saison/catégorie/composition (06/07). GitHub Action parse PDFs FFBB. Reste : tests ClubVoter/TenantResolver, MAILER_DSN prod, chantier B4 (API Platform + JWT) |
 
-**Rappel** : Tout module manipulant des donnees metier doit respecter le filtrage multi-tenant par `club_id` (cf. ADR-0003, RT-0001).
+**Rappel** : Tout module manipulant des données métier doit respecter le filtrage multi-tenant par `club_id` (cf. ADR-0003, RT-0001).
 
 ## Évolutions transverses actées (post-V1)
 
