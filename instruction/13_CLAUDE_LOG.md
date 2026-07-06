@@ -10,6 +10,22 @@
 
 ---
 
+### 2026-07-07 — Socle de tests fonctionnels + premier test IDOR PIRB (HTTP réel)
+
+- Objectif : passer des tests unitaires (logique) aux tests fonctionnels (comportement HTTP réel) pour prouver l'isolation PIRB de bout en bout. Prérequis manquant découvert : aucune config d'environnement de test (`config/packages/test/` était vide).
+- Actions réalisées :
+  1. **`config/packages/test/framework.yaml`** (nouveau) : `framework.test: true` + session `mock_file`. Sans lui, `WebTestCase::createClient()` refuse de démarrer (erreur rencontrée puis résolue).
+  2. **`.env.test.local`** (nouveau, gitignored) : `DATABASE_URL` de test pointant sur le `root` local (Laragon), pour ne pas dépendre des identifiants de prod. La config Doctrine ajoute déjà le suffixe `_test` → base `mabb_pirb_test`, isolée.
+  3. **`tests/Functional/Pirb/PirbSeancesIdorTest.php`** (nouveau) — 3 cas, tous verts : anonyme → redirigé vers login (firewall par host `pirb.localhost`) ; joueuse voit SA séance (200) ; joueuse reçoit 403 sur la séance d'une autre équipe (LE test IDOR). Isolation par transaction annulée en tearDown (pas de bundle DAMA requis).
+- Fichiers modifiés : `config/packages/test/framework.yaml` (créé), `.env.test.local` (créé, non commité), `tests/Functional/Pirb/PirbSeancesIdorTest.php` (créé), cette entrée.
+- Décisions (ADR) : aucune. Choix : `loginUser()` (auth sans formulaire, on teste l'autorisation) ; seed via EntityManager calqué sur `SportFixtures` ; base de test séparée créée via `doctrine:schema:create` (pas les migrations, plus rapide pour les tests).
+- Points de vigilance / risques :
+  - **Prérequis run** : MySQL/MariaDB local démarré + `php bin/console --env=test doctrine:database:create` puis `doctrine:schema:create` (une fois). Si le schéma des entités change, refaire un `doctrine:schema:update --force --env=test` ou recréer la base de test.
+  - `config/packages/test/framework.yaml` **doit être commité** (nécessaire à tout run de test fonctionnel). `.env.test.local` **ne doit pas** l'être.
+  - Reste à décliner le même patron sur les autres routes {id} sensibles (convocations, shot-chart, stats/match, documents, mes-parents).
+
+---
+
 ### 2026-07-06 (octies) — Tests du cœur multi-tenant : ClubVoter + TenantResolver (P0 audit 29/06)
 
 - Objectif : couvrir de tests le cœur d'autorisation multi-tenant, resté à ~0 test et qualifié « indéfendable jury CDA » par l'audit du 29/06 (P0). Aucun code de prod modifié : uniquement de nouveaux tests unitaires purs (pas de base de données).

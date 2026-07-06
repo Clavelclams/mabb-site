@@ -1,0 +1,7 @@
+# Configuration chargée uniquement en environnement de test.
+# - framework.test: true  -> active le client HTTP de test (WebTestCase/createClient).
+# - session mock_file     -> sessions en mémoire/fichier temporaire, isolées, sans navigateur réel.
+framework:
+    test: true
+    session:
+        storage_factory_id: session.storage.factory.mock_file
