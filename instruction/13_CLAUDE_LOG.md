@@ -10,6 +10,23 @@
 
 ---
 
+### 2026-07-07 (quater) — API PIRB B4 lot 2 : sélecteur de saison
+
+- Objectif : débloquer côté app le menu déroulant des saisons (demande #3 de `DEMANDES_APP_PIRB_B4_PHASE2`). La joueuse veut consulter ses saisons passées, jamais les futures.
+- Contexte : session d'audit complet des 3 dépôts (mabb-site, Pirb store, mabb) → rapport dans `instruction/22_AUDIT_ECOSYSTEME_2026-07-07.md`. Chantier retenu ensuite : endpoints API pour le mobile. Premier lot = sélecteur de saison (zéro migration, zéro décision produit, s'appuie sur l'existant).
+- Actions réalisées (`src/Controller/Api/PirbApiController.php`) :
+  1. **Nouveau `GET /api/pirb/saisons`** → `{ courante, saisons[] }`. Source unique : `SaisonService::getSaisonsDisponibles()` (courante → 2023-2024, jamais de futur) + `getSaisonCourante()`. On renvoie `courante` pour que l'app présélectionne sans redupliquer la logique de bascule 1er juillet côté client. Pas de dépendance au Joueur (liste identique pour tous), mais auth Bearer exigée par le firewall `api`.
+  2. **`GET /api/pirb/stats/saison` accepte `?saison=YYYY-YYYY`** (facultatif) : absent → saison courante (rétrocompatible) ; valide → cette saison ; invalide/futur → **400**. La validation réutilise `SaisonService::isValide()` (une saison future n'est pas dans la liste, donc rejetée sans logique en plus). Le champ `saison` de la réponse reflète désormais la saison réellement servie.
+- Tests : nouveau `tests/Functional/Pirb/PirbSaisonsApiTest.php` — **premier test fonctionnel de l'API Bearer** (lacune signalée à l'audit). Couvre : 401 sans jeton, forme de `/saisons` (courante en tête, format YYYY-YYYY), 400 sur saison future, écho du libellé sur saison valide, rétrocompat sans paramètre. Auth via `ApiToken::creerPour()`, isolation par transaction annulée (schéma `PirbIdorTestCase`).
+- Fichiers modifiés : `src/Controller/Api/PirbApiController.php`, `tests/Functional/Pirb/PirbSaisonsApiTest.php` (nouveau), `instruction/22_AUDIT_ECOSYSTEME_2026-07-07.md` (nouveau), ce log.
+- Décisions : aucune ADR (extension d'endpoints existants, pas d'architecture nouvelle ; réutilise SaisonService, la source de vérité unique).
+- Points de vigilance / risques :
+  - **Prod uniquement après déploiement OVH** : l'app tape sur pirb.mabb.fr → tant que ce n'est pas déployé (git pull + cache:clear), l'app ne voit ni `/saisons` ni le param.
+  - Côté app (Pirb store) : brancher `getStatsSaison(saison?)` sur `?saison=` et construire le menu depuis `/api/pirb/saisons`. Rien d'autre à changer (contrat `StatsSaison.saison` déjà prévu).
+  - Non couvert ici : `pointsParSource` (demande #4) — lot suivant si besoin.
+
+---
+
 ### 2026-07-07 (ter) — API PIRB : libellé de saison + zones incluant les tirs FFBB
 
 - Objectif : deux manques constatés en testant l'app avec un vrai compte joueuse (U13, données FFBB) : (1) la saison n'est pas identifiée dans /stats/saison ; (2) « zone par zone » est vide pour un joueur 100 % FFBB.
