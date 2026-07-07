@@ -45,6 +45,42 @@ class RencontreRepository extends ServiceEntityRepository
     }
 
     /**
+     * Rencontres du club POUR UNE SAISON donnée, triées par date décroissante,
+     * avec JOIN equipe (anti N+1) — variante « saison » de findByClubOrderedDesc()
+     * utilisée par la page Stats Live.
+     *
+     * Filtrage par PLAGE DE DATES (01/07 → 01/07) et NON par la colonne
+     * r.saison : celle-ci est nullable (souvent vide sur les rencontres créées
+     * à la main), la date fait donc foi — même règle que
+     * JoueurStatsAggregator::statsSaison() et SaisonService (bascule 1er juillet).
+     * Effet de bord assumé : une rencontre sans date ne peut appartenir à aucune
+     * saison et n'apparaît donc pas dans la vue filtrée.
+     *
+     * @return Rencontre[]
+     */
+    public function findByClubAndSaisonOrderedDesc(int $clubId, string $saison): array
+    {
+        $qb = $this->createQueryBuilder('r')
+            ->leftJoin('r.equipe', 'eq')->addSelect('eq')
+            ->where('r.club = :club')
+            ->setParameter('club', $clubId)
+            ->orderBy('r.date', 'DESC')
+            ->addOrderBy('r.id', 'DESC');
+
+        // Saison "YYYY-YYYY" → [YYYY-07-01, (YYYY+1)-07-01[. Si le libellé est
+        // invalide (ne devrait pas arriver, il vient de SaisonService), on ne
+        // filtre pas plutôt que de renvoyer une liste vide trompeuse.
+        if (preg_match('/^(\d{4})-(\d{4})$/', $saison, $m)) {
+            $qb->andWhere('r.date >= :saisonDebut')
+               ->andWhere('r.date < :saisonFin')
+               ->setParameter('saisonDebut', new \DateTimeImmutable($m[1] . '-07-01'))
+               ->setParameter('saisonFin',   new \DateTimeImmutable($m[2] . '-07-01'));
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * Retourne les rencontres du club qui ont au moins un PDF FFBB uploadé.
      * Utilisé dans l'ENT pour la section "PDFs officiels FFBB".
      * Triées par date décroissante (match le plus récent en premier).

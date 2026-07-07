@@ -61,6 +61,7 @@ class StatsLiveController extends AbstractController
         private readonly \App\Repository\Sport\SessionStatsLiveRepository $sessionRepository,
         private readonly TenantResolver $tenantResolver,
         private readonly RencontreRepository $rencontreRepository,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     // =========================================================================
@@ -91,10 +92,17 @@ class StatsLiveController extends AbstractController
         $club = $this->tenantResolver->getCurrentClub();
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
 
-        // Toutes les rencontres du club, plus récentes en premier, avec equipe JOIN
-        $rencontres = $this->rencontreRepository->findByClubOrderedDesc($club->getId());
+        // Saison affichée = saison active (choix du sélecteur global/de la page,
+        // stocké en session par POST /saison/changer). Par défaut : la courante,
+        // donc en 2026-2027 on ne voit PLUS les matchs des saisons passées.
+        $saison = $this->saisonService->getSaisonActive();
 
-        // Sessions stats live indexées par rencontre ID (évite N+1)
+        // Rencontres du club POUR CETTE SAISON, plus récentes en premier (JOIN equipe)
+        $rencontres = $this->rencontreRepository->findByClubAndSaisonOrderedDesc($club->getId(), $saison);
+
+        // Sessions stats live indexées par rencontre ID (évite N+1). On garde
+        // toutes les sessions du club : le template n'en lit que pour les
+        // rencontres affichées (déjà filtrées par saison ci-dessus).
         $sessionsByRencontreId = $this->sessionRepository->findByClubIndexedByRencontre($club->getId());
 
         // Rencontres d'aujourd'hui (pour les mettre en avant)
@@ -109,6 +117,7 @@ class StatsLiveController extends AbstractController
             'rencontres_today'        => array_values($rencontresToday),
             'sessions_by_rencontre'   => $sessionsByRencontreId,
             'club'                    => $club,
+            'saison_affichee'         => $saison,
             'is_staff'                => $this->isGranted(ClubVoter::CLUB_STAFF, $club),
         ]);
     }

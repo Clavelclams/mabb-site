@@ -10,6 +10,23 @@
 
 ---
 
+### 2026-07-07 (quinquies) — Manager : filtre saison sur Stats Live
+
+- Objectif : sur `/stats-live`, ne plus afficher les matchs des saisons passées en 2026-2027, sauf si on bascule la saison via un dropdown sur la page.
+- Constat : la page listait TOUTES les rencontres du club sans filtre saison (`findByClubOrderedDesc`). Un sélecteur de saison GLOBAL existe déjà (base.html.twig, `saison_active()` + POST `/saison/changer`, session `active_saison`), fonctionnel (redirection Referer). Il suffisait de faire respecter la saison active à stats-live.
+- Actions :
+  1. `RencontreRepository::findByClubAndSaisonOrderedDesc($clubId, $saison)` — variante saison de `findByClubOrderedDesc`, filtre par PLAGE DE DATES (01/07 → 01/07) et non par la colonne `r.saison` (nullable, peu fiable sur rencontres créées à la main) — même règle que `JoueurStatsAggregator` et `SaisonService`.
+  2. `StatsLiveController::liste()` : injection de `SaisonService`, filtrage par `getSaisonActive()`, passage de `saison_affichee` au template.
+  3. Template `stats_live/index.html.twig` : dropdown saison visible en tête (poste vers `saison_changer`, `onchange submit`) + empty-state « Aucun match pour la saison X ».
+- Décisions : aucune ADR (réutilise l'infra saison existante). Choix de filtrer par date plutôt que par `r.saison` documenté dans le repo. Le dropdown de page pilote la MÊME saison de session que le sélecteur global (les deux restent synchro via `saison_active()`).
+- Fichiers modifiés : `src/Repository/Sport/RencontreRepository.php`, `src/Controller/Manager/StatsLiveController.php`, `templates/manager/stats_live/index.html.twig`, ce log.
+- Points de vigilance :
+  - Effet de bord assumé : une rencontre SANS date n'appartient à aucune saison → n'apparaît plus dans la vue filtrée.
+  - Non testé côté PHP dans l'environnement (pas de PHP dispo) : à linter + `cache:clear` en local avant commit.
+  - Même logique à rappliquer ensuite sur l'ENT (mais là il faudra une migration : Document n'a pas de champ saison).
+
+---
+
 ### 2026-07-07 (quater) — API PIRB B4 lot 2 : sélecteur de saison
 
 - Objectif : débloquer côté app le menu déroulant des saisons (demande #3 de `DEMANDES_APP_PIRB_B4_PHASE2`). La joueuse veut consulter ses saisons passées, jamais les futures.

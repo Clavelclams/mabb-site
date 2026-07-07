@@ -31,6 +31,34 @@
     </div>
 {% endfor %}
 
+{# ── Filtre saison ─────────────────────────────────────────────────────────
+   Poste vers le même endpoint que le sélecteur global (saison_changer) : le
+   choix est stocké en session et la page se recharge filtrée (redirection via
+   Referer). Par défaut = saison courante, donc les matchs des saisons passées
+   n'apparaissent plus tant qu'on ne bascule pas ici. #}
+<form method="post" action="{{ path('saison_changer') }}"
+      style="display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:22px;">
+    <input type="hidden" name="_token" value="{{ csrf_token('saison_changer') }}">
+    <label for="saisonStatsLive" style="font-weight:600; color:var(--mabb-muted); display:flex; align-items:center; gap:6px; margin:0;">
+        <i class="bi bi-calendar3"></i> Saison
+    </label>
+    <select id="saisonStatsLive" name="saison" onchange="this.form.submit()" class="form-select" style="width:auto;">
+        {% for s in saisons_disponibles() %}
+            <option value="{{ s }}" {% if s == saison_active() %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+    </select>
+    <span style="font-size:.82rem; color:var(--mabb-muted);">Seuls les matchs de cette saison sont affichés.</span>
+</form>
+
+{# ── Aucun match pour la saison sélectionnée ───────────────────────────── #}
+{% if rencontres is empty %}
+    <div class="card-mabb" style="text-align:center; padding:34px 20px; color:var(--mabb-muted);">
+        <i class="bi bi-calendar-x" style="font-size:1.6rem; display:block; margin-bottom:10px;"></i>
+        Aucun match enregistré pour la saison <strong>{{ saison_affichee }}</strong>.
+        {% if is_staff %}<br>Change de saison ci-dessus, ou crée une nouvelle rencontre.{% else %}<br>Change de saison ci-dessus pour consulter une autre année.{% endif %}
+    </div>
+{% endif %}
+
 {# ══════════════════════════════════════════════════════════════════════
    SECTION 1 — Matchs d'AUJOURD'HUI (mise en avant orange)
 ══════════════════════════════════════════════════════════════════════ #}
