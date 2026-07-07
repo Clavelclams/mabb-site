@@ -41,8 +41,10 @@ use Symfony\Component\Routing\Attribute\Route;
  * d'isolation que l'espace web PIRB. Pas de paramètre {id} : impossible
  * de demander les données d'une autre joueuse.
  *
- * La SAISON servie = saison courante calculée (SaisonService) — l'app
- * ne gère pas encore de sélecteur de saison (P0).
+ * SAISON : par défaut la saison courante calculée (SaisonService). Depuis
+ * le lot 2 (sélecteur de saison), stats/saison accepte ?saison=YYYY-YYYY
+ * (saisons passées uniquement, jamais de saison future) et /saisons
+ * fournit la liste pour construire le menu déroulant côté app.
  */
 class PirbApiController extends AbstractController
 {
@@ -104,18 +106,36 @@ class PirbApiController extends AbstractController
     // ─────────────────────────────────────────────────────────────────────
 
     #[Route('/api/pirb/stats/saison', name: 'api_pirb_stats_saison', methods: ['GET'])]
-    public function statsSaison(): JsonResponse
+    public function statsSaison(Request $request): JsonResponse
     {
         $joueur = $this->joueurOu404();
         if ($joueur instanceof JsonResponse) { return $joueur; }
 
-        $s = $this->statsAggregator->statsSaison($joueur, $this->saisonService->getSaisonCourante());
+        // Sélecteur de saison (B4 lot 2) : ?saison=YYYY-YYYY facultatif.
+        //   - absent             → saison courante calculée (rétrocompatible).
+        //   - présent & valide   → cette saison (passée ou courante).
+        //   - présent & invalide → 400. isValide() s'appuie sur
+        //     getSaisonsDisponibles() qui ne contient JAMAIS de saison future,
+        //     donc une saison future (ou un format faux) est rejetée ici.
+        $saison   = $this->saisonService->getSaisonCourante();
+        $demandee = $request->query->get('saison');
+        if ($demandee !== null && $demandee !== '') {
+            if (!$this->saisonService->isValide($demandee)) {
+                return new JsonResponse(
+                    ['error' => 'Saison invalide ou non disponible.'],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+            $saison = $demandee;
+        }
+
+        $s = $this->statsAggregator->statsSaison($joueur, $saison);
 
         // Mapping snake_case serveur → camelCase du contrat types/pirb.ts
         return new JsonResponse([
             // Libellé de la saison servie (ex. "2025-2026") : l'app affiche la
             // puce de saison quand ce champ est présent (contrat StatsSaison.saison).
-            'saison'    => $this->saisonService->getSaisonCourante(),
+            'saison'    => $saison,
             'nbMatchs'  => $s['nb_matchs'],
             'titulaire' => $s['titulaire'],
             'moyennes'  => $s['moyennes'], // clés identiques (points, rebonds, passes, minutes, eval)
@@ -136,6 +156,30 @@ class PirbApiController extends AbstractController
                 'eval'    => $g['eval'],
                 'rebonds' => $g['rebonds'],
             ], $s['graph_progression']),
+        ]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // GET /api/pirb/saisons  [B4 lot 2] — liste pour le menu déroulant Stats
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Saisons sélectionnables dans l'app (menu Stats).
+     *
+     * Source unique : SaisonService::getSaisonsDisponibles() — de la saison
+     * courante (bascule 1er juillet) jusqu'à 2023-2024, JAMAIS de saison
+     * future. On renvoie aussi `courante` pour que l'app présélectionne la
+     * bonne saison sans redupliquer la logique de bascule côté client.
+     *
+     * Pas lié au Joueur : la liste est la même pour tout le monde. L'auth
+     * Bearer reste exigée (firewall api) mais aucune donnée personnelle ici.
+     */
+    #[Route('/api/pirb/saisons', name: 'api_pirb_saisons', methods: ['GET'])]
+    public function saisons(): JsonResponse
+    {
+        return new JsonResponse([
+            'courante' => $this->saisonService->getSaisonCourante(),
+            'saisons'  => $this->saisonService->getSaisonsDisponibles(),
         ]);
     }
 
