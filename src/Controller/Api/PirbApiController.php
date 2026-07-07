@@ -113,6 +113,9 @@ class PirbApiController extends AbstractController
 
         // Mapping snake_case serveur → camelCase du contrat types/pirb.ts
         return new JsonResponse([
+            // Libellé de la saison servie (ex. "2025-2026") : l'app affiche la
+            // puce de saison quand ce champ est présent (contrat StatsSaison.saison).
+            'saison'    => $this->saisonService->getSaisonCourante(),
             'nbMatchs'  => $s['nb_matchs'],
             'titulaire' => $s['titulaire'],
             'moyennes'  => $s['moyennes'], // clés identiques (points, rebonds, passes, minutes, eval)
@@ -176,15 +179,38 @@ class PirbApiController extends AbstractController
             ];
         }
 
-        // Zones agrégées (les 8 zones officielles, toujours exhaustives)
+        // Zones agrégées depuis LES MÊMES tirs (Live + FFBB) que la liste
+        // ci-dessus. On N'utilise PAS statsParZone() du service : il ne compte
+        // que les tirs Stats Live (positionsTirs ← ActionMatch), donc un joueur
+        // 100 % FFBB verrait 8 zones à zéro. En agrégeant ici, l'agrégat inclut
+        // les tirs FFBB. Le web reste inchangé (il continue d'appeler
+        // statsParZone), donc aucun impact hors de cet endpoint API.
+        $agg = [];
+        foreach (ShotChartCalculator::ZONE_LIBELLES as $zone => $libelle) {
+            $agg[$zone] = ['tentes' => 0, 'reussis' => 0]; // exhaustif : toutes les zones
+        }
+        foreach ($tirs as $t) {
+            $z = $t['zone'];
+            if (!isset($agg[$z])) {
+                $agg[$z] = ['tentes' => 0, 'reussis' => 0];
+            }
+            $agg[$z]['tentes']++;
+            if ($t['reussi']) {
+                $agg[$z]['reussis']++;
+            }
+        }
+
         $zones = [];
-        foreach ($this->shotChart->statsParZone($joueur) as $zone => $stats) {
+        foreach ($agg as $zone => $stats) {
             $zones[] = [
                 'zone'        => $zone,
                 'libelle'     => ShotChartCalculator::ZONE_LIBELLES[$zone] ?? $zone,
                 'tentes'      => $stats['tentes'],
                 'reussis'     => $stats['reussis'],
-                'pourcentage' => $stats['pourcentage'],
+                // Même format que statsParZone : arrondi à 1 décimale, null si 0 tenté.
+                'pourcentage' => $stats['tentes'] > 0
+                    ? round($stats['reussis'] / $stats['tentes'] * 100, 1)
+                    : null,
             ];
         }
 

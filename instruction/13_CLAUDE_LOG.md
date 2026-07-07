@@ -10,6 +10,22 @@
 
 ---
 
+### 2026-07-07 (ter) — API PIRB : libellé de saison + zones incluant les tirs FFBB
+
+- Objectif : deux manques constatés en testant l'app avec un vrai compte joueuse (U13, données FFBB) : (1) la saison n'est pas identifiée dans /stats/saison ; (2) « zone par zone » est vide pour un joueur 100 % FFBB.
+- Actions réalisées (`src/Controller/Api/PirbApiController.php`) :
+  1. **/stats/saison** : ajout du champ `'saison' => $this->saisonService->getSaisonCourante()` à la réponse. Les stats étaient déjà calculées pour la saison courante ; il manquait juste le libellé. L'app affiche la puce de saison dès que le champ est présent (contrat `StatsSaison.saison`, déjà prévu).
+  2. **/shot-chart** : l'agrégat `zones` était construit par `ShotChartCalculator::statsParZone()`, qui ne compte QUE les tirs Stats Live (positionsTirs ← ActionMatch). Un joueur 100 % FFBB voyait donc 8 zones à zéro alors que ses tirs FFBB étaient bien dans `tirs`. Correctif : l'agrégat est désormais calculé DANS le controller à partir de la même liste `$tirs` (LIVE + FFBB), format identique (tentes/reussis/pourcentage arrondi à 1 décimale, zones exhaustives via `ZONE_LIBELLES`).
+- Décision d'archi : NE PAS modifier `statsParZone()` (utilisé par le web + `shootPreferentiel`) → agrégation locale au endpoint API. Zéro impact sur le web, l'API devient cohérente (tirs et zones même source). Le filet client de l'app (session 11 côté Pirb store) devient redondant mais reste inoffensif.
+- Fichiers modifiés : `src/Controller/Api/PirbApiController.php`, ce log.
+- Points de vigilance / risques :
+  - **Effet visible uniquement là où l'API tourne** : si l'app pointe sur pirb.mabb.fr (prod), il faut DÉPLOYER sur OVH pour voir le changement ; en local, pointer l'app sur le serveur local.
+  - Vérifier vite que le shot chart WEB n'a pas bougé (on n'a pas touché `statsParZone`, donc normalement identique).
+  - `pourcentages`/`pointsParSource` non traités ici (hors périmètre ; l'app gère leur absence).
+  - Reste possible : un test fonctionnel de l'endpoint (auth Bearer via ApiToken + seed TirFfbb) pour verrouiller l'agrégat FFBB.
+
+---
+
 ### 2026-07-07 (bis) — BUG-01 confirmé résolu + verrouillé par un test
 
 - Objectif : chantier 2 (P0 web), volet bugs. Investiguer BUG-01 (500 sur `/joueuses/{id}/missions/nouvelle`) et le clôturer proprement.
