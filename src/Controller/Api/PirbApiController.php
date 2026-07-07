@@ -262,6 +262,60 @@ class PirbApiController extends AbstractController
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // GET /api/pirb/commu  → JoueurPublicCard[]
+    // Les VRAIES joueuses du club (coéquipières + autres du club). Les profils
+    // ne sont pas encore publics (elles n'ont pas de compte app) : on n'expose
+    // donc que le minimum club (nom, équipe, poste, photo). Pas de stats, pas
+    // de suivi encore (entité Follow à venir). Non cliquable côté app.
+    // ⚠️ RGPD : ces joueuses sont mineures — cette liste reste intra-club
+    // (visible seulement par un membre du club connecté). Le consentement
+    // parental pour une exposition plus large reste à cadrer avant tout public.
+    // ─────────────────────────────────────────────────────────────────────
+
+    #[Route('/api/pirb/commu', name: 'api_pirb_commu', methods: ['GET'])]
+    public function commu(Request $request): JsonResponse
+    {
+        $moi = $this->joueurOu404();
+        if ($moi instanceof JsonResponse) { return $moi; }
+
+        $club = $moi->getClub();
+        if ($club === null) {
+            return new JsonResponse([]);
+        }
+
+        $saison = $this->saisonService->getSaisonCourante();
+        $monEquipe = $moi->equipePourSaison($saison) ?? $moi->getEquipe();
+        $monEquipeId = $monEquipe?->getId();
+        $base = $request->getSchemeAndHttpHost();
+
+        $cartes = [];
+        foreach ($this->joueurRepo->findByClub($club->getId()) as $j) {
+            if (!$j instanceof Joueur) { continue; }
+            if ($j->getId() === $moi->getId()) { continue; } // pas soi-même
+            if (!$j->isActive()) { continue; }
+
+            $equipe = $j->equipePourSaison($saison) ?? $j->getEquipe();
+
+            $cartes[] = [
+                'id'             => $j->getId(),
+                // Pas de pseudo tant qu'elle n'a pas de compte app → Prénom Nom
+                // (donnée club, non publique hors du club).
+                'pseudo'         => trim(($j->getPrenom() ?? '') . ' ' . ($j->getNom() ?? '')),
+                'photoUrl'       => $j->getPhotoPath() !== null
+                    ? $base . '/' . ltrim($j->getPhotoPath(), '/')
+                    : null,
+                'club'           => $club->getNom(),
+                'equipe'         => $equipe?->getNom(),
+                'poste'          => $j->getPoste(),
+                'suivie'         => false, // entité Follow pas encore posée
+                'estCoequipiere' => $monEquipeId !== null && $equipe?->getId() === $monEquipeId,
+            ];
+        }
+
+        return new JsonResponse($cartes);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // GET /api/pirb/badges
     // ─────────────────────────────────────────────────────────────────────
 

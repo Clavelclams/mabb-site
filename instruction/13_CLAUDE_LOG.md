@@ -27,6 +27,18 @@
 
 ---
 
+### 2026-07-07 (quater) — API PIRB : endpoint Commu (vraies joueuses du club)
+
+- Objectif : l'app affichait de fausses joueuses (Lina_du13...). Servir les VRAIES joueuses liées au club MABB.
+- Actions (`src/Controller/Api/PirbApiController.php`) : nouveau `GET /api/pirb/commu` → `JoueurPublicCard[]`. Renvoie les joueuses actives du club de la joueuse connectée (via `JoueurRepository::findByClub`), hors elle-même. Mapping : `pseudo` = « Prénom Nom » (pas de compte app → pas de pseudo), `equipe` = nom d'équipe (saison courante), `club`, `poste`, `photoUrl` absolue, `suivie=false` (Follow pas encore posé), `estCoequipiere` = même équipe.
+- Décisions : profils NON publics tant qu'elles n'ont pas de compte app → on n'expose que le minimum club (nom, équipe, poste, photo), pas de stats. Non cliquable côté app.
+- Points de vigilance :
+  - **À déployer sur OVH** pour visibilité dans l'app.
+  - ⚠️ RGPD mineures : liste intra-club (visible d'un membre connecté du club). Consentement parental à cadrer avant toute exposition plus large.
+  - **Reste signalé (NON fait)** : le shot chart n'est PAS filtré par saison (positionsTirs + TirFfbb sans saison) → même rendu pour 2025-26 et 2026-27, côté web ET API. À traiter avec le chantier « sélecteur de saison » (threader la saison dans positionsTirs + filtrer les TirFfbb).
+
+---
+
 ### 2026-07-07 (ter) — API PIRB : libellé de saison + zones incluant les tirs FFBB
 
 - Objectif : deux manques constatés en testant l'app avec un vrai compte joueuse (U13, données FFBB) : (1) la saison n'est pas identifiée dans /stats/saison ; (2) « zone par zone » est vide pour un joueur 100 % FFBB.
