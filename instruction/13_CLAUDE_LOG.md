@@ -10,6 +10,21 @@
 
 ---
 
+### 2026-07-07 (bis) — BUG-01 confirmé résolu + verrouillé par un test
+
+- Objectif : chantier 2 (P0 web), volet bugs. Investiguer BUG-01 (500 sur `/joueuses/{id}/missions/nouvelle`) et le clôturer proprement.
+- Constat : le 500 venait du recalcul XP/badges après création de mission ; déjà corrigé par B-205 (try/catch `\Throwable` autour de la gamification). Template, constantes `Mission::TYPES`, route de redirection : tous sains. Aucune autre voie de 500 trouvée.
+- Actions réalisées :
+  1. **`tests/Functional/Manager/MissionAccessTest.php`** (nouveau) — 2 cas verts sur le host `manager.localhost` : un staff du club voit le formulaire (200 → régression BUG-01 verrouillée, plus de 500) ; un staff d'un AUTRE club est refusé (403 via `ClubVoter::CLUB_STAFF`). Réutilise `PirbIdorTestCase` (seed + transaction). Helper `staffDeClub` (UserClubRole DIRIGEANT actif).
+  2. `09_BACKLOG.md` : BUG-01 passé à « corrigé + testé ».
+- Fichiers modifiés : `tests/Functional/Manager/MissionAccessTest.php` (créé), `09_BACKLOG.md`, cette entrée.
+- Décisions (ADR) : aucune.
+- Points de vigilance / risques :
+  - BUG-02 (404 /signup) : déjà couvert par la redirection 301 de B-206 (log sexies) — à confirmer, sinon rien à faire. BUG-03 : cosmétique (B-102 en cours).
+  - Mailer Brevo (B-304) : reste une config prod OVH côté Clavel (secrets non touchés).
+
+---
+
 ### 2026-07-07 — Socle de tests fonctionnels + premier test IDOR PIRB (HTTP réel)
 
 - Objectif : passer des tests unitaires (logique) aux tests fonctionnels (comportement HTTP réel) pour prouver l'isolation PIRB de bout en bout. Prérequis manquant découvert : aucune config d'environnement de test (`config/packages/test/` était vide).

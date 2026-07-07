@@ -73,7 +73,7 @@ Ces idées viennent de l'utilisateur, pas encore priorisées ni estimées :
 
 | ID | Bug | Impact | Statut |
 |----|-----|--------|--------|
-| BUG-01 | 500 sur `/joueuses/{id}/missions/nouvelle` | Moyen | à corriger |
+| BUG-01 | 500 sur `/joueuses/{id}/missions/nouvelle` | Moyen | ✅ corrigé (B-205, try/catch gamification) + testé (`MissionAccessTest`, 07/07) |
 | BUG-02 | 404 sur `manager.mabb.fr/signup` depuis lien PIRB | Faible | à corriger |
 | BUG-03 | Bénévole inscrite sur rencontre → pas de feedback visuel | UX | en cours (B-102) |
 
