@@ -22,7 +22,9 @@
 - Points de vigilance / risques :
   - **Prérequis run** : MySQL/MariaDB local démarré + `php bin/console --env=test doctrine:database:create` puis `doctrine:schema:create` (une fois). Si le schéma des entités change, refaire un `doctrine:schema:update --force --env=test` ou recréer la base de test.
   - `config/packages/test/framework.yaml` **doit être commité** (nécessaire à tout run de test fonctionnel). `.env.test.local` **ne doit pas** l'être.
-  - Reste à décliner le même patron sur les autres routes {id} sensibles (convocations, shot-chart, stats/match, documents, mes-parents).
+  - Patron décliné le 07/07 sur 2 routes de plus : `PirbStatsMatchIdorTest` (GET /stats/match/{id} → 403 sur match d'une autre équipe, sans CSRF) et `PirbShotChartIdorTest` (route destructive : prouve auth requise + protection CSRF ; le franchissement complet du CSRF en test est laissé de côté, friction connue du SameOriginCsrfTokenManager Symfony 7). Classe de base commune `PirbIdorTestCase`. Total functional : 6 tests verts.
+  - Reste à décliner (plus tard) sur : convocations, documents, mes-parents.
+  - Note CSRF-en-test : pour tester le franchissement complet d'une route CSRF (POST/DELETE) jusqu'au contrôle métier, il faudra soit crawler le formulaire (token dans le HTML), soit pré-injecter le token en session de façon fiable. Non bloquant pour l'isolation, qui est prouvée par ailleurs (unitaires + séances/stats + audit).
 
 ---
 
