@@ -92,13 +92,48 @@ class RencontreRepository extends ServiceEntityRepository
         return $this->createQueryBuilder('r')
             ->leftJoin('r.equipe', 'eq')->addSelect('eq')
             ->where('r.club = :club')
+            // Parenthèses OBLIGATOIRES autour du OR : sans elles, la précédence
+            // SQL (AND avant OR) court-circuite le filtre club → fuite multi-tenant
+            // potentielle (rencontres d'autres clubs). Corrigé le 08/07.
             ->andWhere(
-                'r.resumePath IS NOT NULL OR r.feuilleMatchPath IS NOT NULL OR r.positionsTirsPath IS NOT NULL'
+                '(r.resumePath IS NOT NULL OR r.feuilleMatchPath IS NOT NULL OR r.positionsTirsPath IS NOT NULL)'
             )
             ->setParameter('club', $clubId)
             ->orderBy('r.date', 'DESC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Rencontres du club AVEC PDF FFBB, filtrées par SAISON (plage de dates) —
+     * variante « saison » de findWithPdfsByClub() pour l'ENT.
+     *
+     * En 2026-2027, on ne voit plus les PDF officiels des saisons passées, sauf
+     * en changeant la saison active. Filtrage par PLAGE DE DATES (01/07 → 01/07),
+     * même règle que SaisonService et Stats Live (la colonne r.saison est
+     * nullable/peu fiable sur les rencontres créées à la main).
+     *
+     * @return Rencontre[]
+     */
+    public function findWithPdfsByClubAndSaison(int $clubId, string $saison): array
+    {
+        $qb = $this->createQueryBuilder('r')
+            ->leftJoin('r.equipe', 'eq')->addSelect('eq')
+            ->where('r.club = :club')
+            ->andWhere(
+                '(r.resumePath IS NOT NULL OR r.feuilleMatchPath IS NOT NULL OR r.positionsTirsPath IS NOT NULL)'
+            )
+            ->setParameter('club', $clubId)
+            ->orderBy('r.date', 'DESC');
+
+        if (preg_match('/^(\d{4})-(\d{4})$/', $saison, $m)) {
+            $qb->andWhere('r.date >= :saisonDebut')
+               ->andWhere('r.date < :saisonFin')
+               ->setParameter('saisonDebut', new \DateTimeImmutable($m[1] . '-07-01'))
+               ->setParameter('saisonFin',   new \DateTimeImmutable($m[2] . '-07-01'));
+        }
+
+        return $qb->getQuery()->getResult();
     }
 
     /**

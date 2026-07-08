@@ -42,6 +42,7 @@ class DocumentController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly TenantResolver         $tenantResolver,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     // ====================================================================
@@ -76,10 +77,15 @@ class DocumentController extends AbstractController
             $documents = array_values($documents);
         }
 
-        // PDFs FFBB des matchs (feuille, résumé, positions de tirs)
-        // Visibles à tous les membres (données officielles FFBB) — sauf si filtre type actif
+        // PDFs FFBB des matchs (feuille, résumé, positions de tirs).
+        // Ils sont STOCKÉS PAR SAISON (rattachés à une rencontre datée) : on ne
+        // montre que ceux de la saison active — en 2026-2027, les PDF officiels
+        // des saisons passées n'apparaissent plus sauf en changeant de saison via
+        // le sélecteur. Les documents UPLOADÉS (réunions, règlements...) restent
+        // eux visibles en continu, toutes saisons confondues (choix produit).
+        $saison = $this->saisonService->getSaisonActive();
         $rencontresAvecPdfs = $filtreType === null
-            ? $rencontreRepo->findWithPdfsByClub($club->getId())
+            ? $rencontreRepo->findWithPdfsByClubAndSaison($club->getId(), $saison)
             : [];
 
         return $this->render('manager/document/index.html.twig', [
@@ -90,6 +96,7 @@ class DocumentController extends AbstractController
             'is_staff'               => $isStaffElargi,
             'club'                   => $club,
             'rencontres_avec_pdfs'   => $rencontresAvecPdfs,
+            'saison_affichee'        => $saison,
         ]);
     }
 

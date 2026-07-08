@@ -193,7 +193,32 @@
    SECTION PDFs FFBB — Matchs officiels
    (feuille de match, résumé, positions de tirs)
    Visible à tous les membres — données officielles FFBB
+   [08/07] Filtrés par SAISON active (stockés par saison). Les documents
+   uploadés (réunions, règlements…) restent eux visibles toutes saisons.
 ══════════════════════════════════════════════════════════════════════ #}
+{# Sélecteur de saison des PDF FFBB — visible même si la saison n'a aucun PDF.
+   Poste vers le sélecteur global (saison_changer) : la page se recharge filtrée. #}
+{% if filtre_type is null %}
+<div style="margin-top:36px; display:flex; align-items:center; flex-wrap:wrap; gap:10px;">
+    <span style="font-weight:600; color:var(--mabb-muted); display:flex; align-items:center; gap:6px;">
+        <i class="bi bi-calendar3"></i> Saison des PDF FFBB
+    </span>
+    <form method="post" action="{{ path('saison_changer') }}" style="margin:0;">
+        <input type="hidden" name="_token" value="{{ csrf_token('saison_changer') }}">
+        <select name="saison" onchange="this.form.submit()" class="form-select form-select-sm" style="width:auto; display:inline-block;">
+            {% for s in saisons_disponibles() %}
+                <option value="{{ s }}" {% if s == saison_active() %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+        </select>
+    </form>
+    <span style="font-size:.8rem; color:var(--mabb-muted);">Les réunions et autres documents restent visibles toutes saisons.</span>
+</div>
+{% if rencontres_avec_pdfs is empty %}
+    <div class="card-mabb" style="padding:20px; margin-top:12px; text-align:center; color:var(--mabb-muted);">
+        <i class="bi bi-calendar-x me-1"></i> Aucun PDF FFBB pour la saison <strong>{{ saison_affichee }}</strong>.
+    </div>
+{% endif %}
+{% endif %}
 {% if rencontres_avec_pdfs is not empty %}
 <div style="margin-top:36px;">
     <h2 style="font-size:1rem; font-weight:700; color:var(--mabb-dark); margin-bottom:14px; display:flex; align-items:center; gap:8px;">

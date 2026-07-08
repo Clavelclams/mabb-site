@@ -10,6 +10,21 @@
 
 ---
 
+### 2026-07-08 — Manager : filtre saison sur l'ENT (PDF FFBB) + fix fuite multi-tenant
+
+- Objectif : sur `/ent`, ne plus montrer les PDF officiels FFBB des saisons passées en 2026-2027 (sauf via sélecteur), en gardant les documents uploadés (réunions, règlements) visibles en continu — demande explicite de Clavel.
+- Constat clé : **aucune migration nécessaire.** Les PDF FFBB ne sont pas des `Document` mais des fichiers rattachés aux `Rencontre` (datées) → filtrables par saison comme Stats Live. Les `Document` uploadés n'ont pas de saison et restent affichés (= règle « les réunions restent continues »).
+- Actions :
+  1. `RencontreRepository::findWithPdfsByClubAndSaison(clubId, saison)` : variante saison de `findWithPdfsByClub`, filtre par plage de dates (01/07 → 01/07).
+  2. **FIX SÉCURITÉ** : `findWithPdfsByClub` avait un `OR` NON parenthésé → précédence SQL (AND avant OR) court-circuitant le filtre `club` → **fuite multi-tenant potentielle**. Parenthèses ajoutées aux deux méthodes.
+  3. `DocumentController::index` : injection `SaisonService`, PDF FFBB filtrés par `getSaisonActive()`, passage `saison_affichee`.
+  4. Template `document/index.html.twig` : sélecteur de saison sur la section PDF FFBB (poste vers `saison_changer`) + empty-state « aucun PDF pour la saison X », visible même sans PDF.
+- Décisions : aucune ADR. Choix produit acté : PDF FFBB = par saison ; documents uploadés = continus. Si un jour des documents uploadés doivent aussi être scopés par saison, ce sera une migration `Document.saison` séparée (non nécessaire aujourd'hui).
+- Fichiers : `src/Repository/Sport/RencontreRepository.php`, `src/Controller/Manager/DocumentController.php`, `templates/manager/document/index.html.twig`, ce log.
+- Vigilance : non linté ici (pas de PHP) → `php -l` + `lint:twig` + `cache:clear` avant commit. Le fix multi-tenant sur `findWithPdfsByClub` mérite un coup d'œil rapide (comportement inchangé pour MABB seul, mais plus correct).
+
+---
+
 ### 2026-07-08 — Vitrine Lot 2 : bouton « Espace membre »
 
 - Objectif : CDC §3.10 + §6.1 — accès membre depuis le site public.
