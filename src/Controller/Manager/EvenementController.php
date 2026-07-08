@@ -5,10 +5,14 @@ namespace App\Controller\Manager;
 use App\Entity\Core\User;
 use App\Entity\Sport\Evenement;
 use App\Entity\Sport\EvenementParticipation;
+use App\Entity\Sport\InscriptionSortie;
+use App\Entity\Sport\Joueur;
 use App\Entity\Sport\Mission;
 use App\Gamification\BadgeChecker;
 use App\Repository\Sport\EvenementParticipationRepository;
 use App\Repository\Sport\EvenementRepository;
+use App\Repository\Sport\InscriptionSortieRepository;
+use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\RencontreRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
@@ -57,6 +61,8 @@ class EvenementController extends AbstractController
         private readonly EvenementRepository $evenementRepository,
         private readonly EvenementParticipationRepository $participationRepository,
         private readonly RencontreRepository $rencontreRepository,
+        private readonly InscriptionSortieRepository $inscriptionRepository,
+        private readonly JoueurRepository $joueurRepository,
         private readonly BadgeChecker $badgeChecker,
         private readonly EntityManagerInterface $em,
     ) {}
@@ -158,12 +164,210 @@ class EvenementController extends AbstractController
             $maParticipation = $this->participationRepository->trouverPour($this->getUser(), $evenement);
         }
 
+        // Inscriptions Sortie + agrégats + joueurs du club (staff uniquement,
+        // ces données contiennent des infos de mineurs → jamais côté membre).
+        $inscriptions = [];
+        $agregats     = null;
+        $joueursClub  = [];
+        if ($isStaff) {
+            $inscriptions = $this->inscriptionRepository->findByEvenement($evenement);
+            $agregats     = $this->agregatsInscriptions($inscriptions);
+            $joueursClub  = $this->joueurRepository->findByClub($evenement->getClub()->getId());
+        }
+
         return $this->render('manager/evenement/show.html.twig', [
-            'evenement'       => $evenement,
-            'is_staff'        => $isStaff,
+            'evenement'        => $evenement,
+            'is_staff'         => $isStaff,
             'ma_participation' => $maParticipation,
-            'participations'  => $evenement->getParticipations(),
+            'participations'   => $evenement->getParticipations(),
+            'inscriptions'     => $inscriptions,
+            'agregats'         => $agregats,
+            'joueurs_club'     => $joueursClub,
         ]);
+    }
+
+    // =====================================================================
+    // SORTIES — inscriptions (STAFF). Doc 23 / ADR-0011. Données de mineurs :
+    // toutes ces routes exigent CLUB_STAFF + CSRF, jamais exposées aux membres.
+    // =====================================================================
+
+    #[Route('/evenements/{id}/inscriptions', name: 'manager_evenement_inscription_add', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function ajouterInscription(Request $request, Evenement $evenement): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+        if (!$this->isCsrfTokenValid('inscription_add_' . $evenement->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+        }
+
+        $inscription = new InscriptionSortie();
+        $inscription->setEvenement($evenement);
+        $inscription->setCreatedBy($this->getUser() instanceof User ? $this->getUser() : null);
+
+        // Licenciée (joueur) OU saisie libre selon l'ouverture (doc 23 §3.1).
+        $joueurId = (int) $request->request->get('joueur_id', 0);
+        if ($joueurId > 0) {
+            $joueur = $this->joueurRepository->find($joueurId);
+            // Isolation multi-tenant : la joueuse doit être du club de l'événement.
+            if (!$joueur instanceof Joueur || $joueur->getClub()?->getId() !== $evenement->getClub()?->getId()) {
+                $this->addFlash('error', 'Joueuse invalide.');
+                return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+            }
+            $inscription->setJoueur($joueur);
+        } elseif ($evenement->getOuvertA() === Evenement::OUVERT_TOUS) {
+            $nom    = trim((string) $request->request->get('nom', ''));
+            $prenom = trim((string) $request->request->get('prenom', ''));
+            if ($nom === '' || $prenom === '') {
+                $this->addFlash('error', 'Nom et prénom obligatoires pour un participant non licencié.');
+                return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+            }
+            $inscription->setNom($nom);
+            $inscription->setPrenom($prenom);
+            $dn = trim((string) $request->request->get('date_naissance', ''));
+            if ($dn !== '') {
+                try { $inscription->setDateNaissance(new \DateTimeImmutable($dn)); } catch (\Exception) {}
+            }
+            $inscription->setResponsableLegal(trim((string) $request->request->get('responsable_legal', '')) ?: null);
+            $inscription->setTelephoneContact(trim((string) $request->request->get('telephone_contact', '')) ?: null);
+        } else {
+            $this->addFlash('error', 'Événement réservé aux licenciés : choisis une joueuse.');
+            return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+        }
+
+        // Cohérences dérivées (doc 23 §4.3).
+        $inscription->setAutorisationStatut(
+            $evenement->isAutorisationRequise()
+                ? InscriptionSortie::AUTORISATION_EN_ATTENTE
+                : InscriptionSortie::AUTORISATION_NON_REQUISE
+        );
+        $inscription->setPaiementStatut(
+            $evenement->isEstPayant()
+                ? InscriptionSortie::PAIEMENT_A_PAYER
+                : InscriptionSortie::PAIEMENT_GRATUIT
+        );
+
+        $this->em->persist($inscription);
+        $this->em->flush();
+        $this->addFlash('success', sprintf('%s inscrit·e.', $inscription->getNomAffichage()));
+        return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+    }
+
+    #[Route('/evenements/{id}/inscriptions/{iid}/autorisation', name: 'manager_evenement_inscription_autorisation', methods: ['POST'], requirements: ['id' => '\d+', 'iid' => '\d+'])]
+    public function basculerAutorisation(Request $request, Evenement $evenement, int $iid): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+        $inscription = $this->chargerInscription($evenement, $iid, $request, 'autorisation');
+        if (!$inscription instanceof InscriptionSortie) { return $inscription; }
+
+        // Bascule EN_ATTENTE ↔ RECUE (n'agit pas sur NON_REQUISE).
+        if ($inscription->getAutorisationStatut() === InscriptionSortie::AUTORISATION_RECUE) {
+            $inscription->setAutorisationStatut(InscriptionSortie::AUTORISATION_EN_ATTENTE);
+        } elseif ($inscription->getAutorisationStatut() === InscriptionSortie::AUTORISATION_EN_ATTENTE) {
+            $inscription->setAutorisationStatut(InscriptionSortie::AUTORISATION_RECUE);
+        }
+        $this->em->flush();
+        return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+    }
+
+    #[Route('/evenements/{id}/inscriptions/{iid}/paiement', name: 'manager_evenement_inscription_paiement', methods: ['POST'], requirements: ['id' => '\d+', 'iid' => '\d+'])]
+    public function enregistrerPaiement(Request $request, Evenement $evenement, int $iid): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+        $inscription = $this->chargerInscription($evenement, $iid, $request, 'paiement');
+        if (!$inscription instanceof InscriptionSortie) { return $inscription; }
+
+        $statut = (string) $request->request->get('paiement_statut', '');
+        if (in_array($statut, InscriptionSortie::PAIEMENT_STATUTS, true)) {
+            $inscription->setPaiementStatut($statut);
+        }
+        $montant = trim((string) $request->request->get('montant_paye', ''));
+        $inscription->setMontantPaye($montant !== '' ? $montant : null);
+        $moyen = (string) $request->request->get('moyen_paiement', '');
+        $inscription->setMoyenPaiement(in_array($moyen, InscriptionSortie::MOYENS_PAIEMENT, true) ? $moyen : null);
+        $date = trim((string) $request->request->get('paiement_date', ''));
+        if ($date !== '') {
+            try { $inscription->setPaiementDate(new \DateTimeImmutable($date)); } catch (\Exception) {}
+        }
+        $this->em->flush();
+        $this->addFlash('success', 'Paiement mis à jour.');
+        return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+    }
+
+    #[Route('/evenements/{id}/inscriptions/{iid}/presence', name: 'manager_evenement_inscription_presence', methods: ['POST'], requirements: ['id' => '\d+', 'iid' => '\d+'])]
+    public function changerPresence(Request $request, Evenement $evenement, int $iid): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+        $inscription = $this->chargerInscription($evenement, $iid, $request, 'presence');
+        if (!$inscription instanceof InscriptionSortie) { return $inscription; }
+
+        $presence = (string) $request->request->get('presence', '');
+        if (in_array($presence, InscriptionSortie::PRESENCES, true)) {
+            $inscription->setPresence($presence);
+            $this->em->flush();
+        }
+        return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+    }
+
+    #[Route('/evenements/{id}/inscriptions/{iid}/supprimer', name: 'manager_evenement_inscription_supprimer', methods: ['POST'], requirements: ['id' => '\d+', 'iid' => '\d+'])]
+    public function supprimerInscription(Request $request, Evenement $evenement, int $iid): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+        $inscription = $this->chargerInscription($evenement, $iid, $request, 'supprimer');
+        if (!$inscription instanceof InscriptionSortie) { return $inscription; }
+
+        $this->em->remove($inscription);
+        $this->em->flush();
+        $this->addFlash('success', 'Inscription retirée.');
+        return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+    }
+
+    /**
+     * Charge une inscription en vérifiant CSRF + appartenance à l'événement +
+     * droits (CLUB_STAFF sur l'inscription, isolée par club via ClubAwareInterface).
+     * Retourne l'inscription, ou une Response (redirect) si le CSRF est invalide.
+     */
+    private function chargerInscription(Evenement $evenement, int $iid, Request $request, string $intention): InscriptionSortie|Response
+    {
+        if (!$this->isCsrfTokenValid('inscription_' . $intention . '_' . $iid, (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+        }
+        $inscription = $this->inscriptionRepository->find($iid);
+        if (!$inscription instanceof InscriptionSortie || $inscription->getEvenement()?->getId() !== $evenement->getId()) {
+            throw $this->createNotFoundException();
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $inscription);
+        return $inscription;
+    }
+
+    /**
+     * Agrégats du dashboard d'une sortie (doc 23 §6.1).
+     *
+     * @param InscriptionSortie[] $inscriptions
+     * @return array<string, int|float>
+     */
+    private function agregatsInscriptions(array $inscriptions): array
+    {
+        $a = [
+            'nb' => count($inscriptions),
+            'autorisations_recues' => 0,
+            'autorisations_manquantes' => 0,
+            'payes' => 0,
+            'a_payer' => 0,
+            'total_encaisse' => 0.0,
+            'presents' => 0,
+        ];
+        foreach ($inscriptions as $i) {
+            if ($i->getAutorisationStatut() === InscriptionSortie::AUTORISATION_RECUE)   { $a['autorisations_recues']++; }
+            if ($i->getAutorisationStatut() === InscriptionSortie::AUTORISATION_EN_ATTENTE) { $a['autorisations_manquantes']++; }
+            if ($i->getPaiementStatut() === InscriptionSortie::PAIEMENT_PAYE) {
+                $a['payes']++;
+                $a['total_encaisse'] += (float) ($i->getMontantPaye() ?? 0);
+            }
+            if ($i->getPaiementStatut() === InscriptionSortie::PAIEMENT_A_PAYER) { $a['a_payer']++; }
+            if ($i->getPresence() === InscriptionSortie::PRESENCE_PRESENT) { $a['presents']++; }
+        }
+        return $a;
     }
 
     #[Route('/evenements/{id}/modifier', name: 'manager_evenement_edit', methods: ['GET', 'POST'])]
@@ -404,6 +608,12 @@ class EvenementController extends AbstractController
 
         $maxStr = trim((string) $request->request->get('inscriptions_max', ''));
         $evenement->setInscriptionsMax($maxStr !== '' ? (int) $maxStr : null);
+
+        // Sorties payantes (doc 23) : payant + prix, autorisation parentale.
+        $evenement->setEstPayant($request->request->getBoolean('est_payant'));
+        $prixStr = trim((string) $request->request->get('prix', ''));
+        $evenement->setPrix($evenement->isEstPayant() && $prixStr !== '' ? $prixStr : null);
+        $evenement->setAutorisationRequise($request->request->getBoolean('autorisation_requise'));
     }
 
     /**

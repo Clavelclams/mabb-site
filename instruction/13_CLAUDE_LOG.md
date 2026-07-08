@@ -10,6 +10,22 @@
 
 ---
 
+### 2026-07-07 — Module Sorties : Lot B (inscriptions, autorisation, paiement, présence)
+
+- Objectif : rendre les sorties gérables depuis /evenements/{id} (remplacer le Sheet).
+- Actions réalisées (`src/Controller/Manager/EvenementController.php`) :
+  1. Injection `InscriptionSortieRepository` + `JoueurRepository`.
+  2. `show()` enrichi (staff only) : liste des inscriptions + agrégats (inscrits, autorisations reçues/manquantes, payés + total €, à payer, présents) + joueuses du club pour le formulaire.
+  3. 5 routes STAFF + CSRF : `POST .../inscriptions` (ajout licenciée OU saisie libre selon `ouvertA`, cohérences dérivées doc 23 §4.3), `.../{iid}/autorisation` (bascule EN_ATTENTE↔RECUE), `.../{iid}/paiement` (statut/montant/moyen/date), `.../{iid}/presence`, `.../{iid}/supprimer`. Helper `chargerInscription` (CSRF + appartenance à l'événement + `ClubVoter` sur l'inscription via ClubAwareInterface).
+  4. `hydraterDepuisRequete` : gère `est_payant` / `prix` / `autorisation_requise`.
+- Templates : `show.html.twig` → section « Inscriptions à la sortie » (staff + type sortie) : dashboard agrégats + formulaire d'ajout (licenciée vs saisie libre) + tableau avec actions inline. `edit.html.twig` → section « Sortie : paiement & autorisation ».
+- Points de vigilance / risques :
+  - **À tester** : `php bin/console cache:clear` (surface les erreurs PHP), puis créer/éditer une sortie payante + autorisation, ouvrir l'événement, ajouter des participants, gérer autorisation/paiement/présence. Il faut être CLUB_STAFF.
+  - Isolation : chaque route exige CLUB_STAFF + CSRF ; l'inscription est protégée par le ClubVoter (ClubAwareInterface via evenement.club).
+  - Reste : Lot C (dashboard global saison), Lot D (RGPD : registre, purge, upload décharge v2). À déployer avec le Lot A (migration) une fois validé en local.
+
+---
+
 ### 2026-07-07 — Module Sorties : Lot A (fondations, aucune UI)
 
 - Objectif : démarrer le module Sorties (doc 23) pour remplacer le Google Sheet. Lot A = migration + entités + repo, zéro UI.

@@ -175,4 +175,147 @@
             </div>
         </div>
     </div>
+
+    {# ============ SORTIES : inscriptions (staff, type sortie) ============ #}
+    {% if is_staff and evenement.type == 'sortie' %}
+    <div class="card-mabb" style="margin-top:16px;">
+        <div class="card-header"><i class="bi bi-clipboard-check"></i> Inscriptions à la sortie</div>
+        <div class="card-body">
+
+            {# Dashboard agrégats #}
+            <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                <div style="flex:1; min-width:110px; background:#eff6ff; border-radius:10px; padding:10px 12px;">
+                    <div style="font-size:1.4rem; font-weight:800; color:var(--mabb-blue);">{{ agregats.nb }}{% if evenement.inscriptionsMax %} / {{ evenement.inscriptionsMax }}{% endif %}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted);">inscrit·e·s</div>
+                </div>
+                {% if evenement.autorisationRequise %}
+                <div style="flex:1; min-width:110px; background:#f0fdf4; border-radius:10px; padding:10px 12px;">
+                    <div style="font-size:1.4rem; font-weight:800; color:#16a34a;">{{ agregats.autorisations_recues }}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted);">autorisations reçues{% if agregats.autorisations_manquantes %} · {{ agregats.autorisations_manquantes }} manquante·s{% endif %}</div>
+                </div>
+                {% endif %}
+                {% if evenement.estPayant %}
+                <div style="flex:1; min-width:110px; background:#fefce8; border-radius:10px; padding:10px 12px;">
+                    <div style="font-size:1.4rem; font-weight:800; color:#a16207;">{{ agregats.total_encaisse|number_format(2, ',', ' ') }} €</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted);">{{ agregats.payes }} payé·s · {{ agregats.a_payer }} à payer</div>
+                </div>
+                {% endif %}
+                {% if evenement.passe %}
+                <div style="flex:1; min-width:110px; background:#f5f3ff; border-radius:10px; padding:10px 12px;">
+                    <div style="font-size:1.4rem; font-weight:800; color:#7c3aed;">{{ agregats.presents }}</div>
+                    <div style="font-size:.72rem; color:var(--mabb-muted);">présent·e·s</div>
+                </div>
+                {% endif %}
+            </div>
+
+            {# Formulaire d'ajout #}
+            <form method="post" action="{{ path('manager_evenement_inscription_add', {id: evenement.id}) }}"
+                  style="background:#f8fafc; border:1px solid var(--mabb-border); border-radius:10px; padding:12px; margin-bottom:16px;">
+                <input type="hidden" name="_token" value="{{ csrf_token('inscription_add_' ~ evenement.id) }}">
+                <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+                    <div style="flex:2; min-width:200px;">
+                        <label class="form-label" style="font-size:.78rem;">Joueuse licenciée</label>
+                        <select name="joueur_id" class="form-select">
+                            <option value="0">{% if evenement.ouvertA == 'tous' %}— ou saisie libre ci-dessous —{% else %}— choisir une joueuse —{% endif %}</option>
+                            {% for j in joueurs_club %}
+                                <option value="{{ j.id }}">{{ j.prenom }} {{ j.nom }}{% if j.equipe %} ({{ j.equipe.nom }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-mabb-primary"><i class="bi bi-plus-lg"></i> Inscrire</button>
+                </div>
+                {% if evenement.ouvertA == 'tous' %}
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;">
+                        <input type="text" name="prenom" class="form-control" placeholder="Prénom (non licencié)" style="flex:1; min-width:120px;">
+                        <input type="text" name="nom" class="form-control" placeholder="Nom" style="flex:1; min-width:120px;">
+                        <input type="date" name="date_naissance" class="form-control" style="flex:1; min-width:120px;" title="Date de naissance">
+                        <input type="text" name="responsable_legal" class="form-control" placeholder="Responsable légal (si mineur)" style="flex:1; min-width:160px;">
+                        <input type="tel" name="telephone_contact" class="form-control" placeholder="Téléphone contact" style="flex:1; min-width:140px;">
+                    </div>
+                    <p style="font-size:.72rem; color:var(--mabb-muted); margin:6px 0 0;">Renseigne une joueuse licenciée OU la saisie libre (non licenciée).</p>
+                {% endif %}
+            </form>
+
+            {# Tableau des inscrit·e·s #}
+            {% if inscriptions|length == 0 %}
+                <p style="color:var(--mabb-muted); font-style:italic; margin:0;">Personne d'inscrit pour l'instant.</p>
+            {% else %}
+                <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:.82rem;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:2px solid var(--mabb-border);">
+                            <th style="padding:6px;">Participant·e</th>
+                            {% if evenement.autorisationRequise %}<th style="padding:6px;">Autorisation</th>{% endif %}
+                            {% if evenement.estPayant %}<th style="padding:6px;">Paiement</th>{% endif %}
+                            <th style="padding:6px;">Présence</th>
+                            <th style="padding:6px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in inscriptions %}
+                        <tr style="border-bottom:1px solid var(--mabb-border);">
+                            <td style="padding:6px;">
+                                <strong>{{ i.nomAffichage }}</strong>
+                                <div style="font-size:.7rem; color:var(--mabb-muted);">
+                                    {% if i.joueur %}<i class="bi bi-patch-check"></i> licenciée{% if i.joueur.equipe %} · {{ i.joueur.equipe.nom }}{% endif %}
+                                    {% else %}saisie libre{% if i.isMineur %} · <span style="color:var(--mabb-red);">mineure</span>{% endif %}{% endif %}
+                                </div>
+                            </td>
+                            {% if evenement.autorisationRequise %}
+                            <td style="padding:6px;">
+                                <form method="post" action="{{ path('manager_evenement_inscription_autorisation', {id: evenement.id, iid: i.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('inscription_autorisation_' ~ i.id) }}">
+                                    <button type="submit" style="border:none; background:none; cursor:pointer; font-size:.78rem;" title="Basculer reçue / en attente">
+                                        {% if i.autorisationStatut == 'RECUE' %}<span style="color:#16a34a;"><i class="bi bi-check-circle-fill"></i> Reçue</span>
+                                        {% else %}<span style="color:#a16207;"><i class="bi bi-clock"></i> En attente</span>{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                            {% endif %}
+                            {% if evenement.estPayant %}
+                            <td style="padding:6px;">
+                                <form method="post" action="{{ path('manager_evenement_inscription_paiement', {id: evenement.id, iid: i.id}) }}" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('inscription_paiement_' ~ i.id) }}">
+                                    <select name="paiement_statut" class="form-select" style="font-size:.72rem; padding:2px 4px; height:auto; width:auto;">
+                                        {% for s in ['A_PAYER','PAYE','EXONERE','REMBOURSE'] %}
+                                            <option value="{{ s }}" {{ i.paiementStatut == s ? 'selected' : '' }}>{{ s|lower }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input type="text" name="montant_paye" value="{{ i.montantPaye }}" placeholder="€" style="width:52px; font-size:.72rem; padding:2px 4px;" class="form-control">
+                                    <select name="moyen_paiement" class="form-select" style="font-size:.72rem; padding:2px 4px; height:auto; width:auto;">
+                                        <option value="">moyen</option>
+                                        {% for m in ['ESPECE','CHEQUE','VIREMENT','AUTRE'] %}
+                                            <option value="{{ m }}" {{ i.moyenPaiement == m ? 'selected' : '' }}>{{ m|lower }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn-mabb-ghost btn-sm" style="font-size:.7rem; padding:2px 6px;" title="Enregistrer"><i class="bi bi-save"></i></button>
+                                </form>
+                            </td>
+                            {% endif %}
+                            <td style="padding:6px;">
+                                <form method="post" action="{{ path('manager_evenement_inscription_presence', {id: evenement.id, iid: i.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('inscription_presence_' ~ i.id) }}">
+                                    <select name="presence" class="form-select" style="font-size:.72rem; padding:2px 4px; height:auto; width:auto;" onchange="this.form.submit()">
+                                        {% for p in ['INSCRIT','PRESENT','ABSENT'] %}
+                                            <option value="{{ p }}" {{ i.presence == p ? 'selected' : '' }}>{{ p|lower }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                            <td style="padding:6px; text-align:right;">
+                                <form method="post" action="{{ path('manager_evenement_inscription_supprimer', {id: evenement.id, iid: i.id}) }}" style="display:inline;"
+                                      onsubmit="return confirm('Retirer {{ i.nomAffichage }} ?');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('inscription_supprimer_' ~ i.id) }}">
+                                    <button type="submit" style="border:none; background:none; cursor:pointer; color:var(--mabb-red);" title="Retirer"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 {% endblock %}
