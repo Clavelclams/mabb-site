@@ -108,9 +108,21 @@ class PirbStatsController extends AbstractController
         }
 
         // [B22a 12/06/2026] Filtre RGPD : la joueuse ne voit cette page QUE si
-        // elle a joué/été convoquée pour ce match. Si elle est de la même équipe
-        // mais n'a pas joué, on accepte aussi (transparence intra-équipe).
-        $appartientEquipe = $joueur->getEquipe()?->getId() === $rencontre->getEquipe()?->getId();
+        // elle appartient à l'équipe du match (transparence intra-équipe).
+        // [07/07/2026] L'équipe de référence dépend de la SAISON du match, pas
+        // de l'équipe actuelle : après la bascule de saison (1er juillet), son
+        // équipe courante change, mais elle doit garder l'accès à SES matchs des
+        // saisons passées. On compare donc à son équipe DE LA SAISON du match
+        // (avec fallback sur l'équipe courante).
+        $equipeMatchId = $rencontre->getEquipe()?->getId();
+        $saisonMatch   = $rencontre->getSaison();
+        $monEquipeCetteSaison = $saisonMatch !== null
+            ? $joueur->equipePourSaison($saisonMatch)
+            : $joueur->getEquipe();
+        $appartientEquipe = $equipeMatchId !== null && (
+            $monEquipeCetteSaison?->getId() === $equipeMatchId
+            || $joueur->getEquipe()?->getId() === $equipeMatchId
+        );
         if (!$appartientEquipe) {
             throw $this->createAccessDeniedException('Ce match ne concerne pas ton équipe.');
         }
@@ -279,8 +291,18 @@ class PirbStatsController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        // Vérif RGPD : même équipe que la rencontre
-        if ($joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
+        // Vérif RGPD : même équipe que la rencontre, POUR LA SAISON du match
+        // (accès conservé aux matchs passés après la bascule de saison).
+        $equipeMatchId = $rencontre->getEquipe()?->getId();
+        $saisonMatch   = $rencontre->getSaison();
+        $monEquipeCetteSaison = $saisonMatch !== null
+            ? $joueur->equipePourSaison($saisonMatch)
+            : $joueur->getEquipe();
+        $accede = $equipeMatchId !== null && (
+            $monEquipeCetteSaison?->getId() === $equipeMatchId
+            || $joueur->getEquipe()?->getId() === $equipeMatchId
+        );
+        if (!$accede) {
             throw $this->createAccessDeniedException();
         }
 
@@ -358,8 +380,17 @@ class PirbStatsController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        // Vérif RGPD : même équipe
-        if ($joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
+        // Vérif RGPD : même équipe, POUR LA SAISON du match (matchs passés OK).
+        $equipeMatchId = $rencontre->getEquipe()?->getId();
+        $saisonMatch   = $rencontre->getSaison();
+        $monEquipeCetteSaison = $saisonMatch !== null
+            ? $joueur->equipePourSaison($saisonMatch)
+            : $joueur->getEquipe();
+        $accede = $equipeMatchId !== null && (
+            $monEquipeCetteSaison?->getId() === $equipeMatchId
+            || $joueur->getEquipe()?->getId() === $equipeMatchId
+        );
+        if (!$accede) {
             throw $this->createAccessDeniedException();
         }
 

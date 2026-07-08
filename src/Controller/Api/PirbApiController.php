@@ -211,9 +211,24 @@ class PirbApiController extends AbstractController
         //    (x lateral 0-1, y 0=ligne de fond → 1=médiane, panier en 0.5,0).
         foreach ($this->tirFfbbRepo->findForJoueur($joueur) as $tir) {
             if ($tir->getSource() !== TirFfbb::SOURCE_FFBB) { continue; }
-            if ($tir->getFfbbX() === null || $tir->getFfbbY() === null) { continue; }
-            $x = $tir->getFfbbX() / 1000.0;
-            $y = $tir->getFfbbY() / 1000.0;
+
+            // Deux jeux de coordonnées existent sur TirFfbb :
+            //   - ffbbX/ffbbY : pour-mille (0-1000), déjà dans le repère du
+            //     contrat app (x latéral, y 0=fond → 1=médiane, panier en 0.5,0).
+            //   - positionX/positionY : échelle 0-100, repère WEB (panier à
+            //     gauche). C'est ce champ qui est réellement rempli pour les
+            //     tirs FFBB (le web s'en sert). On le convertit vers le repère
+            //     app : latéral = positionY, distance au panier = positionX.
+            if ($tir->getFfbbX() !== null && $tir->getFfbbY() !== null) {
+                $x = $tir->getFfbbX() / 1000.0;
+                $y = $tir->getFfbbY() / 1000.0;
+            } elseif ($tir->getPositionX() !== null && $tir->getPositionY() !== null) {
+                $x = $tir->getPositionY() / 100.0;
+                $y = $tir->getPositionX() / 100.0;
+            } else {
+                continue;
+            }
+
             $tirs[] = [
                 'x'      => $x,
                 'y'      => $y,
