@@ -29,10 +29,17 @@
 			--mabb-red: #ff3b2f;
 			--mabb-gray: #f8f9fa
 		}
+		/* [08/07] overflow-x sur html ET body (+ largeur bornée) : sur iOS Safari,
+		   le seul body ne suffit pas à empêcher la bande de débordement à droite. */
+		html {
+			overflow-x: hidden;
+		}
 		body {
 			font-family: 'Inter', sans-serif;
 			color: #343a40;
-			overflow-x: hidden
+			overflow-x: hidden;
+			max-width: 100%;
+			width: 100%;
 		}
 		h1,
 		h2,
