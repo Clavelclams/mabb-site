@@ -243,6 +243,27 @@
 				font-size: 1.6rem
 			}
 		}
+
+		/* ═══ [08/07] Filet responsive mobile — rien ne déborde en largeur ═══
+		   Le body a overflow-x:hidden : ce qui dépasse est COUPÉ (invisible).
+		   On empêche donc les éléments larges de dépasser, et on rend les
+		   tableaux scrollables en interne plutôt que coupés. */
+		img, video, iframe { max-width: 100%; height: auto; }
+		.article-content { overflow-wrap: break-word; word-wrap: break-word; }
+		.article-content img { border-radius: 8px; }
+		@media (max-width: 991.98px) {
+			/* Tableaux (admin surtout) : scroll horizontal interne au lieu
+			   d'être coupés par l'overflow-x:hidden du body. */
+			table.table, .table-mabb {
+				display: block;
+				width: 100%;
+				overflow-x: auto;
+				-webkit-overflow-scrolling: touch;
+				white-space: nowrap;
+			}
+			/* Les grilles de boutons/formulaires ne débordent pas non plus. */
+			.card-mabb { max-width: 100%; }
+		}
 	</style>
 	{% block extra_css %}{% endblock %}
 	{% block javascripts %}
@@ -315,7 +336,10 @@
 						</a>
 					</li>
 				</ul>
-				<div class="d-flex align-items-center gap-2">
+				{# [08/07] Zone auth responsive : flex-wrap + stacking pour éviter le
+				   débordement horizontal dans le menu replié (hamburger jusqu'à 1400px,
+				   navbar-expand-xxl), surtout en mode admin (6-7 boutons). #}
+				<div class="d-flex flex-wrap align-items-center justify-content-center justify-content-xxl-end gap-2 mt-3 mt-xxl-0 w-100 w-xxl-auto">
 					{% if app.user %}
 						<a href="{{ path('vitrine_compte_mon_compte') }}" class="btn btn-sm btn-outline-light rounded-pill px-3">
 							<i class="bi bi-person-circle me-1"></i>

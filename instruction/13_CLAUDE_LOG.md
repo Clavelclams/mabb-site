@@ -10,6 +10,23 @@
 
 ---
 
+### 2026-07-08 — Vitrine : responsive mobile (navbar admin + tableaux + images)
+
+- Objectif : corriger les débordements sur mobile/iPad quand connecté admin (navbar qui déborde, tableaux/divs coupés, scroll horizontal).
+- Analyse (avant de coder) :
+  - **Découverte** : `templates/vitrine/navbar.html.twig` n'est inclus NULLE PART → fichier MORT. La navbar LIVE est inline dans `base.html.twig` (`#navbarMain`). Conséquence : le bouton « Espace membre » ajouté plus tôt dans navbar.html.twig ne s'affiche pas (à refaire dans base.html.twig si voulu).
+  - Cause navbar : zone auth `d-flex align-items-center gap-2` SANS flex-wrap ni stacking → en admin (6-7 boutons), débordement horizontal dans le menu replié (hamburger jusqu'à 1400px car `navbar-expand-xxl`).
+  - Cause tableaux : `admin/articles/index`, `logs_connexion`, `rgpd` ont des `<table>` SANS `.table-responsive` → coupés par l'`overflow-x:hidden` du body. (Le calendrier vitrine a déjà son wrapper.)
+- Actions (`templates/vitrine/base.html.twig` uniquement) :
+  1. Zone auth navbar → `flex-wrap` + `justify-content-center justify-content-xxl-end` + `w-100 w-xxl-auto mt-3 mt-xxl-0` : les boutons passent à la ligne / se centrent au lieu de déborder.
+  2. Filet CSS responsive global : `img/video/iframe { max-width:100% }`, `.article-content { overflow-wrap:break-word }`, et **@media ≤991px** : `table.table, .table-mabb { display:block; overflow-x:auto; white-space:nowrap }` → scroll horizontal INTERNE aux tableaux au lieu d'être coupés. Couvre les tableaux admin actuels ET futurs sans éditer chaque fichier.
+- Fichiers : `templates/vitrine/base.html.twig`, ce log.
+- Vigilance :
+  - Je ne vois pas le rendu : j'ai corrigé les causes structurelles/CSS. Si une page précise déborde encore après déploiement, l'indiquer pour un fix ciblé.
+  - `navbar.html.twig` mort : à supprimer un jour (ménage), et re-créer « Espace membre » dans base.html.twig si on le veut vraiment.
+
+---
+
 ### 2026-07-08 — Manager : filtre saison sur l'ENT (PDF FFBB) + fix fuite multi-tenant
 
 - Objectif : sur `/ent`, ne plus montrer les PDF officiels FFBB des saisons passées en 2026-2027 (sauf via sélecteur), en gardant les documents uploadés (réunions, règlements) visibles en continu — demande explicite de Clavel.
