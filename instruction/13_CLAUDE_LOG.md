@@ -10,6 +10,29 @@
 
 ---
 
+### 2026-07-08 — Vitrine Lot 2 : bouton « Espace membre »
+
+- Objectif : CDC §3.10 + §6.1 — accès membre depuis le site public.
+- Action : bouton **« Espace membre »** (menu déroulant Manager / PIRB) ajouté à la navbar (`templates/vitrine/navbar.html.twig`), toujours visible.
+- Décision : choix explicite plutôt que redirection auto par rôle. Les 3 apps ont des sessions séparées par sous-domaine, et le rôle (coach/joueuse) est défini PAR CLUB (non résolu sur le site public) → une auto-redirection ne ferait pas gagner la connexion et serait peu fiable. Menu de choix = fallback prévu par le CDC.
+- Reste vitrine : Lot 3 (« comment s'inscrire » + tarifs + pré-inscription → dépend mailer B-304 ; carte d'accès + horaires Contact), Lot 4 (calendrier dynamique, fiches équipe, galerie par équipe).
+
+---
+
+### 2026-07-07 — Module Sorties : Lot C (dashboard global saison)
+
+- Objectif : vue d'ensemble des sorties d'une saison (doc 23 §6.2).
+- Actions réalisées :
+  1. `EvenementRepository::sortiesParClubEtSaison(club, debut, fin)` : sorties (type SORTIE) dans une fenêtre de dates.
+  2. `EvenementController::dashboardSorties()` route `GET /evenements/sorties/dashboard` (CLUB_STAFF). Bornes de saison calculées par la bascule 1er juillet ([1er juil. YYYY, 1er juil. YYYY+1[). Agrège les inscriptions de chaque sortie (réutilise `agregatsInscriptions`). Sélecteur de saison via `?saison=`. `SaisonService` injecté.
+  3. Template `sorties_dashboard.html.twig` : cartes globales (nb sorties, participations, encaissé, autorisations manquantes) + tableau par sortie (inscrits, autor. reçues, encaissé, présents, lien vers l'événement).
+  4. Lien « Dashboard sorties » ajouté sur la page Événements (staff).
+- Points de vigilance :
+  - **À tester** après `cache:clear` : ouvrir `/evenements/sorties/dashboard` (ou le bouton sur la page Événements), changer de saison.
+  - Reste : Lot D (RGPD : entrée registre, purge fin de saison, upload décharge v2).
+
+---
+
 ### 2026-07-07 — Module Sorties : Lot B (inscriptions, autorisation, paiement, présence)
 
 - Objectif : rendre les sorties gérables depuis /evenements/{id} (remplacer le Sheet).

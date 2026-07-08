@@ -547,6 +547,10 @@
 					<a href="{{ path('vitrine_mentions_legales') }}" class="text-white-50">Mentions légales</a>
 					&nbsp;·&nbsp;
 					<a href="{{ path('vitrine_confidentialite') }}" class="text-white-50">Politique de confidentialité</a>
+						&nbsp;·&nbsp;
+						<a href="{{ path('vitrine_cgu') }}" class="text-white-50">CGU</a>
+						&nbsp;·&nbsp;
+						<a href="{{ path('vitrine_plan_site') }}" class="text-white-50">Plan du site</a>
 				</p>
 				<p class="mb-0 mt-1" style="font-size:.75rem;opacity:.6">Crée par Clavel by <a href="https://velito.fr" target="_blank" rel="noopener" style="color:var(--mabb-orange);text-decoration:none;font-weight:600">VENA</a></p>
 			</div>
@@ -557,4 +561,6 @@
 	{% block extra_js %}{% endblock %}
 	{# Chatbot FAQ scripté (V1 sans IA) — présent sur toutes les pages vitrine #}
 	{% include 'vitrine/_chatbot.html.twig' %}
+	{# Bandeau cookies RGPD (informatif, cookies nécessaires uniquement) #}
+	{% include 'vitrine/_cookies.html.twig' %}
 </body></html>

@@ -1,0 +1,76 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Conditions générales d'utilisation — MABB{% endblock %}
+{% block meta_description %}Conditions générales d'utilisation du site du MABB — Amiens Métropole Basket Ball.{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container text-center">
+        <h1>Conditions générales d'utilisation</h1>
+        <p style="color:rgba(255,255,255,.75)">Dernière mise à jour : {{ "now"|date("d/m/Y") }}</p>
+    </div>
+</div>
+
+<section class="section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 article-content">
+
+                <h2>1. Objet</h2>
+                <p>Les présentes conditions générales d'utilisation (« CGU ») encadrent l'accès et
+                l'usage du site {{ cms('cgu_nom_site', 'mabb.fr') }}, édité par l'association
+                MABB — Amiens Métropole Basket Ball (association loi 1901). En naviguant sur le
+                site, l'utilisateur accepte sans réserve les présentes CGU.</p>
+
+                <h2>2. Accès au site</h2>
+                <p>Le site est accessible gratuitement à tout utilisateur disposant d'un accès à
+                Internet. Les frais liés à cet accès (matériel, connexion) restent à la charge de
+                l'utilisateur. L'association s'efforce d'assurer la disponibilité du site mais ne
+                saurait être tenue responsable d'une interruption, quelle qu'en soit la cause.</p>
+
+                <h2>3. Espace membre</h2>
+                <p>Certaines fonctionnalités nécessitent la création d'un compte (espaces Manager et
+                PIRB). L'utilisateur est responsable de la confidentialité de ses identifiants et de
+                toute activité réalisée depuis son compte. Pour les mineurs, l'inscription requiert
+                l'accord d'un représentant légal.</p>
+
+                <h2>4. Propriété intellectuelle</h2>
+                <p>L'ensemble des contenus du site (textes, logos, photographies, éléments
+                graphiques) est protégé par le droit de la propriété intellectuelle et demeure la
+                propriété du club ou de ses partenaires. Toute reproduction sans autorisation
+                préalable est interdite.</p>
+
+                <h2>5. Données personnelles</h2>
+                <p>Le traitement des données personnelles est décrit dans notre
+                <a href="{{ path('vitrine_confidentialite') }}">politique de confidentialité</a>,
+                conforme au RGPD. L'utilisateur dispose d'un droit d'accès, de rectification et de
+                suppression de ses données.</p>
+
+                <h2>6. Liens externes</h2>
+                <p>Le site peut contenir des liens vers des sites tiers (fédération, partenaires,
+                réseaux sociaux). L'association n'exerce aucun contrôle sur ces sites et décline
+                toute responsabilité quant à leur contenu.</p>
+
+                <h2>7. Responsabilité</h2>
+                <p>Les informations publiées sur le site le sont à titre indicatif et peuvent être
+                modifiées à tout moment. L'association ne saurait être tenue responsable des erreurs
+                ou omissions, ni de l'usage qui pourrait être fait de ces informations.</p>
+
+                <h2>8. Droit applicable</h2>
+                <p>Les présentes CGU sont soumises au droit français. Tout litige relatif à leur
+                interprétation ou exécution relève des tribunaux compétents.</p>
+
+                <hr class="my-5">
+                <p class="text-muted small">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Document type à faire relire par un juriste avant valeur contractuelle définitive.
+                </p>
+
+                <a href="{{ path('vitrine_accueil') }}" class="btn rounded-pill fw-semibold"
+                   style="background:#fc702a;color:#fff;border:none;">
+                    <i class="bi bi-arrow-left me-1"></i>Retour à l'accueil
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

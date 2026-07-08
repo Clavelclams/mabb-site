@@ -1,0 +1,31 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{# Page 404 stylisée (override Symfony) — s'affiche en prod pour toute route
+   introuvable. Étend la vitrine pour garder navbar + footer + identité MABB. #}
+
+{% block title %}Page introuvable — MABB{% endblock %}
+{% block meta_description %}La page demandée est introuvable sur le site du MABB.{% endblock %}
+
+{% block body %}
+<section class="section">
+    <div class="container text-center" style="padding:70px 15px;">
+        <div style="font-size:5.5rem;line-height:1;font-weight:800;color:var(--mabb-orange,#fc702a);">
+            404 <span style="font-size:3.2rem;">🏀</span>
+        </div>
+        <h1 class="mt-3">Balle perdue !</h1>
+        <p class="text-muted" style="max-width:520px;margin:0 auto;">
+            Cette page a filé hors du terrain. Elle a peut-être été déplacée, ou elle n'existe plus.
+        </p>
+        <div class="mt-4 d-flex gap-2 justify-content-center flex-wrap">
+            <a href="{{ path('vitrine_accueil') }}" class="btn rounded-pill fw-semibold"
+               style="background:#fc702a;color:#fff;border:none;">
+                <i class="bi bi-house-door me-1"></i>Retour à l'accueil
+            </a>
+            <a href="{{ path('vitrine_news') }}" class="btn rounded-pill fw-semibold"
+               style="background:var(--mabb-blue,#0d1b2a);color:#fff;border:none;">
+                <i class="bi bi-newspaper me-1"></i>Voir les actualités
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -34,6 +34,32 @@
                     {{ article.contenu|raw }}
                 </div>
 
+                {# Partage réseaux sociaux — URL = page courante (absolue) #}
+                <div class="article-partage d-flex align-items-center flex-wrap gap-2 mt-4">
+                    <span class="text-muted small me-1"><i class="bi bi-share-fill me-1"></i>Partager :</span>
+                    <a class="btn btn-sm rounded-pill" style="background:#1877f2;color:#fff;border:none;"
+                       target="_blank" rel="noopener" aria-label="Partager sur Facebook"
+                       href="https://www.facebook.com/sharer/sharer.php?u={{ app.request.uri|url_encode }}">
+                        <i class="bi bi-facebook"></i>
+                    </a>
+                    <a class="btn btn-sm rounded-pill" style="background:#000;color:#fff;border:none;"
+                       target="_blank" rel="noopener" aria-label="Partager sur X"
+                       href="https://twitter.com/intent/tweet?url={{ app.request.uri|url_encode }}&amp;text={{ article.titre|url_encode }}">
+                        <i class="bi bi-twitter-x"></i>
+                    </a>
+                    <a class="btn btn-sm rounded-pill" style="background:#25d366;color:#fff;border:none;"
+                       target="_blank" rel="noopener" aria-label="Partager sur WhatsApp"
+                       href="https://wa.me/?text={{ (article.titre ~ ' ' ~ app.request.uri)|url_encode }}">
+                        <i class="bi bi-whatsapp"></i>
+                    </a>
+                    <button type="button" class="btn btn-sm rounded-pill"
+                            style="background:var(--mabb-blue,#0d1b2a);color:#fff;border:none;"
+                            aria-label="Copier le lien"
+                            onclick="navigator.clipboard.writeText('{{ app.request.uri|e('js') }}');this.innerHTML='&lt;i class=\'bi bi-check-lg\'&gt;&lt;/i&gt; Lien copié';">
+                        <i class="bi bi-link-45deg"></i> Copier le lien
+                    </button>
+                </div>
+
                 <hr class="my-5">
 
                 <div class="d-flex justify-content-between align-items-center">

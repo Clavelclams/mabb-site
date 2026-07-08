@@ -1,0 +1,67 @@
+{% extends 'vitrine/base.html.twig' %}
+{% block title %}Plan du site — MABB{% endblock %}
+{% block meta_description %}Plan du site du MABB — toutes les pages du site en un coup d'œil.{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div class="container text-center">
+        <h1>Plan du site</h1>
+        <p style="color:rgba(255,255,255,.75)">Toutes les pages du site, en un coup d'œil.</p>
+    </div>
+</div>
+
+<section class="section">
+    <div class="container">
+        <div class="row g-4 justify-content-center">
+
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100">
+                    <h2 class="h5"><i class="bi bi-house-door text-mabb-orange me-2"></i>Le club</h2>
+                    <ul class="list-unstyled mt-2 mb-0">
+                        <li><a href="{{ path('vitrine_accueil') }}">Accueil</a></li>
+                        <li><a href="{{ path('vitrine_club') }}">Présentation du club</a></li>
+                        <li><a href="{{ path('vitrine_formation') }}">Parcours de formation</a></li>
+                        <li><a href="{{ path('vitrine_cite_educative') }}">Cité éducative</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100">
+                    <h2 class="h5"><i class="bi bi-trophy text-mabb-orange me-2"></i>Vie sportive</h2>
+                    <ul class="list-unstyled mt-2 mb-0">
+                        <li><a href="{{ path('vitrine_equipes') }}">Nos équipes</a></li>
+                        <li><a href="{{ path('vitrine_calendrier') }}">Calendrier</a></li>
+                        <li><a href="{{ path('vitrine_victoires') }}">Nos victoires</a></li>
+                        <li><a href="{{ path('vitrine_news') }}">Actualités</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-mabb p-4 h-100">
+                    <h2 class="h5"><i class="bi bi-person-badge text-mabb-orange me-2"></i>Espace membre & contact</h2>
+                    <ul class="list-unstyled mt-2 mb-0">
+                        <li><a href="{{ path('vitrine_contact') }}">Contact</a></li>
+                        <li><a href="https://manager.mabb.fr">Espace staff (Manager)</a></li>
+                        <li><a href="https://pirb.mabb.fr">Espace joueuse (PIRB)</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card card-mabb p-4">
+                    <h2 class="h5"><i class="bi bi-shield-check text-mabb-orange me-2"></i>Informations légales</h2>
+                    <ul class="list-unstyled mt-2 mb-0">
+                        <li><a href="{{ path('vitrine_mentions_legales') }}">Mentions légales</a></li>
+                        <li><a href="{{ path('vitrine_confidentialite') }}">Politique de confidentialité</a></li>
+                        <li><a href="{{ path('vitrine_cgu') }}">Conditions générales d'utilisation</a></li>
+                        <li><a href="{{ path('vitrine_plan_site') }}">Plan du site</a></li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

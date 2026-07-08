@@ -32,4 +32,16 @@ class LegalController extends AbstractController
     {
         return $this->render('vitrine/legal/confidentialite.html.twig');
     }
+
+    #[Route('/conditions-generales', name: 'vitrine_cgu', methods: ['GET'])]
+    public function cgu(): Response
+    {
+        return $this->render('vitrine/legal/cgu.html.twig');
+    }
+
+    #[Route('/plan-du-site', name: 'vitrine_plan_site', methods: ['GET'])]
+    public function planSite(): Response
+    {
+        return $this->render('vitrine/legal/plan_site.html.twig');
+    }
 }

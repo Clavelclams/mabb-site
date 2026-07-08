@@ -57,36 +57,39 @@
 		<div class="container">
 			<div class="row g-3 justify-content-center">
 
-                {# Licenciées — animé de 0 à 373 #}
+                {# Compteurs éditables via le CMS (bloc cms('clé','défaut')) : la
+                   valeur reste NUMÉRIQUE pour que l'animation de comptage marche ;
+                   le suffixe (« + ») est géré à part par data-suffix. L'admin les
+                   ajuste dans /admin/contenus, plus aucun chiffre en dur ici. #}
+                {# Licenciées — animé de 0 à la valeur CMS #}
                 <div class="col-6 col-md-3">
                     <div class="card card-mabb text-center p-4">
                         <i class="bi bi-people-fill text-mabb-orange chiffre-icon"></i>
                         <div class="display-6 fw-bold mt-2 chiffre-number counter-anim"
-                             data-target="373"
+                             data-target="{{ cms('accueil_nb_licenciees', '373') }}"
                              data-suffix="">0</div>
-                        <div class="text-muted small">Licenciées — Saison 2025/26</div>
+                        <div class="text-muted small">{{ cms('accueil_label_licenciees', 'Licenciées — Saison 2025/26') }}</div>
                     </div>
                 </div>
 
-                {# Statiques — inchangés #}
                 <div class="col-6 col-md-3">
                     <div class="card card-mabb text-center p-4">
                         <i class="bi bi-trophy-fill text-mabb-orange chiffre-icon"></i>
-                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="3" data-suffix="">0</div>
+                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="{{ cms('accueil_nb_labels', '3') }}" data-suffix="">0</div>
                         <div class="text-muted small">Labels FFBB 3★</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="card card-mabb text-center p-4">
                         <i class="bi bi-building text-mabb-orange chiffre-icon"></i>
-                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="7" data-suffix="">0</div>
+                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="{{ cms('accueil_nb_quartiers', '7') }}" data-suffix="">0</div>
                         <div class="text-muted small">Quartiers</div>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="card card-mabb text-center p-4">
                         <i class="bi bi-calendar-heart text-mabb-orange chiffre-icon"></i>
-                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="23" data-suffix="+">0</div>
+                        <div class="display-6 fw-bold mt-2 chiffre-number counter-anim" data-target="{{ cms('accueil_nb_annees', '23') }}" data-suffix="+">0</div>
                         <div class="text-muted small">Ans d'engagement</div>
                     </div>
                 </div>

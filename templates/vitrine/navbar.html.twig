@@ -83,6 +83,30 @@
 			   Sur mobile/tablette : stack vertical full-width.
 			   Sur desktop (xxl+) : layout inline horizontal comme avant. #}
 			<div class="d-flex flex-column flex-xxl-row gap-2 align-items-stretch align-items-xxl-center w-100 w-xxl-auto mt-3 mt-xxl-0">
+
+			{# Espace membre — CDC §6.1. Les 3 apps ayant des sessions séparées par
+			   sous-domaine, et le rôle (coach/joueuse) étant défini PAR CLUB (non
+			   résolu sur le site public), on propose un menu de choix explicite
+			   plutôt qu'une redirection automatique peu fiable. #}
+			<div class="dropdown">
+				<button class="btn btn-outline-light btn-sm rounded-pill dropdown-toggle w-100"
+				        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+					<i class="bi bi-grid-3x3-gap-fill me-1"></i>Espace membre
+				</button>
+				<ul class="dropdown-menu dropdown-menu-end">
+					<li>
+						<a class="dropdown-item" href="https://manager.mabb.fr">
+							<i class="bi bi-clipboard-data me-2"></i>Espace staff <span class="text-muted small">(Manager)</span>
+						</a>
+					</li>
+					<li>
+						<a class="dropdown-item" href="https://pirb.mabb.fr">
+							<i class="bi bi-person-badge me-2"></i>Espace joueuse <span class="text-muted small">(PIRB)</span>
+						</a>
+					</li>
+				</ul>
+			</div>
+
 			{% if app.user %}
 				<a href="/compte/mon-compte" class="btn btn-outline-light btn-sm rounded-pill text-truncate"
 				   style="max-width:100%">
