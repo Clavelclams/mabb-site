@@ -10,6 +10,40 @@
 
 ---
 
+### 2026-07-07 — Module Sorties : Lot A (fondations, aucune UI)
+
+- Objectif : démarrer le module Sorties (doc 23) pour remplacer le Google Sheet. Lot A = migration + entités + repo, zéro UI.
+- Actions réalisées :
+  1. `src/Entity/Sport/Evenement.php` : 3 champs ajoutés (`estPayant` bool défaut false, `prix` decimal(6,2) nullable, `autorisationRequise` bool défaut false) + getters/setters.
+  2. `src/Entity/Sport/InscriptionSortie.php` (NOUVEAU) : entité participant à une sortie (identité licenciée OU saisie libre, autorisation, paiement en suivi, présence). Implémente `ClubAwareInterface` via `evenement.club`. Helpers `getNomAffichage()`, `isMineur()`. Constantes pour les enums (autorisation/paiement/moyen/présence).
+  3. `src/Repository/Sport/InscriptionSortieRepository.php` (NOUVEAU) : `findByEvenement()`.
+  4. **ADR-0011** acté dans `08_ADR.md` (entité séparée de EvenementParticipation).
+- Décisions : cf. ADR-0011. Paiement = suivi seul ; autorisation v1 = case reçue ; RGPD mineurs (staff only) à cadrer au Lot D.
+- Points de vigilance / risques :
+  - **Migration à générer + jouer sur le PC** : `php bin/console make:migration` (valide aussi que les entités compilent), relire le SQL, puis `php bin/console doctrine:migrations:migrate`. Puis `--env=test doctrine:schema:update --force` (ou recréer la base de test) pour que les tests suivent.
+  - Défauts sur les 2 booléens → zéro régression sur les événements existants.
+  - Prochain : Lot B (formulaire d'inscription + tableau dans /evenements/{id} + actions autorisation/paiement/présence, avec ClubVoter + CSRF).
+
+---
+
+### 2026-07-08 — Vitrine « lot 1 » : compléments CDC §3 (front)
+
+- Objectif : faire monter la vitrine vers 100 % (hors boutique, descopée pour MABB, cf. doc 24). Lot 1 = quick wins front, zéro migration.
+- Actions :
+  1. **Compteurs accueil éditables CMS** (`vitrine/accueil/index.html.twig`) : les 4 chiffres (licenciées, labels, quartiers, années) passent de valeurs en dur à `cms('clé','défaut')` → éditables dans `/admin/contenus`, valeur numérique conservée pour l'animation. Choix : NE PAS auto-compter les licenciées (le nb de joueuses dans l'app ≠ nb réel de licenciées → chiffre faux).
+  2. **Page 404 stylisée** : `templates/bundles/TwigBundle/Exception/error404.html.twig` (override Symfony, étend la vitrine, identité MABB).
+  3. **Bandeau cookies RGPD** : `vitrine/_cookies.html.twig` (informatif, cookies nécessaires only, acquittement + localStorage) inclus dans `base.html.twig`.
+  4. **CGU + Plan du site** : 2 routes dans `LegalController` (`/conditions-generales`, `/plan-du-site`) + templates `legal/cgu.html.twig` et `legal/plan_site.html.twig` + liens ajoutés au footer.
+  5. **Boutons de partage** (Facebook/X/WhatsApp/copier-lien) sur `vitrine/accueil/article.html.twig`.
+- Décisions : boutique e-commerce (CDC §3.7) **descopée pour MABB**, conservée comme feature SaaS backlog (demande Willy) — actée dans doc 24.
+- Fichiers : index.html.twig, error404.html.twig (nouveau), _cookies.html.twig (nouveau), cgu.html.twig (nouveau), plan_site.html.twig (nouveau), LegalController.php, base.html.twig, article.html.twig, docs 24 + ce log.
+- Points de vigilance :
+  - Non linté ici (pas de PHP) → `lint:twig` + `php -l LegalController` + `cache:clear` avant commit.
+  - CGU = document type, à faire relire par un juriste (noté dans la page).
+  - Reste vitrine : lot 2 (bouton « Espace membre » par rôle), lot 3 (inscription/tarifs + pré-inscription → dépend mailer B-304), lot 4 (calendrier dynamique, fiches équipe).
+
+---
+
 ### 2026-07-07 (quinquies) — Manager : filtre saison sur Stats Live
 
 - Objectif : sur `/stats-live`, ne plus afficher les matchs des saisons passées en 2026-2027, sauf si on bascule la saison via un dropdown sur la page.

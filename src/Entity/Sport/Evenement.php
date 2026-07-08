@@ -134,6 +134,20 @@ class Evenement implements ClubAwareInterface
     #[Assert\Range(min: 1, max: 999, notInRangeMessage: 'Entre 1 et 999.')]
     private ?int $inscriptionsMax = null;
 
+    // ===== Sorties payantes (module Sorties, cf. doc 23) =====
+
+    /** L'événement a-t-il un tarif ? (sorties payantes) */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $estPayant = false;
+
+    /** Tarif par participant si payant. Decimal → string côté PHP. */
+    #[ORM\Column(type: Types::DECIMAL, precision: 6, scale: 2, nullable: true)]
+    private ?string $prix = null;
+
+    /** Faut-il une autorisation parentale pour participer ? */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $autorisationRequise = false;
+
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $createur = null;
@@ -191,6 +205,15 @@ class Evenement implements ClubAwareInterface
 
     public function getInscriptionsMax(): ?int { return $this->inscriptionsMax; }
     public function setInscriptionsMax(?int $inscriptionsMax): static { $this->inscriptionsMax = $inscriptionsMax; return $this; }
+
+    public function isEstPayant(): bool { return $this->estPayant; }
+    public function setEstPayant(bool $estPayant): static { $this->estPayant = $estPayant; return $this; }
+
+    public function getPrix(): ?string { return $this->prix; }
+    public function setPrix(?string $prix): static { $this->prix = $prix; return $this; }
+
+    public function isAutorisationRequise(): bool { return $this->autorisationRequise; }
+    public function setAutorisationRequise(bool $autorisationRequise): static { $this->autorisationRequise = $autorisationRequise; return $this; }
 
     public function getCreateur(): ?User { return $this->createur; }
     public function setCreateur(?User $createur): static { $this->createur = $createur; return $this; }

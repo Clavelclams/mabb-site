@@ -114,3 +114,17 @@ Chaque ADR suit le format : Date / Contexte / Options / Decision / Consequences.
   - Phase 2 (poste de dev) : installer API Platform + LexikJWT, remplacer `access_token` par `jwt: ~` — les contrôleurs et le client mobile ne changent pas (le header Bearer reste identique).
   - Migration `Version20260706100000` (table api_token). Prefix routes `/api` retiré de routes.yaml (doublonnait les attributs, dossier Api vide avant B4).
 - Alternatives rejetées : (A) retarde la validation du flux sans bénéfice ; (C) évident.
+
+---
+
+### ADR-0011 — Sorties payantes : entité InscriptionSortie séparée de EvenementParticipation
+- Date : 2026-07-07
+- Contexte : Le club gère des sorties (plage, structures gonflables…) avec participants identifiés (dont non-licenciés), autorisation parentale et suivi de paiement — aujourd'hui sur Google Sheet. Il faut le porter dans le Manager. `Evenement` existe déjà (type SORTIE) ; `EvenementParticipation` gère la participation d'un User (membre gamifié). Cf. cadrage doc 23.
+- Options : (A) Étendre `EvenementParticipation` pour accueillir aussi les non-licenciés + paiement + autorisation. (B) Nouvelle entité `InscriptionSortie` séparée, liée à `Evenement`, `joueur` nullable.
+- Décision : **(B)**. `EvenementParticipation` exige un User (unicité + gamification missions/badges) : y mêler des non-licenciés casserait la contrainte ET la gamification. Séparation nette : `EvenementParticipation` = membres gamifiés ; `InscriptionSortie` = sorties (licenciées OU saisie libre). Règle d'intégrité : `joueur` renseigné OU (`nom` + `prenom`). 3 champs ajoutés à `Evenement` (`estPayant`, `prix`, `autorisationRequise`).
+- Conséquences :
+  - Lot A (fondations) : 3 colonnes sur `sport_evenement` + table `sport_inscription_sortie`. Défauts (estPayant/autorisationRequise = false) → zéro régression sur l'existant.
+  - `InscriptionSortie` implémente `ClubAwareInterface` (via `evenement.club`) → protégée par le `ClubVoter` au Lot B, sans code d'isolation spécifique.
+  - Paiement = SUIVI uniquement (statut/montant/moyen/date) ; aucun encaissement en ligne (chantier séparé). Autorisation v1 = case « reçue » ; upload décharge = v2 (champ `autorisationFichier` créé mais non utilisé).
+  - RGPD : données de mineurs (nom, date de naissance, responsable légal) → accès staff uniquement, jamais côté PIRB/public ; entrée à créer dans `07_REGISTRE_SECURITE_RGPD.md` ; purge après saison à définir.
+- Alternatives rejetées : (A) — dénaturerait `EvenementParticipation` (User obligatoire + gamification) pour accueillir des non-licenciés non gamifiés.
