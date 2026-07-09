@@ -10,6 +10,35 @@
 
 ---
 
+### 2026-07-08 — Multi-club Lot 2a : référentiel officiel FFBB (socle « club officiel »)
+
+- Décision produit (Clavel) : n'importe qui peut créer un club → créé **non-officiel**, créateur = admin auto. Un club devient **officiel** si son n° FFBB existe dans l'annuaire officiel FFBB. Officiel et non-officiel = **mêmes fonctionnalités**. Anti-doublon via le n° FFBB.
+- Réponse à « comment un club devient officiel » : il faut un **numéro FFBB présent dans le référentiel FFBB**. Clavel a fourni les exports FFBB « Rechercher un organisme » (`rechercherOrganisme.xlsx`, ~7100 clubs/ententes : N° groupement type `HDF0080036`, Nom, Type).
+- Actions (socle, autonome) :
+  1. Entité `OrganismeFfbb` (référence read-only : `numero` unique, `nom`, `type`). Table `organisme_ffbb`.
+  2. `OrganismeFfbbRepository` : `findOneByNumero()` + `estOfficiel()`.
+  3. Commande `app:import-ffbb-organismes <fichier.xlsx> [--dry-run]` (PhpSpreadsheet) : upsert par numéro, idempotent (relançable sur les 2 exports), flush par lots de 500, validation format `^[A-Z]{2,4}\d{5,}$`.
+- À faire par Clavel : `doctrine:migrations:diff` + `migrate` (crée la table), puis importer les xlsx (voir commandes du jour). Aucune donnée club touchée.
+- Reste (Lot 2b) : champs `Club` (numeroFfbb, isOfficiel, discipline, createur, plan) + migration + formulaire de création + écran d'accueil public + officialisation (match sur `OrganismeFfbb`). En attente de 3 confirmations (discipline / champ plan / couleurs).
+
+---
+
+### 2026-07-08 — Multi-club Lot 1 : super-admin cross-club (admin@velito.fr)
+
+- Objectif : un compte support (admin@velito.fr) qui voit TOUS les clubs et peut entrer dans n'importe lequel pour dépanner, sans en être membre.
+- Constat : `ROLE_SUPER_ADMIN` existe déjà et `ClubVoter` le court-circuite (tous droits dans un club). La commande `app:create-admin` crée déjà un super-admin. Le blocage était `TenantResolver::getCurrentClub/setCurrentClub` qui exigeait l'appartenance au club.
+- Actions :
+  1. `TenantResolver` : bypass `userBelongsToClub` pour un super-admin (getCurrentClub + setCurrentClub), + helper `isSuperAdmin()`.
+  2. `SuperAdminController` (`#[IsGranted('ROLE_SUPER_ADMIN')]`) : `GET /super-admin/clubs` (liste tous les clubs) + `POST /super-admin/clubs/{id}/entrer` (pose le club actif, CSRF).
+  3. Template `manager/super_admin/clubs.html.twig` : page autonome (n'étend pas le layout Manager → pas de dépendance à un club actif).
+  4. `ManagerLoginController::dashboard` : super-admin sans club actif → redirigé vers la console cross-club (flux fluide à la connexion).
+- Sécurité : accès réservé au seul rôle global ROLE_SUPER_ADMIN (aucun rôle de club ne l'accorde). Le club actif d'un super-admin est posé en session comme pour un user normal.
+- Fichiers : `src/Security/Tenant/TenantResolver.php`, `src/Controller/Manager/SuperAdminController.php` (nouveau), `templates/manager/super_admin/clubs.html.twig` (nouveau), `src/Controller/Manager/ManagerLoginController.php`, ce log.
+- Compte à créer (Clavel, sur OVH, mdp saisi en caché) : `php bin/console app:create-admin --email=admin@velito.fr --prenom=Clavel --nom=Velito`.
+- Reste (Lot 2) : création/rejoindre un club (public) → migration Club (discipline, n° FFBB, officiel, couleurs, créateur) + décisions produit à trancher avant de coder.
+
+---
+
 ### 2026-07-08 — Vitrine : responsive mobile (navbar admin + tableaux + images)
 
 - Objectif : corriger les débordements sur mobile/iPad quand connecté admin (navbar qui déborde, tableaux/divs coupés, scroll horizontal).
