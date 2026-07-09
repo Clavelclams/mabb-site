@@ -1582,12 +1582,24 @@ club = TenantResolver, saison = équipe choisie, anti-IDOR équipe, idempotent, 
 Templates import/rencontres_upload + rencontres_apercu. Bouton « Importer FFBB » sur rencontre/index.
 Commande app:import-rencontres-from-xlsx REFACTORISÉE pour déléguer au service (DRY) — à re-tester en --dry-run.
 Trombinoscope : DÉJÀ web (ImportTrombinoscopeController) — pas recodé. PAS de migration. cache:clear requis.
-nts` dans `config/routes/vitrine.yaml` et bloc `admin_controllers` de `config/routes.yaml`. Ces contraintes forçaient Symfony à générer des URLs absolues avec `localhost` comme host par défaut sur le serveur OVH.
-  2. **Fix placeholder index** — `templates/vitrine/accueil/index.html.twig` : remplacement du bloc `.photo-placeholder` par `<img src="images/teamsU1.jpg">` dans la section "Un club engagé pour le basket féminin".
-  3. **Fix placeholder club** — `templates/vitrine/accueil/club.html.twig` : même correction, image teamsU1.jpg.
-  4. **Fix breadcrumb equipes** — `templates/vitrine/accueil/equipes.html.twig` : suppression du `<li>` breadcrumb "Équipe 3x3". NOTE : ce lien avait été ajouté intentionnellement en session 34. Sa suppression est justifiée par la sémantique breadcrumb (un breadcrumb représente le chemin VERS la page courante, pas vers ses enfants). Si tu veux le conserver comme raccourci, réintroduis-le comme un bouton ou badge distinct du breadcrumb.
-  5. **Ajout image** — `public/images/teamsU1.jpg` ajouté au repo git.
-  6. **Audit visuel** — pages visitées : accueil, club, membres, équipes, news, contact, galerie, calendrier. Aucun autre bug fonctionnel détecté. La page galerie affiche "Photos à venir" (intentionnel). Articles de test visibles (intentionnel).
+
+## 2026-07-09 — Fix import rencontres (message + menu saison)
+- Bug UX : quand tous les matchs sont déjà en base (idempotence), l'upload affichait
+  « aucun match exploitable » au lieu de router vers l'aperçu. Corrigé : on ne bloque
+  que si equipe_detectee==null OU (apercu vide ET deja_en_base==0).
+- Menu équipe groupé par saison (optgroup), saison en cours (SaisonService::getSaisonCourante)
+  signalée, + avertissement si aucune équipe pour la saison courante (2026-2027).
+- Détection auto validée sur rechercherRencontre.xlsx réel : « METROPOLE AMIENOISE BASKETBALL »,
+  16 matchs, 2 exempt, 0 hors-équipe.
+- À VENIR (au choix de Clavel) : duplication des équipes vers la nouvelle saison (rollover),
+  nécessaire pour importer les matchs 2026-2027 (aucune équipe 2026-2027 en base aujourd'hui).
+
+## 2026-07-09 — UX saisie rapide Stats Live (_modale_joueur_rapide)
+- Bug bloquant : liste des éphémères poussait le modal hors écran → bouton « Ajouter » invisible.
+  Fix : #jr-liste max-height:220px + overflow-y:auto ; modal max-height:92vh + overflow.
+- Couleur mémorisée PAR ÉQUIPE (notres=#3b82f6, adverse=#ef4444) au lieu de par joueuse.
+- Après ajout : on reste sur la même équipe + couleur, on ne vide que prénom/nom/n°, focus prénom.
+nel). Articles de test visibles (intentionnel).
 - Fichiers modifiés :
   - `config/routes/vitrine.yaml`
   - `config/routes.yaml`

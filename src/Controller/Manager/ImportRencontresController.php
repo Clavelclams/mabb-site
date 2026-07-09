@@ -8,6 +8,7 @@ use App\Repository\Sport\EquipeRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
 use App\Service\Import\ImportRencontresService;
+use App\Service\SaisonService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -39,6 +40,7 @@ class ImportRencontresController extends AbstractController
         private readonly TenantResolver $tenantResolver,
         private readonly EquipeRepository $equipeRepository,
         private readonly ImportRencontresService $importer,
+        private readonly SaisonService $saisonService,
     ) {
     }
 
@@ -55,8 +57,13 @@ class ImportRencontresController extends AbstractController
 
         $equipes = $this->equipeRepository->findBy(
             ['club' => $club, 'isActive' => true],
-            ['categorie' => 'ASC']
+            ['saison' => 'DESC', 'categorie' => 'ASC']
         );
+        // Groupé par saison pour le menu (saison en cours en tête).
+        $equipesParSaison = [];
+        foreach ($equipes as $e) {
+            $equipesParSaison[$e->getSaison()][] = $e;
+        }
 
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('import_rencontres', (string) $request->request->get('_token', ''))) {
@@ -125,11 +132,17 @@ class ImportRencontresController extends AbstractController
                 return $this->redirectToRoute('manager_rencontre_import_ffbb');
             }
 
-            if ($resultat['equipe_detectee'] === null || $resultat['apercu'] === []) {
+            // On ne bloque que si RIEN n'est exploitable : soit l'équipe n'a pas
+            // pu être détectée (mauvais fichier), soit il n'y a ni match nouveau
+            // NI match déjà en base. Si des matchs sont déjà en base, on laisse
+            // passer vers l'aperçu (qui affichera « tout est déjà en base »).
+            $stats = $resultat['stats'];
+            $rienDuTout = $resultat['apercu'] === [] && $stats['deja_en_base'] === 0;
+            if ($resultat['equipe_detectee'] === null || $rienDuTout) {
                 @unlink($tempDir . '/' . $tempName);
                 $this->addFlash('warning',
-                    'Aucun match exploitable détecté. Vérifie que le fichier est bien l\'export « Rechercher une rencontre » de cette équipe '
-                    . '(ou que ces matchs ne sont pas déjà tous importés).'
+                    'Aucun match trouvé pour cette équipe dans ce fichier. Vérifie que c\'est bien l\'export '
+                    . '« Rechercher une rencontre » de ton club (colonne « Equipe » = ton club sur chaque ligne).'
                 );
 
                 return $this->redirectToRoute('manager_rencontre_import_ffbb');
@@ -147,8 +160,10 @@ class ImportRencontresController extends AbstractController
         }
 
         return $this->render('manager/import/rencontres_upload.html.twig', [
-            'club'    => $club,
-            'equipes' => $equipes,
+            'club'               => $club,
+            'equipes'            => $equipes,
+            'equipes_par_saison' => $equipesParSaison,
+            'saison_courante'    => $this->saisonService->getSaisonCourante(),
         ]);
     }
 

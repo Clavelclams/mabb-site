@@ -22,7 +22,8 @@
 
     <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
                 background:var(--mabb-bg-card, #1e2132); border:1px solid var(--mabb-border, #3a3f5c);
-                border-radius:14px; padding:24px 20px; width:min(420px, 95vw); box-shadow:0 8px 40px rgba(0,0,0,.5);">
+                border-radius:14px; padding:24px 20px; width:min(420px, 95vw); box-shadow:0 8px 40px rgba(0,0,0,.5);
+                max-height:92vh; overflow-y:auto;">
 
         {# En-tête #}
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
@@ -82,7 +83,7 @@
                            placeholder="7">
                 </div>
                 <div>
-                    <label style="font-size:.78rem; font-weight:600; display:block; margin-bottom:4px;">Couleur maillot</label>
+                    <label style="font-size:.78rem; font-weight:600; display:block; margin-bottom:4px;">Couleur de l'équipe</label>
                     <div style="display:flex; gap:6px; align-items:center;">
                         <input type="color" id="jr-couleur" value="#3b82f6"
                                style="width:40px; height:36px; padding:2px; border-radius:6px; border:1px solid var(--mabb-border,#3a3f5c); cursor:pointer;">
@@ -90,6 +91,9 @@
                                style="flex:1; padding:8px 10px; border-radius:7px; border:1px solid var(--mabb-border,#3a3f5c);
                                       background:var(--mabb-bg,#111827); color:var(--mabb-text,#f1f5f9); font-size:.85rem;"
                                placeholder="#3b82f6">
+                    </div>
+                    <div style="font-size:.72rem; color:var(--mabb-text-muted,#8b929e); margin-top:3px;">
+                        Une fois par équipe — chaque joueuse la reprend.
                     </div>
                 </div>
             </div>
@@ -122,7 +126,8 @@
         </form>
 
         {# Liste dynamique des éphémères créées — mise à jour sans reload #}
-        <div id="jr-liste" style="margin-top:16px;">
+        {# Hauteur plafonnée + scroll : la liste ne pousse jamais le bouton hors de l'écran. #}
+        <div id="jr-liste" style="margin-top:16px; max-height:220px; overflow-y:auto; padding-right:4px;">
             {% set ephemeresExistantes = [] %}
             {# On a besoin de passer les éphémères depuis le controller — voir show.html.twig #}
         </div>
@@ -146,11 +151,24 @@
     const colorHex      = document.getElementById('jr-couleur-hex');
     const listeDiv      = document.getElementById('jr-liste');
 
-    // Sync color picker ↔ hex input
-    colorPicker.addEventListener('input', () => { colorHex.value = colorPicker.value; });
-    colorHex.addEventListener('input', () => {
-        if (/^#[0-9a-fA-F]{6}$/.test(colorHex.value)) colorPicker.value = colorHex.value;
+    // Couleur mémorisée PAR ÉQUIPE : définie une fois, reprise pour chaque joueuse.
+    const sideColors = { notres: '#3b82f6', adverse: '#ef4444' };
+    function applySideColor(side) {
+        const c = sideColors[side] || '#3b82f6';
+        colorPicker.value = c;
+        colorHex.value    = c;
+    }
+    colorPicker.addEventListener('input', () => {
+        colorHex.value = colorPicker.value;
+        sideColors[sideInput.value] = colorPicker.value;
     });
+    colorHex.addEventListener('input', () => {
+        if (/^#[0-9a-fA-F]{6}$/.test(colorHex.value)) {
+            colorPicker.value = colorHex.value;
+            sideColors[sideInput.value] = colorHex.value;
+        }
+    });
+    applySideColor('notres');
 
     // Onglets Notre équipe / Adversaire
     tabBtns.forEach(btn => {
@@ -165,6 +183,7 @@
             btn.style.borderColor = 'var(--mabb-accent, #3b82f6)';
             sideInput.value = btn.dataset.side;
             adverseRow.style.display = btn.dataset.side === 'adverse' ? 'block' : 'none';
+            applySideColor(btn.dataset.side);
         });
     });
 
@@ -244,11 +263,12 @@
                 errorBox.style.display = 'block';
             } else {
                 renderJoueurCard(data);
-                form.reset();
-                colorPicker.value = '#3b82f6';
-                colorHex.value    = '#3b82f6';
-                // Reset onglets
-                tabBtns[0].click();
+                // On RESTE sur la même équipe + la même couleur pour enchaîner les ajouts.
+                // On ne vide que l'identité de la joueuse.
+                document.getElementById('jr-prenom').value = '';
+                document.getElementById('jr-nom').value    = '';
+                document.getElementById('jr-numero').value = '';
+                document.getElementById('jr-prenom').focus();
                 // Notifier la sidebar stats live si ouverte
                 document.dispatchEvent(new CustomEvent('joueur-ephemere-ajoute', { detail: data }));
             }

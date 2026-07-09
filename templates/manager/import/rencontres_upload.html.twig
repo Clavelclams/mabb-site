@@ -51,12 +51,24 @@
                         <label for="equipe_id" style="display:block; font-weight:600; margin-bottom:6px;">Équipe concernée</label>
                         <select name="equipe_id" id="equipe_id" class="form-select" required>
                             <option value="" disabled selected>Choisir une équipe…</option>
-                            {% for equipe in equipes %}
-                                <option value="{{ equipe.id }}">
-                                    {{ equipe.nom }} — {{ equipe.categorie }} ({{ equipe.saison }})
-                                </option>
+                            {% for saison, liste in equipes_par_saison %}
+                                <optgroup label="Saison {{ saison }}{{ saison == saison_courante ? ' — en cours' : '' }}">
+                                    {% for equipe in liste %}
+                                        <option value="{{ equipe.id }}">{{ equipe.nom }} — {{ equipe.categorie }}</option>
+                                    {% endfor %}
+                                </optgroup>
                             {% endfor %}
                         </select>
+                        <small style="color:var(--mabb-muted, #64748b);">
+                            Les matchs seront rangés dans la saison de l'équipe choisie ({{ saison_courante }} = saison en cours).
+                        </small>
+                        {% if saison_courante not in equipes_par_saison|keys %}
+                            <div style="background:#fff4e5; border-left:4px solid var(--mabb-orange,#e07a1f); padding:10px 14px; border-radius:6px; margin-top:10px; font-size:.85rem;">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Aucune équipe pour la saison en cours <strong>{{ saison_courante }}</strong>. Pour importer les matchs de cette saison,
+                                crée d'abord tes équipes {{ saison_courante }} (ou dis-moi de te préparer la duplication des équipes vers la nouvelle saison).
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div style="margin-bottom:18px;">
