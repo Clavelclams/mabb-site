@@ -1559,17 +1559,20 @@
 - Actions réalisées :
   1. **Encadrement complet** — `equipes.html.twig` : 4 coaches (COULPIED, DUFOSSE, HARTHATI, NDEMA MOUSSA) + 7 services civiques réels (DAOUDI, GUELFAT, YAHIAOUI, BADIBALOWA, PARFAIT, KOUDJIL, ATSHABO photographe)
   2. **Chiffres home** — animation compteur 0→373 (IntersectionObserver + easeOutCubic), 3 autres chiffres statiques restaurés (Labels FFBB, Quartiers, Ans)
-  3. **Nouvelle page /victoires** — "Nos Victoires" : résultats 5x5 par catégorie, 3x3 (45 tournois), sélections nationales/régionales, UNSS
-  4. **Route Symfony** — `vitrine_victoires` ajoutée dans `AccueilController.php`
-  5. **Navbar** — Équipes | Équipe 3×3 | Nos Victoires (3 li côte à côte)
-  6. **Cité Éducative** — chiffres 2025 (974h, 1 145 participants), "En savoir plus" École (collapse Bootstrap) + "En savoir plus" Lycée (collapse), card Collège inchangée
-  7. **Section home "Qui sommes-nous"** — photo remplacée par stack 3 photos animé (panierGonflable 1/2/3) — éventail au repos, spread au hover, CSS pur
-  8. **"Dernières" en blanc** — `index.html.twig` titre section actualités
-  9. **Breadcrumb équipes** — style identique 3x3 : Accueil > Équipes (actif orange) > Nos Victoires
-- Fichiers modifiés :
-  - `templates/vitrine/accueil/index.html.twig`
-  - `templates/vitrine/accueil/equipes.html.twig`
-  - `templates/vitrine/accueil/victoires.html.twig` (nouveau)
+  3. **Nouvelle page /victoi
+## 2026-07-09 — Lot 2b-2 : création de club (multi-club)
+Route PUBLIQUE `GET/POST /creer-un-club` (host manager). N'importe qui crée un club ;
+si anonyme → compte User créé (ROLE_DIRIGEANT plateforme) ; le créateur devient
+admin de SON club via UserClubRole DIRIGEANT STATUS_ACTIVE (droits via ClubVoter).
+Officialisation auto : isOfficiel posé par ClubOfficialisation selon le n° FFBB
+(référentiel organisme_ffbb). Anti-doublon slug + numéro FFBB. Connexion programmatique
+(Security::login firewall 'manager') + setCurrentClub → redirect dashboard.
+Fichiers : security.yaml (+1 règle PUBLIC_ACCESS avant catch-all),
+src/Controller/Manager/ManagerCreerClubController.php (NEW),
+templates/manager/creer_club.html.twig (NEW), templates/manager/login.html.twig (liens).
+PAS de migration (colonnes club déjà en base via Version20260709124204). cache:clear requis (secu).
+Reste : import doc FFBB (rencontres + trombinoscope) en UI Manager ; officialiser MABB (HDF0080036).
+wig` (nouveau)
   - `templates/vitrine/club/cite_educative.html.twig`
   - `templates/vitrine/navbar.html.twig`
   - `src/Controller/Vitrine/AccueilController.php`

@@ -200,6 +200,8 @@ security:
         - { path: ^/login$, host: '^manager\.', roles: PUBLIC_ACCESS }
         # Page inscription manager : publique (signup multi-club)
         - { path: ^/inscription$, host: '^manager\.', roles: PUBLIC_ACCESS }
+        # Création d'un club : publique (n'importe qui peut créer son club)
+        - { path: ^/creer-un-club$, host: '^manager\.', roles: PUBLIC_ACCESS }
         # Gestion avancée (ex: multi-clubs, paramètres plateforme) : super admin
         - { path: ^/admin, host: '^manager\.', roles: ROLE_SUPER_ADMIN }
         # Gestion du club (ex: équipes, joueurs) : dirigeant minimum
