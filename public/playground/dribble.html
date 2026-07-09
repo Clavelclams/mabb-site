@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PIRB Dribble — score auto (spike P2, jeu à niveaux)</title>
+<!--
+  SPIKE P2, étape jeu : LE DRIBBLE AVEC SCORE AUTOMATIQUE.
+  ════════════════════════════════════════════════════════
+  Tu te filmes, des cibles apparaissent, et c'est LA DÉTECTION qui valide :
+  le ballon (repéré par le modèle) entre dans la cible → point compté,
+  animation, cible suivante. Aucune saisie manuelle.
+
+  Niveaux : ça démarre tranquille (1 cible, 5 s), et tous les 5 hits ça
+  monte : cibles plus rapides, puis 2 en même temps, puis 3.
+
+  Ce jeu web = le prototype exact de ce qui ira dans l'app via le
+  development build (react-native-vision-camera + TFLite). Même modèle,
+  même règle du jeu. Si c'est fun ici, c'est GO pour l'app.
+
+  RGPD : flux affiché en direct, rien d'enregistré, analyse 100 % locale.
+  Lancement :  cd spikes/p2-ball-detection && npx serve .
+  Sur téléphone : npx cloudflared tunnel --url http://localhost:3000 (HTTPS requis pour la caméra).
+-->
+<style>
+  :root {
+    --bg: #0A0E14; --surface: #111823; --border: #27354A;
+    --text: #F2F0EB; --muted: #8C96A3;
+    --ball: #FF6B2C; --net: #3ECF8E; --gold: #F5C542;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 14px; min-height: 100vh;
+  }
+  h1 { font-size: 19px; } h1 span { color: var(--ball); }
+  .hint { color: var(--muted); font-size: 13px; text-align: center; max-width: 620px; }
+  button {
+    background: var(--ball); color: var(--bg); border: 0; border-radius: 10px;
+    padding: 12px 26px; font-size: 15px; font-weight: 800; cursor: pointer; min-height: 44px;
+  }
+  #stage { position: relative; width: min(94vw, 880px); aspect-ratio: 4/3;
+           border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #000; }
+  video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  video { object-fit: cover; transform: scaleX(-1); }
+  #hud { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: center;
+         background: var(--surface); border: 1px solid var(--border);
+         border-radius: 12px; padding: 10px 18px; font-size: 14px; }
+  #hud b { font-size: 20px; }
+  #vTemps { color: var(--text); } #vNiveau { color: var(--gold); }
+  #vScore { color: var(--ball); } #vHits { color: var(--net); }
+  #status { font-size: 13px; color: var(--muted); text-align: center; }
+  #fin { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
+         justify-content: center; gap: 10px; background: rgba(10,14,20,0.88); text-align: center; }
+  #fin h2 { font-size: 44px; color: var(--ball); letter-spacing: 2px; }
+  #fin p { color: var(--muted); font-size: 15px; }
+  #fin .gros { font-size: 26px; color: var(--text); font-weight: 800; }
+</style>
+</head>
+<body>
+  <h1>PIRB DRIBBLE — <span>score automatique</span></h1>
+  <p class="hint">
+    Pose ton tel ou ton PC, recule avec ton ballon. Amène-le sur les cibles : la caméra le voit,
+    le point tombe tout seul. Tous les 5 hits, le niveau monte. Ça va aller de plus en plus vite.
+  </p>
+  <button id="btn">Démarrer (90 secondes)</button>
+  <div id="status">Le modèle (~4 Mo) se charge au premier lancement, ensuite tout est local.</div>
+  <div id="stage" hidden>
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="canvas"></canvas>
+    <div id="fin">
+      <h2 id="finScore">0 pts</h2>
+      <p class="gros" id="finNiveau"></p>
+      <p id="finDetail"></p>
+      <button id="btnRejouer">Rejouer</button>
+    </div>
+  </div>
+  <div id="hud" hidden>
+    <span>⏱ <b id="vTemps">90</b>s</span>
+    <span>Niveau <b id="vNiveau">1</b></span>
+    <span>Score <b id="vScore">0</b></span>
+    <span>Touchées <b id="vHits">0</b>/<span id="vApparues">0</span></span>
+    <span style="color:var(--muted)">FPS <b id="vFps" style="color:var(--muted)">–</b></span>
+  </div>
+
+<script type="module">
+import { ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const $ = (id) => document.getElementById(id);
+
+// ---------- Réglages du jeu ---------------------------------------------------
+const DUREE_JEU_S = 90;
+const HITS_PAR_NIVEAU = 5;
+// Chaque niveau : combien de cibles en même temps, et leur durée de vie (ms).
+const NIVEAUX = [
+  { cibles: 1, dureeMs: 5000 },
+  { cibles: 1, dureeMs: 4000 },
+  { cibles: 2, dureeMs: 4000 },
+  { cibles: 2, dureeMs: 3200 },
+  { cibles: 3, dureeMs: 3000 },
+  { cibles: 3, dureeMs: 2500 },
+  { cibles: 3, dureeMs: 2100 },
+];
+const configNiveau = (n) => NIVEAUX[Math.min(n - 1, NIVEAUX.length - 1)];
+
+// ---------- État --------------------------------------------------------------
+let detector = null, lastVideoTime = -1;
+let enJeu = false, finAu = 0;
+let niveau = 1, score = 0, hits = 0, apparues = 0;
+let cibles = []; // { x, y, r, neeA, dureeMs, etat:'live'|'hit', hitA }
+let flottants = []; // les "+30" qui montent { x, y, t0, texte }
+let balleVue = null; // dernière position connue du ballon (anti-clignotement) { bx, by, r, vueA, x, oy, w, h }
+
+// ---------- Modèle (une fois) ---------------------------------------------------
+async function chargerModele() {
+  if (detector) return;
+  $("status").textContent = "Chargement du modèle…";
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+  );
+  detector = await ObjectDetector.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
+      delegate: "GPU",
+    },
+    runningMode: "VIDEO", scoreThreshold: 0.35, maxResults: 4,
+  });
+}
+
+// ---------- Démarrage -----------------------------------------------------------
+$("btn").addEventListener("click", async () => {
+  $("btn").disabled = true;
+  try {
+    await chargerModele();
+    $("status").textContent = "Ouverture de la caméra…";
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 960, height: 720 } });
+    video.srcObject = stream;
+    await new Promise((ok) => (video.onloadeddata = ok));
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    $("stage").hidden = false; $("hud").hidden = false; $("btn").hidden = true;
+    $("status").textContent = "Analyse locale en direct. Rien n'est enregistré, rien ne part.";
+    lancerPartie();
+    requestAnimationFrame(boucle);
+  } catch (e) {
+    $("status").textContent = "Échec : " + e.message;
+    $("btn").disabled = false;
+  }
+});
+
+$("btnRejouer").addEventListener("click", () => { $("fin").style.display = "none"; lancerPartie(); });
+
+function lancerPartie() {
+  enJeu = true; niveau = 1; score = 0; hits = 0; apparues = 0;
+  cibles = []; flottants = [];
+  finAu = performance.now() + DUREE_JEU_S * 1000;
+  majHud();
+}
+
+// ---------- Cibles ---------------------------------------------------------------
+function faireApparaitre(t) {
+  const R = 0.085 * Math.min(canvas.width, canvas.height);
+  cibles.push({
+    x: (0.14 + Math.random() * 0.72) * canvas.width,
+    y: (0.2 + Math.random() * 0.62) * canvas.height,
+    r: R, neeA: t, dureeMs: configNiveau(niveau).dureeMs, etat: "live", hitA: 0,
+  });
+  apparues++;
+}
+
+function toucher(cible, t) {
+  cible.etat = "hit"; cible.hitA = t;
+  hits++;
+  const points = 10 * niveau; // plus le niveau est haut, plus ça rapporte
+  score += points;
+  flottants.push({ x: cible.x, y: cible.y - cible.r, t0: t, texte: `+${points}` });
+  // Montée de niveau tous les 5 hits
+  const nouveau = Math.floor(hits / HITS_PAR_NIVEAU) + 1;
+  if (nouveau > niveau) {
+    niveau = nouveau;
+    flottants.push({ x: canvas.width / 2, y: canvas.height / 2, t0: t, texte: `NIVEAU ${niveau} !` });
+  }
+  majHud();
+}
+
+// ---------- Boucle ---------------------------------------------------------------
+let fpsN = 0, fpsT = performance.now();
+
+function boucle() {
+  if (video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    const t = performance.now();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (enJeu) {
+      // Temps
+      const reste = Math.max(0, Math.ceil((finAu - t) / 1000));
+      $("vTemps").textContent = reste;
+      if (reste <= 0) return finirPartie();
+
+      // On complète le plateau selon le niveau (1, 2 ou 3 cibles vivantes)
+      cibles = cibles.filter((c) => (c.etat === "live" ? t - c.neeA < c.dureeMs : t - c.hitA < 380));
+      while (cibles.filter((c) => c.etat === "live").length < configNiveau(niveau).cibles) {
+        faireApparaitre(t);
+      }
+
+      // Détection du ballon : c'est ELLE qui valide, pas un doigt.
+      // On retient la MEILLEURE détection de la frame et on la mémorise :
+      // si la détection saute une frame, on réutilise la dernière position
+      // connue (< 200 ms) → on ne perd plus un contact à cause d'un clignotement.
+      const res = detector.detectForVideo(video, t);
+      let meilleure = null;
+      for (const d of res.detections) {
+        if (d.categories[0].categoryName !== "sports ball") continue;
+        if (!meilleure || d.categories[0].score > meilleure.categories[0].score) meilleure = d;
+      }
+      if (meilleure) {
+        const b = meilleure.boundingBox;
+        const x = canvas.width - (b.originX + b.width); // vidéo en miroir
+        balleVue = {
+          bx: x + b.width / 2, by: b.originY + b.height / 2,
+          r: Math.max(b.width, b.height) / 2,
+          vueA: t, x, oy: b.originY, w: b.width, h: b.height,
+        };
+      }
+
+      const balleActive = balleVue && (t - balleVue.vueA) < 200;
+      if (balleActive) {
+        // Cadre du ballon : plein s'il vient d'être vu, estompé si mémorisé.
+        const frais = (t - balleVue.vueA) < 45;
+        ctx.strokeStyle = frais ? "#FF6B2C" : "rgba(255,107,44,0.5)";
+        ctx.lineWidth = 3;
+        ctx.strokeRect(balleVue.x, balleVue.oy, balleVue.w, balleVue.h);
+        // Contact TOLÉRANT : la cible se valide si le ballon la chevauche
+        // (rayon cible + un demi-rayon ballon), pas seulement si le centre y est.
+        for (const c of cibles) {
+          if (c.etat === "live" && Math.hypot(balleVue.bx - c.x, balleVue.by - c.y) < c.r + balleVue.r * 0.5) {
+            toucher(c, t);
+          }
+        }
+      }
+
+      // Indicateur "ballon suivi" (l'utilisatrice voit que ça la détecte).
+      ctx.fillStyle = balleActive ? "#3ECF8E" : "rgba(255,255,255,0.35)";
+      ctx.beginPath(); ctx.arc(26, 30, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff"; ctx.font = "600 15px system-ui"; ctx.textAlign = "left";
+      ctx.fillText(balleActive ? "ballon suivi" : "montre le ballon…", 42, 35);
+
+      dessinerCibles(t);
+      dessinerFlottants(t);
+    }
+
+    fpsN++;
+    if (t - fpsT >= 1000) { $("vFps").textContent = fpsN; fpsN = 0; fpsT = t; }
+  }
+  requestAnimationFrame(boucle);
+}
+
+function dessinerCibles(t) {
+  for (const c of cibles) {
+    if (c.etat === "live") {
+      // Pop d'apparition (200 ms) puis anneau du temps restant qui rétrécit
+      const pop = Math.min(1, (t - c.neeA) / 200);
+      const resteFrac = 1 - (t - c.neeA) / c.dureeMs;
+      ctx.strokeStyle = "#FF6B2C"; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r * pop * Math.max(0.15, resteFrac), 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "rgba(255,107,44,0.85)";
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 0.42 * pop, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#0A0E14"; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(c.x - c.r * 0.42, c.y); ctx.lineTo(c.x + c.r * 0.42, c.y); 
