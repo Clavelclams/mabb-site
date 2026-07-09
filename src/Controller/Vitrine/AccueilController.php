@@ -172,8 +172,11 @@ final class AccueilController extends AbstractController
 
                         $emailMessage = (new Email())
                             ->from('noreply@mabb.fr')
-                            ->to('contact@mabb.fr')          // boîte officielle du club
-                            ->addTo('reseauxmabb@gmail.com') // Clavel — réseaux sociaux
+                            // [08/07] Destinataire = admin@mabb.fr (Clavel trie/transmet),
+                            // et NON contact@mabb.fr (boîte de Willy, déjà saturée) : demande
+                            // de Willy pour éviter le flux site/app dans sa boîte.
+                            ->to('admin@mabb.fr')
+                            ->addTo('reseauxmabb@gmail.com') // Clavel — copie de secours
                             ->replyTo($email)                // répondre directement à l'expéditeur
                             ->subject('[MABB Contact] ' . ucfirst($sujet) . ' — ' . $prenom . ' ' . $nom)
                             ->html($corps);
