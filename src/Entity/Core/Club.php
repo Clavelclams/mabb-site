@@ -57,6 +57,51 @@ class Club
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $siteWeb = null;
 
+    // ── Multi-club : création & officialisation ──────────────────────────
+    public const DISCIPLINE_FEMININ  = 'feminin';
+    public const DISCIPLINE_MASCULIN = 'masculin';
+    public const DISCIPLINE_MIXTE    = 'mixte';
+    public const DISCIPLINES = [self::DISCIPLINE_FEMININ, self::DISCIPLINE_MASCULIN, self::DISCIPLINE_MIXTE];
+    public const DISCIPLINE_LIBELLES = [
+        self::DISCIPLINE_FEMININ  => 'Basket féminin',
+        self::DISCIPLINE_MASCULIN => 'Basket masculin',
+        self::DISCIPLINE_MIXTE    => 'Mixte',
+    ];
+
+    public const PLAN_DECOUVERTE = 'decouverte';
+    public const PLAN_CLUB       = 'club';
+    public const PLAN_PREMIUM    = 'premium';
+
+    /** Discipline du club (féminin / masculin / mixte). */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $discipline = null;
+
+    /**
+     * N° d'agrément / groupement FFBB (ex. « HDF0080036 »). Nullable.
+     * Unique quand renseigné (MySQL autorise plusieurs NULL) : anti-doublon /
+     * anti-imposteur — un même numéro ne peut être revendiqué qu'une seule fois.
+     */
+    #[ORM\Column(length: 20, nullable: true, unique: true)]
+    private ?string $numeroFfbb = null;
+
+    /**
+     * OFFICIEL = numeroFfbb correspond à un OrganismeFfbb du référentiel FFBB.
+     * Posé à la validation. Défaut : non-officiel. Officiel/non-officiel ont
+     * les MÊMES fonctionnalités (décision produit) — c'est juste un badge + la
+     * protection anti-doublon.
+     */
+    #[ORM\Column]
+    private bool $isOfficiel = false;
+
+    /** Plan d'abonnement (facturation non implémentée). Défaut : Découverte. */
+    #[ORM\Column(length: 20, options: ['default' => self::PLAN_DECOUVERTE])]
+    private string $plan = self::PLAN_DECOUVERTE;
+
+    /** Créateur du club → admin auto de son club. Nullable (clubs historiques). */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?User $createur = null;
+
     #[ORM\Column]
     private bool $isActive = true;
 
@@ -221,6 +266,33 @@ class Club
     {
         return $this->updatedAt;
     }
+
+    // ── Multi-club : discipline / FFBB / officiel / plan / créateur ───────
+
+    public function getDiscipline(): ?string { return $this->discipline; }
+    public function setDiscipline(?string $discipline): static { $this->discipline = $discipline; return $this; }
+    public function getDisciplineLibelle(): ?string
+    {
+        return $this->discipline !== null ? (self::DISCIPLINE_LIBELLES[$this->discipline] ?? $this->discipline) : null;
+    }
+
+    public function getNumeroFfbb(): ?string { return $this->numeroFfbb; }
+    public function setNumeroFfbb(?string $numeroFfbb): static
+    {
+        // Normalisation : majuscules + trim, ou null si vide (cohérent avec OrganismeFfbb).
+        $numeroFfbb = $numeroFfbb !== null ? strtoupper(trim($numeroFfbb)) : null;
+        $this->numeroFfbb = ($numeroFfbb === '') ? null : $numeroFfbb;
+        return $this;
+    }
+
+    public function isOfficiel(): bool { return $this->isOfficiel; }
+    public function setIsOfficiel(bool $isOfficiel): static { $this->isOfficiel = $isOfficiel; return $this; }
+
+    public function getPlan(): string { return $this->plan; }
+    public function setPlan(string $plan): static { $this->plan = $plan; return $this; }
+
+    public function getCreateur(): ?User { return $this->createur; }
+    public function setCreateur(?User $createur): static { $this->createur = $createur; return $this; }
 
     /** @return Collection<int, UserClubRole> */
     public function getUserClubRoles(): Collection

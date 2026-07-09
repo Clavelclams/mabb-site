@@ -10,6 +10,18 @@
 
 ---
 
+### 2026-07-08 — Multi-club Lot 2b-1 : entité Club (création & officialisation)
+
+- Référentiel FFBB importé en prod ✅ (~7105 organismes ; MABB HDF0080036 reconnu).
+- Décisions produit (défauts validés « fais le max ») : discipline = féminin/masculin/mixte ; champ `plan` défaut « Découverte » sans facturation ; couleurs = skip (v2).
+- Actions (couche données) :
+  1. Entité `Club` : + `discipline` (nullable), + `numeroFfbb` (nullable, **unique** — anti-doublon, MySQL autorise plusieurs NULL), + `isOfficiel` (bool défaut false), + `plan` (défaut PLAN_DECOUVERTE), + `createur` (ManyToOne User, onDelete SET NULL). Constantes DISCIPLINE_* / PLAN_* + libellés + getters/setters (numeroFfbb normalisé majuscules/trim).
+  2. Service `ClubOfficialisation` : `rafraichir(Club)` pose isOfficiel selon `OrganismeFfbbRepository::estOfficiel` ; `organismePour(Club)` renvoie l'organisme (pré-remplissage nom officiel).
+- À faire par Clavel : `doctrine:migrations:diff` + relire + `migrate` (ajoute les colonnes club + contrainte unique numero_ffbb).
+- Reste (Lot 2b-2) : écran d'accueil public « Créer / Rejoindre un club » + formulaire de création (vérif FFBB en direct) + le créateur devient **admin auto** (UserClubRole DIRIGEANT/ADMIN actif). À faire APRÈS la migration + lecture du flux ManagerInscription/UserClubRole pour câbler le rôle correctement.
+
+---
+
 ### 2026-07-08 — Multi-club Lot 2a : référentiel officiel FFBB (socle « club officiel »)
 
 - Décision produit (Clavel) : n'importe qui peut créer un club → créé **non-officiel**, créateur = admin auto. Un club devient **officiel** si son n° FFBB existe dans l'annuaire officiel FFBB. Officiel et non-officiel = **mêmes fonctionnalités**. Anti-doublon via le n° FFBB.
