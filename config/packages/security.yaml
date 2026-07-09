@@ -204,6 +204,11 @@ security:
         - { path: ^/creer-un-club$, host: '^manager\.', roles: PUBLIC_ACCESS }
         # Gestion avancée (ex: multi-clubs, paramètres plateforme) : super admin
         - { path: ^/admin, host: '^manager\.', roles: ROLE_SUPER_ADMIN }
+        # Console super-admin cross-club (liste des clubs + « entrer » en mode
+        # support) : défense en profondeur — le controller a déjà
+        # #[IsGranted('ROLE_SUPER_ADMIN')], on double la protection ici pour
+        # qu'un futur refactor du controller ne puisse pas ouvrir la route.
+        - { path: ^/super-admin, host: '^manager\.', roles: ROLE_SUPER_ADMIN }
         # Gestion du club (ex: équipes, joueurs) : dirigeant minimum
         - { path: ^/club, host: '^manager\.', roles: ROLE_DIRIGEANT }
         # Espace coach (ex: saisie présences, convocations) : coach minimum

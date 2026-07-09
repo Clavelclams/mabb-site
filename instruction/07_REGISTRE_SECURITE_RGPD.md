@@ -94,3 +94,16 @@ Centraliser les obligations de securite + RGPD (tracabilite, conservation, droit
 - Regle : mentions legales et politique de confidentialite accessibles depuis le footer de la vitrine (/mentions-legales, /politique-confidentialite). Contenu variable (adresse, president, contact) editable via le CMS (/admin/contenus) — cle prefixe `legal.*`.
 - Points couverts : editeur/hebergeur, donnees collectees et finalites, cookies techniques uniquement (pas de bandeau requis), durees, droits RGPD (renvoi vers l'export/effacement integres au profil), mineures, recours CNIL.
 - Statut : fait — a relire par le bureau (adresse siege et nom du president a completer dans Admin → Contenus)
+
+---
+
+### RGPD-0010 — Inscriptions sorties : donnees de mineures + purge fin de saison (Lot D)
+- Categorie : RGPD
+- Date : 2026-07-09
+- Traitement : gestion des inscriptions aux sorties du club (entite `InscriptionSortie`, table `sport_inscription_sortie`). Donnees : identite (nom, prenom, date de naissance), responsable legal, telephone de contact, suivi autorisation parentale (+ chemin de decharge signee en v2), suivi paiement (statut, montant, moyen, date), presence, commentaire. Concerne des MINEURES, y compris des non-licenciees exterieures au club.
+- Base legale : execution de la relation adherent/participant (organisation de la sortie). Finalite eteinte a la fin de la saison.
+- Acces : CLUB_STAFF uniquement (Voter `ClubVoter` via `ClubAwareInterface`), jamais expose cote PIRB/public (cf. doc 23 §8, ADR-0011).
+- Conservation / minimisation : ANONYMISATION en fin de saison — commande `app:sorties:purger-rgpd` (dry-run par defaut, `--execute` pour appliquer ; ne touche jamais la saison en cours). L'identite de saisie libre, le responsable legal, le telephone, le commentaire et la reference de decharge sont effaces ; la ligne est conservee (presence, paiement) pour garder des agregats exacts (dashboard, bilans). Le lien vers la fiche `Joueur` (licenciee) est conserve : cycle de vie couvert par RGPD-0008.
+- A planifier : cron annuel (ex. 15 juillet) — meme mecanique que RGPD-0003.
+- Decharge signee v2 (09/07/2026) : upload/consultation/suppression via `DechargeSortieUploader` — stockage `var/decharges/{clubId}/` HORS `public/` (jamais servi en direct), lecture uniquement via controleur (`BinaryFileResponse`) derriere `ClubVoter::CLUB_STAFF`, CSRF sur upload/suppression, MIME whitelist (PDF/JPG/PNG/WEBP, 10 Mo). La purge supprime aussi le fichier physique.
+- Statut : fait (09/07/2026) — reste : cron annuel a poser sur OVH (ex. 15 juillet)

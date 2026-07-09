@@ -21,8 +21,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
  *     monolithe) — aucune intervention, aucun déploiement.
  *   - Les saisons disponibles sont GÉNÉRÉES : de PREMIERE_SAISON (plus
  *     ancienne donnée en base — camps 2023-2024) jusqu'à la saison
- *     courante + 1 (pour préparer la saison suivante en avance :
- *     équipes, plannings, tarifs).
+ *     courante INCLUSE, jamais au-delà (demande explicite : aucune
+ *     saison future sélectionnable, cf. getSaisonsDisponibles).
  *   - Le choix manuel d'une autre saison reste possible (session
  *     'active_saison', posée par POST /saison/changer) — il est validé
  *     contre la liste générée.
@@ -69,8 +69,8 @@ class SaisonService
 
     /**
      * Saison sportive EN COURS selon la date réelle.
-     * Convention FFBB : la saison N-(N+1) démarre le 1er septembre N.
-     * Ex : 05/07/2026 → '2025-2026' ; 01/09/2026 → '2026-2027'.
+     * Bascule au 1er JUILLET (début administratif FFBB, cf. MOIS_BASCULE).
+     * Ex : 30/06/2026 → '2025-2026' ; 05/07/2026 → '2026-2027'.
      */
     public function getSaisonCourante(): string
     {

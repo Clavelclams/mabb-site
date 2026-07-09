@@ -270,6 +270,33 @@
                                         {% else %}<span style="color:#a16207;"><i class="bi bi-clock"></i> En attente</span>{% endif %}
                                     </button>
                                 </form>
+                                {# Décharge signée (Lot D v2) : dépôt / consultation / retrait #}
+                                <div style="margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                    {% if i.autorisationFichier %}
+                                        <a href="{{ path('manager_evenement_inscription_decharge_voir', {id: evenement.id, iid: i.id}) }}"
+                                           target="_blank" style="font-size:.72rem; text-decoration:none; color:var(--mabb-blue);"
+                                           title="Voir la décharge signée">
+                                            <i class="bi bi-file-earmark-check"></i> décharge
+                                        </a>
+                                        <form method="post" action="{{ path('manager_evenement_inscription_decharge_supprimer', {id: evenement.id, iid: i.id}) }}"
+                                              style="display:inline;" onsubmit="return confirm('Supprimer la décharge de {{ i.nomAffichage }} ?');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('inscription_decharge_supprimer_' ~ i.id) }}">
+                                            <button type="submit" style="border:none; background:none; cursor:pointer; color:var(--mabb-red); font-size:.72rem; padding:0;"
+                                                    title="Supprimer la décharge"><i class="bi bi-x-circle"></i></button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{{ path('manager_evenement_inscription_decharge_upload', {id: evenement.id, iid: i.id}) }}"
+                                              enctype="multipart/form-data" style="display:flex; align-items:center; gap:4px;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('inscription_decharge_' ~ i.id) }}">
+                                            <label style="font-size:.7rem; color:var(--mabb-muted); cursor:pointer; margin:0;" title="Déposer la décharge signée (PDF ou photo, 10 Mo max)">
+                                                <i class="bi bi-paperclip"></i>
+                                                <input type="file" name="decharge" accept="application/pdf,image/jpeg,image/png,image/webp"
+                                                       style="display:none;" onchange="this.form.submit()">
+                                                joindre
+                                            </label>
+                                        </form>
+                                    {% endif %}
+                                </div>
                             </td>
                             {% endif %}
                             {% if evenement.estPayant %}

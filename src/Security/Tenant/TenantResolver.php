@@ -43,8 +43,11 @@ class TenantResolver
         $activeClubId = $session->get('active_club_id');
         if ($activeClubId) {
             $club = $this->clubRepository->find($activeClubId);
-            // Vérifier que l'user appartient vraiment à ce club (sécurité)
-            if ($club && $this->userBelongsToClub($user, $club)) {
+            // Vérifier que l'user appartient vraiment à ce club (sécurité).
+            // EXCEPTION : un ROLE_SUPER_ADMIN (support cross-club, ex. admin@velito.fr)
+            // peut entrer dans N'IMPORTE quel club pour dépanner — il n'a pas de
+            // UserClubRole dans ces clubs. ClubVoter le court-circuite déjà côté droits.
+            if ($club && ($this->isSuperAdmin() || $this->userBelongsToClub($user, $club))) {
                 return $club;
             }
             // Si le club en session n'est plus valide, on le supprime
@@ -72,10 +75,22 @@ class TenantResolver
         if (!$user instanceof User) {
             return;
         }
-        if (!$this->userBelongsToClub($user, $club)) {
+        // Un super-admin peut basculer sur n'importe quel club (support cross-club) ;
+        // un user normal ne peut basculer que sur un club dont il est membre validé.
+        if (!$this->isSuperAdmin() && !$this->userBelongsToClub($user, $club)) {
             throw new \LogicException('L\'utilisateur n\'appartient pas à ce club.');
         }
         $this->requestStack->getSession()->set('active_club_id', $club->getId());
+    }
+
+    /**
+     * Vrai si l'utilisateur courant a le rôle global ROLE_SUPER_ADMIN.
+     * Le super-admin (ex. admin@velito.fr) voit tous les clubs et peut entrer
+     * dans n'importe lequel pour dépanner, sans y être membre.
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->security->isGranted('ROLE_SUPER_ADMIN');
     }
 
     /**

@@ -58,6 +58,12 @@ class ManagerLoginController extends AbstractController
 
         // Récupération du club actif pour alimenter le dashboard
         $club = $tenantResolver->getCurrentClub();
+
+        // Super-admin (ex. admin@velito.fr) sans club actif → il n'a pas de club
+        // à lui : on l'envoie sur la console cross-club pour qu'il en choisisse un.
+        if (!$club && $tenantResolver->isSuperAdmin()) {
+            return $this->redirectToRoute('manager_super_admin_clubs');
+        }
         $prochainSeances = [];
         $prochainRencontres = [];
         $prochainEvenements = [];

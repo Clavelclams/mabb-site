@@ -16,10 +16,15 @@ use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\RencontreRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
+use App\Service\DechargeSortieUploader;
+use App\Service\SaisonService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -63,7 +68,9 @@ class EvenementController extends AbstractController
         private readonly RencontreRepository $rencontreRepository,
         private readonly InscriptionSortieRepository $inscriptionRepository,
         private readonly JoueurRepository $joueurRepository,
+        private readonly SaisonService $saisonService,
         private readonly BadgeChecker $badgeChecker,
+        private readonly DechargeSortieUploader $dechargeUploader,
         private readonly EntityManagerInterface $em,
     ) {}
 
@@ -104,6 +111,55 @@ class EvenementController extends AbstractController
             'evenements_passes' => $evenementsPasses,
             'rencontres_futurs' => $rencontresFuturs,
             'is_staff'          => $isStaff,
+        ]);
+    }
+
+    /**
+     * Dashboard global des sorties sur une saison (doc 23 §6.2).
+     * Bornes de saison calculées par la bascule du 1er juillet.
+     */
+    #[Route('/evenements/sorties/dashboard', name: 'manager_sorties_dashboard', methods: ['GET'])]
+    public function dashboardSorties(Request $request): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        if (!$club) {
+            $this->addFlash('warning', 'Aucun club actif.');
+            return $this->redirectToRoute('manager_dashboard');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        $saison = (string) $request->query->get('saison', '');
+        if ($saison === '' || !$this->saisonService->isValide($saison)) {
+            $saison = $this->saisonService->getSaisonActive();
+        }
+        // Bornes de la saison (bascule 1er juillet) : [1er juil. YYYY, 1er juil. YYYY+1[.
+        $anneeDebut = (int) explode('-', $saison)[0];
+        $debut = new \DateTimeImmutable($anneeDebut . '-07-01 00:00:00');
+        $fin   = $debut->modify('+1 year');
+
+        $sorties = $this->evenementRepository->sortiesParClubEtSaison($club, $debut, $fin);
+
+        $lignes = [];
+        $totalParticipants = 0;
+        $totalEncaisse = 0.0;
+        $autorisationsManquantes = 0;
+        foreach ($sorties as $sortie) {
+            $ag = $this->agregatsInscriptions($this->inscriptionRepository->findByEvenement($sortie));
+            $totalParticipants += $ag['nb'];
+            $totalEncaisse += $ag['total_encaisse'];
+            $autorisationsManquantes += $ag['autorisations_manquantes'];
+            $lignes[] = ['evenement' => $sortie, 'agregats' => $ag];
+        }
+
+        return $this->render('manager/evenement/sorties_dashboard.html.twig', [
+            'club'                     => $club,
+            'saison'                   => $saison,
+            'saisons'                  => $this->saisonService->getSaisonsDisponibles(),
+            'lignes'                   => $lignes,
+            'nb_sorties'               => count($sorties),
+            'total_participants'       => $totalParticipants,
+            'total_encaisse'           => $totalEncaisse,
+            'autorisations_manquantes' => $autorisationsManquantes,
         ]);
     }
 
@@ -266,6 +322,96 @@ class EvenementController extends AbstractController
             $inscription->setAutorisationStatut(InscriptionSortie::AUTORISATION_RECUE);
         }
         $this->em->flush();
+        return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+    }
+
+    /**
+     * Upload (ou remplacement) de la décharge signée d'une inscription
+     * (Lot D v2). Le fichier part dans var/decharges/ (HORS public/) via
+     * DechargeSortieUploader ; le statut passe automatiquement à RECUE.
+     */
+    #[Route('/evenements/{id}/inscriptions/{iid}/decharge', name: 'manager_evenement_inscription_decharge_upload', methods: ['POST'], requirements: ['id' => '\d+', 'iid' => '\d+'])]
+    public function uploadDecharge(Request $request, Evenement $evenement, int $iid): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+        $inscription = $this->chargerInscription($evenement, $iid, $request, 'decharge');
+        if (!$inscription instanceof InscriptionSortie) { return $inscription; }
+
+        $fichier = $request->files->get('decharge');
+        if (!$fichier instanceof UploadedFile) {
+            $this->addFlash('error', 'Aucun fichier reçu.');
+            return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+        }
+
+        try {
+            $nom = $this->dechargeUploader->upload($fichier, $inscription);
+        } catch (\InvalidArgumentException $e) {
+            $this->addFlash('error', $e->getMessage());
+            return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+        }
+
+        $inscription->setAutorisationFichier($nom);
+        // Décharge déposée = autorisation reçue (sauf si non requise sur l'événement).
+        if ($inscription->getAutorisationStatut() === InscriptionSortie::AUTORISATION_EN_ATTENTE) {
+            $inscription->setAutorisationStatut(InscriptionSortie::AUTORISATION_RECUE);
+        }
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf('Décharge enregistrée pour %s.', $inscription->getNomAffichage()));
+        return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+    }
+
+    /**
+     * Consultation de la décharge signée (staff uniquement). Lecture via
+     * BinaryFileResponse : le fichier n'est JAMAIS accessible en URL directe.
+     */
+    #[Route('/evenements/{id}/inscriptions/{iid}/decharge', name: 'manager_evenement_inscription_decharge_voir', methods: ['GET'], requirements: ['id' => '\d+', 'iid' => '\d+'])]
+    public function voirDecharge(Evenement $evenement, int $iid): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+
+        // GET sans CSRF : chargement manuel avec les mêmes contrôles d'intégrité
+        // que chargerInscription (appartenance à l'événement + Voter sur l'entité).
+        $inscription = $this->inscriptionRepository->find($iid);
+        if (!$inscription instanceof InscriptionSortie || $inscription->getEvenement()?->getId() !== $evenement->getId()) {
+            throw $this->createNotFoundException();
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $inscription);
+
+        $chemin = $this->dechargeUploader->getAbsolutePath($inscription);
+        if ($chemin === null) {
+            $this->addFlash('warning', 'Aucune décharge enregistrée pour cette inscription.');
+            return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
+        }
+
+        $response = new BinaryFileResponse($chemin);
+        $response->setContentDisposition(
+            ResponseHeaderBag::DISPOSITION_INLINE,
+            sprintf('decharge-%s.%s', $iid, pathinfo($chemin, PATHINFO_EXTENSION))
+        );
+        return $response;
+    }
+
+    /**
+     * Suppression de la décharge (fichier physique + référence). Le statut
+     * repasse à EN_ATTENTE si l'autorisation est requise sur l'événement.
+     */
+    #[Route('/evenements/{id}/inscriptions/{iid}/decharge/supprimer', name: 'manager_evenement_inscription_decharge_supprimer', methods: ['POST'], requirements: ['id' => '\d+', 'iid' => '\d+'])]
+    public function supprimerDecharge(Request $request, Evenement $evenement, int $iid): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $evenement);
+        $inscription = $this->chargerInscription($evenement, $iid, $request, 'decharge_supprimer');
+        if (!$inscription instanceof InscriptionSortie) { return $inscription; }
+
+        $this->dechargeUploader->delete($inscription);
+        $inscription->setAutorisationFichier(null);
+        if ($evenement->isAutorisationRequise()
+            && $inscription->getAutorisationStatut() === InscriptionSortie::AUTORISATION_RECUE) {
+            $inscription->setAutorisationStatut(InscriptionSortie::AUTORISATION_EN_ATTENTE);
+        }
+        $this->em->flush();
+
+        $this->addFlash('success', 'Décharge supprimée.');
         return $this->redirectToRoute('manager_evenement_show', ['id' => $evenement->getId()]);
     }
 

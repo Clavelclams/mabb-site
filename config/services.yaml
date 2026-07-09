@@ -118,6 +118,14 @@ services:
         arguments:
             $uploadBaseDirectory: '%kernel.project_dir%/public/uploads/ent'
 
+    # Décharges signées des sorties (Lot D v2 — RGPD-0010).
+    # ⚠️ HORS public/ : données de mineures + signatures parentales, jamais
+    # servies en direct par le serveur web. Lecture via contrôleur uniquement
+    # (BinaryFileResponse derrière ClubVoter::CLUB_STAFF).
+    App\Service\DechargeSortieUploader:
+        arguments:
+            $uploadBaseDirectory: '%kernel.project_dir%/var/decharges'
+
     # [B-FFBB-OCR 15/06/2026] Google Vision OCR
     # Le fichier google-vision-key.json contient la clé service account et NE DOIT
     # JAMAIS être committé (cf. .gitignore /config/credentials/).

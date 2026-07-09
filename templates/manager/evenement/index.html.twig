@@ -9,9 +9,14 @@
             <p class="subtitle">Vie du club : matchs, AG, tournois, sorties, formations et plus.</p>
         </div>
         {% if is_staff %}
-            <a href="{{ path('manager_evenement_new') }}" class="btn-mabb-orange">
-                <i class="bi bi-plus-lg"></i> Créer un événement
-            </a>
+            <div style="display:flex; gap:8px;">
+                <a href="{{ path('manager_sorties_dashboard') }}" class="btn-mabb-ghost">
+                    <i class="bi bi-clipboard-data"></i> Dashboard sorties
+                </a>
+                <a href="{{ path('manager_evenement_new') }}" class="btn-mabb-orange">
+                    <i class="bi bi-plus-lg"></i> Créer un événement
+                </a>
+            </div>
         {% endif %}
     </div>
 

@@ -10,6 +10,22 @@
 
 ---
 
+### 2026-07-09 — Sorties Lot D (RGPD complet) + durcissement sécu + hygiène dépôt
+
+- Objectif : clore le Lot D RGPD des Sorties (dernier lot du chantier), durcir la sécurité super-admin, tuer le bruit CRLF.
+- ⚠️ Constat de session IMPORTANT : la copie du dépôt vue par le sandbox Claude (montage Linux) était TRONQUÉE sur ~20 fichiers (coupés en plein milieu, artefact de sync). **Les fichiers réels sur le disque Windows sont INTACTS** — vérifié un par un par accès direct. Ne JAMAIS « réparer » sur la foi d'un `git status` vu du sandbox ; les diffs suspects type « −123 lignes sur Club.php » étaient des fantômes.
+- Actions réalisées :
+  1. **Lot D — purge RGPD** : commande `app:sorties:purger-rgpd` (dry-run par défaut, `--execute`, `--saison=`). Anonymise l'identité de saisie libre (nom→« Anonymisé », prénom/date naissance/responsable légal/téléphone/commentaire→null), supprime la décharge (fichier + référence), CONSERVE la ligne (présence/paiement) pour des agrégats exacts. Ne touche jamais la saison courante. Utilise `getSaisonCourante()` (pas `getSaisonActive()` qui lit la session — inexistante en console).
+  2. **Lot D — décharge signée v2** : `DechargeSortieUploader` (stockage `var/decharges/{clubId}/` HORS public/, PDF/JPG/PNG/WEBP, 10 Mo, nom généré anti-traversal) + 3 routes `EvenementController` (upload POST + voir GET via BinaryFileResponse + supprimer POST, CSRF + ClubVoter::CLUB_STAFF partout) + UI dans la colonne Autorisation de `show.html.twig` (joindre/voir/retirer). Upload ⇒ statut RECUE auto ; suppression ⇒ retour EN_ATTENTE. Zéro migration (colonne `autorisation_fichier` déjà dans Version20260708021754).
+  3. **Sécu** : `security.yaml` — règle `access_control` `^/super-admin` (host manager) → ROLE_SUPER_ADMIN, défense en profondeur du `#[IsGranted]` du controller.
+  4. **Hygiène** : `.gitattributes` racine (`* text=auto` + binaires) — après commit, lancer une fois `git add --renormalize .`.
+  5. **Docs** : fiche RGPD-0010 au registre (traitement sorties/mineures + purge + décharge) ; docblocks `SaisonService` corrigés (bascule = 1er JUILLET, pas septembre ; aucune saison future générée).
+- Fichiers modifiés : `src/Command/PurgerInscriptionsSortiesCommand.php` (new), `src/Service/DechargeSortieUploader.php` (new), `src/Controller/Manager/EvenementController.php`, `templates/manager/evenement/show.html.twig`, `config/services.yaml`, `config/packages/security.yaml`, `src/Service/SaisonService.php` (commentaires), `.gitattributes` (new), `instruction/07_REGISTRE_SECURITE_RGPD.md`.
+- Décisions : anonymisation plutôt que suppression (cohérent RGPD-0008, agrégats préservés) ; décharges HORS public/ servies uniquement via contrôleur ; lien `Joueur` conservé à la purge (cycle de vie licenciée ≠ cycle de vie sortie).
+- Points de vigilance / risques : cron annuel de purge à poser sur OVH (~15 juillet) ; prochain déploiement = `git pull` + `doctrine:migrations:migrate` (colonnes Club) + `cache:clear --env=prod` ; PHP non exécutable dans le sandbox → syntaxe vérifiée par parseur (nouveaux fichiers) et relecture (fichiers édités), un `php -l` local avant commit reste conseillé.
+
+---
+
 ### 2026-07-08 — Multi-club Lot 2b-1 : entité Club (création & officialisation)
 
 - Référentiel FFBB importé en prod ✅ (~7105 organismes ; MABB HDF0080036 reconnu).

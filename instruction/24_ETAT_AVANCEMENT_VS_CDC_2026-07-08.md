@@ -5,6 +5,26 @@
 > réel (`mabb-site` : 76 contrôleurs, 48 entités ; `Pirb store` : app Expo).
 > Méthode : présence contrôleur/entité + audits précédents (docs 19, 22).
 > **Confiance** : ✅ confirmé par le code · 🟡 estimé · ❓ à vérifier.
+> **Mis à jour : 08/07 (fin de session).**
+
+---
+
+## 0-bis. Ce qui a avancé le 08/07 (cette session)
+
+- **Manager — filtre saison** : Stats Live (`/stats-live`) ✅ et ENT PDF FFBB (`/ent`) ✅
+  filtrés par saison active + dropdown. Zéro migration (filtrage par date). Bonus : fix
+  d'une **fuite multi-tenant** latente (`OR` non parenthésé dans `findWithPdfsByClub`).
+- **Module Sorties (doc 23)** : Lots **A/B/C faits** (entité `InscriptionSortie`, inscriptions
+  licenciées/libres, autorisations, suivi paiements, dashboard événement + dashboard global
+  saison). Reste **Lot D** (RGPD : registre + purge fin de saison + upload décharge v2).
+- **Vitrine** : 404 stylisée ✅, bandeau cookies RGPD ✅, CGU + plan du site ✅, boutons de
+  partage articles ✅, compteurs d'accueil éditables CMS ✅. Contact → **admin@mabb.fr**
+  (épargne la boîte de Willy). Responsive mobile corrigé (navbar admin, tableaux scrollables,
+  overflow-x). **Boutique descopée** pour MABB (backlog SaaS).
+- **App PIRB** : sélecteur de saison (lot 2) ✅ + shot chart par saison.
+- **Mailer (B-304)** : **EN COURS** — compte Brevo (Free 300/j) créé, `MAILER_DSN` posé sur
+  OVH, `APP_DEBUG=0`, destinataire = admin@mabb.fr. **Reste : authentifier le domaine
+  `mabb.fr` (DKIM/SPF dans la zone DNS OVH)** puis tester. Le seul point « qui attend ».
 
 ---
 
@@ -24,10 +44,10 @@ volet « produit SaaS revendable à d'autres clubs » (hors périmètre jury imm
 
 | Application | Avancement vs CDC | Note |
 |---|---|---|
-| **mabb.fr (vitrine)** | ~70 % 🟡 | Solide, manque boutique + chatbot |
-| **manager.mabb.fr** | ~70 % 🟡 | Cœur très complet, manque messagerie/plans/multi-club |
+| **mabb.fr (vitrine)** | ~78 % 🟡 | +404/CGU/cookies/partage ; manque calendrier dynamique, fiches équipe, chatbot |
+| **manager.mabb.fr** | ~74 % 🟡 | +filtre saison ENT/StatsLive +module Sorties (A-C) ; manque messagerie/plans/multi-club |
 | **pirb.mabb.fr (web)** | ~65 % 🟡 | Espace joueuse riche, manque messagerie/carte membre |
-| **Pirb store (mobile)** | ~50 % 🟡 | Cœur réel, social mock, pas prêt stores |
+| **Pirb store (mobile)** | ~52 % 🟡 | +sélecteur saison ; social mock, pas prêt stores |
 | **Tronc commun + transverse** | ~55 % 🟡 | Auth OK, manque onboarding multi-club/notifs push |
 
 ---
@@ -59,13 +79,13 @@ le permet. C'est LE chantier « SaaS » manquant — mais hors besoin quotidien 
 | 3.1 Accueil (hero, actus, événements, équipes 3x3, sponsors) | ✅ 🟡 | 80 |
 | 3.2 Le club (présentation, organigramme, formation, salle) | ✅ 🟡 | 75 |
 | 3.3 Équipes (liste, fiches, résultats, galerie) | 🟡 | 65 |
-| 3.4 Actualités (articles, filtres, partage) | ✅ (CMS + AdminArticles) | 80 |
+| 3.4 Actualités (articles, filtres, partage) | ✅ (partage ✅, CMS) | 85 |
 | 3.5 Vie sportive (calendrier, résultats, victoires) | 🟡 | 60 |
 | 3.6 Inscription / adhésion (tarifs, docs, pré-inscription) | 🟡 | 50 |
-| 3.7 **Boutique** (catalogue, panier, paiement) | ❌ **absent** | 0 |
-| 3.8 Contact (formulaire, coordonnées, carte) | ✅ (mailer à finir) | 70 |
-| 3.9 Pages utilitaires (mentions, RGPD, CGU, 404) | ✅ 🟡 | 80 |
-| 3.10 Header/footer, **chatbot FAQ**, bandeau cookies | 🟡 (chatbot ❌) | 55 |
+| 3.7 **Boutique** (catalogue, panier, paiement) | ⏸️ **descopée MABB** | 0 |
+| 3.8 Contact (formulaire, coordonnées, carte) | ✅ (mailer en cours, → admin@) | 75 |
+| 3.9 Pages utilitaires (mentions, RGPD, CGU, 404, plan du site) | ✅ | 95 |
+| 3.10 Header/footer, cookies RGPD ✅, **chatbot FAQ** scripté | 🟡 (Espace membre à refaire) | 70 |
 
 ---
 
@@ -81,7 +101,7 @@ le permet. C'est LE chantier « SaaS » manquant — mais hors besoin quotidien 
 | 4.6 Feuille de match (5 majeur, live, validation, verrou, PDF FFBB) | ✅ | 80 | StatsLive/ActionMatch/SessionStatsLive |
 | 4.7 Statistiques (cumul, par match, shot chart, top, export) | ✅ | 80 | Stats + ShotChart + saison filtrée |
 | 4.8 Bilan saison (4 axes, radar, profil de jeu) | ✅ | 85 | BilanCompetence |
-| 4.9 Documents/ENT (statut, upload, preview, **expiration**) | 🟡 | 70 | Document ; filtre saison à faire ; alerte expiration ❓ |
+| 4.9 Documents/ENT (statut, upload, preview, **expiration**) | ✅ 🟡 | 80 | Document + **filtre saison PDF FFBB ✅** ; alerte expiration ❓ |
 | 4.10 Réunions / PV (planif, convoc, notes, PV, archive) | ✅ | 85 | Reunion + Convocation + Document + PvVersion |
 | 4.11 Compta / Trésorerie (recettes/dépenses, cotis, note frais, TdB) | 🟡 | 70 | OperationTresorerie/Cotisation/TarifCotisation/NoteFrais |
 | 4.12 Dossiers de subvention (statuts, échéancier, docs) | 🟡 | 50 | Subvention entité + controller |
@@ -152,20 +172,20 @@ d'endpoints backend B4 phase 2, cf. `DEMANDES_APP_PIRB_B4_PHASE2`).
 ## 7. Ce qui reste — priorisé
 
 ### 🔴 Bloquants / à forte valeur immédiate
-1. **MAILER Brevo** (B-304) — sans lui : convocations, invitations, reset, contact ne partent pas. Débloque une dizaine de features du CDC d'un coup.
-2. **APP_DEBUG=0** en prod (sécurité).
-3. **Convocations bout-en-bout** (email + relance J-3 + PDF) — module central du CDC (§4.4).
+1. **MAILER Brevo** (B-304) — **EN COURS** : compte + DSN + APP_DEBUG=0 + destinataire admin@ faits. **Reste : authentifier le domaine `mabb.fr` (DKIM/SPF, zone DNS OVH)** puis tester le contact. Débloque convocations, invitations, reset, pré-inscription.
+2. ~~APP_DEBUG=0~~ → posé dans `.env.local` OVH (à confirmer via curl JSON propre).
+3. **Convocations bout-en-bout** (email + relance J-3 + PDF) — module central du CDC (§4.4), débloqué dès que le mailer répond.
 4. **Endpoints B4 phase 2** (commu, follow, convocations mobiles) — débloquent l'immersion app.
 
 ### 🟠 Gros manques structurels (chantiers dédiés)
-5. **Messagerie interne** (Manager §4.14 + PIRB §5.10) — entièrement à faire.
+5. **Messagerie interne** (Manager §4.14 + PIRB §5.10) — entièrement à faire (décision : plus tard).
 6. **Onboarding multi-club** (créer/rejoindre un club) — le volet SaaS (§2).
 7. **Notifications push** (§7) — infra à poser.
-8. **Module Sorties/paiements** — cadré (doc 23), entité `InscriptionSortie` **déjà présente** → Lot A partiellement amorcé, à finir.
+8. **Module Sorties/paiements** — Lots **A/B/C faits** (inscriptions, autorisations, paiements, dashboards). Reste **Lot D** (RGPD : registre + purge fin de saison + upload décharge signée v2).
 
 ### 🟡 Complétions / polish
 9. Recherche globale (§4.19), iCal export, QR présence + carte membre, alertes expiration docs.
-10. Filtre saison ENT (planifié), dashboard TdB Manager, indicateurs d'impact auto-PDF.
+10. ~~Filtre saison ENT~~ **fait ✅** · dashboard TdB Manager, indicateurs d'impact auto-PDF, chatbot IA, calendrier vitrine dynamique, fiches par équipe, « Espace membre » à recréer dans la vraie navbar.
 
 ### ⏸️ Hors périmètre jury (plus tard)
 - **Boutique e-commerce (§3.7) — DÉCISION 08/07 : descopée pour MABB** (club QPV,

@@ -62,4 +62,21 @@ class EvenementRepository extends ServiceEntityRepository
             ->orderBy('e.date', 'DESC')
             ->getQuery()->getResult();
     }
+
+    /**
+     * Sorties (type SORTIE) d'un club dans une fenêtre de dates (une saison),
+     * triées par date décroissante. Tous statuts (le staff voit tout).
+     *
+     * @return Evenement[]
+     */
+    public function sortiesParClubEtSaison(Club $club, \DateTimeInterface $debut, \DateTimeInterface $fin): array
+    {
+        return $this->createQueryBuilder('e')
+            ->andWhere('e.club = :c')->setParameter('c', $club)
+            ->andWhere('e.type = :t')->setParameter('t', Evenement::TYPE_SORTIE)
+            ->andWhere('e.date >= :debut')->setParameter('debut', $debut)
+            ->andWhere('e.date < :fin')->setParameter('fin', $fin)
+            ->orderBy('e.date', 'DESC')
+            ->getQuery()->getResult();
+    }
 }

@@ -3,25 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>PIRB Dribble — score auto (spike P2, jeu à niveaux)</title>
-<!--
-  SPIKE P2, étape jeu : LE DRIBBLE AVEC SCORE AUTOMATIQUE.
-  ════════════════════════════════════════════════════════
-  Tu te filmes, des cibles apparaissent, et c'est LA DÉTECTION qui valide :
-  le ballon (repéré par le modèle) entre dans la cible → point compté,
-  animation, cible suivante. Aucune saisie manuelle.
-
-  Niveaux : ça démarre tranquille (1 cible, 5 s), et tous les 5 hits ça
-  monte : cibles plus rapides, puis 2 en même temps, puis 3.
-
-  Ce jeu web = le prototype exact de ce qui ira dans l'app via le
-  development build (react-native-vision-camera + TFLite). Même modèle,
-  même règle du jeu. Si c'est fun ici, c'est GO pour l'app.
-
-  RGPD : flux affiché en direct, rien d'enregistré, analyse 100 % locale.
-  Lancement :  cd spikes/p2-ball-detection && npx serve .
-  Sur téléphone : npx cloudflared tunnel --url http://localhost:3000 (HTTPS requis pour la caméra).
--->
+<title>PIRB Dribble — score auto</title>
 <style>
   :root {
     --bg: #0A0E14; --surface: #111823; --border: #27354A;
@@ -95,7 +77,6 @@ const $ = (id) => document.getElementById(id);
 // ---------- Réglages du jeu ---------------------------------------------------
 const DUREE_JEU_S = 90;
 const HITS_PAR_NIVEAU = 5;
-// Chaque niveau : combien de cibles en même temps, et leur durée de vie (ms).
 const NIVEAUX = [
   { cibles: 1, dureeMs: 5000 },
   { cibles: 1, dureeMs: 4000 },
@@ -111,9 +92,9 @@ const configNiveau = (n) => NIVEAUX[Math.min(n - 1, NIVEAUX.length - 1)];
 let detector = null, lastVideoTime = -1;
 let enJeu = false, finAu = 0;
 let niveau = 1, score = 0, hits = 0, apparues = 0;
-let cibles = []; // { x, y, r, neeA, dureeMs, etat:'live'|'hit', hitA }
-let flottants = []; // les "+30" qui montent { x, y, t0, texte }
-let balleVue = null; // dernière position connue du ballon (anti-clignotement) { bx, by, r, vueA, x, oy, w, h }
+let cibles = [];
+let flottants = [];
+let balleVue = null;
 
 // ---------- Modèle (une fois) ---------------------------------------------------
 async function chargerModele() {
@@ -174,10 +155,9 @@ function faireApparaitre(t) {
 function toucher(cible, t) {
   cible.etat = "hit"; cible.hitA = t;
   hits++;
-  const points = 10 * niveau; // plus le niveau est haut, plus ça rapporte
+  const points = 10 * niveau;
   score += points;
   flottants.push({ x: cible.x, y: cible.y - cible.r, t0: t, texte: `+${points}` });
-  // Montée de niveau tous les 5 hits
   const nouveau = Math.floor(hits / HITS_PAR_NIVEAU) + 1;
   if (nouveau > niveau) {
     niveau = nouveau;
@@ -196,21 +176,15 @@ function boucle() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (enJeu) {
-      // Temps
       const reste = Math.max(0, Math.ceil((finAu - t) / 1000));
       $("vTemps").textContent = reste;
       if (reste <= 0) return finirPartie();
 
-      // On complète le plateau selon le niveau (1, 2 ou 3 cibles vivantes)
       cibles = cibles.filter((c) => (c.etat === "live" ? t - c.neeA < c.dureeMs : t - c.hitA < 380));
       while (cibles.filter((c) => c.etat === "live").length < configNiveau(niveau).cibles) {
         faireApparaitre(t);
       }
 
-      // Détection du ballon : c'est ELLE qui valide, pas un doigt.
-      // On retient la MEILLEURE détection de la frame et on la mémorise :
-      // si la détection saute une frame, on réutilise la dernière position
-      // connue (< 200 ms) → on ne perd plus un contact à cause d'un clignotement.
       const res = detector.detectForVideo(video, t);
       let meilleure = null;
       for (const d of res.detections) {
@@ -219,7 +193,7 @@ function boucle() {
       }
       if (meilleure) {
         const b = meilleure.boundingBox;
-        const x = canvas.width - (b.originX + b.width); // vidéo en miroir
+        const x = canvas.width - (b.originX + b.width);
         balleVue = {
           bx: x + b.width / 2, by: b.originY + b.height / 2,
           r: Math.max(b.width, b.height) / 2,
@@ -229,13 +203,10 @@ function boucle() {
 
       const balleActive = balleVue && (t - balleVue.vueA) < 200;
       if (balleActive) {
-        // Cadre du ballon : plein s'il vient d'être vu, estompé si mémorisé.
         const frais = (t - balleVue.vueA) < 45;
         ctx.strokeStyle = frais ? "#FF6B2C" : "rgba(255,107,44,0.5)";
         ctx.lineWidth = 3;
         ctx.strokeRect(balleVue.x, balleVue.oy, balleVue.w, balleVue.h);
-        // Contact TOLÉRANT : la cible se valide si le ballon la chevauche
-        // (rayon cible + un demi-rayon ballon), pas seulement si le centre y est.
         for (const c of cibles) {
           if (c.etat === "live" && Math.hypot(balleVue.bx - c.x, balleVue.by - c.y) < c.r + balleVue.r * 0.5) {
             toucher(c, t);
@@ -243,7 +214,6 @@ function boucle() {
         }
       }
 
-      // Indicateur "ballon suivi" (l'utilisatrice voit que ça la détecte).
       ctx.fillStyle = balleActive ? "#3ECF8E" : "rgba(255,255,255,0.35)";
       ctx.beginPath(); ctx.arc(26, 30, 8, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.font = "600 15px system-ui"; ctx.textAlign = "left";
@@ -262,7 +232,6 @@ function boucle() {
 function dessinerCibles(t) {
   for (const c of cibles) {
     if (c.etat === "live") {
-      // Pop d'apparition (200 ms) puis anneau du temps restant qui rétrécit
       const pop = Math.min(1, (t - c.neeA) / 200);
       const resteFrac = 1 - (t - c.neeA) / c.dureeMs;
       ctx.strokeStyle = "#FF6B2C"; ctx.lineWidth = 5;
@@ -270,4 +239,59 @@ function dessinerCibles(t) {
       ctx.fillStyle = "rgba(255,107,44,0.85)";
       ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 0.42 * pop, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = "#0A0E14"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(c.x - c.r * 0.42, c.y); ctx.lineTo(c.x + c.r * 0.42, c.y); 
+      ctx.beginPath(); ctx.moveTo(c.x - c.r * 0.42, c.y); ctx.lineTo(c.x + c.r * 0.42, c.y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(c.x, c.y - c.r * 0.42); ctx.lineTo(c.x, c.y + c.r * 0.42); ctx.stroke();
+    } else {
+      const k = (t - c.hitA) / 380;
+      ctx.strokeStyle = `rgba(62,207,142,${1 - k})`; ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r * (1 + k * 0.9), 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = `rgba(62,207,142,${0.5 * (1 - k)})`;
+      ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+function dessinerFlottants(t) {
+  flottants = flottants.filter((f) => t - f.t0 < 900);
+  for (const f of flottants) {
+    const k = (t - f.t0) / 900;
+    ctx.fillStyle = `rgba(245,197,66,${1 - k})`;
+    ctx.font = "bold " + (f.texte.startsWith("NIVEAU") ? 44 : 28) + "px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(f.texte, f.x, f.y - k * 46);
+  }
+  ctx.textAlign = "left";
+}
+
+function finirPartie() {
+  enJeu = false;
+  $("finScore").textContent = `${score} pts`;
+  $("finNiveau").textContent = `Niveau ${niveau} atteint`;
+  const pct = apparues > 0 ? Math.round((hits / apparues) * 100) : 0;
+  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%). Compté par la caméra, pas par toi.`;
+  $("fin").style.display = "flex";
+  // Pont vers l'app PIRB (WebView) : la séance rejoint l'historique
+  // Playground (AsyncStorage), comme une séance manuelle. Hors app,
+  // window.ReactNativeWebView n'existe pas → no-op silencieux.
+  try {
+    window.ReactNativeWebView?.postMessage(JSON.stringify({
+      type: "seanceTerminee",
+      mode: "dribble",
+      reussis: hits,
+      rates: Math.max(0, apparues - hits),
+      dureeSecondes: DUREE_JEU_S,
+      score, // ici le score du jeu (niveaux) fait foi, il est plus riche que réussis×10
+    }));
+  } catch { /* hors app : rien à faire */ }
+  requestAnimationFrame(boucle);
+}
+
+function majHud() {
+  $("vNiveau").textContent = niveau;
+  $("vScore").textContent = score;
+  $("vHits").textContent = hits;
+  $("vApparues").textContent = apparues;
+}
+</script>
+</body>
+</html>

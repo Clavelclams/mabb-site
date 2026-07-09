@@ -10,6 +10,7 @@ use App\Entity\Sport\TirFfbb;
 use App\Gamification\BadgeCatalog;
 use App\Gamification\NiveauCatalog;
 use App\Gamification\XpCalculator;
+use App\Repository\Pirb\FollowRepository;
 use App\Repository\Sport\JoueurBadgeRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\TirFfbbRepository;
@@ -56,6 +57,7 @@ class PirbApiController extends AbstractController
         private readonly JoueurBadgeRepository $badgeRepo,
         private readonly XpCalculator $xpCalculator,
         private readonly SaisonService $saisonService,
+        private readonly FollowRepository $followRepo,
     ) {}
 
     // ─────────────────────────────────────────────────────────────────────
@@ -320,6 +322,10 @@ class PirbApiController extends AbstractController
         $monEquipeId = $monEquipe?->getId();
         $base = $request->getSchemeAndHttpHost();
 
+        // [Social V1] ids des joueuses que JE suis — 1 requête, puis un
+        // simple in_array par carte (pas un SELECT par joueuse).
+        $idsQueJeSuis = $this->followRepo->idsSuiviesPar($moi);
+
         $cartes = [];
         foreach ($this->joueurRepo->findByClub($club->getId()) as $j) {
             if (!$j instanceof Joueur) { continue; }
@@ -339,7 +345,7 @@ class PirbApiController extends AbstractController
                 'club'           => $club->getNom(),
                 'equipe'         => $equipe?->getNom(),
                 'poste'          => $j->getPoste(),
-                'suivie'         => false, // entité Follow pas encore posée
+                'suivie'         => in_array($j->getId(), $idsQueJeSuis, true), // [Social V1] réel
                 'estCoequipiere' => $monEquipeId !== null && $equipe?->getId() === $monEquipeId,
             ];
         }
