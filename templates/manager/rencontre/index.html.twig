@@ -13,9 +13,14 @@
             </p>
         </div>
         {% if is_granted('CLUB_STAFF', club) %}
-            <a href="{{ path('manager_rencontre_new') }}" class="btn-mabb-orange">
-                <i class="bi bi-plus-lg"></i> Nouvelle rencontre
-            </a>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <a href="{{ path('manager_rencontre_import_ffbb') }}" class="btn-mabb-ghost">
+                    <i class="bi bi-calendar-plus"></i> Importer FFBB
+                </a>
+                <a href="{{ path('manager_rencontre_new') }}" class="btn-mabb-orange">
+                    <i class="bi bi-plus-lg"></i> Nouvelle rencontre
+                </a>
+            </div>
         {% endif %}
     </div>
 

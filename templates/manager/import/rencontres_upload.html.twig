@@ -1,0 +1,75 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Importer les rencontres FFBB{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-calendar-plus"></i> Importer les rencontres FFBB</h1>
+            <p class="subtitle">Upload de l'export « Rechercher une rencontre » (.xlsx) pour créer le calendrier d'une équipe.</p>
+        </div>
+        <a href="{{ path('manager_rencontre_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="card-mabb" style="max-width:780px; margin:0 auto;">
+        <div class="card-header"><i class="bi bi-info-circle"></i> Comment ça marche ?</div>
+        <div class="card-body">
+            <ol style="font-size:.92rem; line-height:1.7; color:var(--mabb-text); padding-left:20px;">
+                <li>Sur ton espace FFBB (FBI), fais « Rechercher une rencontre » filtré sur l'équipe, puis exporte en Excel.</li>
+                <li>Choisis l'équipe concernée ci-dessous et upload le .xlsx.</li>
+                <li>Le système détecte automatiquement ton équipe et te montre les matchs trouvés.</li>
+                <li>Tu vérifies l'aperçu, puis tu valides : les rencontres sont créées (domicile/extérieur, scores, dates).</li>
+            </ol>
+            <div style="background:#eaf4fb; border-left:4px solid var(--mabb-blue, #0b4fa3); padding:12px 16px; border-radius:6px; margin-top:14px; font-size:.88rem;">
+                <i class="bi bi-shield-check"></i>
+                Import <strong>idempotent</strong> : relancer le même fichier ne crée pas de doublon, les matchs déjà présents sont ignorés.
+                La saison est celle de l'équipe choisie.
+            </div>
+        </div>
+    </div>
+
+    {% if equipes is empty %}
+        <div class="card-mabb" style="max-width:780px; margin:20px auto 0;">
+            <div class="card-body" style="text-align:center;">
+                <p style="margin-bottom:14px;"><i class="bi bi-exclamation-triangle" style="color:var(--mabb-orange);"></i>
+                    Aucune équipe active pour ce club. Crée d'abord une équipe, puis reviens importer son calendrier.</p>
+                <a href="{{ path('manager_equipe_index') }}" class="btn-mabb">
+                    <i class="bi bi-plus-circle"></i> Gérer les équipes
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div class="card-mabb" style="max-width:780px; margin:20px auto 0;">
+            <div class="card-header"><i class="bi bi-file-earmark-arrow-up"></i> Fichier à importer</div>
+            <div class="card-body">
+                <form method="post" action="{{ path('manager_rencontre_import_ffbb') }}" enctype="multipart/form-data">
+                    <input type="hidden" name="_token" value="{{ csrf_token('import_rencontres') }}">
+
+                    <div style="margin-bottom:18px;">
+                        <label for="equipe_id" style="display:block; font-weight:600; margin-bottom:6px;">Équipe concernée</label>
+                        <select name="equipe_id" id="equipe_id" class="form-select" required>
+                            <option value="" disabled selected>Choisir une équipe…</option>
+                            {% for equipe in equipes %}
+                                <option value="{{ equipe.id }}">
+                                    {{ equipe.nom }} — {{ equipe.categorie }} ({{ equipe.saison }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom:18px;">
+                        <label for="xlsx" style="display:block; font-weight:600; margin-bottom:6px;">Fichier .xlsx FFBB</label>
+                        <input type="file" name="xlsx" id="xlsx" accept=".xlsx" class="form-control" required>
+                        <small style="color:var(--mabb-muted, #64748b);">Export « Rechercher une rencontre » — 5 Mo max.</small>
+                    </div>
+
+                    <button type="submit" class="btn-mabb">
+                        <i class="bi bi-search"></i> Analyser le fichier
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

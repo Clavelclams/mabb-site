@@ -1572,23 +1572,17 @@ src/Controller/Manager/ManagerCreerClubController.php (NEW),
 templates/manager/creer_club.html.twig (NEW), templates/manager/login.html.twig (liens).
 PAS de migration (colonnes club déjà en base via Version20260709124204). cache:clear requis (secu).
 Reste : import doc FFBB (rencontres + trombinoscope) en UI Manager ; officialiser MABB (HDF0080036).
-wig` (nouveau)
-  - `templates/vitrine/club/cite_educative.html.twig`
-  - `templates/vitrine/navbar.html.twig`
-  - `src/Controller/Vitrine/AccueilController.php`
-- Commits : `07fd0d1`, `039a573`, `fa513f4`, `35c53ee`, `7429861`, `0008f93`
-- Points de vigilance :
-  - **9 commits en attente de push** — faire `git push origin main` depuis le terminal local
-  - Push HTTPS GitHub nécessite credentials (Personal Access Token) — non disponible en sandbox
-  - Déploiement OVH ensuite : `ssh mabbzzyo@ssh.cluster102.hosting.ovh.net "cd ~/mabb-site && git pull && php bin/console cache:clear --env=prod"`
 
----
-
-### 2026-03-26 (session 36) — Audit visuel mabb.fr + corrections bugs
-
-- Objectif : Analyser le site live, corriger bugs connus (routes localhost, placeholder image) + bugs trouvés lors de l'audit
-- Actions réalisées :
-  1. **Fix routes** — suppression `host`/`defaults`/`requirements` dans `config/routes/vitrine.yaml` et bloc `admin_controllers` de `config/routes.yaml`. Ces contraintes forçaient Symfony à générer des URLs absolues avec `localhost` comme host par défaut sur le serveur OVH.
+## 2026-07-09 — Lot 2b-3 : import web des rencontres FFBB (Manager)
+Service partagé App\Service\Import\ImportRencontresService (parsing extrait de la commande CLI).
+Détection auto de « notre équipe » par fréquence (plus de pattern MABB en dur ; hint optionnel).
+Controller ImportRencontresController : /rencontres/import-ffbb (upload xlsx + choix équipe) →
+/rencontres/import-ffbb/apercu (dry-run, aperçu matchs) → POST confirm (écriture). CLUB_STAFF requis,
+club = TenantResolver, saison = équipe choisie, anti-IDOR équipe, idempotent, temp var/temp_import.
+Templates import/rencontres_upload + rencontres_apercu. Bouton « Importer FFBB » sur rencontre/index.
+Commande app:import-rencontres-from-xlsx REFACTORISÉE pour déléguer au service (DRY) — à re-tester en --dry-run.
+Trombinoscope : DÉJÀ web (ImportTrombinoscopeController) — pas recodé. PAS de migration. cache:clear requis.
+nts` dans `config/routes/vitrine.yaml` et bloc `admin_controllers` de `config/routes.yaml`. Ces contraintes forçaient Symfony à générer des URLs absolues avec `localhost` comme host par défaut sur le serveur OVH.
   2. **Fix placeholder index** — `templates/vitrine/accueil/index.html.twig` : remplacement du bloc `.photo-placeholder` par `<img src="images/teamsU1.jpg">` dans la section "Un club engagé pour le basket féminin".
   3. **Fix placeholder club** — `templates/vitrine/accueil/club.html.twig` : même correction, image teamsU1.jpg.
   4. **Fix breadcrumb equipes** — `templates/vitrine/accueil/equipes.html.twig` : suppression du `<li>` breadcrumb "Équipe 3x3". NOTE : ce lien avait été ajouté intentionnellement en session 34. Sa suppression est justifiée par la sémantique breadcrumb (un breadcrumb représente le chemin VERS la page courante, pas vers ses enfants). Si tu veux le conserver comme raccourci, réintroduis-le comme un bouton ou badge distinct du breadcrumb.

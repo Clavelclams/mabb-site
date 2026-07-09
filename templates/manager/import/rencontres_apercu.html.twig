@@ -1,0 +1,98 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Aperçu import rencontres{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-calendar-check"></i> Aperçu de l'import</h1>
+            <p class="subtitle">Équipe « {{ data.equipe_nom }} » — saison {{ data.saison }}.</p>
+        </div>
+        <a href="{{ path('manager_rencontre_import_ffbb') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Changer de fichier
+        </a>
+    </div>
+
+    <div class="card-mabb" style="max-width:920px; margin:0 auto;">
+        <div class="card-body">
+            <p style="font-size:.95rem;">
+                Équipe détectée dans le fichier :
+                <strong style="color:var(--mabb-blue, #0b4fa3);">{{ resultat.equipe_detectee }}</strong>
+            </p>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin:14px 0;">
+                <span class="badge-mabb" style="background:#e8f5e9; color:#1b7a34; padding:6px 12px; border-radius:8px; font-weight:700;">
+                    {{ resultat.stats.creees }} à importer
+                </span>
+                <span class="badge-mabb" style="background:#eef2f7; color:#475569; padding:6px 12px; border-radius:8px; font-weight:700;">
+                    {{ resultat.stats.deja_en_base }} déjà en base
+                </span>
+                {% if resultat.stats.exempt > 0 %}
+                    <span class="badge-mabb" style="background:#eef2f7; color:#475569; padding:6px 12px; border-radius:8px; font-weight:700;">
+                        {{ resultat.stats.exempt }} exempt
+                    </span>
+                {% endif %}
+                {% if resultat.stats.erreurs > 0 %}
+                    <span class="badge-mabb" style="background:#fdecea; color:#b3261e; padding:6px 12px; border-radius:8px; font-weight:700;">
+                        {{ resultat.stats.erreurs }} erreur(s)
+                    </span>
+                {% endif %}
+            </div>
+
+            {% if resultat.erreurs is not empty %}
+                <div style="background:#fdecea; border-left:4px solid #b3261e; padding:10px 14px; border-radius:6px; margin-bottom:14px; font-size:.85rem;">
+                    {% for err in resultat.erreurs %}<div>{{ err }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            {% if resultat.apercu is empty %}
+                <p style="text-align:center; color:var(--mabb-muted,#64748b); padding:20px 0;">
+                    Rien de nouveau à importer — tout est déjà en base.
+                </p>
+            {% else %}
+                <div style="overflow-x:auto;">
+                    <table class="table-mabb" style="width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="text-align:left; border-bottom:2px solid #e2e8f0;">
+                                <th style="padding:8px;">Date</th>
+                                <th style="padding:8px;">Lieu</th>
+                                <th style="padding:8px;">Adversaire</th>
+                                <th style="padding:8px;">Division</th>
+                                <th style="padding:8px;">N° match</th>
+                                <th style="padding:8px;">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in resultat.apercu %}
+                                <tr style="border-bottom:1px solid #eef2f7;">
+                                    <td style="padding:8px; white-space:nowrap;">{{ m.date }}</td>
+                                    <td style="padding:8px;">
+                                        {% if m.domicile %}
+                                            <span style="color:#1b7a34; font-weight:700;">Domicile</span>
+                                        {% else %}
+                                            <span style="color:#b45309; font-weight:700;">Extérieur</span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding:8px;">{{ m.adversaire }}</td>
+                                    <td style="padding:8px;">{{ m.division ?? '—' }}</td>
+                                    <td style="padding:8px;">{{ m.numero }}</td>
+                                    <td style="padding:8px; white-space:nowrap;">{{ m.score }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            <form method="post" action="{{ path('manager_rencontre_import_ffbb_apercu') }}" style="margin-top:20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                <input type="hidden" name="_token" value="{{ csrf_token('confirm_rencontres') }}">
+                {% if resultat.apercu is not empty %}
+                    <button type="submit" class="btn-mabb">
+                        <i class="bi bi-check2-circle"></i> Importer ces {{ resultat.stats.creees }} rencontre(s)
+                    </button>
+                {% endif %}
+                <a href="{{ path('manager_rencontre_index') }}" class="btn-mabb-ghost">Annuler</a>
+            </form>
+        </div>
+    </div>
+{% endblock %}
