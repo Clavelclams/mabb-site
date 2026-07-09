@@ -1,4 +1,44 @@
-# Session 09/07/2026 (soir) — Social V1 (Follow) + Tir auto (tracker de shoot)
+# Session 09-10/07/2026 — Social V1 (Follow) + Tir auto (tracker de shoot)
+
+> **MÀJ 10/07 — v2 des jeux après les tests au gymnase** : voir §0 ci-dessous,
+> il remplace la description du tir du §1.B pour ce qui est de la détection.
+
+## 0. v2 Playground — réponse aux retours terrain du 09/07 (23h, gymnase)
+
+**Retour 1 — « le suivi de balle capte très légèrement » (tir).**
+Cause identifiée : EfficientDet-lite0 analyse l'image réduite à ~320 px ;
+un ballon shooté à 5-6 m ne fait plus que quelques pixels + flou de
+mouvement → détection 1 frame sur 3-4, trajectoire hachée, tirs perdus.
+Deux corrections cumulées :
+1. **Modèle lite2** (entrée 448 px, voit un ballon petit et loin) chargé en
+   premier, **repli automatique sur lite0** si l'appareil ne suit pas.
+   Seuil abaissé 0.35 → 0.25, capture caméra montée à 1280×960.
+2. **`tracker.js` (nouveau, partagé)** — suiveur de mouvement maison : entre
+   deux détections du modèle, on cherche le ballon par DIFFÉRENCE D'IMAGES
+   dans une petite fenêtre autour de la position prédite (position + vitesse).
+   Le flou de mouvement, ennemi du modèle, devient un allié (plus ça bouge,
+   mieux le centroïde ressort). Garde-fous : fenêtre locale uniquement (pas
+   de téléportation), abandon après 700 ms sans confirmation du modèle.
+   Indicateur à l'écran : vert = modèle, JAUNE = suivi mouvement, gris = perdu.
+
+**Retour 2 — « le cercle d'arceau ne correspond pas à ce qu'on voit ».**
+Exact : un cercle plein-face ne ressemble à rien filmé de profil ou d'en
+dessous. **Remplacé par une calibration en 2 TAPS** (bord gauche puis bord
+droit de l'arceau) → un SEGMENT, qui épouse l'arceau sous n'importe quel
+angle. La règle devient géométriquement propre : panier = la trajectoire
+coupe le segment en descendant (intersection de segments, avec 6 % de marge) ;
+raté = elle coupe la droite juste à côté (< 0.9 longueur d'arceau) ; plus
+loin = passe, rien compté.
+
+**Dribble (bugs de détection)** : branché sur le même tracker.js (les trous
+de détection pendant les mouvements rapides sont comblés), seuil 0.3,
+tolérance de contact cible montée à 0.6 rayon de ballon.
+
+⚠️ Déploiement : `tracker.js` est un NOUVEAU fichier statique — il part avec
+le `git pull` (pas de cache:clear nécessaire). Les jeux l'importent en
+relatif (`./tracker.js`), même origine, rien d'autre à configurer.
+
+---
 
 Deux chantiers livrés dans les deux dépôts, prêts à committer/déployer/tester.
 Objectif produit : rapprocher la sortie store — plus rien de « verrouillé » dans l'app.

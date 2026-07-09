@@ -10,6 +10,24 @@
 
 ---
 
+### 2026-07-09 (soir) — Stats Live V2.4f : peaufinage complet (7 demandes Clavel)
+
+- Objectif : fluidifier Stats Live — chrono, scores auto, éphémères sur le terrain, cartographie, mode Débutant, résumé de match « équivalent Easy Stats ».
+- Actions réalisées :
+  1. **Chrono cliquable** : tap sur l'affichage TIMER = start/pause direct (+ Entrée/Espace clavier). Les boutons et les contrôles du drawer restent inchangés (demande explicite).
+  2. **Score auto des DEUX côtés (match normal)** : notre score = somme de NOS joueuses uniquement — l'ancien code additionnait AUSSI les éphémères adverses dans notre score (bug corrigé). Score adverse affiché = part manuelle (+1/+2/+3, persistée serveur) + points saisis sur les éphémères adverses. `updateScoreAdverse` passe par un état `scoreAdverseManuel` + recalcul central ; 1er calcul au chargement.
+  3. **Éphémères sur le terrain** : `entrerSurTerrain` accepte désormais les joueuses éphémères de CETTE rencontre (essai + adverses) → temps de jeu chronométré, limite 5/équipe. Anti-IDOR conservé (`rencontreOrigine === rencontre`). Fini le « Joueuse hors équipe » en entraînement. Span temps de jeu ajouté aux cartes éphémères adverses.
+  4. **Demi-terrains aux couleurs des équipes** : le fond SVG opaque `#c2410c` masquait les teintes posées sur le wrap — nouvelle classe `.courts-duo` : bleu (nous/A) et rouge (adverse/B) + titres colorés. Terrain unique inchangé (orange).
+  5. **Mode « Localiser » (Expert)** : toggle 🎯 dans le panneau actions — quand actif, une stat (perte de balle, interception, rebond…) attend un clic sur le demi-terrain de la joueuse (filtre par côté déjà en place) et s'enregistre AVEC position. Serveur : positionX/Y OPTIONNELLE pour tous les types (toujours obligatoire pour les tirs). Désactivé par défaut → zéro ralentissement.
+  6. **Mode Débutant : mini-terrain pour les tirs uniquement** (demande précisée par Clavel) : le terrain n'apparaît QUE pour panier/tir raté, dans le modal — tap = position réelle → shot chart PIRB alimenté même en Débutant (avant : tous les tirs Débutant tombaient à 0.5/0.5 au centre !). Le 2pts déclaré est affiné int/ext selon la zone tapée ; un 3pts déclaré reste 3pts. Bouton « Passer » = comportement d'avant. Fini aussi les fausses positions sur les lancers francs.
+  7. **Résumé de match** (`GET /rencontres/{id}/stats-live/resume`) : feuille de stats style Easy Stats/FFBB par joueuse (MIN, PTS, 2PTS, 3PTS, LF avec %, RO/RD, PD, INT, CTR, CS, FPR, FTE, BP, ÉVAL FFBB), totaux par équipe, score par période, ★ MVP, sélecteur de session (officielle par défaut), bouton Imprimer/PDF. Fonctionne en Expert ET Débutant (tout est ActionMatch). Liens ajoutés au drawer + sheet « Plus ».
+  8. **Effectif : « Tout cocher / Tout décocher »** — en entraînement/exhibition, on vide l'équipe en un clic pour ne garder que les éphémères (répond au « beaucoup de joueuses pour rien »).
+- Fichiers modifiés : `templates/manager/evaluation/stats-live.html.twig`, `src/Controller/Manager/StatsLiveController.php`, `templates/manager/evaluation/stats-live-resume.html.twig` (new).
+- Vérifications : JS extrait et validé `node --check` (1622 lignes) ; Twig if/for/block équilibrés (2 fichiers) ; PHP parsé php8 sans erreur ; toutes les méthodes d'entités référencées existent (vérifiées ligne par ligne).
+- Points de vigilance / risques : (a) rendre `Rencontre.equipe` optionnelle pour un « vrai » mode entraînement sans équipe = chantier invasif (migration + null-safety partout) — NON fait, le raccourci effectif y répond à 90 % ; (b) marqueurs de tir toujours non redessinés au rechargement (limite connue, inchangée) ; (c) saisie multi-postes simultanée toujours non synchronisée entre bénévoles (par design des sessions).
+
+---
+
 ### 2026-07-09 — Sorties Lot D (RGPD complet) + durcissement sécu + hygiène dépôt
 
 - Objectif : clore le Lot D RGPD des Sorties (dernier lot du chantier), durcir la sécurité super-admin, tuer le bruit CRLF.

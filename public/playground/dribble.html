@@ -68,6 +68,10 @@
 
 <script type="module">
 import { ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+// [10/07] Suiveur de mouvement partagé (voir tracker.js) : quand le modèle
+// perd le ballon une frame (mouvement rapide, flou), le suiveur comble le
+// trou → moins de "clignotements" et de contacts manqués sur les cibles.
+import { creerSuiveur } from "./tracker.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -95,6 +99,7 @@ let niveau = 1, score = 0, hits = 0, apparues = 0;
 let cibles = [];
 let flottants = [];
 let balleVue = null;
+let suiveur = creerSuiveur();
 
 // ---------- Modèle (une fois) ---------------------------------------------------
 async function chargerModele() {
@@ -108,7 +113,7 @@ async function chargerModele() {
       modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
       delegate: "GPU",
     },
-    runningMode: "VIDEO", scoreThreshold: 0.35, maxResults: 4,
+    runningMode: "VIDEO", scoreThreshold: 0.3, maxResults: 4,
   });
 }
 
@@ -185,6 +190,10 @@ function boucle() {
         faireApparaitre(t);
       }
 
+      // [10/07] Le suiveur mémorise la frame (différence d'images) AVANT la
+      // détection : il pourra combler le trou si le modèle ne voit rien.
+      suiveur.nouvelleFrame(video);
+
       const res = detector.detectForVideo(video, t);
       let meilleure = null;
       for (const d of res.detections) {
@@ -197,8 +206,24 @@ function boucle() {
         balleVue = {
           bx: x + b.width / 2, by: b.originY + b.height / 2,
           r: Math.max(b.width, b.height) / 2,
-          vueA: t, x, oy: b.originY, w: b.width, h: b.height,
+          vueA: t, x, oy: b.originY, w: b.width, h: b.height, mvt: false,
         };
+        // ATTENTION MIROIR : le suiveur lit la vidéo BRUTE (non inversée),
+        // on lui donne donc la position non-miroir (b.originX + w/2).
+        suiveur.confirmerDetection(b.originX + b.width / 2, balleVue.by, balleVue.r, t);
+      } else if (balleVue) {
+        // Trou de détection → suivi au mouvement (coordonnées brutes),
+        // puis re-miroir pour rester dans le repère affiché à l'écran.
+        const p = suiveur.suivreParMouvement(t);
+        if (p) {
+          const bx = canvas.width - p.x;
+          balleVue = {
+            ...balleVue,
+            bx, by: p.y, vueA: t, mvt: true,
+            x: bx - balleVue.r, oy: p.y - balleVue.r,
+            w: balleVue.r * 2, h: balleVue.r * 2,
+          };
+        }
       }
 
       const balleActive = balleVue && (t - balleVue.vueA) < 200;
@@ -206,18 +231,26 @@ function boucle() {
         const frais = (t - balleVue.vueA) < 45;
         ctx.strokeStyle = frais ? "#FF6B2C" : "rgba(255,107,44,0.5)";
         ctx.lineWidth = 3;
-        ctx.strokeRect(balleVue.x, balleVue.oy, balleVue.w, balleVue.h);
+        if (balleVue.mvt) {
+          // Position issue du suivi mouvement : cercle (pas de vraie boîte).
+          ctx.beginPath(); ctx.arc(balleVue.bx, balleVue.by, balleVue.r, 0, Math.PI * 2); ctx.stroke();
+        } else {
+          ctx.strokeRect(balleVue.x, balleVue.oy, balleVue.w, balleVue.h);
+        }
         for (const c of cibles) {
-          if (c.etat === "live" && Math.hypot(balleVue.bx - c.x, balleVue.by - c.y) < c.r + balleVue.r * 0.5) {
+          // Tolérance de contact montée à 0.6 rayon de ballon (retour
+          // terrain : des contacts nets n'étaient pas comptés).
+          if (c.etat === "live" && Math.hypot(balleVue.bx - c.x, balleVue.by - c.y) < c.r + balleVue.r * 0.6) {
             toucher(c, t);
           }
         }
       }
 
-      ctx.fillStyle = balleActive ? "#3ECF8E" : "rgba(255,255,255,0.35)";
+      // Indicateur : vert = modèle, jaune = suivi mouvement, gris = rien.
+      ctx.fillStyle = balleActive ? (balleVue.mvt ? "#F5C542" : "#3ECF8E") : "rgba(255,255,255,0.35)";
       ctx.beginPath(); ctx.arc(26, 30, 8, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.font = "600 15px system-ui"; ctx.textAlign = "left";
-      ctx.fillText(balleActive ? "ballon suivi" : "montre le ballon…", 42, 35);
+      ctx.fillText(balleActive ? (balleVue.mvt ? "suivi au mouvement" : "ballon suivi") : "montre le ballon…", 42, 35);
 
       dessinerCibles(t);
       dessinerFlottants(t);

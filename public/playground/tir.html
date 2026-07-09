@@ -47,12 +47,12 @@
 <body>
   <h1>PIRB TIR — <span>tracker de shoot</span></h1>
   <p class="hint">
-    Pose ton tel face au panier (caméra arrière), pour qu'on voie l'arceau ET toi.
-    Au démarrage tu tapes UNE fois sur l'arceau à l'écran, ensuite tout est automatique :
-    la caméra suit le ballon, dessine ta trajectoire, et compte marqué / raté toute seule.
+    Pose ton tel de PROFIL ou face au panier (caméra arrière), pour qu'on voie l'arceau ET toi.
+    Au démarrage tu tapes les DEUX BOUTS de l'arceau à l'écran (gauche puis droit), ensuite tout
+    est automatique : la caméra suit le ballon, dessine ta trajectoire, et compte marqué / raté.
   </p>
   <button id="btn">Démarrer la séance</button>
-  <div id="status">Le modèle (~4 Mo) se charge au premier lancement, ensuite tout est local.</div>
+  <div id="status">Le modèle (~7 Mo) se charge au premier lancement, ensuite tout est local.</div>
   <div id="stage" hidden>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
@@ -74,6 +74,9 @@
 
 <script type="module">
 import { ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+// Le suiveur de mouvement maison (retour terrain 09/07) : il comble les
+// trous entre deux détections du modèle → trajectoire CONTINUE.
+import { creerSuiveur } from "./tracker.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -81,35 +84,56 @@ const ctx = canvas.getContext("2d");
 const $ = (id) => document.getElementById(id);
 
 // ---------- Réglages -----------------------------------------------------------
-// L'arceau est CALIBRÉ PAR UN TAP (les modèles embarquables ne connaissent
-// pas la classe « panier de basket » — COCO n'a que « sports ball »). Un
-// tap = une zone. Tout le reste (ballon, trajectoire, marqué/raté) est auto.
-const RAYON_ARCEAU_FRAC = 0.055;  // rayon de la zone arceau (fraction du petit côté)
-const TRAINEE_MS = 1100;          // durée de vie de la trajectoire dessinée
-const BALLE_PERDUE_MS = 250;      // au-delà : on considère la détection perdue
+// L'ARCEAU EST UN SEGMENT, PAS UN CERCLE (retour terrain 09/07) : filmé de
+// profil ou d'en dessous, un arceau n'est jamais un rond à l'écran — c'est
+// une barre. Deux taps (bord gauche, bord droit) suffisent à le décrire
+// sous N'IMPORTE quel angle de caméra. Panier = la trajectoire du ballon
+// coupe ce segment en descendant.
+const TRAINEE_MS = 1300;          // durée de vie de la trajectoire dessinée
+const SEGMENT_VALIDE_MS = 220;    // au-delà entre 2 points : trou → segment ignoré
 const COOLDOWN_MS = 1400;         // anti double-comptage après une décision
-const LARGEUR_TIR_FRAC = 3.0;     // raté compté si le ballon retombe à moins de 3 rayons de l'arceau
+const MARGE_RATE = 0.9;           // raté si le croisement est à moins de 0.9 longueur d'arceau à côté
 
 // ---------- État ----------------------------------------------------------------
-let detector = null, lastVideoTime = -1;
+let detector = null, modeleNom = "", lastVideoTime = -1;
 let phase = "attente";            // attente | calibration | jeu | fini
-let arceau = null;                // { x, y, r } en pixels canvas
-let balleVue = null;              // dernière détection { bx, by, r, vueA, x, oy, w, h }
-let trainee = [];                 // trajectoire : [{ x, y, t }]
-let flottants = [];               // "+1", "RATÉ"… qui montent à l'écran
+let arceau = null;                // { a:{x,y}, b:{x,y}, len } — a = bord gauche (x min)
+let tapCalibration = null;        // 1er tap en attente du 2e
+let balleVue = null;              // dernière détection MODÈLE { bx, by, r, vueA, x, oy, w, h }
+let suiveur = creerSuiveur();     // suivi de mouvement entre les détections
+let trainee = [];                 // trajectoire : [{ x, y, t, src: 'modele'|'mouvement' }]
+let flottants = [];
 let reussis = 0, tentes = 0, serie = 0, meilleureSerie = 0;
 let debutSeance = 0;
 
-// Machine à états du TIR (le cœur du tracker) :
-//   repos   → le ballon vit sa vie sous le niveau de l'arceau
-//   en_vol  → le ballon est passé AU-DESSUS de l'arceau (un tir est parti)
-//   cooldown→ décision prise (panier/raté), on attend avant le tir suivant
-let tir = { etat: "repos", depuis: 0, apogee: null };
+// Machine à états du TIR : repos → en_vol → décision → cooldown.
+let tir = { etat: "repos", depuis: 0 };
 
-// ---------- Sons (WebAudio, zéro asset à télécharger) ----------------------------
-// Un « swish » qui monte pour un panier, un buzz sourd pour un raté.
-// L'AudioContext est créé AU PREMIER TAP (les navigateurs mobiles exigent
-// un geste utilisateur avant de laisser une page émettre du son).
+// ---------- Géométrie de l'arceau -------------------------------------------------
+// Côté signé du point p par rapport à la DROITE (a→b) : négatif = AU-DESSUS
+// de l'arceau à l'écran, positif = en dessous (a.x < b.x garanti au tap).
+// Divisé par la longueur → une vraie distance en pixels, comparable partout.
+function distanceSignee(p) {
+  const { a, b, len } = arceau;
+  return ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x)) / len;
+}
+
+// La trajectoire [p1→p2] coupe-t-elle la droite de l'arceau ? Si oui, où ?
+// Retourne u : position du croisement LE LONG de l'arceau (0 = bord gauche,
+// 1 = bord droit, <0 ou >1 = à côté), ou null si pas de croisement.
+function croisementArceau(p1, p2) {
+  const { a, b } = arceau;
+  const d1x = p2.x - p1.x, d1y = p2.y - p1.y;
+  const d2x = b.x - a.x, d2y = b.y - a.y;
+  const den = d1x * d2y - d1y * d2x;
+  if (Math.abs(den) < 1e-9) return null; // trajectoires parallèles
+  const t = ((a.x - p1.x) * d2y - (a.y - p1.y) * d2x) / den; // sur la trajectoire
+  if (t < 0 || t > 1) return null;                            // croisement hors du segment parcouru
+  const u = ((a.x - p1.x) * d1y - (a.y - p1.y) * d1x) / den;  // le long de l'arceau
+  return { u, x: p1.x + t * d1x, y: p1.y + t * d1y };
+}
+
+// ---------- Sons (WebAudio, zéro asset) --------------------------------------------
 let audio = null;
 function initAudio() {
   if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { /* muet */ } }
@@ -129,11 +153,7 @@ function jouer(freqDebut, freqFin, dureeS, type = "sine", gainMax = 0.25) {
 const sonPanier = () => { jouer(880, 1560, 0.22); jouer(1320, 1760, 0.3, "sine", 0.15); };
 const sonRate  = () => jouer(190, 130, 0.25, "square", 0.12);
 
-// ---------- Pont vers l'app PIRB (WebView) ----------------------------------------
-// Si la page tourne dans l'app (react-native-webview), on lui envoie la
-// séance terminée : l'app l'enregistre dans l'historique Playground
-// (AsyncStorage), comme une séance manuelle. Dans un navigateur normal,
-// window.ReactNativeWebView n'existe pas → no-op silencieux.
+// ---------- Pont vers l'app PIRB (WebView) ------------------------------------------
 function envoyerALApp() {
   try {
     window.ReactNativeWebView?.postMessage(JSON.stringify({
@@ -142,45 +162,52 @@ function envoyerALApp() {
       reussis,
       rates: tentes - reussis,
       dureeSecondes: Math.round((performance.now() - debutSeance) / 1000),
-      score: reussis * 10, // même règle produit que l'app (réussis × 10)
+      score: reussis * 10,
     }));
   } catch { /* hors app : rien à faire */ }
 }
 
-// ---------- Modèle (une fois) -------------------------------------------------------
+// ---------- Modèle (une fois) ---------------------------------------------------------
+// lite2 d'abord (entrée 448px : voit un ballon PETIT et LOIN — retour terrain :
+// lite0/320px perdait le ballon à distance de shoot). Si l'appareil ne suit
+// pas (vieux tel, chargement qui échoue), on retombe sur lite0 sans casser.
 async function chargerModele() {
   if (detector) return;
   $("status").textContent = "Chargement du modèle…";
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
   );
-  detector = await ObjectDetector.createFromOptions(vision, {
+  const options = (modele) => ({
     baseOptions: {
-      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/object_detector/${modele}/float16/1/${modele}.tflite`,
       delegate: "GPU",
     },
-    runningMode: "VIDEO", scoreThreshold: 0.3, maxResults: 4,
+    runningMode: "VIDEO", scoreThreshold: 0.25, maxResults: 4,
   });
+  try {
+    detector = await ObjectDetector.createFromOptions(vision, options("efficientdet_lite2"));
+    modeleNom = "lite2";
+  } catch {
+    detector = await ObjectDetector.createFromOptions(vision, options("efficientdet_lite0"));
+    modeleNom = "lite0";
+  }
 }
 
-// ---------- Démarrage ----------------------------------------------------------------
+// ---------- Démarrage ------------------------------------------------------------------
 $("btn").addEventListener("click", async () => {
   $("btn").disabled = true;
   initAudio();
   try {
     await chargerModele();
     $("status").textContent = "Ouverture de la caméra…";
-    // Caméra ARRIÈRE de préférence (on filme le panier). `ideal` et pas
-    // `exact` : sur un PC portable il n'y a qu'une caméra frontale, on la
-    // prend quand même plutôt que d'échouer.
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" }, width: 960, height: 720 },
+      video: { facingMode: { ideal: "environment" }, width: 1280, height: 960 },
     });
     video.srcObject = stream;
     await new Promise((ok) => (video.onloadeddata = ok));
     canvas.width = video.videoWidth; canvas.height = video.videoHeight;
     $("stage").hidden = false; $("hud").hidden = false; $("btn").hidden = true;
-    $("status").textContent = "Analyse locale en direct. Rien n'est enregistré, rien ne part.";
+    $("status").textContent = `Analyse locale en direct (modèle ${modeleNom}). Rien n'est enregistré, rien ne part.`;
     phase = "calibration";
     requestAnimationFrame(boucle);
   } catch (e) {
@@ -189,61 +216,68 @@ $("btn").addEventListener("click", async () => {
   }
 });
 
-// Le TAP de calibration : la position cliquée (coordonnées CSS) est
-// convertie en coordonnées canvas (la vidéo est mise à l'échelle).
+// Calibration en 2 TAPS : bord gauche puis bord droit de l'arceau.
 $("stage").addEventListener("click", (e) => {
   if (phase !== "calibration") return;
   const rect = canvas.getBoundingClientRect();
   const x = (e.clientX - rect.left) * (canvas.width / rect.width);
   const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-  arceau = { x, y, r: RAYON_ARCEAU_FRAC * Math.min(canvas.width, canvas.height) };
-  if (debutSeance === 0) debutSeance = performance.now(); // 1re calibration = début de séance
+
+  if (!tapCalibration) {
+    tapCalibration = { x, y };
+    return; // on attend le 2e bord
+  }
+  // Deuxième tap : on ordonne gauche→droite et on fige l'arceau.
+  const p1 = tapCalibration, p2 = { x, y };
+  tapCalibration = null;
+  const [a, b] = p1.x <= p2.x ? [p1, p2] : [p2, p1];
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  if (len < 12) return; // deux taps au même endroit : on recommence
+  arceau = { a, b, len };
+  if (debutSeance === 0) debutSeance = performance.now();
   phase = "jeu";
-  flottants.push({ x, y: y - 40, t0: performance.now(), texte: "Panier calé 🎯", couleur: "62,207,142" });
+  flottants.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 40, t0: performance.now(), texte: "Arceau calé 🎯", couleur: "62,207,142" });
 });
 
 $("btnRecaler").addEventListener("click", () => {
-  // L'arceau a bougé dans le cadre (tel déplacé) → on re-tape dessus.
-  if (phase === "jeu") { phase = "calibration"; }
+  if (phase === "jeu") { phase = "calibration"; tapCalibration = null; }
 });
 
 $("btnFinir").addEventListener("click", () => { if (phase === "jeu") finirSeance(); });
 $("btnRejouer").addEventListener("click", () => {
   $("fin").style.display = "none";
   reussis = 0; tentes = 0; serie = 0; meilleureSerie = 0;
-  trainee = []; tir = { etat: "repos", depuis: 0, apogee: null };
+  trainee = []; tir = { etat: "repos", depuis: 0 };
+  suiveur = creerSuiveur();
   debutSeance = performance.now();
-  phase = "calibration"; // le tel a pu bouger entre deux séances
+  phase = "calibration"; tapCalibration = null; // le tel a pu bouger
   majHud();
 });
 
-// ---------- Décisions panier / raté ---------------------------------------------------
-function panier(t, xCross) {
+// ---------- Décisions panier / raté -------------------------------------------------------
+function panier(t, xCross, yCross) {
   reussis++; tentes++; serie++;
   meilleureSerie = Math.max(meilleureSerie, serie);
-  // Temps de vol : de l'entrée en état en_vol au passage de l'arceau.
   const vol = ((t - tir.depuis) / 1000).toFixed(1);
-  flottants.push({ x: xCross, y: arceau.y - arceau.r * 2, t0: t, texte: `+1  ·  ${vol}s de vol`, couleur: "62,207,142" });
+  flottants.push({ x: xCross, y: yCross - 40, t0: t, texte: `+1  ·  ${vol}s de vol`, couleur: "62,207,142" });
   if (serie >= 3) flottants.push({ x: canvas.width / 2, y: canvas.height * 0.3, t0: t, texte: `🔥 ${serie} D'AFFILÉE`, couleur: "245,197,66" });
   sonPanier();
   finDeTir(t);
 }
 
-function rate(t, xCross) {
+function rate(t, xCross, yCross) {
   tentes++; serie = 0;
-  flottants.push({ x: xCross, y: arceau.y - arceau.r * 2, t0: t, texte: "Raté", couleur: "229,72,77" });
+  flottants.push({ x: xCross, y: yCross - 40, t0: t, texte: "Raté", couleur: "229,72,77" });
   sonRate();
   finDeTir(t);
 }
 
 function finDeTir(t) {
-  tir = { etat: "cooldown", depuis: t, apogee: null };
+  tir = { etat: "cooldown", depuis: t };
   majHud();
 }
 
-// ---------- Boucle -------------------------------------------------------------------
-let fpsN = 0, fpsT = performance.now();
-
+// ---------- Boucle -------------------------------------------------------------------------
 function boucle() {
   if (video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
@@ -253,8 +287,10 @@ function boucle() {
     if (phase === "calibration") {
       dessinerCalibration(t);
     } else if (phase === "jeu") {
-      // 1. Détecter le ballon (meilleure détection « sports ball » de la frame).
-      //    PAS de miroir : caméra arrière, coordonnées directes.
+      // 0. Le suiveur mémorise la frame (pour la différence d'images).
+      suiveur.nouvelleFrame(video);
+
+      // 1. Détection MODÈLE (elle fait foi quand elle voit le ballon).
       const res = detector.detectForVideo(video, t);
       let meilleure = null;
       for (const d of res.detections) {
@@ -268,44 +304,42 @@ function boucle() {
           r: Math.max(b.width, b.height) / 2,
           vueA: t, x: b.originX, oy: b.originY, w: b.width, h: b.height,
         };
-        // 2. Alimenter la trajectoire (et virer les points trop vieux).
-        trainee.push({ x: balleVue.bx, y: balleVue.by, t });
+        suiveur.confirmerDetection(balleVue.bx, balleVue.by, balleVue.r, t);
+        trainee.push({ x: balleVue.bx, y: balleVue.by, t, src: "modele" });
+      } else {
+        // 2. Trou de détection → le suiveur de mouvement prend le relais
+        //    (c'est LUI qui rend la trajectoire continue à distance de shoot).
+        const p = suiveur.suivreParMouvement(t);
+        if (p) trainee.push({ x: p.x, y: p.y, t, src: "mouvement" });
       }
       trainee = trainee.filter((p) => t - p.t < TRAINEE_MS);
 
       // 3. La machine à états du tir.
       avancerTir(t);
 
-      // 4. Dessin : arceau, trajectoire, ballon, indicateur, flottants.
+      // 4. Dessin.
       dessinerArceau(t);
       dessinerTrainee(t);
       dessinerBallon(t);
       dessinerFlottants(t);
     }
-
-    fpsN++;
-    if (t - fpsT >= 1000) { fpsN = 0; fpsT = t; }
   }
   requestAnimationFrame(boucle);
 }
 
 /**
- * La logique métier du tracker. Trois états :
- *  - repos    : on attend que le ballon monte AU-DESSUS de l'arceau
- *               (c'est ça, un tir : le ballon passe plus haut que le cercle).
- *  - en_vol   : le tir est parti. On surveille le moment où la trajectoire
- *               REDESCEND et croise la ligne de l'arceau : si le point de
- *               croisement est DANS le cercle → panier ; s'il retombe à
- *               côté (mais proche : c'était bien un tir) → raté ; s'il
- *               retombe loin, c'était une passe → on annule, rien compté.
- *  - cooldown : décision prise, on ignore tout pendant COOLDOWN_MS pour ne
- *               pas compter deux fois le même ballon (rebond sur l'arceau…).
+ * repos   : on attend que le ballon passe clairement AU-DESSUS de la ligne
+ *           d'arceau (un tir est parti).
+ * en_vol  : on surveille chaque segment de trajectoire : dès qu'il coupe la
+ *           droite de l'arceau en DESCENDANT → dedans (0≤u≤1) = panier,
+ *           juste à côté = raté, loin = c'était une passe (rien compté).
+ * cooldown: décision prise, on ignore tout un instant (rebond, ramassage…).
  */
 function avancerTir(t) {
   if (!arceau) return;
 
   if (tir.etat === "cooldown") {
-    if (t - tir.depuis > COOLDOWN_MS) tir = { etat: "repos", depuis: t, apogee: null };
+    if (t - tir.depuis > COOLDOWN_MS) tir = { etat: "repos", depuis: t };
     return;
   }
 
@@ -313,102 +347,107 @@ function avancerTir(t) {
   if (n < 2) return;
   const prev = trainee[n - 2];
   const cur = trainee[n - 1];
-  // Détection perdue trop longtemps entre 2 points → segment pas fiable.
-  const segmentValide = cur.t - prev.t < BALLE_PERDUE_MS;
+  const segmentValide = cur.t - prev.t < SEGMENT_VALIDE_MS;
 
   if (tir.etat === "repos") {
-    // Le ballon passe clairement au-dessus de l'arceau → un tir démarre.
-    if (segmentValide && cur.y < arceau.y - arceau.r) {
-      tir = { etat: "en_vol", depuis: t, apogee: cur.y };
+    // Au-dessus de la ligne d'arceau d'au moins ~un demi-ballon → en vol.
+    if (segmentValide && distanceSignee(cur) < -14) {
+      tir = { etat: "en_vol", depuis: t };
     }
     return;
   }
 
   // ---- en_vol ----
-  tir.apogee = Math.min(tir.apogee ?? cur.y, cur.y);
-
-  // Le ballon a disparu du cadre trop longtemps : on ne peut rien affirmer
-  // (airball hors champ ? occlusion ?) → on annule SANS compter. Mieux vaut
-  // un tir non compté qu'un faux chiffre (la donnée doit rester crédible).
+  // Ballon perdu trop longtemps : on annule SANS compter (airball hors
+  // champ ? occlusion ?) — mieux vaut un tir non compté qu'un faux chiffre.
   if (t - cur.t > 900) {
-    tir = { etat: "repos", depuis: t, apogee: null };
+    tir = { etat: "repos", depuis: t };
     return;
   }
 
-  // Croisement de la ligne de l'arceau en DESCENDANT.
-  if (segmentValide && prev.y <= arceau.y && cur.y > arceau.y && cur.y > prev.y) {
-    // Interpolation : où était le ballon (en x) pile au niveau de l'arceau ?
-    const k = (arceau.y - prev.y) / (cur.y - prev.y);
-    const xCross = prev.x + k * (cur.x - prev.x);
-    const dist = Math.abs(xCross - arceau.x);
+  // Croisement de la ligne d'arceau en DESCENDANT (au-dessus → en dessous).
+  if (segmentValide && distanceSignee(prev) <= 0 && distanceSignee(cur) > 0) {
+    const c = croisementArceau(prev, cur);
+    if (!c) { tir = { etat: "repos", depuis: t }; return; }
 
-    if (dist <= arceau.r * 1.15) {
-      panier(t, xCross);          // dedans (petite tolérance : l'arceau est une zone, pas un pixel)
-    } else if (dist <= arceau.r * LARGEUR_TIR_FRAC) {
-      rate(t, xCross);            // à côté mais proche : c'était un tir → raté
+    if (c.u >= -0.06 && c.u <= 1.06) {
+      panier(t, c.x, c.y);          // dans l'arceau (marge 6 % : le filet pardonne)
+    } else if (c.u >= -MARGE_RATE && c.u <= 1 + MARGE_RATE) {
+      rate(t, c.x, c.y);            // à côté mais proche : c'était un tir → raté
     } else {
-      tir = { etat: "repos", depuis: t, apogee: null }; // loin : une passe, pas un tir
+      tir = { etat: "repos", depuis: t }; // loin : une passe, pas un tir
     }
   }
 }
 
-// ---------- Dessins --------------------------------------------------------------------
+// ---------- Dessins ---------------------------------------------------------------------
 function dessinerCalibration(t) {
-  // Assombrir + cercle qui pulse au centre + consigne : UNE action demandée.
   ctx.fillStyle = "rgba(10,14,20,0.45)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  const pulse = 1 + 0.08 * Math.sin(t / 260);
-  const r = RAYON_ARCEAU_FRAC * Math.min(canvas.width, canvas.height) * pulse;
-  const cx = arceau?.x ?? canvas.width / 2;
-  const cy = arceau?.y ?? canvas.height * 0.35;
-  ctx.strokeStyle = "#F5C542"; ctx.lineWidth = 4; ctx.setLineDash([10, 8]);
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
-  ctx.setLineDash([]);
   ctx.fillStyle = "#fff"; ctx.font = "800 22px system-ui"; ctx.textAlign = "center";
-  ctx.fillText("Tape sur l'arceau 🎯", canvas.width / 2, canvas.height * 0.12);
+  if (!tapCalibration) {
+    ctx.fillText("Tape sur le BORD GAUCHE de l'arceau 🎯", canvas.width / 2, canvas.height * 0.12);
+  } else {
+    // Le 1er bord est posé : pastille + consigne pour le 2e.
+    ctx.fillText("Maintenant le BORD DROIT 🎯", canvas.width / 2, canvas.height * 0.12);
+    const pulse = 6 + 2 * Math.sin(t / 200);
+    ctx.fillStyle = "#F5C542";
+    ctx.beginPath(); ctx.arc(tapCalibration.x, tapCalibration.y, pulse, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.font = "600 15px system-ui"; ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.fillText("Cadre le panier ET l'endroit d'où tu shootes", canvas.width / 2, canvas.height * 0.12 + 28);
+  ctx.fillText("Deux taps et c'est réglé — tu pourras recaler à tout moment", canvas.width / 2, canvas.height * 0.12 + 28);
   ctx.textAlign = "left";
 }
 
-function dessinerArceau(t) {
+function dessinerArceau() {
   if (!arceau) return;
-  // La zone arceau : anneau vert + ligne du « plan de l'arceau » discrète.
-  ctx.strokeStyle = "rgba(62,207,142,0.9)"; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(arceau.x, arceau.y, arceau.r, 0, Math.PI * 2); ctx.stroke();
-  ctx.strokeStyle = "rgba(62,207,142,0.25)"; ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(Math.max(0, arceau.x - arceau.r * 4), arceau.y);
-  ctx.lineTo(Math.min(canvas.width, arceau.x + arceau.r * 4), arceau.y);
-  ctx.stroke();
+  const { a, b, len } = arceau;
+  // Le segment épouse l'arceau quel que soit l'angle de la caméra (profil,
+  // dessous, face). L'ellipse discrète autour aide l'œil à lire « cerceau ».
+  ctx.save();
+  ctx.translate((a.x + b.x) / 2, (a.y + b.y) / 2);
+  ctx.rotate(Math.atan2(b.y - a.y, b.x - a.x));
+  ctx.strokeStyle = "rgba(62,207,142,0.35)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 0, len / 2, Math.max(6, len * 0.16), 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = "rgba(62,207,142,0.95)"; ctx.lineWidth = 5; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  // Petites poignées aux extrémités (repères des 2 taps).
+  for (const p of [a, b]) {
+    ctx.fillStyle = "#3ECF8E";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill();
+  }
 }
 
 function dessinerTrainee(t) {
-  // La trajectoire : un trait orange qui s'estompe avec l'âge du point —
-  // c'est LE feedback visuel du tir (l'arc que la joueuse vient de dessiner).
+  // Trajectoire : trait orange qui s'estompe. Les points « mouvement »
+  // (suiveur) sont dessinés un peu plus fins que les points « modèle » —
+  // même trajectoire, on voit juste la couture si on regarde de près.
   for (let i = 1; i < trainee.length; i++) {
     const a = trainee[i - 1], b = trainee[i];
-    if (b.t - a.t > BALLE_PERDUE_MS) continue; // trou de détection : ne pas relier
-    const age = (t - b.t) / TRAINEE_MS;        // 0 = frais, 1 = mourant
-    ctx.strokeStyle = `rgba(255,107,44,${(1 - age) * 0.85})`;
-    ctx.lineWidth = 5 * (1 - age) + 1;
+    if (b.t - a.t > SEGMENT_VALIDE_MS) continue; // trou : ne pas relier
+    const age = (t - b.t) / TRAINEE_MS;
+    ctx.strokeStyle = `rgba(255,107,44,${(1 - age) * 0.9})`;
+    ctx.lineWidth = (b.src === "modele" ? 5 : 3.5) * (1 - age) + 1;
+    ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
 }
 
 function dessinerBallon(t) {
-  const balleActive = balleVue && (t - balleVue.vueA) < 200;
-  if (balleActive) {
-    const frais = (t - balleVue.vueA) < 45;
-    ctx.strokeStyle = frais ? "#FF6B2C" : "rgba(255,107,44,0.5)";
+  const detectionFraiche = balleVue && (t - balleVue.vueA) < 200;
+  const suiviActif = suiveur.actif(t);
+  if (detectionFraiche) {
+    ctx.strokeStyle = (t - balleVue.vueA) < 45 ? "#FF6B2C" : "rgba(255,107,44,0.5)";
     ctx.lineWidth = 3;
     ctx.strokeRect(balleVue.x, balleVue.oy, balleVue.w, balleVue.h);
   }
-  // Indicateur haut-gauche (même code visuel que le dribble) + état du tir.
-  ctx.fillStyle = balleActive ? "#3ECF8E" : "rgba(255,255,255,0.35)";
+  // Indicateur : vert = modèle, jaune = suivi mouvement, gris = rien.
+  ctx.fillStyle = detectionFraiche ? "#3ECF8E" : (suiviActif ? "#F5C542" : "rgba(255,255,255,0.35)");
   ctx.beginPath(); ctx.arc(26, 30, 8, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "#fff"; ctx.font = "600 15px system-ui"; ctx.textAlign = "left";
-  const label = !balleActive ? "montre le ballon…" : (tir.etat === "en_vol" ? "tir en l'air 🏀" : "ballon suivi");
+  const label = detectionFraiche ? (tir.etat === "en_vol" ? "tir en l'air 🏀" : "ballon suivi")
+    : suiviActif ? "suivi au mouvement" : "montre le ballon…";
   ctx.fillText(label, 42, 35);
 }
 
@@ -434,7 +473,7 @@ function finirSeance() {
     ? `Meilleure série : ${meilleureSerie}. Compté par la caméra, pas par toi.`
     : "Vérifie que l'arceau calibré et tes tirs sont bien dans le cadre.";
   $("fin").style.display = "flex";
-  envoyerALApp(); // dans l'app : la séance rejoint l'historique Playground
+  envoyerALApp();
 }
 
 function majHud() {
