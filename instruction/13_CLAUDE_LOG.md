@@ -1599,27 +1599,23 @@ Trombinoscope : DÉJÀ web (ImportTrombinoscopeController) — pas recodé. PAS 
   Fix : #jr-liste max-height:220px + overflow-y:auto ; modal max-height:92vh + overflow.
 - Couleur mémorisée PAR ÉQUIPE (notres=#3b82f6, adverse=#ef4444) au lieu de par joueuse.
 - Après ajout : on reste sur la même équipe + couleur, on ne vide que prénom/nom/n°, focus prénom.
-nel). Articles de test visibles (intentionnel).
-- Fichiers modifiés :
-  - `config/routes/vitrine.yaml`
-  - `config/routes.yaml`
-  - `templates/vitrine/accueil/index.html.twig`
-  - `templates/vitrine/accueil/club.html.twig`
-  - `templates/vitrine/accueil/equipes.html.twig`
-  - `public/images/teamsU1.jpg` (nouveau fichier)
-- Décisions : aucune ADR nécessaire (corrections de bugs, pas d'architecture)
-- Points de vigilance :
-  - Le push git + déploiement SSH doit être fait manuellement depuis le terminal (credentials HTTPS GitHub non disponibles dans la sandbox Cowork). Commandes : `git push` puis SSH OVH `git pull && php bin/console cache:clear --env=prod`
-  - Le breadcrumb 3x3 a été retiré — voir note ci-dessus si souhait de le réintégrer autrement
 
----
+## 2026-07-09 — Stats Live : limite « 5 PAR ÉQUIPE » (mode 2 équipes)
+Bug : limite « 5 sur le terrain » globale (surTerrain.size>=5) → impossible de faire entrer
+l'adverse. Fix : data-cote (nous/adverse, + a/b en mode interne) ajouté sur chaque carte
+(macro carte_joueuse + 3 blocs éphémères), et le handler badge ON/OFF compte désormais par côté
+(5 nous + 5 adverses). Rien côté serveur (limite 100% JS, entrerSurTerrain ne compte pas).
+Terrain complet (2 paniers) NON fait : gros chantier (SVG + detectZone JS + ShotChartCalculator PHP
++ repère des positions déjà stockées + tous les shot-charts). Option moins coûteuse = 2 demi-terrains.
 
-### 2026-03-22 (session 35) — Quill pages amélioration + Roadmap CMS V2
-- Objectif : Améliorer le bloc Quill dans pages/edit.html.twig (variable quillPage, background, 320px), documenter la vision CMS V2 dans la roadmap
-- Actions réalisées :
-  - `templates/admin/pages/edit.html.twig` : variable `quill` → `quillPage`, hauteur 300→320px, ajout option `background` avec 5 couleurs MABB, CSS selector simplifié
-  - `instruction/04_ROADMAP_V2.md` : ajout section "CMS Vitrine V2 — Super Admin Total" avec 4 niveaux (textes/sections/nav/médias), entités cibles, priorités
-- Fichiers modifiés :
-  - `templates/admin/pages/edit.html.twig`
+## 2026-07-09 — Stats Live : deux demi-terrains (match 2 équipes)
+Macro Twig demi_terrain(suffixe, cote, bg, titre). court-zone : 1 terrain en match normal,
+2 demi-terrains côte à côte si adverse présent (ou mode interne A/B), teintés bleu (nous/A) et
+rouge (adverse/B). data-cote sur wrap + svg. JS : handler clic sur TOUS les .court-svg, refuse le clic
+si la joueuse sélectionnée n'est pas du côté du terrain ; marqueurs dessinés dans le bon demi (state.tirCote) ;
+clearPendingTir masque les 2 pending ; sélection d'une joueuse surligne son demi-terrain, grise l'autre.
+Gated : match normal = 1 seul terrain, comportement inchangé. Repère 0-1 panier-haut conservé par demi
+→ detectZone + ShotChartCalculator PHP INTACTS, aucune donnée cassée.
+t.html.twig`
   - `instruction/04_ROADMAP_V2.md`
 - Décisions : architecture V2 retenue = blocs JSON dans PageContenu (évite une nouvelle entité en V2 early), migration vers SectionPage en V2 mature

@@ -37,13 +37,14 @@
 {# [V2.3] Carte joueuse — factorisation pour les colonnes A et B.
    Markup identique aux cartes classiques : les sélecteurs JS existants
    (data-joueur-id, data-joueur-pts, data-badge-joueur…) restent valides. #}
-{% macro carte_joueuse(j, comptages, est_sur_terrain) %}
+{% macro carte_joueuse(j, comptages, est_sur_terrain, cote='nous') %}
     {% set pts = ((comptages.tir_2pt_int_reussi ?? 0) + (comptages.tir_2pt_ext_reussi ?? 0)) * 2
                + (comptages.tir_3pt_reussi ?? 0) * 3
                + (comptages.lancer_reussi ?? 0) %}
     <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
          data-joueur-id="{{ j.id }}"
          data-pts="{{ pts }}"
+         data-cote="{{ cote }}"
          data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}">
         <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
             <span class="dot"></span>
@@ -58,6 +59,32 @@
                 <span class="pts" data-joueur-pts="{{ j.id }}">{{ pts }}</span> pts
                 · <span class="temps-jeu" data-temps-jeu="{{ j.id }}">00:00</span>
             </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{# Un demi-terrain offensif FFBB (panier en haut). Réutilisé en 1 ou 2 exemplaires
+   (match normal = 1 ; match 2 équipes = 1 par équipe, teinté à sa couleur). #}
+{% macro demi_terrain(suffixe, cote, bg, titre) %}
+    <div class="court-col" data-cote="{{ cote }}" style="flex:1; min-width:0;">
+        {% if titre %}<div class="court-col-title">{{ titre }}</div>{% endif %}
+        <div class="court-svg-wrap" id="courtWrap{{ suffixe }}" data-cote="{{ cote }}" style="background:{{ bg }};">
+            <svg class="court-svg" id="courtSvg{{ suffixe }}" data-cote="{{ cote }}" viewBox="0 0 1500 1400" preserveAspectRatio="xMidYMid meet">
+                <line x1="0" y1="0" x2="1500" y2="0" class="court-line"/>
+                <line x1="0" y1="0" x2="0" y2="1400" class="court-line"/>
+                <line x1="1500" y1="0" x2="1500" y2="1400" class="court-line"/>
+                <line x1="0" y1="1400" x2="1500" y2="1400" class="court-line"/>
+                <rect x="505" y="0" width="490" height="580" class="court-paint court-line"/>
+                <circle cx="750" cy="580" r="180" class="court-line"/>
+                <path d="M 625,130 A 125,125 0 0 0 875,130" class="court-line"/>
+                <line x1="90" y1="0" x2="90" y2="299" class="court-line"/>
+                <line x1="1410" y1="0" x2="1410" y2="299" class="court-line"/>
+                <path d="M 90,299 A 675,675 0 0 0 1410,299" class="court-line"/>
+                <line x1="660" y1="100" x2="840" y2="100" class="court-line" style="stroke-width:6;"/>
+                <circle cx="750" cy="130" r="22" fill="none" stroke="#fff" stroke-width="4"/>
+                <g id="shotMarkers{{ suffixe }}" class="shot-markers"></g>
+                <circle id="pendingTir{{ suffixe }}" class="pending-tir-marker" cx="-100" cy="-100" style="display:none;"/>
+            </svg>
         </div>
     </div>
 {% endmacro %}
@@ -563,6 +590,11 @@
             position: relative;
         }
         .court-svg-wrap.disabled { cursor: not-allowed; opacity: .55; }
+        /* Deux demi-terrains (match 2 équipes) : titre + surbrillance de l'équipe active */
+        .court-col-title { text-align:center; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; padding:3px 0 4px; opacity:.9; color:#fff; }
+        .court-svg-wrap { border-radius:8px; transition:opacity .15s ease, outline-color .15s ease; }
+        .court-svg-wrap.court-actif { outline:2px solid rgba(255,255,255,.6); }
+        .court-svg-wrap.court-inactif { opacity:.4; }
         .court-svg {
             background: #c2410c;
             border-radius: 4px;
@@ -2120,7 +2152,7 @@
                     <div class="ab-col ab-col-a" id="colEquipeA">
                         <div class="ab-col-header">{{ rencontre.equipeANom }}</div>
                         {% for j in joueuses_equipe_a %}
-                            {{ _self.carte_joueuse(j, comptages_par_joueur[j.id] ?? {}, j.id in ids_sur_terrain) }}
+                            {{ _self.carte_joueuse(j, comptages_par_joueur[j.id] ?? {}, j.id in ids_sur_terrain, 'a') }}
                         {% else %}
                             <p style="color:#94a3b8; padding:8px; font-size:.8rem;">Aucune joueuse.</p>
                         {% endfor %}
@@ -2128,7 +2160,7 @@
                     <div class="ab-col ab-col-b" id="colEquipeB">
                         <div class="ab-col-header">{{ rencontre.equipeBNom }}</div>
                         {% for j in joueuses_equipe_b %}
-                            {{ _self.carte_joueuse(j, comptages_par_joueur[j.id] ?? {}, j.id in ids_sur_terrain) }}
+                            {{ _self.carte_joueuse(j, comptages_par_joueur[j.id] ?? {}, j.id in ids_sur_terrain, 'b') }}
                         {% else %}
                             <p style="color:#94a3b8; padding:8px; font-size:.8rem;">Aucune joueuse.</p>
                         {% endfor %}
@@ -2161,6 +2193,7 @@
                         <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
                              data-joueur-id="{{ j.id }}"
                              data-pts="{{ pts }}"
+                             data-cote="nous"
                              data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}">
                             <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
                                 <span class="dot"></span>
@@ -2193,6 +2226,7 @@
                             <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
                                  data-joueur-id="{{ j.id }}"
                                  data-pts="{{ pts }}"
+                                 data-cote="nous"
                                  data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}"
                                  style="border-left: 3px solid {{ j.couleurMaillot ?? '#ea580c' }};">
                                 <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
@@ -2231,6 +2265,7 @@
                             <div class="joueuse-item {{ est_sur_terrain ? 'sur-terrain' : '' }}"
                                  data-joueur-id="{{ j.id }}"
                                  data-pts="{{ pts }}"
+                                 data-cote="adverse"
                                  data-sur-terrain="{{ est_sur_terrain ? '1' : '0' }}"
                                  style="border-left: 3px solid {{ j.couleurMaillot ?? '#ef4444' }}; opacity:.9;">
                                 <span class="badge-terrain {{ est_sur_terrain ? 'on' : '' }}" data-badge-joueur="{{ j.id }}">
@@ -2260,50 +2295,20 @@
 
             {# ===== COLONNE 2 : TERRAIN SVG ===== #}
             <div class="court-zone">
-                <div class="court-svg-wrap" id="courtWrap">
-                    {# Demi-terrain offensif FFBB — proportions réelles (15m largeur × 14m profondeur).
-                       Panier à (750, 130). ViewBox sized en cm × 1. #}
-                    <svg class="court-svg" id="courtSvg" viewBox="0 0 1500 1400" preserveAspectRatio="xMidYMid meet">
-                        {# Ligne de fond (haut) #}
-                        <line x1="0" y1="0" x2="1500" y2="0" class="court-line"/>
-
-                        {# Lignes côté (gauche/droite) #}
-                        <line x1="0" y1="0" x2="0" y2="1400" class="court-line"/>
-                        <line x1="1500" y1="0" x2="1500" y2="1400" class="court-line"/>
-
-                        {# Ligne médiane (bas) #}
-                        <line x1="0" y1="1400" x2="1500" y2="1400" class="court-line"/>
-
-                        {# Raquette (4.9m large × 5.8m profondeur) #}
-                        <rect x="505" y="0" width="490" height="580" class="court-paint court-line"/>
-
-                        {# Cercle des LF (1.8m rayon) centré à 5.8m de la ligne de fond #}
-                        <circle cx="750" cy="580" r="180" class="court-line"/>
-
-                        {# Demi-cercle "no-charge" sous le panier (rayon 1.25m) #}
-                        <path d="M 625,130 A 125,125 0 0 0 875,130" class="court-line"/>
-
-                        {# Ligne 3pts (6.75m) — arc + 2 segments verticaux dans les coins #}
-                        {# Coin gauche : segment vertical depuis ligne de fond jusqu'à 2.99m, puis arc #}
-                        <line x1="90" y1="0" x2="90" y2="299" class="court-line"/>
-                        <line x1="1410" y1="0" x2="1410" y2="299" class="court-line"/>
-                        {# Arc 3pts : rayon 6.75m centré sur le panier (750, 130) #}
-                        <path d="M 90,299 A 675,675 0 0 0 1410,299" class="court-line"/>
-
-                        {# Panier — petit rectangle de planche + cercle anneau #}
-                        <line x1="660" y1="100" x2="840" y2="100" class="court-line" style="stroke-width:6;"/>
-                        <circle cx="750" cy="130" r="22" fill="none" stroke="#fff" stroke-width="4"/>
-
-                        {# Calque pour les marqueurs de tirs (rempli en JS) #}
-                        <g id="shotMarkers"></g>
-
-                        {# Marqueur du tir en cours (avant choix réussi/raté) #}
-                        <circle id="pendingTir" class="pending-tir-marker" cx="-100" cy="-100" style="display:none;"/>
-                    </svg>
-                </div>
+                {% set deux_terrains = mode_interne_ab or (joueuses_ephemeres_adverses is defined and joueuses_ephemeres_adverses|length > 0) %}
+                {% if deux_terrains %}
+                    {% set coteA = mode_interne_ab ? 'a' : 'nous' %}
+                    {% set coteB = mode_interne_ab ? 'b' : 'adverse' %}
+                    <div style="display:flex; gap:10px; align-items:flex-start;">
+                        {{ _self.demi_terrain('', coteA, 'rgba(59,130,246,.14)', mode_interne_ab ? rencontre.equipeANom : 'Notre équipe') }}
+                        {{ _self.demi_terrain('Adverse', coteB, 'rgba(239,68,68,.14)', mode_interne_ab ? rencontre.equipeBNom : rencontre.adversaire) }}
+                    </div>
+                {% else %}
+                    {{ _self.demi_terrain('', 'nous', 'transparent', '') }}
+                {% endif %}
                 <div class="court-hint" id="courtHint">
                     <i class="bi bi-info-circle"></i>
-                    Sélectionne une joueuse à gauche, puis clique sur le terrain pour saisir un tir.
+                    Sélectionne une joueuse, puis clique sur SON demi-terrain (surligné) pour saisir un tir.
                 </div>
             </div>
 
@@ -3601,8 +3606,18 @@
             if (estSurTerrain) {
                 await sortirJoueuse(joueurId);
             } else {
-                if (surTerrain.size >= 5) {
-                    toast('Maximum 5 sur le terrain. Sors-en une d\'abord.', true);
+                // Limite 5 PAR ÉQUIPE (et non 5 au total) : on compte les joueuses
+                // déjà sur le terrain qui partagent le même côté (data-cote) que
+                // celle qu'on veut faire entrer → 5 chez nous + 5 adverses possibles.
+                const carteCourante = badge.closest('.joueuse-item');
+                const coteCourant   = carteCourante?.dataset.cote || 'nous';
+                let dejaSurCeCote = 0;
+                surTerrain.forEach((_v, id) => {
+                    const c = document.querySelector('.joueuse-item[data-joueur-id="' + id + '"]')?.dataset.cote || 'nous';
+                    if (c === coteCourant) dejaSurCeCote++;
+                });
+                if (dejaSurCeCote >= 5) {
+                    toast('Maximum 5 pour cette équipe. Sors-en une d\'abord.', true);
                     return;
                 }
                 await entrerJoueuse(joueurId);
@@ -3629,8 +3644,8 @@
             state.tirX = null;
             state.tirY = null;
             state.tirZone = null;
-            const marker = document.getElementById('pendingTir');
-            marker.style.display = 'none';
+            state.tirCote = null;
+            document.querySelectorAll('.pending-tir-marker').forEach(m => { m.style.display = 'none'; });
             setMode(false);
         }
 
@@ -3812,8 +3827,11 @@
         // DESSIN MARKERS DE TIR (permanent)
         // ====================================================================
         function drawShotMarker(x, y, reussi) {
-            const svg = document.getElementById('courtSvg');
-            const group = document.getElementById('shotMarkers');
+            // Dessine dans le demi-terrain de l'équipe du tir (state.tirCote), sinon le principal.
+            const cote = state.tirCote || 'nous';
+            const group = document.querySelector('.court-svg[data-cote="' + cote + '"] .shot-markers')
+                       || document.getElementById('shotMarkers');
+            if (!group) return;
             const cx = x * 1500;
             const cy = y * 1400;
 
@@ -3860,6 +3878,13 @@
             document.querySelectorAll('.joueuse-item').forEach(e => e.classList.remove('active'));
             el.classList.add('active');
             state.joueurActif = joueurId;
+            // Surligne le demi-terrain de l'équipe de la joueuse, grise l'autre.
+            const cote = el.dataset.cote || 'nous';
+            document.querySelectorAll('.court-svg-wrap').forEach(w => {
+                const actif = (w.dataset.cote || 'nous') === cote;
+                w.classList.toggle('court-actif', actif);
+                w.classList.toggle('court-inactif', !actif);
+            });
             clearPendingTir(); // toujours repartir d'un état tir vierge
         }
 
@@ -3872,6 +3897,7 @@
          */
         function deselectionnerJoueuse() {
             document.querySelectorAll('.joueuse-item').forEach(e => e.classList.remove('active'));
+            document.querySelectorAll('.court-svg-wrap').forEach(w => w.classList.remove('court-actif', 'court-inactif'));
             state.joueurActif = null;
             clearPendingTir();
         }
@@ -3880,14 +3906,23 @@
         window.deselectionnerJoueuse = deselectionnerJoueuse;
 
         // --- Clic sur le terrain ---
-        document.getElementById('courtSvg').addEventListener('click', (e) => {
+        document.querySelectorAll('.court-svg').forEach(courtEl => {
+          courtEl.addEventListener('click', (e) => {
             if (!state.joueurActif) {
                 toast('Sélectionne une joueuse d\'abord', true);
                 return;
             }
 
-            // Coordonnées clic en pixel SVG (basées sur le viewBox)
             const svg = e.currentTarget;
+            // Le tir doit être saisi sur le demi-terrain de l'ÉQUIPE de la joueuse.
+            const courtCote  = svg.dataset.cote || 'nous';
+            const joueurCote = document.querySelector('.joueuse-item[data-joueur-id="' + state.joueurActif + '"]')?.dataset.cote || 'nous';
+            if (courtCote !== joueurCote) {
+                toast('Clique sur le demi-terrain de l\'équipe de cette joueuse.', true);
+                return;
+            }
+
+            // Coordonnées clic en pixel SVG (basées sur le viewBox)
             const pt = svg.createSVGPoint();
             pt.x = e.clientX;
             pt.y = e.clientY;
@@ -3898,19 +3933,25 @@
             const x = Math.max(0, Math.min(1, svgPoint.x / 1500));
             const y = Math.max(0, Math.min(1, svgPoint.y / 1400));
 
+            // Reset (masque les pending des 2 terrains) puis pose le nouvel état
+            clearPendingTir();
             state.tirX = x;
             state.tirY = y;
             state.tirZone = detectZone(x, y);
+            state.tirCote = courtCote;
 
-            // Affiche le marker pending
-            const marker = document.getElementById('pendingTir');
-            marker.setAttribute('cx', x * 1500);
-            marker.setAttribute('cy', y * 1400);
-            marker.style.display = 'block';
+            // Affiche le marker pending sur CE demi-terrain
+            const marker = svg.querySelector('.pending-tir-marker');
+            if (marker) {
+                marker.setAttribute('cx', x * 1500);
+                marker.setAttribute('cy', y * 1400);
+                marker.style.display = 'block';
+            }
 
             // Affiche les options réussi/raté en mode tir
             setMode(true);
             document.getElementById('shotZoneLabel').textContent = state.tirZone.label;
+          });
         });
 
         // --- Boutons actions (panneau droit) ---
