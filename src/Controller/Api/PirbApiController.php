@@ -188,15 +188,25 @@ class PirbApiController extends AbstractController
     // ─────────────────────────────────────────────────────────────────────
 
     #[Route('/api/pirb/shot-chart', name: 'api_pirb_shot_chart', methods: ['GET'])]
-    public function shotChart(): JsonResponse
+    public function shotChart(Request $request): JsonResponse
     {
         $joueur = $this->joueurOu404();
         if ($joueur instanceof JsonResponse) { return $joueur; }
 
+        // Filtrage par saison (même contrat que /stats/saison) : ?saison=YYYY-YYYY.
+        $saison   = $this->saisonService->getSaisonCourante();
+        $demandee = $request->query->get('saison');
+        if ($demandee !== null && $demandee !== '') {
+            if (!$this->saisonService->isValide($demandee)) {
+                return new JsonResponse(['error' => 'Saison invalide ou non disponible.'], Response::HTTP_BAD_REQUEST);
+            }
+            $saison = $demandee;
+        }
+
         $tirs = [];
 
-        // 1. Tirs Stats Live (ActionMatch, coordonnées natives 0-1, source LIVE)
-        foreach ($this->shotChart->positionsTirs($joueur) as $t) {
+        // 1. Tirs Stats Live (ActionMatch), filtrés sur la saison choisie
+        foreach ($this->shotChart->positionsTirs($joueur, null, $saison) as $t) {
             $tirs[] = [
                 'x'      => $t['x'],
                 'y'      => $t['y'],
@@ -211,6 +221,7 @@ class PirbApiController extends AbstractController
         //    (x lateral 0-1, y 0=ligne de fond → 1=médiane, panier en 0.5,0).
         foreach ($this->tirFfbbRepo->findForJoueur($joueur) as $tir) {
             if ($tir->getSource() !== TirFfbb::SOURCE_FFBB) { continue; }
+            if ($tir->getRencontre()?->getSaison() !== $saison) { continue; } // saison choisie
 
             // Deux jeux de coordonnées existent sur TirFfbb :
             //   - ffbbX/ffbbY : pour-mille (0-1000), déjà dans le repère du
@@ -249,6 +260,12 @@ class PirbApiController extends AbstractController
             $agg[$zone] = ['tentes' => 0, 'reussis' => 0]; // exhaustif : toutes les zones
         }
         foreach ($tirs as $t) {
+            // Zone par zone = STATS LIVE uniquement. La FFBB ne fournit que les
+            // tirs RÉUSSIS → l'inclure afficherait 100 % partout (trompeur). Les
+            // tirs FFBB restent visibles sur le terrain (pastilles), pas ici.
+            if ($t['source'] !== 'LIVE') {
+                continue;
+            }
             $z = $t['zone'];
             if (!isset($agg[$z])) {
                 $agg[$z] = ['tentes' => 0, 'reussis' => 0];

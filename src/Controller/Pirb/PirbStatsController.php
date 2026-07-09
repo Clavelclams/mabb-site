@@ -123,7 +123,22 @@ class PirbStatsController extends AbstractController
             $monEquipeCetteSaison?->getId() === $equipeMatchId
             || $joueur->getEquipe()?->getId() === $equipeMatchId
         );
-        if (!$appartientEquipe) {
+
+        // [09/07/2026] Fallback robuste : le contrôle par équipe/saison casse
+        // quand le mapping affectation joueuse↔équipe est incomplet (fréquent
+        // après la bascule du 1er juillet). Or la liste des matchs du shot chart
+        // vient des PROPRES tirs de la joueuse : si elle a des tirs sur ce match,
+        // c'est SA donnée → accès légitime, aucune fuite RGPD.
+        $aDesTirsSurCeMatch = (int) $this->tirFfbbRepo->createQueryBuilder('t')
+            ->select('COUNT(t.id)')
+            ->where('t.joueur = :j')
+            ->andWhere('t.rencontre = :r')
+            ->setParameter('j', $joueur)
+            ->setParameter('r', $rencontre)
+            ->getQuery()
+            ->getSingleScalarResult() > 0;
+
+        if (!$appartientEquipe && !$aDesTirsSurCeMatch) {
             throw $this->createAccessDeniedException('Ce match ne concerne pas ton équipe.');
         }
 
@@ -196,7 +211,7 @@ class PirbStatsController extends AbstractController
      * sur l'ensemble des matchs joués. Permet d'identifier les zones de tir efficaces.
      */
     #[Route('/stats/shotchart', name: 'pirb_stats_shotchart', methods: ['GET'])]
-    public function shotchart(): Response
+    public function shotchart(Request $request, \App\Service\SaisonService $saisonService): Response
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -207,8 +222,21 @@ class PirbStatsController extends AbstractController
             return $this->redirectToRoute('pirb_dashboard');
         }
 
-        // Tous les tirs réussis FFBB de la joueuse (saison toutes confondues)
-        $tirsFfbb = $this->tirFfbbRepo->findForJoueur($joueur);
+        // [09/07/2026] Saison active : le sélecteur du header PIRB (session) pilote
+        // getSaisonActive() ; l'app peut aussi passer ?saison= pour rester alignée
+        // avec la saison choisie dans son écran Stats. Avant : AUCUN filtre, donc
+        // 2026-2027 affichait encore les 81 tirs de 2025-2026.
+        $saison   = $saisonService->getSaisonActive();
+        $demandee = $request->query->get('saison');
+        if ($demandee !== null && $saisonService->isValide($demandee)) {
+            $saison = $demandee;
+        }
+
+        // Tirs réussis FFBB de la joueuse, filtrés sur la saison active.
+        $tirsFfbb = array_values(array_filter(
+            $this->tirFfbbRepo->findForJoueur($joueur),
+            static fn($t) => $t->getRencontre()?->getSaison() === $saison
+        ));
 
         // [B22d 12/06/2026] Tirs depuis ActionMatch (Stats Live officielles)
         // → on cherche les actions TYPE_TIR_*_REUSSI avec position X/Y
@@ -228,6 +256,12 @@ class PirbStatsController extends AbstractController
             ->setParameter('off', \App\Entity\Sport\SessionStatsLive::STATUT_OFFICIELLE)
             ->getQuery()
             ->getResult();
+
+        // Filtre saison (même saison active que les tirs FFBB ci-dessus).
+        $tirsLive = array_values(array_filter(
+            $tirsLive,
+            static fn($t) => $t->getSession()?->getRencontre()?->getSaison() === $saison
+        ));
 
         // Décompte par type pour stats globales (FFBB + Live confondus)
         $countByType = ['2pt_int' => 0, '2pt_ext' => 0, '3pt' => 0, 'inconnu' => 0];
