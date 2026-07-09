@@ -193,6 +193,9 @@
         .chrono-display.running {
             color: #fef9c3; /* jaune clair quand le chrono tourne */
         }
+        /* [V2.4f] Le chrono est cliquable (start/pause au tap direct) */
+        .chrono-display { cursor: pointer; user-select: none; -webkit-user-select: none; }
+        .chrono-display:active { transform: scale(.97); }
         .chrono-display.warning {
             color: #fecaca; /* rouge si < 1 min */
             animation: chronoBlink 1s ease-in-out infinite;
@@ -599,6 +602,17 @@
             background: #c2410c;
             border-radius: 4px;
         }
+        /* [V2.4f] Match à 2 terrains : le fond du SVG (opaque) prend la couleur
+           de l'équipe — l'ancienne teinte posée sur le wrap était invisible
+           derrière le #c2410c. Bleu = notre équipe / équipe A ; rouge = adverse / B. */
+        .courts-duo .court-col[data-cote="nous"] .court-svg,
+        .courts-duo .court-col[data-cote="a"] .court-svg { background: #1d4ed8; }
+        .courts-duo .court-col[data-cote="adverse"] .court-svg,
+        .courts-duo .court-col[data-cote="b"] .court-svg { background: #b91c1c; }
+        .courts-duo .court-col[data-cote="nous"] .court-col-title,
+        .courts-duo .court-col[data-cote="a"] .court-col-title { color: #93c5fd; }
+        .courts-duo .court-col[data-cote="adverse"] .court-col-title,
+        .courts-duo .court-col[data-cote="b"] .court-col-title { color: #fca5a5; }
         .court-line { stroke: #fff; stroke-width: 4; fill: none; }
         .court-paint { fill: rgba(255,255,255,.15); }
         .court-hint {
@@ -614,6 +628,15 @@
             r: 12;
             animation: pulse 1s infinite;
         }
+        /* [V2.4f] Toggle "Localiser les actions" (panneau expert) */
+        .localiser-toggle {
+            display: flex; align-items: center; gap: 8px;
+            font-size: .78rem; color: #cbd5e1; cursor: pointer;
+            padding: 8px 10px; border: 1px dashed #475569; border-radius: 8px;
+            margin: 2px 0 6px; user-select: none;
+        }
+        .localiser-toggle input { accent-color: #fbbf24; }
+        .localiser-toggle:has(input:checked) { border-color: #fbbf24; color: #fef3c7; }
         @keyframes pulse {
             0%,100% { opacity: 1; }
             50% { opacity: 0.5; }
@@ -2006,6 +2029,11 @@
                 <span class="nav-icon">🗂️</span>
                 <span>Voir les sessions de saisie</span>
             </a>
+            {# [V2.4f] Résumé de match complet (feuille de stats style Easy Stats) #}
+            <a href="{{ path('manager_rencontre_stats_live_resume', {id: rencontre.id}) }}" class="nav-drawer-item">
+                <span class="nav-icon">📊</span>
+                <span>Résumé de match</span>
+            </a>
             <div class="nav-drawer-divider"></div>
 
             {# V2.1m — Contrôles chrono déplacés ici pour libérer la top bar #}
@@ -2071,7 +2099,10 @@
                     <span class="chrono-period-q" id="periodLabel">Q1</span>
                     <span style="color:#64748b; font-size:.7rem;">/ {{ rencontre.nbPeriodes }}</span>
                 </div>
-                <div class="chrono-display" id="chronoDisplay">
+                {# [V2.4f] Chrono CLIQUABLE : tap sur l'affichage = start/pause direct,
+                   plus besoin d'ouvrir le drawer. Les boutons dédiés restent. #}
+                <div class="chrono-display" id="chronoDisplay" role="button" tabindex="0"
+                     title="Toucher pour démarrer / mettre en pause">
                     {{ '%02d'|format(rencontre.dureePeriodeMinutes) }}:00
                 </div>
                 <div class="chrono-controls">
@@ -2283,6 +2314,7 @@
                                     </div>
                                     <div class="joueuse-stats">
                                         <span class="pts" data-joueur-pts="{{ j.id }}">{{ pts }}</span> pts
+                                        · <span class="temps-jeu" data-temps-jeu="{{ j.id }}">00:00</span>
                                     </div>
                                 </div>
                             </div>
@@ -2299,7 +2331,9 @@
                 {% if deux_terrains %}
                     {% set coteA = mode_interne_ab ? 'a' : 'nous' %}
                     {% set coteB = mode_interne_ab ? 'b' : 'adverse' %}
-                    <div style="display:flex; gap:10px; align-items:flex-start;">
+                    {# [V2.4f] .courts-duo : chaque demi-terrain prend la COULEUR de son
+                       équipe (le fond SVG orange opaque masquait les anciennes teintes). #}
+                    <div class="courts-duo" style="display:flex; gap:10px; align-items:flex-start;">
                         {{ _self.demi_terrain('', coteA, 'rgba(59,130,246,.14)', mode_interne_ab ? rencontre.equipeANom : 'Notre équipe') }}
                         {{ _self.demi_terrain('Adverse', coteB, 'rgba(239,68,68,.14)', mode_interne_ab ? rencontre.equipeBNom : rencontre.adversaire) }}
                     </div>
@@ -2328,6 +2362,15 @@
                         <i class="bi bi-arrow-counterclockwise"></i> Annuler tir
                     </button>
                 </div>
+
+                {# [V2.4f] Toggle "Localiser" : quand actif, une action (perte de
+                   balle, interception, rebond…) attend un clic sur le demi-terrain
+                   de la joueuse pour être enregistrée AVEC sa position. Désactivé
+                   par défaut pour ne pas ralentir la saisie live. #}
+                <label class="localiser-toggle" for="toggleLocaliser" title="Enregistrer aussi OÙ l'action a eu lieu (clic terrain après chaque stat)">
+                    <input type="checkbox" id="toggleLocaliser">
+                    🎯 Localiser les actions sur le terrain
+                </label>
 
                 {# === Lancers francs === #}
                 <div class="actions-group">
@@ -2447,6 +2490,10 @@
         <div class="modal-box modal-box-sheet">
             <h2 class="modal-title">Plus d'actions</h2>
             <div style="display:flex; flex-direction:column; gap:10px; margin:14px 0;">
+                <a href="{{ path('manager_rencontre_stats_live_resume', {id: rencontre.id}) }}"
+                   class="modal-btn modal-btn-cancel" style="text-align:left; padding:14px; text-decoration:none;">
+                    📊 Résumé de match
+                </a>
                 <a href="{{ path('manager_rencontre_sessions', {id: rencontre.id}) }}"
                    class="modal-btn modal-btn-cancel" style="text-align:left; padding:14px; text-decoration:none;">
                     🗂️ Voir les sessions de saisie
@@ -2496,6 +2543,13 @@
                 absentes (blessées, examens). Par défaut, toutes sont cochées.
             </p>
             <div class="modal-counter" id="modalEffectifCounter">— qui jouent</div>
+            {# [V2.4f] Raccourcis : utile en ENTRAÎNEMENT / EXHIBITION — décocher
+               toute l'équipe d'un coup pour ne travailler qu'avec les joueuses
+               éphémères, sans devoir décliquer une par une. #}
+            <div style="display:flex; gap:8px; margin:6px 0;">
+                <button type="button" class="modal-btn modal-btn-cancel" id="modalEffectifToutes" style="flex:1; font-size:.8rem;">✅ Tout cocher</button>
+                <button type="button" class="modal-btn modal-btn-cancel" id="modalEffectifAucune" style="flex:1; font-size:.8rem;">🚫 Tout décocher</button>
+            </div>
             <div class="modal-grid" id="modalEffectifGrid">
                 {# Boutons générés à l'ouverture #}
             </div>
@@ -2698,8 +2752,14 @@
         // === Init chrono au chargement ===
         restoreChrono();
         updateChronoDisplay();
-        document.getElementById('btnStartPause').addEventListener('click', () => {
-            chrono.running ? pauseChrono() : startChrono();
+        const toggleChrono = () => { chrono.running ? pauseChrono() : startChrono(); };
+        document.getElementById('btnStartPause').addEventListener('click', toggleChrono);
+        // [V2.4f] Le CHRONO LUI-MÊME est cliquable (tap = start/pause) — geste
+        // naturel en bord de terrain, évite d'aller chercher le drawer/boutons.
+        const chronoDisplayEl = document.getElementById('chronoDisplay');
+        chronoDisplayEl.addEventListener('click', toggleChrono);
+        chronoDisplayEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleChrono(); }
         });
         document.getElementById('btnResetChrono').addEventListener('click', resetPeriode);
         document.getElementById('btnNextPeriod').addEventListener('click', periodeNext);
@@ -2954,6 +3014,10 @@
         // ====================================================================
         const URL_SCORE_ADVERSE = '{{ path('manager_rencontre_stats_live_score_adverse', {id: rencontre.id}) }}';
         const scoreAdverseDisplay = document.getElementById('scoreAdverseDisplay');
+        // [V2.4f] Part MANUELLE du score adverse (boutons +1/+2/+3, persistée
+        // serveur). L'affichage = manuel + pts des éphémères adverses, recalculé
+        // par updateScoreEquipe() — ne plus écrire le DOM directement ici.
+        let scoreAdverseManuel = {{ rencontre.scoreAdverse ?? 0 }};
 
         async function updateScoreAdverse(delta) {
             try {
@@ -2967,11 +3031,12 @@
                     toast(data.error || 'Échec mise à jour score adverse', true);
                     return;
                 }
-                scoreAdverseDisplay.textContent = data.scoreAdverse;
+                scoreAdverseManuel = data.scoreAdverse;
+                updateScoreEquipe();
                 // Petit flash visuel pour confirmer
                 scoreAdverseDisplay.style.transform = 'scale(1.15)';
                 setTimeout(() => { scoreAdverseDisplay.style.transform = ''; }, 200);
-                toast((delta > 0 ? '+' : '') + delta + ' adverse → ' + data.scoreAdverse);
+                toast((delta > 0 ? '+' : '') + delta + ' adverse');
             } catch (e) {
                 toast('Erreur réseau (score adverse)', true);
             }
@@ -2983,6 +3048,10 @@
                 updateScoreAdverse(delta);
             });
         });
+
+        // [V2.4f] 1er calcul des scores au chargement (nos pts, pts éphémères
+        // adverses + part manuelle) — avant, seul le rendu Twig initial faisait foi.
+        updateScoreEquipe();
 
         // ====================================================================
         // V2.1f — Modal Effectif du match
@@ -3055,6 +3124,19 @@
         }
 
         function closeModalEffectif() { modalEffectif.classList.remove('show'); }
+
+        // [V2.4f] Raccourcis effectif : tout cocher / tout décocher.
+        // « Tout décocher » = mode entraînement/exhibition avec uniquement des
+        // joueuses éphémères — plus besoin de décliquer l'équipe une par une.
+        function setEffectifToutes(coche) {
+            modalEffectifJouent = coche ? new Set(EFFECTIF_COMPLET.map(j => j.id)) : new Set();
+            modalEffectifGrid.querySelectorAll('.modal-joueuse-btn').forEach(btn => {
+                btn.classList.toggle('selected', coche);
+            });
+            refreshEffectifCounter();
+        }
+        document.getElementById('modalEffectifToutes').addEventListener('click', () => setEffectifToutes(true));
+        document.getElementById('modalEffectifAucune').addEventListener('click', () => setEffectifToutes(false));
 
         async function validerEffectif() {
             // Calcule les NON convoquées = EFFECTIF_COMPLET MINUS celles qui jouent
@@ -3203,20 +3285,93 @@
             });
         }
 
+        // ─── [V2.4f] Étape position : mini-terrain DANS le modal (Débutant) ───
+        // Le terrain n'apparaît QUE pour les tirs (réussis / ratés) : on tape où
+        // le tir est parti → le shot chart PIRB est alimenté même en saisie
+        // Débutant (avant : tous les tirs Débutant tombaient au centre 0.5/0.5).
+        // Un 2pts déclaré est affiné intérieur/extérieur selon la zone tapée ;
+        // un 3pts déclaré RESTE un 3pts (le score compté par l'humain fait foi).
+        // « Passer » = enregistre sans position précise (comme avant).
+        function demanderPositionTir(typeDeclare, options, titre, sousTitre) {
+            return new Promise((resolve) => {
+                const html = `
+                    <div style="text-align:center;">
+                        <svg id="modalCourtSvg" viewBox="0 0 1500 1400" preserveAspectRatio="xMidYMid meet"
+                             style="width:100%; max-width:340px; background:#c2410c; border-radius:8px; cursor:crosshair; touch-action:manipulation;">
+                            <line x1="0" y1="0" x2="1500" y2="0" class="court-line"/>
+                            <line x1="0" y1="0" x2="0" y2="1400" class="court-line"/>
+                            <line x1="1500" y1="0" x2="1500" y2="1400" class="court-line"/>
+                            <line x1="0" y1="1400" x2="1500" y2="1400" class="court-line"/>
+                            <rect x="505" y="0" width="490" height="580" class="court-paint court-line"/>
+                            <circle cx="750" cy="580" r="180" class="court-line"/>
+                            <path d="M 625,130 A 125,125 0 0 0 875,130" class="court-line"/>
+                            <line x1="90" y1="0" x2="90" y2="299" class="court-line"/>
+                            <line x1="1410" y1="0" x2="1410" y2="299" class="court-line"/>
+                            <path d="M 90,299 A 675,675 0 0 0 1410,299" class="court-line"/>
+                            <line x1="660" y1="100" x2="840" y2="100" class="court-line" style="stroke-width:6;"/>
+                            <circle cx="750" cy="130" r="22" fill="none" stroke="#fff" stroke-width="4"/>
+                        </svg>
+                        <button type="button" class="modal-btn modal-btn-cancel" id="modalCourtSkip" style="margin-top:10px; width:100%;">
+                            ⏭️ Passer (sans position)
+                        </button>
+                    </div>`;
+                openModalAction(titre || '📍 Où le tir est-il parti ?', sousTitre || 'Tape l\'endroit sur le terrain', html);
+
+                const svg = document.getElementById('modalCourtSvg');
+                let dejaEnregistre = false; // anti double-tap (svg puis "Passer" pendant l'await)
+                svg.addEventListener('click', async (e) => {
+                    if (dejaEnregistre) return;
+                    dejaEnregistre = true;
+                    const pt = svg.createSVGPoint();
+                    pt.x = e.clientX;
+                    pt.y = e.clientY;
+                    const ctm = svg.getScreenCTM();
+                    if (!ctm) return;
+                    const p = pt.matrixTransform(ctm.inverse());
+                    const x = Math.max(0, Math.min(1, p.x / 1500));
+                    const y = Math.max(0, Math.min(1, p.y / 1400));
+
+                    // Affine le type 2pts selon la zone tapée (int/ext)
+                    let type = typeDeclare;
+                    if (typeDeclare.startsWith('tir_2pt')) {
+                        const zone = detectZone(x, y);
+                        const reussi = typeDeclare.endsWith('_reussi');
+                        const interieur = !zone.type3pts && zone.interieur;
+                        type = 'tir_2pt_' + (interieur ? 'int' : 'ext') + (reussi ? '_reussi' : '_rate');
+                    }
+                    await saveAction(type, Object.assign({ positionX: x, positionY: y }, options));
+                    resolve(true);
+                }, { once: true });
+
+                document.getElementById('modalCourtSkip').addEventListener('click', async () => {
+                    if (dejaEnregistre) return;
+                    dejaEnregistre = true;
+                    await saveAction(typeDeclare, Object.assign({ positionX: 0.5, positionY: 0.5 }, options));
+                    resolve(true);
+                }, { once: true });
+            });
+        }
+
         // ─── Étape 2 : selon le type, ouvre un sous-workflow ou enregistre direct ───
         async function handleActionChoisie(joueurId, joueurNom, type) {
             state.joueurActif = joueurId;
 
-            // Tir RÉUSSI → demande "avec assist ?"
+            // Tir RÉUSSI → demande "avec assist ?" (puis position sur mini-terrain)
             if (['tir_2pt_int_reussi', 'tir_2pt_ext_reussi', 'tir_3pt_reussi'].includes(type)) {
                 workflowAssist(joueurId, joueurNom, type);
                 return;
             }
 
-            // Tir RATÉ → demande "qui a eu le rebond ?"
-            if (['tir_2pt_int_rate', 'tir_2pt_ext_rate', 'tir_3pt_rate', 'lancer_rate'].includes(type)) {
-                // On enregistre d'abord le tir raté
-                await saveAction(type, { positionX: 0.5, positionY: 0.5 });
+            // Tir RATÉ → position sur mini-terrain PUIS "qui a eu le rebond ?"
+            if (['tir_2pt_int_rate', 'tir_2pt_ext_rate', 'tir_3pt_rate'].includes(type)) {
+                await demanderPositionTir(type, {}, '📍 Où le tir a-t-il été raté ?', joueurNom + ' a manqué — tape l\'endroit');
+                workflowRebondApresTirRate(joueurNom);
+                return;
+            }
+
+            // LF raté : pas de terrain (position fixe) → rebond directement
+            if (type === 'lancer_rate') {
+                await saveAction(type, {});
                 workflowRebondApresTirRate(joueurNom);
                 return;
             }
@@ -3233,9 +3388,9 @@
                 return;
             }
 
-            // Action simple → enregistré direct
-            const needsPosition = ['tir_2pt_int_reussi', 'tir_3pt_reussi', 'lancer_reussi'].includes(type);
-            await saveAction(type, needsPosition ? { positionX: 0.5, positionY: 0.5 } : {});
+            // Action simple → enregistré direct (plus AUCUNE fausse position :
+            // les lancers n'ont pas de coordonnées, le serveur n'en attend pas)
+            await saveAction(type, {});
             closeModalAction();
         }
 
@@ -3250,13 +3405,15 @@
             openModalAction(joueurNom + ' a marqué !', 'Avec une passe décisive ?', html);
             modalActionBody.querySelectorAll('.action-btn').forEach(b => {
                 b.addEventListener('click', async () => {
+                    // [V2.4f] Dernière étape commune : le mini-terrain (position
+                    // réelle du tir → shot chart PIRB, même en mode Débutant).
                     if (b.dataset.choice === 'non') {
-                        await saveAction(typeTir, { positionX: 0.5, positionY: 0.5 });
+                        await demanderPositionTir(typeTir, {}, '📍 D\'où a-t-elle marqué ?', joueurNom + ' — tape l\'endroit du panier');
                         closeModalAction();
                     } else {
                         // Demande qui a fait la passe
                         showJoueurChoice('Qui a fait la passe ?', joueurId, async (passeurId) => {
-                            await saveAction(typeTir, { positionX: 0.5, positionY: 0.5, assistJoueurId: passeurId });
+                            await demanderPositionTir(typeTir, { assistJoueurId: passeurId }, '📍 D\'où a-t-elle marqué ?', joueurNom + ' — tape l\'endroit du panier');
                             closeModalAction();
                         });
                     }
@@ -3314,9 +3471,11 @@
         // ─── Sous-workflow : passe décisive (qui a marqué après ?) ───
         function workflowPasseDecisive(passeurId, passeurNom) {
             showJoueurChoice('Qui a marqué grâce à ' + passeurNom + ' ?', passeurId, async (marqueurId) => {
-                // On crée le tir réussi pour le marqueur + assist pour le passeur
+                // On crée le tir réussi pour le marqueur + assist pour le passeur.
+                // [V2.4f] Position réelle demandée sur le mini-terrain (le type
+                // 2pts int/ext est affiné selon la zone tapée).
                 state.joueurActif = marqueurId;
-                await saveAction('tir_2pt_int_reussi', { positionX: 0.5, positionY: 0.5, assistJoueurId: passeurId });
+                await demanderPositionTir('tir_2pt_int_reussi', { assistJoueurId: passeurId }, '📍 D\'où le panier est-il parti ?');
                 closeModalAction();
             });
         }
@@ -3645,6 +3804,7 @@
             state.tirY = null;
             state.tirZone = null;
             state.tirCote = null;
+            state.mapPending = null; // [V2.4f] annule aussi une localisation en attente
             document.querySelectorAll('.pending-tir-marker').forEach(m => { m.style.display = 'none'; });
             setMode(false);
         }
@@ -3702,12 +3862,22 @@
                 if (advDisplay) advDisplay.textContent = totalB;
                 return;
             }
-            // Somme des pts de toutes les joueuses (depuis le DOM)
-            let total = 0;
+            // [V2.4f] Match normal : les DEUX scores se mettent à jour tout seuls.
+            //   - Notre score = somme des pts de NOS joueuses (l'ancien code
+            //     additionnait TOUTES les cartes… y compris les éphémères
+            //     adverses dans NOTRE score — bug corrigé).
+            //   - Score adverse affiché = score manuel (boutons +1/+2/+3, stocké
+            //     serveur) + pts saisis sur les éphémères ADVERSES. Les deux
+            //     modes de saisie cohabitent : global au buzzer OU nominatif.
+            let totalNous = 0, totalAdverse = 0;
             document.querySelectorAll('[data-joueur-pts]').forEach(el => {
-                total += parseInt(el.textContent, 10) || 0;
+                const cote = el.closest('.joueuse-item')?.dataset.cote || 'nous';
+                const v = parseInt(el.textContent, 10) || 0;
+                if (cote === 'adverse') { totalAdverse += v; } else { totalNous += v; }
             });
-            document.getElementById('scoreMabb').textContent = total;
+            document.getElementById('scoreMabb').textContent = totalNous;
+            const advDisplay = document.getElementById('scoreAdverseDisplay');
+            if (advDisplay) advDisplay.textContent = scoreAdverseManuel + totalAdverse;
         }
 
         function addToHistory(actionId, joueurInitiales, type, qt, minute, secondes) {
@@ -3933,6 +4103,17 @@
             const x = Math.max(0, Math.min(1, svgPoint.x / 1500));
             const y = Math.max(0, Math.min(1, svgPoint.y / 1400));
 
+            // [V2.4f] Mode "Localiser" armé : ce clic terrain POSITIONNE l'action
+            // en attente (perte de balle, interception, rebond…) et l'enregistre
+            // directement avec ses coordonnées. Pas de flux tir dans ce cas.
+            if (state.mapPending) {
+                const pending = state.mapPending;
+                state.mapPending = null;
+                saveAction(pending.type, { positionX: x, positionY: y });
+                toast('🎯 ' + pending.label + ' localisée');
+                return;
+            }
+
             // Reset (masque les pending des 2 terrains) puis pose le nouvel état
             clearPendingTir();
             state.tirX = x;
@@ -3958,6 +4139,23 @@
         document.querySelectorAll('.action-btn[data-type]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const type = btn.dataset.type;
+
+                // [V2.4f] Toggle "Localiser" actif → on n'enregistre pas tout de
+                // suite : on arme l'action, le prochain clic sur le demi-terrain
+                // de la joueuse (filtré automatiquement par data-cote) la sauvera
+                // AVEC sa position. Exclu pour les lancers francs (position fixe).
+                const toggleLoc = document.getElementById('toggleLocaliser');
+                if (toggleLoc && toggleLoc.checked && !type.startsWith('lancer')) {
+                    if (!state.joueurActif) {
+                        toast('Sélectionne une joueuse d\'abord', true);
+                        return;
+                    }
+                    const label = btn.textContent.trim();
+                    state.mapPending = { type: type, label: label };
+                    toast('🎯 ' + label + ' : clique sur le demi-terrain surligné pour placer l\'action');
+                    return;
+                }
+
                 saveAction(type);
             });
         });

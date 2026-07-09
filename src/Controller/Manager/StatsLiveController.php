@@ -488,13 +488,20 @@ class StatsLiveController extends AbstractController
         $action->setMinute($this->clampInt($data['minute'] ?? 0, 0, 15));
         $action->setSecondes($this->clampInt($data['secondes'] ?? 0, 0, 59));
 
-        // Position X/Y obligatoire pour les tirs, ignorée pour le reste
+        // Position X/Y : OBLIGATOIRE pour les tirs (shot chart), OPTIONNELLE
+        // pour les autres actions [V2.4f — mode « Localiser » : cartographier
+        // pertes de balle, interceptions, rebonds…]. Validée si fournie.
+        $x = isset($data['positionX']) && $data['positionX'] !== null ? (float) $data['positionX'] : null;
+        $y = isset($data['positionY']) && $data['positionY'] !== null ? (float) $data['positionY'] : null;
+        $positionValide = $x !== null && $y !== null && $x >= 0 && $x <= 1 && $y >= 0 && $y <= 1;
+
         if (in_array($type, ActionMatch::TYPES_AVEC_POSITION, true)) {
-            $x = isset($data['positionX']) ? (float) $data['positionX'] : null;
-            $y = isset($data['positionY']) ? (float) $data['positionY'] : null;
-            if ($x === null || $y === null || $x < 0 || $x > 1 || $y < 0 || $y > 1) {
+            if (!$positionValide) {
                 return $this->jsonError('Position du tir manquante ou invalide.', Response::HTTP_BAD_REQUEST);
             }
+            $action->setPositionX($x);
+            $action->setPositionY($y);
+        } elseif ($positionValide) {
             $action->setPositionX($x);
             $action->setPositionY($y);
         }
@@ -625,11 +632,20 @@ class StatsLiveController extends AbstractController
         //     équipes du club (U15+U18+Séniors) → le critère devient
         //     "joueuse ∈ composition A∪B" (plus strict que club-scoped :
         //     une joueuse du club hors composition est aussi refusée).
+        // [V2.4f] Les joueuses ÉPHÉMÈRES créées pour CETTE rencontre (essai OU
+        // adverses) peuvent entrer sur le terrain : temps de jeu + limite de 5
+        // par équipe s'appliquent à elles aussi (mode entraînement / exhibition).
+        // Le critère rencontreOrigine === cette rencontre reste anti-IDOR :
+        // une éphémère d'un autre match est refusée.
+        $estEphemereDeCetteRencontre = $joueur->isTemporaire()
+            && $joueur->getRencontreOrigine()?->getId() === $rencontre->getId();
+
         if ($rencontre->isInterneDeuxEquipes()) {
-            if (!$rencontre->estDansComposition((int) $joueur->getId())) {
+            if (!$estEphemereDeCetteRencontre && !$rencontre->estDansComposition((int) $joueur->getId())) {
                 return $this->jsonError('Joueuse hors composition A/B.', Response::HTTP_FORBIDDEN);
             }
-        } elseif ($joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
+        } elseif (!$estEphemereDeCetteRencontre
+            && $joueur->getEquipe()?->getId() !== $rencontre->getEquipe()?->getId()) {
             return $this->jsonError('Joueuse hors équipe.', Response::HTTP_FORBIDDEN);
         }
 
@@ -813,6 +829,210 @@ class StatsLiveController extends AbstractController
             'success' => true,
             'joueursNonConvoques' => $rencontre->getJoueursNonConvoques(),
         ]);
+    }
+
+    // ====================================================================
+    // [V2.4f 09/07/2026] RÉSUMÉ DE MATCH — « l'équivalent Easy Stats »
+    // ====================================================================
+
+    /**
+     * Résumé complet du match : feuille de stats par joueuse (style Easy
+     * Stats / FFBB), totaux d'équipe, score par période. Fonctionne quel
+     * que soit le mode de saisie (Expert ou Débutant) puisque tout est
+     * ActionMatch.
+     *
+     * Session : `?session=<id>` pour en choisir une, sinon priorité à la
+     * session OFFICIELLE, sinon la plus récente. Les actions d'avant V2.1d
+     * (session NULL) sont couvertes par le fallback « toutes ».
+     */
+    #[Route('/rencontres/{id}/stats-live/resume', name: 'manager_rencontre_stats_live_resume', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function resume(Request $request, Rencontre $rencontre): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $rencontre);
+
+        // --- Choix de la session de saisie ---
+        $sessions = $this->sessionRepository->findBy(['rencontre' => $rencontre], ['id' => 'DESC']);
+        $sessionChoisie = null;
+        $sessionIdParam = (int) $request->query->get('session', 0);
+        if ($sessionIdParam > 0) {
+            foreach ($sessions as $s) {
+                if ($s->getId() === $sessionIdParam) { $sessionChoisie = $s; break; }
+            }
+        }
+        if ($sessionChoisie === null) {
+            foreach ($sessions as $s) {
+                if ($s->isOfficielle()) { $sessionChoisie = $s; break; }
+            }
+        }
+        if ($sessionChoisie === null && $sessions !== []) {
+            $sessionChoisie = $sessions[0];
+        }
+
+        // --- Toutes les actions du match (de la session choisie) ---
+        $qb = $this->actionMatchRepository->createQueryBuilder('a')
+            ->select('a', 'j')
+            ->join('a.joueur', 'j')
+            ->andWhere('a.rencontre = :r')->setParameter('r', $rencontre)
+            ->orderBy('a.id', 'ASC');
+        if ($sessionChoisie !== null) {
+            $qb->andWhere('a.session = :s')->setParameter('s', $sessionChoisie);
+        }
+        /** @var ActionMatch[] $actions */
+        $actions = $qb->getQuery()->getResult();
+
+        // --- Agrégation par joueuse + score par période + par camp ---
+        $modeAB = $rencontre->isInterneDeuxEquipes();
+        $comptagesParJoueur = [];
+        $joueursParId = [];
+        $scoreParPeriode = []; // [periode][camp] => pts
+
+        foreach ($actions as $a) {
+            $j = $a->getJoueur();
+            if (!$j instanceof Joueur) { continue; }
+            $jid = (int) $j->getId();
+            $joueursParId[$jid] = $j;
+            $comptagesParJoueur[$jid][$a->getType()] = ($comptagesParJoueur[$jid][$a->getType()] ?? 0) + 1;
+
+            $pts = ActionMatch::TYPES_QUI_MARQUENT[$a->getType()] ?? 0;
+            if ($pts > 0) {
+                $camp = $this->campDeLaJoueuse($j, $rencontre);
+                $periode = $a->getQuartTemps() ?? ActionMatch::QT_1;
+                $scoreParPeriode[$periode][$camp] = ($scoreParPeriode[$periode][$camp] ?? 0) + $pts;
+            }
+        }
+
+        // --- Temps de jeu par joueuse (présences terrain de la session) ---
+        $presQb = $this->em->getRepository(\App\Entity\Sport\PresenceTerrain::class)
+            ->createQueryBuilder('p')
+            ->andWhere('p.rencontre = :r')->setParameter('r', $rencontre)
+            ->andWhere('p.secondesSortie IS NOT NULL');
+        if ($sessionChoisie !== null) {
+            $presQb->andWhere('p.session = :s')->setParameter('s', $sessionChoisie);
+        }
+        $secondesJouees = [];
+        foreach ($presQb->getQuery()->getResult() as $p) {
+            $jid = (int) $p->getJoueur()?->getId();
+            $secondesJouees[$jid] = ($secondesJouees[$jid] ?? 0) + (int) ($p->getDureeSecondes() ?? 0);
+        }
+
+        // --- Lignes de la feuille de stats, groupées par camp ---
+        $lignesParCamp = [];
+        foreach ($comptagesParJoueur as $jid => $c) {
+            $j = $joueursParId[$jid];
+            $ligne = $this->ligneResume($j, $c, $secondesJouees[$jid] ?? 0);
+            $lignesParCamp[$this->campDeLaJoueuse($j, $rencontre)][] = $ligne;
+        }
+        // Tri : meilleures évaluations en premier
+        foreach ($lignesParCamp as &$lignes) {
+            usort($lignes, fn(array $a, array $b) => $b['eval'] <=> $a['eval']);
+        }
+        unset($lignes);
+
+        // --- Totaux par camp ---
+        $totauxParCamp = [];
+        foreach ($lignesParCamp as $camp => $lignes) {
+            $tot = array_fill_keys(['pts','t2r','t2t','t3r','t3t','lfr','lft','ro','rd','pd','int','co','cs','fp','fc','bp','eval'], 0);
+            foreach ($lignes as $l) {
+                foreach ($tot as $k => $_) { $tot[$k] += $l[$k]; }
+            }
+            $totauxParCamp[$camp] = $tot;
+        }
+
+        // Libellés des camps + score final affiché
+        $campA = $modeAB ? 'a' : 'nous';
+        $campB = $modeAB ? 'b' : 'adverse';
+        $scoreA = $totauxParCamp[$campA]['pts'] ?? 0;
+        // Match normal : score adverse = manuel (serveur) + éventuels pts
+        // saisis nominativement sur les éphémères adverses.
+        $scoreB = $modeAB
+            ? ($totauxParCamp[$campB]['pts'] ?? 0)
+            : (int) ($rencontre->getScoreAdverse() ?? 0) + ($totauxParCamp[$campB]['pts'] ?? 0);
+
+        // Ordre d'affichage des périodes
+        $ordrePeriodes = ActionMatch::QUARTS_TEMPS;
+
+        return $this->render('manager/evaluation/stats-live-resume.html.twig', [
+            'rencontre'        => $rencontre,
+            'mode_interne_ab'  => $modeAB,
+            'sessions'         => $sessions,
+            'session_choisie'  => $sessionChoisie,
+            'lignes_par_camp'  => $lignesParCamp,
+            'totaux_par_camp'  => $totauxParCamp,
+            'camp_a'           => $campA,
+            'camp_b'           => $campB,
+            'nom_camp_a'       => $modeAB ? $rencontre->getEquipeANom() : $rencontre->getEquipe()?->getNom(),
+            'nom_camp_b'       => $modeAB ? $rencontre->getEquipeBNom() : $rencontre->getAdversaire(),
+            'score_a'          => $scoreA,
+            'score_b'          => $scoreB,
+            'score_par_periode' => $scoreParPeriode,
+            'ordre_periodes'   => $ordrePeriodes,
+            'nb_actions'       => count($actions),
+        ]);
+    }
+
+    /**
+     * Camp d'une joueuse pour le résumé :
+     *   - interne A/B : composition A → 'a', composition B → 'b'
+     *     (éphémère hors composition : adverse → 'b', sinon 'a')
+     *   - match normal : éphémère adverse → 'adverse', sinon 'nous'
+     */
+    private function campDeLaJoueuse(Joueur $j, Rencontre $rencontre): string
+    {
+        if ($rencontre->isInterneDeuxEquipes()) {
+            $jid = (int) $j->getId();
+            if (in_array($jid, array_map('intval', $rencontre->getEquipeAIds()), true)) { return 'a'; }
+            if (in_array($jid, array_map('intval', $rencontre->getEquipeBIds()), true)) { return 'b'; }
+            return $j->isEphemereAdverse() ? 'b' : 'a';
+        }
+        return $j->isEphemereAdverse() ? 'adverse' : 'nous';
+    }
+
+    /**
+     * Ligne de la feuille de stats d'une joueuse (compteurs FIBA dérivés,
+     * même découpage que ActionMatchAggregator + éval FFBB).
+     *
+     * Éval FFBB = (pts + rebonds + passes D + interceptions + contres +
+     * fautes provoquées) − (tirs ratés + LF ratés + pertes de balle +
+     * fautes commises).
+     */
+    private function ligneResume(Joueur $j, array $c, int $secondesJouees): array
+    {
+        $t2r = ($c[ActionMatch::TYPE_TIR_2PT_INT_REUSSI] ?? 0) + ($c[ActionMatch::TYPE_TIR_2PT_EXT_REUSSI] ?? 0);
+        $t2t = $t2r + ($c[ActionMatch::TYPE_TIR_2PT_INT_RATE] ?? 0) + ($c[ActionMatch::TYPE_TIR_2PT_EXT_RATE] ?? 0);
+        $t3r = $c[ActionMatch::TYPE_TIR_3PT_REUSSI] ?? 0;
+        $t3t = $t3r + ($c[ActionMatch::TYPE_TIR_3PT_RATE] ?? 0);
+        $lfr = $c[ActionMatch::TYPE_LANCER_REUSSI] ?? 0;
+        $lft = $lfr + ($c[ActionMatch::TYPE_LANCER_RATE] ?? 0);
+        $pts = $this->calculerPointsJoueur($c);
+
+        $ro  = $c[ActionMatch::TYPE_REBOND_OFFENSIF] ?? 0;
+        $rd  = $c[ActionMatch::TYPE_REBOND_DEFENSIF] ?? 0;
+        $pd  = $c[ActionMatch::TYPE_PASSE_DECISIVE]  ?? 0;
+        $int = $c[ActionMatch::TYPE_INTERCEPTION]    ?? 0;
+        $co  = $c[ActionMatch::TYPE_CONTRE]          ?? 0;
+        $cs  = $c[ActionMatch::TYPE_CONTRE_SUBI]     ?? 0;
+        $fp  = $c[ActionMatch::TYPE_FAUTE_PROVOQUEE] ?? 0;
+        $fc  = $c[ActionMatch::TYPE_FAUTE_COMMISE]   ?? 0;
+        $bp  = $c[ActionMatch::TYPE_PERTE_BALLE]     ?? 0;
+
+        $eval = ($pts + $ro + $rd + $pd + $int + $co + $fp)
+              - (($t2t - $t2r) + ($t3t - $t3r) + ($lft - $lfr) + $bp + $fc);
+
+        return [
+            'joueur'      => $j,
+            'ephemere'    => $j->isTemporaire(),
+            'minutes'     => intdiv($secondesJouees, 60),
+            'pts'  => $pts,
+            't2r'  => $t2r, 't2t' => $t2t,
+            't3r'  => $t3r, 't3t' => $t3t,
+            'lfr'  => $lfr, 'lft' => $lft,
+            'ro'   => $ro,  'rd'  => $rd,
+            'pd'   => $pd,  'int' => $int,
+            'co'   => $co,  'cs'  => $cs,
+            'fp'   => $fp,  'fc'  => $fc,
+            'bp'   => $bp,
+            'eval' => $eval,
+        ];
     }
 
     // ====================================================================

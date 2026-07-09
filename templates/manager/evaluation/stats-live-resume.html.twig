@@ -1,0 +1,263 @@
+{% extends 'manager/base.html.twig' %}
+
+{#
+    [V2.4f 09/07/2026] RÉSUMÉ DE MATCH — « l'équivalent Easy Stats ».
+    Feuille de stats par joueuse + totaux + score par période, quel que soit
+    le mode de saisie (Expert ou Débutant). Print-friendly (bouton Imprimer).
+#}
+
+{% block title %}Résumé — {{ nom_camp_a }} vs {{ nom_camp_b }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        body { background: #0f172a; color: #e2e8f0; }
+        .resume-wrap { max-width: 1100px; margin: 0 auto; padding: 12px; }
+
+        /* ===== En-tête score ===== */
+        .resume-header {
+            display: flex; align-items: center; justify-content: center; gap: 18px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid #334155; border-radius: 14px;
+            padding: 18px 12px; margin-bottom: 14px; flex-wrap: wrap; text-align: center;
+        }
+        .resume-team { flex: 1 1 180px; min-width: 0; }
+        .resume-team .name { font-weight: 700; font-size: 1rem; color: #cbd5e1; }
+        .resume-team .pts { font-size: 3rem; font-weight: 800; line-height: 1.1; }
+        .resume-team.team-a .pts { color: #60a5fa; }
+        .resume-team.team-b .pts { color: #f87171; }
+        .resume-vs { color: #64748b; font-weight: 700; }
+        .resume-meta { width: 100%; color: #94a3b8; font-size: .8rem; }
+
+        /* ===== Score par période ===== */
+        .periodes-table { margin: 0 auto 16px; border-collapse: collapse; font-size: .85rem; }
+        .periodes-table th, .periodes-table td { padding: 5px 14px; text-align: center; border: 1px solid #334155; }
+        .periodes-table th { background: #1e293b; color: #94a3b8; font-weight: 600; }
+        .periodes-table .camp-label { text-align: left; font-weight: 700; }
+
+        /* ===== Feuille de stats ===== */
+        .stats-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+        .stats-card-header {
+            padding: 10px 14px; font-weight: 700; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+        .stats-card.camp-a .stats-card-header { color: #93c5fd; background: rgba(59,130,246,.1); }
+        .stats-card.camp-b .stats-card-header { color: #fca5a5; background: rgba(239,68,68,.1); }
+        .stats-scroll { overflow-x: auto; }
+        table.feuille { width: 100%; border-collapse: collapse; font-size: .8rem; white-space: nowrap; }
+        .feuille th, .feuille td { padding: 6px 8px; text-align: center; border-bottom: 1px solid #263449; }
+        .feuille th { background: #0f172a; color: #94a3b8; font-weight: 600; position: sticky; top: 0; }
+        .feuille td:first-child, .feuille th:first-child { text-align: left; position: sticky; left: 0; background: #1e293b; }
+        .feuille tr:hover td { background: rgba(255,255,255,.03); }
+        .feuille .pts-cell { font-weight: 800; color: #fbbf24; }
+        .feuille .eval-pos { color: #4ade80; font-weight: 700; }
+        .feuille .eval-neg { color: #f87171; font-weight: 700; }
+        .feuille tfoot td { background: #0f172a; font-weight: 700; border-top: 2px solid #334155; }
+        .badge-eph { font-size: .62rem; background: rgba(234,88,12,.25); color: #fb923c; padding: 0 5px; border-radius: 3px; margin-left: 4px; }
+        .mvp-star { color: #fbbf24; }
+
+        /* ===== Barre outils ===== */
+        .resume-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: center; }
+        .resume-btn {
+            background: #334155; color: #e2e8f0; border: none; border-radius: 8px;
+            padding: 8px 14px; font-size: .85rem; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center;
+        }
+        .resume-btn:hover { background: #475569; color: #fff; }
+        .resume-btn.primary { background: #ea580c; color: #fff; }
+        .session-select { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; padding: 7px 10px; font-size: .85rem; }
+
+        .resume-empty { text-align: center; color: #94a3b8; padding: 50px 10px; }
+
+        /* ===== Impression ===== */
+        @media print {
+            body { background: #fff; color: #000; }
+            .resume-tools, .navbar, nav { display: none !important; }
+            .stats-card, .resume-header { border-color: #999; background: #fff; }
+            .feuille th, .feuille td { color: #000; background: #fff !important; border-color: #ccc; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="resume-wrap">
+
+    {# ===== Outils ===== #}
+    <div class="resume-tools">
+        <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}" class="resume-btn">
+            ← Retour à la saisie
+        </a>
+        <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" class="resume-btn">
+            📅 Fiche rencontre
+        </a>
+        <button type="button" class="resume-btn primary" onclick="window.print()">🖨️ Imprimer / PDF</button>
+
+        {% if sessions|length > 1 %}
+            <form method="get" style="margin-left:auto;">
+                <select name="session" class="session-select" onchange="this.form.submit()">
+                    {% for s in sessions %}
+                        <option value="{{ s.id }}" {{ session_choisie and s.id == session_choisie.id ? 'selected' : '' }}>
+                            {{ s.nom }} ({{ s.statutLabel|default(s.statut) }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        {% endif %}
+    </div>
+
+    {# ===== En-tête score ===== #}
+    <div class="resume-header">
+        <div class="resume-team team-a">
+            <div class="name">{{ nom_camp_a }}</div>
+            <div class="pts">{{ score_a }}</div>
+        </div>
+        <div class="resume-vs">VS</div>
+        <div class="resume-team team-b">
+            <div class="name">{{ nom_camp_b }}</div>
+            <div class="pts">{{ score_b }}</div>
+        </div>
+        <div class="resume-meta">
+            {{ rencontre.date ? rencontre.date|date('d/m/Y') : '' }}
+            {% if session_choisie %} · Session : {{ session_choisie.nom }}{% endif %}
+            · {{ nb_actions }} action{{ nb_actions > 1 ? 's' : '' }} saisie{{ nb_actions > 1 ? 's' : '' }}
+        </div>
+    </div>
+
+    {% if nb_actions == 0 %}
+        <div class="resume-empty">
+            <p style="font-size:2rem; margin:0;">📭</p>
+            <p>Aucune action saisie sur cette session.<br>
+            Lance la saisie depuis <a href="{{ path('manager_rencontre_stats_live', {id: rencontre.id}) }}" style="color:#60a5fa;">Stats Live</a>.</p>
+        </div>
+    {% else %}
+
+    {# ===== Score par période ===== #}
+    {% if score_par_periode|length > 0 %}
+        <table class="periodes-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    {% for p in ordre_periodes %}
+                        {% if score_par_periode[p] is defined %}<th>{{ p }}</th>{% endif %}
+                    {% endfor %}
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="camp-label" style="color:#93c5fd;">{{ nom_camp_a }}</td>
+                    {% for p in ordre_periodes %}
+                        {% if score_par_periode[p] is defined %}<td>{{ score_par_periode[p][camp_a] ?? 0 }}</td>{% endif %}
+                    {% endfor %}
+                    <td><strong>{{ score_a }}</strong></td>
+                </tr>
+                <tr>
+                    <td class="camp-label" style="color:#fca5a5;">{{ nom_camp_b }}</td>
+                    {% for p in ordre_periodes %}
+                        {% if score_par_periode[p] is defined %}<td>{{ score_par_periode[p][camp_b] ?? 0 }}</td>{% endif %}
+                    {% endfor %}
+                    <td><strong>{{ mode_interne_ab ? score_b : (totaux_par_camp[camp_b].pts ?? 0) }}</strong>
+                        {% if not mode_interne_ab and rencontre.scoreAdverse %}<small style="color:#94a3b8;"> (+{{ rencontre.scoreAdverse }} global)</small>{% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    {% endif %}
+
+    {# ===== Feuilles de stats par camp ===== #}
+    {% set camps = [
+        { cle: camp_a, nom: nom_camp_a, css: 'camp-a' },
+        { cle: camp_b, nom: nom_camp_b, css: 'camp-b' },
+    ] %}
+    {% for campInfo in camps %}
+        {% set lignes = lignes_par_camp[campInfo.cle] ?? [] %}
+        {% if lignes|length > 0 %}
+            {% set tot = totaux_par_camp[campInfo.cle] %}
+            <div class="stats-card {{ campInfo.css }}">
+                <div class="stats-card-header">
+                    <span>{{ campInfo.nom }}</span>
+                    <span>{{ tot.pts }} pts</span>
+                </div>
+                <div class="stats-scroll">
+                    <table class="feuille">
+                        <thead>
+                            <tr>
+                                <th>Joueuse</th>
+                                <th title="Minutes jouées (temps chronométré ON/OFF)">MIN</th>
+                                <th>PTS</th>
+                                <th title="Tirs à 2 points réussis / tentés">2PTS</th>
+                                <th title="Tirs à 3 points réussis / tentés">3PTS</th>
+                                <th title="Lancers francs réussis / tentés">LF</th>
+                                <th title="Rebonds offensifs">RO</th>
+                                <th title="Rebonds défensifs">RD</th>
+                                <th title="Passes décisives">PD</th>
+                                <th title="Interceptions">INT</th>
+                                <th title="Contres">CTR</th>
+                                <th title="Contres subis">CS</th>
+                                <th title="Fautes provoquées">FPR</th>
+                                <th title="Fautes commises">FTE</th>
+                                <th title="Pertes de balle">BP</th>
+                                <th title="Évaluation FFBB : (pts+reb+pd+int+ctr+f.prov) − (tirs ratés+LF ratés+pertes+fautes)">ÉVAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for l in lignes %}
+                                <tr>
+                                    <td>
+                                        {% if loop.first and l.eval > 0 %}<span class="mvp-star" title="Meilleure évaluation">★</span>{% endif %}
+                                        {% if l.joueur.numeroMaillot is not null %}#{{ l.joueur.numeroMaillot }} {% endif %}{{ l.joueur.prenom }} {{ l.joueur.nom }}
+                                        {% if l.ephemere %}<span class="badge-eph">{{ l.joueur.isEphemereAdverse ? 'adv' : 'essai' }}</span>{% endif %}
+                                    </td>
+                                    <td>{{ l.minutes > 0 ? l.minutes ~ "'" : '—' }}</td>
+                                    <td class="pts-cell">{{ l.pts }}</td>
+                                    <td>{{ l.t2r }}/{{ l.t2t }}{% if l.t2t > 0 %} <small style="color:#64748b;">{{ ((l.t2r / l.t2t) * 100)|round }}%</small>{% endif %}</td>
+                                    <td>{{ l.t3r }}/{{ l.t3t }}{% if l.t3t > 0 %} <small style="color:#64748b;">{{ ((l.t3r / l.t3t) * 100)|round }}%</small>{% endif %}</td>
+                                    <td>{{ l.lfr }}/{{ l.lft }}</td>
+                                    <td>{{ l.ro }}</td>
+                                    <td>{{ l.rd }}</td>
+                                    <td>{{ l.pd }}</td>
+                                    <td>{{ l.int }}</td>
+                                    <td>{{ l.co }}</td>
+                                    <td>{{ l.cs }}</td>
+                                    <td>{{ l.fp }}</td>
+                                    <td>{{ l.fc }}</td>
+                                    <td>{{ l.bp }}</td>
+                                    <td class="{{ l.eval >= 0 ? 'eval-pos' : 'eval-neg' }}">{{ l.eval }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td>TOTAL</td>
+                                <td>—</td>
+                                <td class="pts-cell">{{ tot.pts }}</td>
+                                <td>{{ tot.t2r }}/{{ tot.t2t }}{% if tot.t2t > 0 %} <small style="color:#64748b;">{{ ((tot.t2r / tot.t2t) * 100)|round }}%</small>{% endif %}</td>
+                                <td>{{ tot.t3r }}/{{ tot.t3t }}{% if tot.t3t > 0 %} <small style="color:#64748b;">{{ ((tot.t3r / tot.t3t) * 100)|round }}%</small>{% endif %}</td>
+                                <td>{{ tot.lfr }}/{{ tot.lft }}</td>
+                                <td>{{ tot.ro }}</td>
+                                <td>{{ tot.rd }}</td>
+                                <td>{{ tot.pd }}</td>
+                                <td>{{ tot.int }}</td>
+                                <td>{{ tot.co }}</td>
+                                <td>{{ tot.cs }}</td>
+                                <td>{{ tot.fp }}</td>
+                                <td>{{ tot.fc }}</td>
+                                <td>{{ tot.bp }}</td>
+                                <td class="{{ tot.eval >= 0 ? 'eval-pos' : 'eval-neg' }}">{{ tot.eval }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    {% if not mode_interne_ab and (lignes_par_camp[camp_b] ?? [])|length == 0 and rencontre.scoreAdverse %}
+        <p style="color:#94a3b8; font-size:.8rem; text-align:center;">
+            Score adverse saisi globalement ({{ rencontre.scoreAdverse }} pts) — pas de détail par joueuse adverse.
+            Ajoute des joueuses éphémères adverses pendant le match pour un détail nominatif.
+        </p>
+    {% endif %}
+
+    {% endif %}
+</div>
+{% endblock %}
