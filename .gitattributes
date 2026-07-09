@@ -1,0 +1,34 @@
+# Normalisation des fins de ligne — tue le bruit "modified en boucle" (CRLF Windows)
+# Git stocke en LF, checkout selon l'OS. Après ajout de ce fichier, lancer une fois :
+#   git add --renormalize .
+#   git commit -m "chore: normalisation des fins de ligne (.gitattributes)"
+* text=auto
+
+# Fichiers texte explicites (LF forcé en dépôt)
+*.php text
+*.twig text
+*.yaml text
+*.yml text
+*.md text
+*.html text
+*.css text
+*.js text
+*.json text
+*.xml text
+*.sql text
+*.env text
+
+# Binaires : jamais de conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.xlsx binary
+*.zip binary
