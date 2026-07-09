@@ -1,0 +1,86 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Dashboard des sorties{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-clipboard-data"></i> Dashboard des sorties</h1>
+            <p class="subtitle">Saison {{ saison }}</p>
+        </div>
+        <a href="{{ path('manager_evenement_index') }}" class="btn-mabb-ghost"><i class="bi bi-arrow-left"></i> Événements</a>
+    </div>
+
+    {# Sélecteur de saison #}
+    <form method="get" action="{{ path('manager_sorties_dashboard') }}" style="margin-bottom:16px;">
+        <select name="saison" class="form-select" style="width:auto; display:inline-block;" onchange="this.form.submit()">
+            {% for s in saisons %}
+                <option value="{{ s }}" {{ s == saison ? 'selected' : '' }}>Saison {{ s }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    {# Agrégats globaux #}
+    <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div class="card-mabb" style="flex:1; min-width:140px;"><div class="card-body">
+            <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-blue);">{{ nb_sorties }}</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">sorties</div>
+        </div></div>
+        <div class="card-mabb" style="flex:1; min-width:140px;"><div class="card-body">
+            <div style="font-size:1.8rem; font-weight:800; color:#16a34a;">{{ total_participants }}</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">participations</div>
+        </div></div>
+        <div class="card-mabb" style="flex:1; min-width:140px;"><div class="card-body">
+            <div style="font-size:1.8rem; font-weight:800; color:#a16207;">{{ total_encaisse|number_format(2, ',', ' ') }} €</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">encaissé</div>
+        </div></div>
+        {% if autorisations_manquantes > 0 %}
+        <div class="card-mabb" style="flex:1; min-width:140px;"><div class="card-body">
+            <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-red);">{{ autorisations_manquantes }}</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">autorisations manquantes</div>
+        </div></div>
+        {% endif %}
+    </div>
+
+    {# Tableau des sorties #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-list-ul"></i> Sorties de la saison</div>
+        <div class="card-body">
+            {% if lignes|length == 0 %}
+                <p style="color:var(--mabb-muted); font-style:italic; margin:0;">Aucune sortie sur cette saison.</p>
+            {% else %}
+                <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:.85rem;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:2px solid var(--mabb-border);">
+                            <th style="padding:8px;">Sortie</th>
+                            <th style="padding:8px;">Date</th>
+                            <th style="padding:8px;">Inscrits</th>
+                            <th style="padding:8px;">Autor. reçues</th>
+                            <th style="padding:8px;">Encaissé</th>
+                            <th style="padding:8px;">Présents</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in lignes %}
+                        <tr style="border-bottom:1px solid var(--mabb-border);">
+                            <td style="padding:8px;">
+                                <a href="{{ path('manager_evenement_show', {id: l.evenement.id}) }}" style="font-weight:600; text-decoration:none; color:var(--mabb-blue);">
+                                    {{ l.evenement.titre }}
+                                </a>
+                                {% if l.evenement.statut != 'publie' %}<span style="font-size:.7rem; color:var(--mabb-muted);"> ({{ l.evenement.statut }})</span>{% endif %}
+                            </td>
+                            <td style="padding:8px;">{{ l.evenement.date|date('d/m/Y') }}</td>
+                            <td style="padding:8px;">{{ l.agregats.nb }}{% if l.evenement.inscriptionsMax %} / {{ l.evenement.inscriptionsMax }}{% endif %}</td>
+                            <td style="padding:8px;">{% if l.evenement.autorisationRequise %}{{ l.agregats.autorisations_recues }}{% if l.agregats.autorisations_manquantes %} <span style="color:var(--mabb-red);">({{ l.agregats.autorisations_manquantes }} manq.)</span>{% endif %}{% else %}—{% endif %}</td>
+                            <td style="padding:8px;">{% if l.evenement.estPayant %}{{ l.agregats.total_encaisse|number_format(2, ',', ' ') }} €{% else %}gratuit{% endif %}</td>
+                            <td style="padding:8px;">{{ l.agregats.presents }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
