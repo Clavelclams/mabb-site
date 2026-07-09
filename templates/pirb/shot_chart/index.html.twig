@@ -520,15 +520,18 @@
         {# Erreur #}
         <div id="sc-error" style="display:none; padding:8px 12px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); border-radius:6px; font-size:.82rem; color:#ef4444; margin-bottom:10px;"></div>
 
-        {# Boutons #}
-        <div style="display:flex; gap:8px; margin-top:auto; padding-bottom:env(safe-area-inset-bottom, 8px);">
+        {# Boutons — collés en bas (sticky) pour rester visibles sans scroller,
+           même dans la WebView de l'app où la barre d'onglets mange le bas. #}
+        <div style="display:flex; gap:8px; position:sticky; bottom:0; margin-top:12px;
+                    padding:10px 4px calc(env(safe-area-inset-bottom, 8px) + 12px);
+                    background:#0f172a; border-top:1px solid rgba(255,255,255,.08); z-index:5;">
             <button type="button" id="modal-sc-close2"
-                    style="flex:1; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:transparent; color:var(--pirb-text-muted); font-size:.9rem; cursor:pointer;">
+                    style="flex:1; padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,.15); background:transparent; color:var(--pirb-text-muted); font-size:.9rem; cursor:pointer;">
                 Annuler
             </button>
             <button type="button" id="sc-sauvegarder"
-                    style="flex:2; padding:12px; border-radius:10px; border:none; background:var(--pirb-accent); color:#fff; font-weight:800; font-size:.9rem; cursor:pointer;">
-                💾 Sauvegarder
+                    style="flex:2; padding:14px; border-radius:10px; border:none; background:var(--pirb-accent); color:#fff; font-weight:800; font-size:.9rem; cursor:pointer;">
+                📤 Envoyer au coach
             </button>
         </div>
     </div>
@@ -940,6 +943,13 @@
         });
     });
 
+    // Ouverture auto du formulaire quand on arrive depuis l'app ("Créer une
+    // séance" dans Stats ajoute ?nouvelle=1) → la joueuse tombe direct sur la
+    // saisie, sans avoir à recliquer sur "➕ Séance".
+    if (new URLSearchParams(location.search).get('nouvelle') === '1') {
+        document.getElementById('btn-nouvelle-seance')?.click();
+    }
+
     // Clic sur le terrain de la modale
     terrainModal.addEventListener('click', (e) => {
         const rect = terrainModal.getBoundingClientRect();
@@ -1074,7 +1084,7 @@
         }
 
         btnSave.disabled = true;
-        btnSave.textContent = '⏳ Sauvegarde…';
+        btnSave.textContent = '⏳ Envoi…';
 
         try {
             const resp = await fetch('/shot-chart/sauvegarder', {
@@ -1106,7 +1116,7 @@
             errorBox.style.display = 'block';
         } finally {
             btnSave.disabled = false;
-            btnSave.textContent = '💾 Sauvegarder';
+            btnSave.textContent = '📤 Envoyer au coach';
         }
     });
 

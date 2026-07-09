@@ -168,6 +168,20 @@ class SeanceTirRepository extends ServiceEntityRepository
             $qb->andWhere('st.dateSeance <= :to')->setParameter('to', $to);
         }
 
-        return $qb->getQuery()->getArrayResult();
+        // getArrayResult() hydrate dateSeance en objet DateTime → json_encode
+        // le sérialiserait en {date, timezone...} et le JS afficherait
+        // "[object Object]" sur l'axe. On formate en chaîne ISO, et on caste
+        // les SUM (renvoyés en string par le SGBD) en entiers pour le graphe.
+        $rows = $qb->getQuery()->getArrayResult();
+        foreach ($rows as &$row) {
+            if ($row['date'] instanceof \DateTimeInterface) {
+                $row['date'] = $row['date']->format('Y-m-d');
+            }
+            $row['tentatives'] = (int) $row['tentatives'];
+            $row['reussis']    = (int) $row['reussis'];
+        }
+        unset($row);
+
+        return $rows;
     }
 }

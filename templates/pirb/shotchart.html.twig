@@ -104,7 +104,7 @@
         <div class="pirb-card">
             <div class="pirb-card-title">Tirs par match</div>
             {% set tirsByMatch = {} %}
-            {% for tir in tirs if tir.rencontre is not null %}
+            {% for tir in tirs|filter(tir => tir.rencontre is not null) %}
                 {# Clé préfixée 'm' : une clé ENTIÈRE serait ré-indexée par le
                    filtre merge de Twig (0,1,2…), ce qui cassait l'accès
                    tirsByMatch[id]. Une clé chaîne ('m82') est préservée.
