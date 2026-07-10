@@ -147,6 +147,7 @@ class JoueurController extends AbstractController
         \App\Repository\Sport\ParentJoueurRepository $parentJoueurRepository,
         \App\Repository\Sport\BilanCompetenceRepository $bilanRepo,
         \App\Repository\Sport\ResponsableLegalRepository $responsableLegalRepo,
+        \App\Service\SaisonService $saisonService,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $joueur);
 
@@ -213,10 +214,16 @@ class JoueurController extends AbstractController
         // ====================================================================
         // Gamification : XP, niveau, badges débloqués
         // ====================================================================
-        $now = new \DateTimeImmutable();
-        $moisNum = (int) $now->format('n');
-        $anneeDebut = $moisNum >= 9 ? (int) $now->format('Y') : (int) $now->format('Y') - 1;
-        $saison = $anneeDebut . '-' . ($anneeDebut + 1);
+        // [V2.4n] FIX : la saison était recalculée ICI avec une bascule au
+        // 1er SEPTEMBRE — en contradiction avec SaisonService (1er juillet).
+        // Résultat : la fiche affichait 2025-2026 en juillet 2026. On passe
+        // par la source de vérité unique + un sélecteur `?saison=` (dropdown
+        // du bloc Performances, demande Clavel).
+        $saison = (string) $request->query->get('saison', '');
+        if (!$saisonService->isValide($saison)) {
+            $saison = $saisonService->getSaisonActive();
+        }
+        $saisonsDisponibles = $saisonService->getSaisonsDisponibles();
 
         $xpSaison = $xpCalculator->xpSaison($joueur, $saison);
         $niveau   = \App\Gamification\NiveauCatalog::depuisXp($xpSaison);
@@ -335,6 +342,8 @@ class JoueurController extends AbstractController
             'type_labels'                   => JoueurEquipe::TYPE_LABELS,
             'type_couleurs'                 => JoueurEquipe::TYPE_COULEURS,
             'saison_courante'               => $saison,
+            // [V2.4n] dropdown saison du bloc Performances
+            'saisons_disponibles'           => $saisonsDisponibles,
             // Bilan le plus récent (toutes saisons, tous statuts) — pour le bloc bilan profil
             'bilan_recent'                  => $bilanRepo->findByJoueur($joueur)[0] ?? null,
             // Liens Parents — tous les ParentJoueur de cette joueuse (actifs + pending)
