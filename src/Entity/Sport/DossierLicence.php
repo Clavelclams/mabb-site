@@ -42,12 +42,21 @@ class DossierLicence implements ClubAwareInterface
     public const TYPES = [self::TYPE_CREATION, self::TYPE_RENOUVELLEMENT, self::TYPE_MUTATION];
 
     // ===== Statut de paiement =====
+    /**
+     * [V2.4m] NON_RENSEIGNE = dossier préparé (ex. « Préparer la saison »)
+     * dont la secrétaire n'a PAS encore fixé le tarif/paiement. N'apparaît
+     * JAMAIS dans « À relancer » : on ne relance pas quelqu'un dont on ne
+     * sait pas encore ce qu'il doit (retour Clavel : Romy, la secrétaire
+     * elle-même, sortait « à relancer en priorité »…).
+     */
+    public const PAIEMENT_NON_RENSEIGNE = 'NON_RENSEIGNE';
     public const PAIEMENT_EN_ATTENTE = 'EN_ATTENTE';
     public const PAIEMENT_PARTIEL    = 'PARTIEL';
     public const PAIEMENT_PAYE       = 'PAYE';
     public const PAIEMENT_EXONERE    = 'EXONERE'; // gratuit (dirigeants, staff)
 
     public const PAIEMENT_STATUTS = [
+        self::PAIEMENT_NON_RENSEIGNE,
         self::PAIEMENT_EN_ATTENTE,
         self::PAIEMENT_PARTIEL,
         self::PAIEMENT_PAYE,
@@ -55,10 +64,11 @@ class DossierLicence implements ClubAwareInterface
     ];
 
     public const PAIEMENT_LABELS = [
-        self::PAIEMENT_EN_ATTENTE => 'À payer',
-        self::PAIEMENT_PARTIEL    => 'Partiel',
-        self::PAIEMENT_PAYE       => 'Payé',
-        self::PAIEMENT_EXONERE    => 'Exonéré',
+        self::PAIEMENT_NON_RENSEIGNE => 'À définir',
+        self::PAIEMENT_EN_ATTENTE    => 'À payer',
+        self::PAIEMENT_PARTIEL       => 'Partiel',
+        self::PAIEMENT_PAYE          => 'Payé',
+        self::PAIEMENT_EXONERE       => 'Exonéré',
     ];
 
     #[ORM\Id]

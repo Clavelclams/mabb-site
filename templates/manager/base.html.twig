@@ -989,13 +989,8 @@
             <i class="bi bi-journal-text"></i> Secrétariat
         </a></li>
         {% endif %}
-        {# [V2.4m] Dashboard OTM (table de marque du week-end) — staff élargi,
-           services civiques inclus. Sorti du Secrétariat (demande Clavel). #}
-        {% if nav_club and is_granted('CLUB_STAFF_ELARGI', nav_club) %}
-        <li><a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="{{ app.request.attributes.get('_route') == 'manager_rencontre_staff_organisation_weekend' ? 'active' : '' }}">
-            <i class="bi bi-clipboard-pulse"></i> OTM
-        </a></li>
-        {% endif %}
+        {# [V2.4m] Dashboard OTM : retiré de la navbar (demande Clavel) —
+           accessible via sa card sur le tableau de bord, avec les autres modules. #}
         {% if nav_club and is_granted('CLUB_STAFF_ELARGI', nav_club) %}
         <li><a href="{{ path('manager_coach_dashboard') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_bilan' or app.request.attributes.get('_route') == 'manager_coach_dashboard' ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Coach

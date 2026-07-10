@@ -215,7 +215,7 @@
                                     <input type="hidden" name="retour_categorie" value="{{ filtre_categorie }}">
                                     <input type="hidden" name="retour_statut" value="{{ filtre_statut }}">
                                     <select name="statut" class="form-select" style="font-size:.72rem; padding:2px 4px; width:auto; height:auto;
-                                            color:{{ d.paiementStatut == 'PAYE' or d.paiementStatut == 'EXONERE' ? '#16a34a' : (d.paiementStatut == 'PARTIEL' ? '#a16207' : '#b91c1c') }};"
+                                            color:{{ d.paiementStatut == 'NON_RENSEIGNE' ? '#64748b' : (d.paiementStatut == 'PAYE' or d.paiementStatut == 'EXONERE' ? '#16a34a' : (d.paiementStatut == 'PARTIEL' ? '#a16207' : '#b91c1c')) }};"
                                             onchange="this.form.submit()">
                                         {% for code, label in statuts %}<option value="{{ code }}" {{ code == d.paiementStatut ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
                                     </select>

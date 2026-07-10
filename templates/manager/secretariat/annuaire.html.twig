@@ -97,8 +97,9 @@
                     <span class="ann-nom">{{ f.nom|upper }} {{ f.prenom }}</span>
                     {% if f.categorie %}<span class="ann-badge" style="background:#eff6ff; color:#1d4ed8;">{{ f.categorie }}</span>{% endif %}
                     {% if f.dossier %}
-                        <span class="ann-badge" style="background:{{ f.dossier.paiementStatut == 'PAYE' or f.dossier.paiementStatut == 'EXONERE' ? '#dcfce7' : '#fee2e2' }};
-                              color:{{ f.dossier.paiementStatut == 'PAYE' or f.dossier.paiementStatut == 'EXONERE' ? '#166534' : '#b91c1c' }};">
+                        {% set pst = f.dossier.paiementStatut %}
+                        <span class="ann-badge" style="background:{{ pst == 'NON_RENSEIGNE' ? '#f1f5f9' : (pst == 'PAYE' or pst == 'EXONERE' ? '#dcfce7' : '#fee2e2') }};
+                              color:{{ pst == 'NON_RENSEIGNE' ? '#64748b' : (pst == 'PAYE' or pst == 'EXONERE' ? '#166534' : '#b91c1c') }};">
                             {{ f.dossier.paiementLabel }}{{ f.dossier.tarif ? ' · ' ~ f.dossier.tarif : '' }}
                         </span>
                     {% else %}
