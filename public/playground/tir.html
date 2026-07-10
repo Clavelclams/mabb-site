@@ -38,10 +38,22 @@
   #vPct { color: var(--gold); } #vSerie { color: var(--ball); }
   #status { font-size: 13px; color: var(--muted); text-align: center; }
   #fin { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
-         justify-content: center; gap: 10px; background: rgba(10,14,20,0.88); text-align: center; }
-  #fin h2 { font-size: 44px; color: var(--net); letter-spacing: 2px; }
-  #fin p { color: var(--muted); font-size: 15px; }
-  #fin .gros { font-size: 26px; color: var(--text); font-weight: 800; }
+         justify-content: flex-start; gap: 10px; background: rgba(10,14,20,0.94); text-align: center;
+         overflow-y: auto; padding: 16px; }
+  #fin h2 { font-size: 38px; color: var(--net); letter-spacing: 2px; }
+  #fin p { color: var(--muted); font-size: 14px; }
+  #fin .gros { font-size: 22px; color: var(--text); font-weight: 800; }
+  /* Récap de séance : trajectoires + demi-terrain + liste des tirs */
+  #recapTraj { width: 100%; max-width: 560px; border: 1px solid var(--border); border-radius: 10px; background: rgba(0,0,0,0.5); }
+  #recapCourt { width: 100%; max-width: 300px; border: 1px solid var(--border); border-radius: 10px; background: #0D1420; }
+  #recapListe { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 6px; }
+  .tirRow { display: flex; align-items: center; gap: 10px; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
+  .tirRow .res { font-weight: 800; width: 34px; }
+  .tirRow .zoneBtn { background: var(--surface); color: var(--muted); border: 1px solid var(--border);
+                     border-radius: 8px; min-height: 34px; padding: 4px 10px; font-size: 16px; }
+  .tirRow .zoneNom { flex: 1; color: var(--text); font-weight: 700; font-size: 13.5px; }
+  #finBoutons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 </style>
 </head>
 <body>
@@ -60,8 +72,20 @@
     <div id="fin">
       <h2 id="finScore">0 / 0</h2>
       <p class="gros" id="finPct"></p>
+      <!-- Le DEBRIEF avant validation : trajectoires superposées (tes axes
+           d'amélioration se voient), positions estimées sur le demi-terrain,
+           zone AJUSTABLE par tir. La réussite, elle, est verrouillée :
+           détectée par la caméra, pas modifiable (sinon on triche). -->
+      <p class="gros" id="recapTitre" hidden>Tes trajectoires</p>
+      <canvas id="recapTraj" hidden></canvas>
+      <p class="gros" id="courtTitre" hidden>D'où tu as tiré (estimé — ajuste si besoin)</p>
+      <canvas id="recapCourt" hidden></canvas>
+      <div id="recapListe"></div>
       <p id="finDetail"></p>
-      <button id="btnRejouer">Nouvelle séance</button>
+      <div id="finBoutons">
+        <button id="btnValider" hidden>Valider la séance ✓</button>
+        <button id="btnRejouer" class="ghost">Nouvelle séance</button>
+      </div>
     </div>
   </div>
   <div id="hud" hidden>
@@ -106,6 +130,79 @@ let trainee = [];                 // trajectoire : [{ x, y, t, src: 'modele'|'mo
 let flottants = [];
 let reussis = 0, tentes = 0, serie = 0, meilleureSerie = 0;
 let debutSeance = 0;
+
+// [Jeu v3, 10/07] ------------------------------------------------------------
+// Fantôme du dernier tir : la trajectoire FIGÉE 2,5 s (verte = marqué,
+// rouge = raté) — la joueuse VOIT son arc et peut le corriger. C'est LE
+// feedback qui transforme un compteur en outil d'entraînement.
+let fantome = null; // { points: [{x,y}], couleur: 'r,g,b', jusqua: t }
+// [Recap v4, 10/07] Chaque tir décidé est ARCHIVÉ pour le debrief de fin :
+// trajectoire complète + réussite (verrouillée) + zone ESTIMÉE (ajustable).
+let tirsSeance = []; // { reussi, volS, arc: [{x,y}], zone }
+
+// Les 8 zones du serveur (même taxonomie que l'app / ShotChartCalculator).
+const ZONES_ORDRE = ["raquette", "courte_distance", "mi_distance", "3pts_coin_g", "3pts_aile_g", "3pts_haut", "3pts_aile_d", "3pts_coin_d"];
+const ZONE_NOMS = {
+  raquette: "Raquette", courte_distance: "Courte distance", mi_distance: "Mi-distance",
+  "3pts_coin_g": "3pts coin gauche", "3pts_coin_d": "3pts coin droit",
+  "3pts_aile_g": "3pts aile gauche", "3pts_aile_d": "3pts aile droite", "3pts_haut": "3pts haut",
+};
+// Position de chaque zone sur le demi-terrain du récap (x latéral 0-1,
+// y 0 = ligne de fond → 1 = milieu). Sert à poser les points.
+const ZONE_CENTRES = {
+  raquette: [0.5, 0.1], courte_distance: [0.5, 0.26], mi_distance: [0.5, 0.44],
+  "3pts_coin_g": [0.09, 0.08], "3pts_coin_d": [0.91, 0.08],
+  "3pts_aile_g": [0.17, 0.42], "3pts_aile_d": [0.83, 0.42], "3pts_haut": [0.5, 0.62],
+};
+
+/**
+ * Zone de tir ESTIMÉE depuis l'image — l'astuce : l'arceau fait 45 cm dans
+ * la vraie vie et on connaît sa taille en pixels (les 2 taps de calibration).
+ * Il devient une RÈGLE posée dans l'image : distance départ-du-tir → panier
+ * en pixels × 45 cm / taille-arceau-px ≈ distance en mètres. C'est un
+ * « à peu près » assumé (la perspective écrase la profondeur) → la joueuse
+ * peut AJUSTER la zone au récap. La réussite, elle, n'est jamais éditable.
+ */
+function estimerZone(arc) {
+  if (!arceau || arc.length === 0) return "mi_distance";
+  const dep = arc[0]; // le départ du tir = premier point de l'arc
+  const cx = (arceau.a.x + arceau.b.x) / 2, cy = (arceau.a.y + arceau.b.y) / 2;
+  const distPx = Math.hypot(dep.x - cx, dep.y - cy);
+  const metres = (distPx * 0.45) / arceau.len;
+  const lateral = (dep.x - cx) / Math.max(1, distPx); // -1 = gauche … 1 = droite
+  if (metres < 1.8) return "raquette";
+  if (metres < 3.5) return "courte_distance";
+  if (metres < 6.0) return "mi_distance";
+  if (Math.abs(lateral) > 0.85) return lateral < 0 ? "3pts_coin_g" : "3pts_coin_d";
+  if (Math.abs(lateral) > 0.35) return lateral < 0 ? "3pts_aile_g" : "3pts_aile_d";
+  return "3pts_haut";
+}
+
+// Callouts variés sur panier (la répétition tue le plaisir).
+const CALLOUTS = ["SPLASH !", "Encore !", "Trop propre 😮‍💨", "Money 💰", "Elle est douce."];
+let calloutIdx = 0;
+// Temps de vol cumulé (moyenne affichée en fin de séance).
+let volSommeS = 0;
+// Tirs annulés d'affilée (ballon perdu) → on souffle une aide à la joueuse.
+let annulesConsecutifs = 0, prochaineAideA = 0;
+// Records PERSO du téléphone (localStorage de la page — pas de compte requis).
+const CLE_RECORDS = "pirb.tir.records.v1";
+function lireRecords() {
+  try { return JSON.parse(localStorage.getItem(CLE_RECORDS)) ?? {}; } catch { return {}; }
+}
+function ecrireRecords(r) {
+  try { localStorage.setItem(CLE_RECORDS, JSON.stringify(r)); } catch { /* stockage plein/privé */ }
+}
+// Wake lock : un tel posé s'éteint au bout d'une minute → séance morte au
+// milieu. On demande à l'OS de garder l'écran allumé pendant qu'on joue.
+let wakeLock = null;
+async function garderEcranAllume() {
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { /* pas supporté : tant pis */ }
+}
+// iOS relâche le verrou quand on change d'app : on le reprend au retour.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && phase === "jeu") garderEcranAllume();
+});
 
 // [Fluidité 10/07] Détection adaptative (même mécanique que dribble.html) :
 // lite2 coûte 40-90 ms par passage — à chaque frame, ça saccade. On mesure
@@ -170,6 +267,10 @@ function envoyerALApp() {
       rates: tentes - reussis,
       dureeSecondes: Math.round((performance.now() - debutSeance) / 1000),
       score: reussis * 10,
+      // [Recap v4] Le détail par tir : réussite (auto, jamais éditée) +
+      // zone (estimée puis éventuellement ajustée au debrief). L'arc de
+      // trajectoire reste LOCAL (données brutes inutiles côté serveur).
+      tirs: tirsSeance.map((x) => ({ reussi: x.reussi, zone: x.zone })),
     }));
   } catch { /* hors app : rien à faire */ }
 }
@@ -216,6 +317,7 @@ $("btn").addEventListener("click", async () => {
     $("stage").hidden = false; $("hud").hidden = false; $("btn").hidden = true;
     $("status").textContent = `Analyse locale en direct (modèle ${modeleNom}). Rien n'est enregistré, rien ne part.`;
     phase = "calibration";
+    garderEcranAllume(); // le tel posé ne doit JAMAIS s'éteindre en séance
     requestAnimationFrame(boucle);
   } catch (e) {
     $("status").textContent = "Échec : " + e.message;
@@ -251,13 +353,25 @@ $("btnRecaler").addEventListener("click", () => {
 });
 
 $("btnFinir").addEventListener("click", () => { if (phase === "jeu") finirSeance(); });
+
+// [Recap v4] La validation : C'EST ELLE qui envoie la séance à l'app
+// (zones ajustées comprises). Une seule fois — le bouton se verrouille.
+$("btnValider").addEventListener("click", () => {
+  envoyerALApp();
+  $("btnValider").disabled = true;
+  $("btnValider").textContent = "Enregistrée ✓";
+});
+
 $("btnRejouer").addEventListener("click", () => {
   $("fin").style.display = "none";
   reussis = 0; tentes = 0; serie = 0; meilleureSerie = 0;
+  volSommeS = 0; annulesConsecutifs = 0; fantome = null;
+  tirsSeance = []; // le récap de la partie d'avant ne pollue pas la suivante
   trainee = []; tir = { etat: "repos", depuis: 0 };
   suiveur = creerSuiveur();
   debutSeance = performance.now();
   phase = "calibration"; tapCalibration = null; // le tel a pu bouger
+  garderEcranAllume(); // le verrou a pu sauter pendant l'écran de fin
   majHud();
 });
 
@@ -265,22 +379,52 @@ $("btnRejouer").addEventListener("click", () => {
 function panier(t, xCross, yCross) {
   reussis++; tentes++; serie++;
   meilleureSerie = Math.max(meilleureSerie, serie);
-  const vol = ((t - tir.depuis) / 1000).toFixed(1);
-  flottants.push({ x: xCross, y: yCross - 40, t0: t, texte: `+1  ·  ${vol}s de vol`, couleur: "62,207,142" });
+  annulesConsecutifs = 0;
+  const volS = (t - tir.depuis) / 1000;
+  volSommeS += volS;
+  // Callout varié (rotation) + le temps de vol en dessous, plus discret.
+  const callout = CALLOUTS[calloutIdx++ % CALLOUTS.length];
+  flottants.push({ x: xCross, y: yCross - 52, t0: t, texte: callout, couleur: "62,207,142" });
+  flottants.push({ x: xCross, y: yCross - 18, t0: t, texte: `+1 · ${volS.toFixed(1)}s de vol`, couleur: "140,150,163" });
   if (serie >= 3) flottants.push({ x: canvas.width / 2, y: canvas.height * 0.3, t0: t, texte: `🔥 ${serie} D'AFFILÉE`, couleur: "245,197,66" });
   sonPanier();
+  const arc = arcRecent(t);
+  figerFantome(arc, t, "62,207,142");
+  tirsSeance.push({ reussi: true, volS, arc, zone: estimerZone(arc) }); // [Recap v4]
   finDeTir(t);
 }
 
 function rate(t, xCross, yCross) {
   tentes++; serie = 0;
+  annulesConsecutifs = 0;
   flottants.push({ x: xCross, y: yCross - 40, t0: t, texte: "Raté", couleur: "229,72,77" });
   sonRate();
+  const arc = arcRecent(t);
+  figerFantome(arc, t, "229,72,77");
+  tirsSeance.push({ reussi: false, volS: (t - tir.depuis) / 1000, arc, zone: estimerZone(arc) }); // [Recap v4]
   finDeTir(t);
+}
+
+/** L'arc du tir qui vient de se terminer : les points des ~1,2 dernières secondes. */
+function arcRecent(t) {
+  return trainee.filter((p) => t - p.t < 1200).map((p) => ({ x: p.x, y: p.y }));
+}
+
+/** Fige la trajectoire du dernier tir (le « fantôme » à l'écran). */
+function figerFantome(points, t, couleur) {
+  if (points.length >= 3) fantome = { points, couleur, jusqua: t + 2500 };
 }
 
 function finDeTir(t) {
   tir = { etat: "cooldown", depuis: t };
+  // Jalons de séance : un repère tous les 5/10/20 tirs — la joueuse sait
+  // toujours où elle en est sans regarder le HUD.
+  if (tentes === 5 || tentes === 10 || tentes === 20) {
+    flottants.push({
+      x: canvas.width / 2, y: canvas.height * 0.2, t0: t,
+      texte: `${tentes} tirs : ${reussis}/${tentes}`, couleur: "245,197,66",
+    });
+  }
   majHud();
 }
 
@@ -333,6 +477,7 @@ function boucle() {
 
       // 4. Dessin.
       dessinerArceau(t);
+      dessinerFantome(t);
       dessinerTrainee(t);
       dessinerBallon(t);
       dessinerFlottants(t);
@@ -376,6 +521,16 @@ function avancerTir(t) {
   // champ ? occlusion ?) — mieux vaut un tir non compté qu'un faux chiffre.
   if (t - cur.t > 900) {
     tir = { etat: "repos", depuis: t };
+    // [UX v3] 2 tirs perdus d'affilée = un problème de CADRAGE, pas de
+    // joueuse. On le dit (au plus une fois toutes les 15 s, pas de spam).
+    annulesConsecutifs++;
+    if (annulesConsecutifs >= 2 && t > prochaineAideA) {
+      prochaineAideA = t + 15000;
+      flottants.push({
+        x: canvas.width / 2, y: canvas.height * 0.24, t0: t,
+        texte: "Je te perds 👀 rapproche le tel ou recale l'arceau", couleur: "245,197,66",
+      });
+    }
     return;
   }
 
@@ -433,6 +588,19 @@ function dessinerArceau() {
   }
 }
 
+/** Le fantôme du dernier tir : l'arc figé, vert ou rouge, qui s'efface en 2,5 s. */
+function dessinerFantome(t) {
+  if (!fantome) return;
+  if (t > fantome.jusqua) { fantome = null; return; }
+  const alpha = Math.min(0.8, (fantome.jusqua - t) / 2500);
+  ctx.strokeStyle = `rgba(${fantome.couleur},${alpha})`;
+  ctx.lineWidth = 3.5; ctx.lineCap = "round"; ctx.setLineDash([2, 7]);
+  ctx.beginPath();
+  fantome.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
 function dessinerTrainee(t) {
   // Trajectoire : trait orange qui s'estompe. Les points « mouvement »
   // (suiveur) sont dessinés un peu plus fins que les points « modèle » —
@@ -483,15 +651,116 @@ function finirSeance() {
   const pct = tentes > 0 ? Math.round((reussis / tentes) * 100) : 0;
   $("finScore").textContent = `${reussis} / ${tentes}`;
   $("finPct").textContent = tentes > 0 ? `${pct}% d'adresse` : "Aucun tir détecté";
-  // Dans l'app, la séance part dans l'historique Playground → on le DIT
-  // (une récompense invisible n'existe pas). Hors app, pas de promesse.
-  const dansApp = typeof window.ReactNativeWebView !== "undefined";
+
+  // [v3] Records PERSO (ce téléphone) : adresse (à partir de 5 tirs, sinon
+  // 1/1 = 100 % serait un faux record) et meilleure série. Battre son
+  // record d'hier > battre les autres : c'est ça, redonner goût au jeu.
+  const records = lireRecords();
+  let ligneRecord = "";
+  if (tentes >= 5 && pct > (records.adresse ?? -1)) {
+    records.adresse = pct;
+    ligneRecord = " 🏆 Nouveau record d'adresse !";
+  }
+  if (meilleureSerie > (records.serie ?? 0)) {
+    records.serie = meilleureSerie;
+    ligneRecord += " 🏆 Record de série !";
+  }
+  ecrireRecords(records);
+
+  const volMoyen = reussis > 0 ? ` Vol moyen : ${(volSommeS / reussis).toFixed(1)}s.` : "";
   $("finDetail").textContent = tentes > 0
-    ? `Meilleure série : ${meilleureSerie}. Compté par la caméra, pas par toi.`
-      + (dansApp ? " Séance enregistrée dans ton Playground ✓" : "")
+    ? `Meilleure série : ${meilleureSerie}.${volMoyen}${ligneRecord} Réussi/raté : compté par la caméra, pas modifiable.`
     : "Vérifie que l'arceau calibré et tes tirs sont bien dans le cadre.";
+
+  // [Recap v4] Le debrief AVANT l'envoi : la séance ne part qu'au tap sur
+  // « Valider » (le temps d'ajuster les zones). Rien ne part sans elle.
+  construireRecap();
   $("fin").style.display = "flex";
-  envoyerALApp();
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Le RÉCAP de fin (v4) : trajectoires superposées + demi-terrain + liste
+// ─────────────────────────────────────────────────────────────────────────
+
+function construireRecap() {
+  const aDesTirs = tirsSeance.length > 0;
+  for (const id of ["recapTitre", "recapTraj", "courtTitre", "recapCourt", "btnValider"]) {
+    $(id).hidden = !aDesTirs;
+  }
+  $("btnValider").disabled = false;
+  $("btnValider").textContent = "Valider la séance ✓";
+  $("recapListe").innerHTML = "";
+  if (!aDesTirs) return;
+
+  dessinerRecapTraj();
+  dessinerRecapCourt();
+
+  // La liste : réussite VERROUILLÉE (affichage seul), zone ajustable ◀ ▶.
+  tirsSeance.forEach((tirS, i) => {
+    const row = document.createElement("div");
+    row.className = "tirRow";
+    row.innerHTML =
+      `<span style="color:var(--muted)">Tir ${i + 1}</span>` +
+      `<span class="res" style="color:${tirS.reussi ? "#3ECF8E" : "#E5484D"}">${tirS.reussi ? "✅" : "❌"}</span>` +
+      `<span class="zoneNom" id="zn${i}">${ZONE_NOMS[tirS.zone]}</span>` +
+      `<button class="zoneBtn" data-i="${i}" data-d="-1">◀</button>` +
+      `<button class="zoneBtn" data-i="${i}" data-d="1">▶</button>`;
+    $("recapListe").appendChild(row);
+  });
+  $("recapListe").querySelectorAll(".zoneBtn").forEach((b) =>
+    b.addEventListener("click", () => {
+      const i = Number(b.dataset.i), d = Number(b.dataset.d);
+      const idx = (ZONES_ORDRE.indexOf(tirsSeance[i].zone) + d + ZONES_ORDRE.length) % ZONES_ORDRE.length;
+      tirsSeance[i].zone = ZONES_ORDRE[idx];
+      document.getElementById("zn" + i).textContent = ZONE_NOMS[tirsSeance[i].zone];
+      dessinerRecapCourt(); // le point bouge en direct sur le terrain
+    })
+  );
+}
+
+/** Toutes les trajectoires de la séance, superposées (vert/rouge) + l'arceau. */
+function dessinerRecapTraj() {
+  const rc = $("recapTraj");
+  rc.width = 560; rc.height = 420;
+  const cx2 = rc.getContext("2d");
+  const sx = rc.width / canvas.width, sy = rc.height / canvas.height;
+  // L'arceau, en repère : c'est LA référence pour lire les arcs.
+  if (arceau) {
+    cx2.strokeStyle = "rgba(62,207,142,0.9)"; cx2.lineWidth = 4; cx2.lineCap = "round";
+    cx2.beginPath();
+    cx2.moveTo(arceau.a.x * sx, arceau.a.y * sy);
+    cx2.lineTo(arceau.b.x * sx, arceau.b.y * sy);
+    cx2.stroke();
+  }
+  for (const tirS of tirsSeance) {
+    cx2.strokeStyle = tirS.reussi ? "rgba(62,207,142,0.65)" : "rgba(229,72,77,0.6)";
+    cx2.lineWidth = 2.5; cx2.lineCap = "round";
+    cx2.beginPath();
+    tirS.arc.forEach((p, i) => (i === 0 ? cx2.moveTo(p.x * sx, p.y * sy) : cx2.lineTo(p.x * sx, p.y * sy)));
+    cx2.stroke();
+  }
+}
+
+/** Le demi-terrain : un point par tir, posé sur sa zone (décalé pour ne pas s'empiler). */
+function dessinerRecapCourt() {
+  const rc = $("recapCourt");
+  rc.width = 300; rc.height = 270;
+  const c2 = rc.getContext("2d");
+  const W = rc.width, H = rc.height;
+  // Le décor : ligne de fond en haut, raquette, arc 3 pts, rond du panier.
+  c2.strokeStyle = "rgba(140,150,163,0.5)"; c2.lineWidth = 1.5;
+  c2.strokeRect(1, 1, W - 2, H - 2);
+  c2.strokeRect(W * 0.36, 1, W * 0.28, H * 0.3);                 // raquette
+  c2.beginPath(); c2.arc(W * 0.5, H * 0.07, W * 0.62, 0.15, Math.PI - 0.15); c2.stroke(); // 3 pts
+  c2.fillStyle = "#FF6B2C";
+  c2.beginPath(); c2.arc(W * 0.5, H * 0.07, 5, 0, Math.PI * 2); c2.fill();  // le panier
+  // Les tirs : un point par zone (léger décalage en spirale si plusieurs).
+  tirsSeance.forEach((tirS, i) => {
+    const [zx, zy] = ZONE_CENTRES[tirS.zone];
+    const dx = ((i % 5) - 2) * 7, dy = (Math.floor(i / 5) % 3 - 1) * 7;
+    c2.fillStyle = tirS.reussi ? "#3ECF8E" : "#E5484D";
+    c2.beginPath(); c2.arc(zx * W + dx, zy * H + dy, 6, 0, Math.PI * 2); c2.fill();
+  });
 }
 
 function majHud() {

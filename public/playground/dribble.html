@@ -102,6 +102,47 @@ let flottants = [];
 let balleVue = null;
 let suiveur = creerSuiveur();
 
+// [Jeu v3, 10/07] ------------------------------------------------------------
+// Décompte 3-2-1 avant la partie : AVANT, le chrono partait au clic alors
+// que la joueuse était encore penchée sur le tel — 3-4 secondes perdues à
+// chaque partie. Maintenant elle a le temps de reculer et de prendre le
+// ballon.
+let decompteFinA = 0;
+// Sons (WebAudio, zéro asset) — le dribble était MUET, un jeu muet est un
+// formulaire. Pop sur hit, jingle sur montée de niveau, buzzer de fin.
+let audio = null;
+function initAudio() {
+  if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { /* muet */ } }
+}
+function jouer(freqDebut, freqFin, dureeS, type = "sine", gainMax = 0.22) {
+  if (!audio) return;
+  const osc = audio.createOscillator();
+  const gain = audio.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freqDebut, audio.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(freqFin, audio.currentTime + dureeS);
+  gain.gain.setValueAtTime(gainMax, audio.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + dureeS);
+  osc.connect(gain).connect(audio.destination);
+  osc.start(); osc.stop(audio.currentTime + dureeS);
+}
+const sonHit    = () => jouer(660, 990, 0.12);
+const sonNiveau = () => { jouer(523, 659, 0.12); setTimeout(() => jouer(659, 880, 0.16), 110); };
+const sonFin    = () => jouer(330, 165, 0.5, "square", 0.15);
+// Record PERSO du téléphone (localStorage de la page).
+const CLE_RECORD = "pirb.dribble.record.v1";
+function lireRecord() {
+  try { return Number(localStorage.getItem(CLE_RECORD)) || 0; } catch { return 0; }
+}
+// Wake lock : le tel posé ne doit pas s'éteindre en pleine partie.
+let wakeLock = null;
+async function garderEcranAllume() {
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { /* pas supporté */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && enJeu) garderEcranAllume();
+});
+
 // [Fluidité 10/07] Détection ADAPTATIVE : le modèle est LE poste de coût
 // (20-60 ms par passage selon l'appareil). Le faire tourner à chaque frame
 // plombait le framerate (retour terrain : « pas assez fluide »). On mesure
@@ -150,6 +191,7 @@ async function chargerModele() {
 // ---------- Démarrage -----------------------------------------------------------
 $("btn").addEventListener("click", async () => {
   $("btn").disabled = true;
+  initAudio(); // au 1er geste utilisateur (exigence des navigateurs mobiles)
   try {
     await chargerModele();
     $("status").textContent = "Ouverture de la caméra…";
@@ -159,6 +201,7 @@ $("btn").addEventListener("click", async () => {
     canvas.width = video.videoWidth; canvas.height = video.videoHeight;
     $("stage").hidden = false; $("hud").hidden = false; $("btn").hidden = true;
     $("status").textContent = "Analyse locale en direct. Rien n'est enregistré, rien ne part.";
+    garderEcranAllume(); // le tel posé ne doit JAMAIS s'éteindre en partie
     lancerPartie();
     requestAnimationFrame(boucle);
   } catch (e) {
@@ -171,8 +214,11 @@ $("btnRejouer").addEventListener("click", () => { $("fin").style.display = "none
 
 function lancerPartie() {
   enJeu = true; niveau = 1; score = 0; hits = 0; apparues = 0;
-  cibles = []; flottants = [];
-  finAu = performance.now() + DUREE_JEU_S * 1000;
+  cibles = []; flottants = []; pointPrec = null;
+  // Décompte 3-2-1 : le chrono de jeu ne démarre qu'APRÈS (le temps de
+  // reculer et de prendre le ballon).
+  decompteFinA = performance.now() + 3000;
+  finAu = decompteFinA + DUREE_JEU_S * 1000;
   majHud();
 }
 
@@ -193,10 +239,12 @@ function toucher(cible, t) {
   const points = 10 * niveau;
   score += points;
   flottants.push({ x: cible.x, y: cible.y - cible.r, t0: t, texte: `+${points}` });
+  sonHit(); // [v3] le hit S'ENTEND — feedback sans regarder l'écran
   const nouveau = Math.floor(hits / HITS_PAR_NIVEAU) + 1;
   if (nouveau > niveau) {
     niveau = nouveau;
     flottants.push({ x: canvas.width / 2, y: canvas.height / 2, t0: t, texte: `NIVEAU ${niveau} !` });
+    sonNiveau();
   }
   majHud();
 }
@@ -211,6 +259,21 @@ function boucle() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (enJeu) {
+      // ---- Décompte 3-2-1 : plein écran, rien d'autre ne bouge ----------
+      if (t < decompteFinA) {
+        ctx.fillStyle = "rgba(10,14,20,0.45)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const n = Math.ceil((decompteFinA - t) / 1000);
+        ctx.fillStyle = "#FF6B2C"; ctx.textAlign = "center";
+        ctx.font = "bold " + Math.round(canvas.height * 0.28) + "px system-ui";
+        ctx.fillText(String(n), canvas.width / 2, canvas.height * 0.55);
+        ctx.fillStyle = "#fff"; ctx.font = "600 20px system-ui";
+        ctx.fillText("Recule, prends ton ballon…", canvas.width / 2, canvas.height * 0.72);
+        ctx.textAlign = "left";
+        requestAnimationFrame(boucle);
+        return;
+      }
+
       const reste = Math.max(0, Math.ceil((finAu - t) / 1000));
       $("vTemps").textContent = reste;
       if (reste <= 0) return finirPartie();
@@ -351,13 +414,27 @@ function dessinerFlottants(t) {
 
 function finirPartie() {
   enJeu = false;
+  sonFin();
   $("finScore").textContent = `${score} pts`;
-  $("finNiveau").textContent = `Niveau ${niveau} atteint`;
   const pct = apparues > 0 ? Math.round((hits / apparues) * 100) : 0;
+
+  // [v3] Record PERSO (ce téléphone) : battre son score d'hier, c'est LA
+  // raison de relancer une partie. Affiché même quand il tient.
+  const record = lireRecord();
+  let ligneRecord;
+  if (score > record) {
+    try { localStorage.setItem(CLE_RECORD, String(score)); } catch { /* stockage privé */ }
+    ligneRecord = record > 0 ? ` 🏆 NOUVEAU RECORD (ancien : ${record}) !` : "";
+    $("finNiveau").textContent = `Niveau ${niveau} atteint 🏆`;
+  } else {
+    ligneRecord = ` Ton record : ${record} pts.`;
+    $("finNiveau").textContent = `Niveau ${niveau} atteint`;
+  }
+
   // Dans l'app : on annonce l'enregistrement (récompense visible = boucle
   // d'engagement qui se referme). Hors app : pas de promesse.
   const dansApp = typeof window.ReactNativeWebView !== "undefined";
-  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%). Compté par la caméra, pas par toi.`
+  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%).${ligneRecord} Compté par la caméra, pas par toi.`
     + (dansApp ? " Séance enregistrée dans ton Playground ✓" : "");
   $("fin").style.display = "flex";
   // Pont vers l'app PIRB (WebView) : la séance rejoint l'historique
