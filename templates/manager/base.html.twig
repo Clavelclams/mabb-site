@@ -953,6 +953,10 @@
 <div class="topbar">
     <a href="{{ path('manager_dashboard') }}" class="brand">🏀 MABB Manager</a>
 
+    {# [V2.4m] Le club de la navbar est résolu ICI (fallback club_actif()) :
+       les items conditionnés ne dépendent plus du fait que chaque contrôleur
+       pense à passer `club` — fini la navbar amputée sur certaines pages. #}
+    {% set nav_club = (club is defined and club) ? club : club_actif() %}
     <ul class="nav-modules">
         <li><a href="{{ path('manager_dashboard') }}" class="{{ app.request.attributes.get('_route') == 'manager_dashboard' ? 'active' : '' }}">
             <i class="bi bi-grid"></i> Tableau de bord
@@ -980,12 +984,19 @@
             <i class="bi bi-folder2-open"></i> ENT
         </a></li>
         {# [V2.4g] Secrétariat — dirigeant + rôle SECRETAIRE uniquement #}
-        {% if club is defined and club and is_granted('CLUB_SECRETARIAT', club) %}
+        {% if nav_club and is_granted('CLUB_SECRETARIAT', nav_club) %}
         <li><a href="{{ path('manager_secretariat_dashboard') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_secretariat' ? 'active' : '' }}">
             <i class="bi bi-journal-text"></i> Secrétariat
         </a></li>
         {% endif %}
-        {% if club is defined and club and is_granted('CLUB_STAFF_ELARGI', club) %}
+        {# [V2.4m] Dashboard OTM (table de marque du week-end) — staff élargi,
+           services civiques inclus. Sorti du Secrétariat (demande Clavel). #}
+        {% if nav_club and is_granted('CLUB_STAFF_ELARGI', nav_club) %}
+        <li><a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="{{ app.request.attributes.get('_route') == 'manager_rencontre_staff_organisation_weekend' ? 'active' : '' }}">
+            <i class="bi bi-clipboard-pulse"></i> OTM
+        </a></li>
+        {% endif %}
+        {% if nav_club and is_granted('CLUB_STAFF_ELARGI', nav_club) %}
         <li><a href="{{ path('manager_coach_dashboard') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_bilan' or app.request.attributes.get('_route') == 'manager_coach_dashboard' ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Coach
         </a></li>
@@ -999,7 +1010,7 @@
         {# Réunions, PDFs FFBB, Bibliothèque, Séances solo : retirés de la navbar,
            accessibles via cards sur le dashboard #}
         {# Lien Demandes — visible UNIQUEMENT aux dirigeants du club actif #}
-        {% if club is defined and club and is_granted('CLUB_ADMIN', club) %}
+        {% if nav_club and is_granted('CLUB_ADMIN', nav_club) %}
             <li><a href="{{ path('manager_demandes_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_demandes' ? 'active' : '' }}">
                 <i class="bi bi-hourglass-split"></i> Demandes
             </a></li>
@@ -1034,7 +1045,8 @@
                     {# [V2.4j] Pont écosystème : les membres du club de la vitrine
                        ont AUSSI leur compte mabb.fr (même login) — on le leur montre.
                        Invisible pour les clubs externes (mabb.fr n'est pas leur site). #}
-                    {% if club is defined and club and club.slug == club_vitrine_slug %}
+                    {% set menu_club = (club is defined and club) ? club : club_actif() %}
+                    {% if menu_club and menu_club.slug == club_vitrine_slug %}
                         <a href="https://mabb.fr/compte/mon-compte" class="user-menu-item" target="_blank" rel="noopener">
                             <i class="bi bi-globe"></i> Mon compte mabb.fr
                         </a>

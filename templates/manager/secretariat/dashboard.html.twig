@@ -61,9 +61,7 @@
         <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="{{ nb_pre_inscriptions > 0 ? 'btn-mabb-orange' : 'btn-mabb-ghost' }}" style="padding:16px; font-size:1rem; text-align:center;">
             <i class="bi bi-inbox"></i> Les demandes{% if nb_pre_inscriptions > 0 %} ({{ nb_pre_inscriptions }}){% endif %}<br><small style="font-weight:400; opacity:.75;">nouvelles licences</small>
         </a>
-        <a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="btn-mabb-ghost" style="padding:16px; font-size:1rem; text-align:center;">
-            <i class="bi bi-calendar-week"></i> Le week-end<br><small style="font-weight:400; opacity:.75;">qui fait quoi aux matchs</small>
-        </a>
+        {# [V2.4m] « Le week-end » sorti d'ici → Dashboard OTM dédié (navbar) #}
         <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost" style="padding:16px; font-size:1rem; text-align:center;">
             <i class="bi bi-upload"></i> Mes Excel<br><small style="font-weight:400; opacity:.75;">les faire entrer ici</small>
         </a>

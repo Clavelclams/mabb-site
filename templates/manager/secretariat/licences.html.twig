@@ -126,6 +126,12 @@
                 {{ n }} <span class="cnt">({{ compteurs_site[n] ?? 0 }})</span>
             </a>
         {% endfor %}
+        {# [V2.4m] Onglet « À placer » dédié (exclu de noms_secteurs → plus de doublon) #}
+        {% if (compteurs_site['À placer'] ?? 0) > 0 %}
+            <a href="{{ path('manager_secretariat_licences', {saison: saison, site: 'À placer'}) }}" class="cls-tab {{ filtre_site == 'À placer' ? 'active' : '' }}">
+                📍 À placer <span class="cnt">({{ compteurs_site['À placer'] }})</span>
+            </a>
+        {% endif %}
     </div>
 
     <div class="card-mabb" style="border-top-left-radius:0;">

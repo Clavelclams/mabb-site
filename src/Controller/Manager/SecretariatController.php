@@ -106,6 +106,12 @@ class SecretariatController extends AbstractController
         $secteurs = $this->secteurRepo->findByClub($club);
         $nomsSecteurs = array_map(fn($s) => $s->getNom(), $secteurs);
         foreach ($this->dossierRepo->sites($club, $saison) as $s) {
+            // [V2.4m] 'À placer' est EXCLU de la liste : les templates l'ajoutent
+            // explicitement (onglet + option dédiés) — sinon il sortait en double
+            // (« un truc superposé » repéré par Clavel sur le bouton À placer).
+            if (mb_strtoupper($s) === 'À PLACER') {
+                continue;
+            }
             if (!in_array(mb_strtoupper($s), array_map('mb_strtoupper', $nomsSecteurs), true)) {
                 $nomsSecteurs[] = $s;
             }

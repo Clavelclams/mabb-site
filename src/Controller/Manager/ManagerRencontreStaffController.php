@@ -379,11 +379,10 @@ class ManagerRencontreStaffController extends AbstractController
         if ($club === null) {
             return $this->redirectToRoute('manager_dashboard');
         }
-        // Secrétaire OU staff (coach/dirigeant/staff) : les deux organisent.
-        if (!$this->isGranted(ClubVoter::CLUB_SECRETARIAT, $club)
-            && !$this->isGranted(ClubVoter::CLUB_STAFF, $club)) {
-            throw $this->createAccessDeniedException();
-        }
+        // [V2.4m] Dashboard OTM (Officiels de Table de Marque) — accès staff
+        // ÉLARGI : dirigeants, coachs, staff, trésorier, EMPLOYÉS/services
+        // civiques et secrétaire. Ce sont eux qui tiennent la table de marque.
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF_ELARGI, $club);
 
         // Samedi de référence : ?date=YYYY-MM-DD (n'importe quel jour de la
         // semaine visée) — défaut : le week-end courant ou à venir.
