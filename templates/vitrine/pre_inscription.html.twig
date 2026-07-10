@@ -1,0 +1,98 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{# [V2.4h] Pré-inscription licence — formulaire public (remplace le Google Form).
+   La demande arrive dans Manager → Secrétariat → Pré-inscriptions. #}
+
+{% block title %}Pré-inscription {{ saison }} — MABB Amiens{% endblock %}
+
+{% block meta_description %}Pré-inscris ta joueuse à la MABB Amiens Métropole Basket Ball pour la saison {{ saison }} : formulaire en ligne simple et rapide.{% endblock %}
+
+{% block body %}
+<section class="section">
+    <div class="container" style="max-width: 760px;">
+        <div class="text-center mb-4">
+            <h1 class="section-title">Pré-inscription <span>{{ saison }}</span></h1>
+            <p class="section-subtitle">
+                Remplis ce formulaire pour préparer la licence — la secrétaire du club
+                te recontacte pour finaliser le dossier et le paiement.
+            </p>
+        </div>
+
+        {% for msg in app.flashes('error') %}
+            <div class="alert alert-danger">{{ msg }}</div>
+        {% endfor %}
+
+        {% if envoye %}
+            <div class="card border-0 shadow-sm text-center p-5">
+                <div style="font-size:3rem;">🏀</div>
+                <h2 class="h4 mt-3">Demande bien reçue !</h2>
+                <p class="text-muted mb-4">
+                    La secrétaire du club va la traiter et vous recontacter.
+                    Pense à préparer le certificat médical et le règlement.
+                </p>
+                <div>
+                    <a href="{{ path('vitrine_pre_inscription') }}" class="btn btn-outline-secondary btn-sm rounded-pill">Envoyer une autre demande</a>
+                </div>
+            </div>
+        {% else %}
+            <form method="post" class="card border-0 shadow-sm p-4" style="display:flex; flex-direction:column; gap:14px;">
+                <input type="hidden" name="_token" value="{{ csrf_token('pre_inscription') }}">
+                {# Honeypot anti-bot : invisible pour un humain, ne pas remplir #}
+                <div style="position:absolute; left:-9999px;" aria-hidden="true">
+                    <label>Site web <input type="text" name="site_web" tabindex="-1" autocomplete="off"></label>
+                </div>
+
+                <h2 class="h5 mb-0">🏀 La joueuse</h2>
+                <div class="row g-2">
+                    <div class="col-md-6"><input type="text" name="nom" class="form-control" placeholder="Nom *" required></div>
+                    <div class="col-md-6"><input type="text" name="prenom" class="form-control" placeholder="Prénom *" required></div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted mb-1">Date de naissance</label>
+                        <input type="date" name="date_naissance" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted mb-1">Téléphone de la joueuse (si elle en a un)</label>
+                        <input type="tel" name="telephone_joueuse" class="form-control" placeholder="06…">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted mb-1">Catégorie (si connue)</label>
+                        <input type="text" name="categorie" class="form-control" placeholder="Ex : U13, Seniors…">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small text-muted mb-1">Secteur souhaité</label>
+                        <select name="secteur" class="form-select">
+                            <option value="">— Je ne sais pas encore —</option>
+                            {% for s in secteurs %}
+                                <option value="{{ s.nom }}">{{ s.nom }}{% if s.responsableNom %} (resp. {{ s.responsableNom }}){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <h2 class="h5 mb-0 mt-2">👨‍👩‍👧 Parent / responsable légal <small class="text-muted fw-normal">(obligatoire si mineure)</small></h2>
+                <div class="row g-2">
+                    <div class="col-md-6"><input type="text" name="parent_nom" class="form-control" placeholder="Nom et prénom du parent"></div>
+                    <div class="col-md-6"><input type="tel" name="parent_telephone" class="form-control" placeholder="Téléphone du parent"></div>
+                    <div class="col-md-6"><input type="email" name="parent_email" class="form-control" placeholder="Email (réception de la licence)"></div>
+                    <div class="col-md-4"><input type="text" name="parent_adresse" class="form-control" placeholder="Adresse"></div>
+                    <div class="col-md-2"><input type="text" name="parent_code_postal" class="form-control" placeholder="CP"></div>
+                </div>
+
+                <label class="d-flex gap-2 align-items-start small mt-2" style="cursor:pointer;">
+                    <input type="checkbox" name="consentement" value="1" required class="mt-1">
+                    <span>
+                        J'accepte que ces informations soient utilisées par le club MABB pour
+                        la gestion de la licence ({{ saison }}). Elles ne sont jamais publiées ni
+                        transmises à des tiers — voir la
+                        <a href="/politique-confidentialite" target="_blank">politique de confidentialité</a>. *
+                    </span>
+                </label>
+
+                <button type="submit" class="btn btn-lg rounded-pill btn-inscription mt-2">
+                    Envoyer la pré-inscription
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

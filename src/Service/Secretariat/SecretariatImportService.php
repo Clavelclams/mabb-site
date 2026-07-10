@@ -173,6 +173,21 @@ final class SecretariatImportService
                 continue;
             }
 
+            // [V2.4h] ENRICHISSEMENT fiche joueuse (demande Clavel : « on doit
+            // s'en servir ») — on complète les champs VIDES de la fiche, sans
+            // jamais écraser une donnée déjà saisie par le staff :
+            //   col5 = téléphone de la joueuse, col1 = date de naissance.
+            if (!$dryRun) {
+                $telJoueuse = trim((string) ($row[5] ?? ''));
+                if ($telJoueuse !== '' && $joueur->getTelephone() === null) {
+                    $joueur->setTelephone($telJoueuse);
+                }
+                $ddn = $this->lireDate($row[1] ?? null);
+                if ($ddn !== null && $joueur->getDateNaissance() === null) {
+                    $joueur->setDateNaissance($ddn);
+                }
+            }
+
             $nomParents = trim((string) ($row[6] ?? ''));
             if ($nomParents === '') {
                 continue; // pas de contact parent sur cette ligne
@@ -182,13 +197,19 @@ final class SecretariatImportService
                 continue;
             }
 
+            // [V2.4h] col10 = « Ton responsable » (responsable de SECTEUR :
+            // Willy/Romy DUFOSSE…) — vraie info métier, conservée en note du
+            // contact. Le référentiel Secteur porte le responsable officiel.
+            $responsableSecteur = trim((string) ($row[10] ?? ''));
+
             $r = new ResponsableLegal();
             $r->setJoueur($joueur)
               ->setNomComplet($nomParents)
               ->setTelephone(trim((string) ($row[11] ?? '')) ?: null)
               ->setEmail(trim((string) ($row[9] ?? '')) ?: null)
               ->setAdresse(trim((string) ($row[7] ?? '')) ?: null)
-              ->setCodePostal($this->lireCodePostal($row[8] ?? null));
+              ->setCodePostal($this->lireCodePostal($row[8] ?? null))
+              ->setNotes($responsableSecteur !== '' ? 'Responsable secteur : ' . $responsableSecteur : null);
             if (!$dryRun) {
                 $this->em->persist($r);
             }
@@ -279,14 +300,9 @@ final class SecretariatImportService
         return $index;
     }
 
-    /** minuscules, sans accents, espaces compactés — tolère les Excel « sales ». */
+    /** Délègue à NomOutil — normalisation UNIQUE pour tous les rapprochements. */
     private function normaliserNom(string $nom): string
     {
-        $n = mb_strtolower(trim($nom));
-        $translit = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $n);
-        if (is_string($translit) && $translit !== '') {
-            $n = $translit;
-        }
-        return preg_replace('/\s+/', ' ', $n) ?? $n;
+        return NomOutil::normaliser($nom);
     }
 }

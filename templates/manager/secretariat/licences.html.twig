@@ -1,77 +1,197 @@
 {% extends 'manager/base.html.twig' %}
 
-{# [V2.4g] Tableau des dossiers licences — l'équivalent des Excel
-   « LICENCIÉS <SITE> » avec filtres, changement de statut et relances. #}
+{# [V2.4h] LE CLASSEUR — reproduit l'environnement Excel de la secrétaire :
+   onglets SECTEURS (ses fichiers) → onglets CATÉGORIES (ses onglets) → lignes.
+   Ajout manuel, déplacement de secteur, paiement inline, relances, édition. #}
 
-{% block title %}Licences {{ saison }} — Secrétariat{% endblock %}
+{% block title %}Classeur licences {{ saison }} — Secrétariat{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .cls-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px; }
+        .cls-tab {
+            padding:8px 16px; border-radius:10px 10px 0 0; text-decoration:none;
+            font-weight:700; font-size:.85rem; border:1px solid var(--mabb-border);
+            border-bottom:none; color:var(--mabb-muted); background:#f1f5f9;
+        }
+        .cls-tab.active { background:#fff; color:var(--mabb-blue); border-color:var(--mabb-blue); }
+        .cls-tab .cnt { font-weight:400; font-size:.72rem; opacity:.7; }
+        .cls-subtabs { display:flex; gap:4px; flex-wrap:wrap; margin:8px 0; }
+        .cls-subtab {
+            padding:4px 12px; border-radius:999px; text-decoration:none; font-size:.76rem;
+            border:1px solid var(--mabb-border); color:var(--mabb-muted); background:#fff;
+        }
+        .cls-subtab.active { background:var(--mabb-orange, #ea580c); color:#fff; border-color:transparent; }
+        details.cls-panel { border:1px dashed var(--mabb-border); border-radius:10px; padding:10px 14px; margin-bottom:10px; background:#fff; }
+        details.cls-panel summary { cursor:pointer; font-weight:700; font-size:.85rem; color:var(--mabb-blue); }
+    </style>
+{% endblock %}
 
 {% block body %}
     <div class="page-header">
         <div>
-            <h1><i class="bi bi-table"></i> Dossiers licences</h1>
-            <p class="subtitle">{{ dossiers|length }} dossier{{ dossiers|length > 1 ? 's' : '' }} — saison {{ saison }}</p>
+            <h1><i class="bi bi-journal-bookmark"></i> Classeur licences</h1>
+            <p class="subtitle">Saison {{ saison }} — {{ dossiers|length }} ligne{{ dossiers|length > 1 ? 's' : '' }} affichée{{ dossiers|length > 1 ? 's' : '' }}</p>
         </div>
-        <a href="{{ path('manager_secretariat_dashboard', {saison: saison}) }}" class="btn-mabb-ghost"><i class="bi bi-arrow-left"></i> Secrétariat</a>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            {% if nb_pre_inscriptions > 0 %}
+                <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="btn-mabb-orange">
+                    <i class="bi bi-inbox"></i> {{ nb_pre_inscriptions }} pré-inscription{{ nb_pre_inscriptions > 1 ? 's' : '' }}
+                </a>
+            {% else %}
+                <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="btn-mabb-ghost"><i class="bi bi-inbox"></i> Pré-inscriptions</a>
+            {% endif %}
+            <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost"><i class="bi bi-upload"></i> Import Excel</a>
+            <form method="get">
+                <select name="saison" class="form-select" onchange="this.form.submit()">
+                    {% for s in saisons %}<option value="{{ s }}" {{ s == saison ? 'selected' : '' }}>Saison {{ s }}</option>{% endfor %}
+                </select>
+            </form>
+        </div>
     </div>
 
-    {# ===== Filtres ===== #}
-    <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-        <select name="saison" class="form-select" style="width:auto;" onchange="this.form.submit()">
-            {% for s in saisons %}<option value="{{ s }}" {{ s == saison ? 'selected' : '' }}>Saison {{ s }}</option>{% endfor %}
-        </select>
-        <select name="site" class="form-select" style="width:auto;" onchange="this.form.submit()">
-            <option value="">Tous les sites</option>
-            {% for s in sites %}<option value="{{ s }}" {{ s == filtre_site ? 'selected' : '' }}>{{ s }}</option>{% endfor %}
-        </select>
-        <select name="categorie" class="form-select" style="width:auto;" onchange="this.form.submit()">
-            <option value="">Toutes les catégories</option>
-            {% for c in categories %}<option value="{{ c }}" {{ c == filtre_categorie ? 'selected' : '' }}>{{ c }}</option>{% endfor %}
-        </select>
-        <select name="statut" class="form-select" style="width:auto;" onchange="this.form.submit()">
-            <option value="">Tous les statuts</option>
-            {% for code, label in statuts %}<option value="{{ code }}" {{ code == filtre_statut ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
-        </select>
-    </form>
+    {# ===== Panneaux : ajouter / préparer la saison / secteurs ===== #}
+    <details class="cls-panel">
+        <summary><i class="bi bi-person-plus"></i> Ajouter une licenciée</summary>
+        <form method="post" action="{{ path('manager_secretariat_licence_ajouter') }}"
+              style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; margin-top:10px; align-items:end;">
+            <input type="hidden" name="_token" value="{{ csrf_token('secretariat_licence_ajouter') }}">
+            <input type="hidden" name="saison" value="{{ saison }}">
+            <input type="text" name="nom_complet" class="form-control" placeholder="NOM Prénom *" required style="grid-column: span 2;">
+            <select name="site" class="form-select">
+                <option value="">Secteur…</option>
+                {% for n in noms_secteurs %}<option value="{{ n }}" {{ n == filtre_site ? 'selected' : '' }}>{{ n }}</option>{% endfor %}
+                <option value="À placer">À placer</option>
+            </select>
+            <input type="text" name="categorie" class="form-control" placeholder="Catégorie" value="{{ filtre_categorie }}">
+            <input type="text" name="numero_licence" class="form-control" placeholder="N° licence">
+            <input type="text" name="telephone" class="form-control" placeholder="Téléphone">
+            <input type="text" name="tarif" class="form-control" placeholder="Tarif (110, Gratuit…)">
+            <button type="submit" class="btn-mabb-orange"><i class="bi bi-plus-lg"></i> Ajouter</button>
+        </form>
+        <p style="font-size:.72rem; color:var(--mabb-muted); margin:8px 0 0;">
+            Anti-doublon : si la joueuse existe déjà cette saison (n° ou nom), son dossier est complété, jamais dupliqué.
+        </p>
+    </details>
 
-    <div class="card-mabb">
+    <details class="cls-panel">
+        <summary><i class="bi bi-magic"></i> Préparer la saison depuis les fiches joueuses</summary>
+        <p style="font-size:.8rem; color:var(--mabb-muted); margin:8px 0;">
+            Crée un dossier « À payer / À placer » pour chaque joueuse ACTIVE du club qui n'a pas
+            encore de ligne dans le classeur {{ saison }} (les joueuses de l'an dernier, donc).
+            Aucun doublon possible : celles déjà présentes sont sautées.
+        </p>
+        <form method="post" action="{{ path('manager_secretariat_licences_generer') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('secretariat_generer') }}">
+            <input type="hidden" name="saison" value="{{ saison }}">
+            <button type="submit" class="btn-mabb-ghost" onclick="return confirm('Créer les dossiers manquants pour {{ saison }} ?');">
+                <i class="bi bi-magic"></i> Préparer {{ saison }}
+            </button>
+        </form>
+    </details>
+
+    <details class="cls-panel">
+        <summary><i class="bi bi-geo-alt"></i> Secteurs &amp; responsables</summary>
+        <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:.8rem;">
+            {% for s in secteurs %}
+                <div style="border:1px solid var(--mabb-border); border-radius:8px; padding:8px 12px;">
+                    <strong>{{ s.nom }}</strong><br>
+                    <span style="color:var(--mabb-muted);">
+                        {{ s.responsableNom ?? 'responsable non défini' }}{% if s.responsableTelephone %} · {{ s.responsableTelephone }}{% endif %}
+                    </span>
+                </div>
+            {% else %}
+                <p style="color:var(--mabb-muted); margin:0;">Aucun secteur défini — crée AMIENS NORD, AMIENS SUD, ETOUVIE…</p>
+            {% endfor %}
+        </div>
+        <form method="post" action="{{ path('manager_secretariat_secteur_enregistrer') }}"
+              style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:end;">
+            <input type="hidden" name="_token" value="{{ csrf_token('secretariat_secteur') }}">
+            <input type="text" name="nom" class="form-control" placeholder="Nom du secteur *" required style="max-width:180px;">
+            <input type="text" name="responsable_nom" class="form-control" placeholder="Responsable (ex: Willy DUFOSSE)" style="max-width:230px;">
+            <input type="text" name="responsable_telephone" class="form-control" placeholder="Tél responsable" style="max-width:160px;">
+            <button type="submit" class="btn-mabb-ghost"><i class="bi bi-check2"></i> Créer / mettre à jour</button>
+        </form>
+    </details>
+
+    {# ===== Onglets SECTEURS ===== #}
+    <div class="cls-tabs">
+        <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="cls-tab {{ filtre_site == '' ? 'active' : '' }}">
+            Tous <span class="cnt">({{ compteurs_site|map(v => v)|reduce((a, b) => a + b, 0) }})</span>
+        </a>
+        {% for n in noms_secteurs %}
+            <a href="{{ path('manager_secretariat_licences', {saison: saison, site: n}) }}" class="cls-tab {{ filtre_site == n ? 'active' : '' }}">
+                {{ n }} <span class="cnt">({{ compteurs_site[n] ?? 0 }})</span>
+            </a>
+        {% endfor %}
+    </div>
+
+    <div class="card-mabb" style="border-top-left-radius:0;">
         <div class="card-body">
+
+            {# ===== Sous-onglets CATÉGORIES + filtre statut ===== #}
+            <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+                <div class="cls-subtabs">
+                    <a href="{{ path('manager_secretariat_licences', {saison: saison, site: filtre_site}) }}"
+                       class="cls-subtab {{ filtre_categorie == '' ? 'active' : '' }}">Toutes</a>
+                    {% for c in categories %}
+                        <a href="{{ path('manager_secretariat_licences', {saison: saison, site: filtre_site, categorie: c}) }}"
+                           class="cls-subtab {{ filtre_categorie == c ? 'active' : '' }}">{{ c }}</a>
+                    {% endfor %}
+                </div>
+                <form method="get">
+                    <input type="hidden" name="saison" value="{{ saison }}">
+                    <input type="hidden" name="site" value="{{ filtre_site }}">
+                    <input type="hidden" name="categorie" value="{{ filtre_categorie }}">
+                    <select name="statut" class="form-select" style="font-size:.78rem; width:auto;" onchange="this.form.submit()">
+                        <option value="">Tous les statuts</option>
+                        {% for code, label in statuts %}<option value="{{ code }}" {{ code == filtre_statut ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
+                    </select>
+                </form>
+            </div>
+
             {% if dossiers is empty %}
-                <p style="color:var(--mabb-muted); font-style:italic; margin:0;">
-                    Aucun dossier pour ces filtres.
-                    <a href="{{ path('manager_secretariat_import') }}">Importer les Excel de la saison →</a>
+                <p style="color:var(--mabb-muted); font-style:italic; margin:14px 0 0;">
+                    Rien ici pour l'instant — ajoute une licenciée, « prépare la saison », ou
+                    <a href="{{ path('manager_secretariat_import') }}">importe un Excel</a>.
                 </p>
             {% else %}
-                <div style="overflow-x:auto;">
+                <div style="overflow-x:auto; margin-top:10px;">
                 <table style="width:100%; border-collapse:collapse; font-size:.82rem; white-space:nowrap;">
                     <thead>
                         <tr style="text-align:left; border-bottom:2px solid var(--mabb-border);">
                             <th style="padding:7px;">Nom</th>
                             <th style="padding:7px;">N° licence</th>
-                            <th style="padding:7px;">Type</th>
-                            <th style="padding:7px;">Site</th>
-                            <th style="padding:7px;">Catégorie</th>
+                            <th style="padding:7px;">Naissance</th>
                             <th style="padding:7px;">Téléphone</th>
+                            <th style="padding:7px;">Catégorie</th>
                             <th style="padding:7px;">Tarif</th>
-                            <th style="padding:7px;">Aides</th>
                             <th style="padding:7px;">Paiement</th>
+                            <th style="padding:7px;">Secteur</th>
                             <th style="padding:7px;">Relance</th>
+                            <th style="padding:7px;"></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for d in dossiers %}
                         <tr style="border-bottom:1px solid var(--mabb-border);">
                             <td style="padding:7px; font-weight:600;">
-                                {{ d.nomComplet }}
-                                {% if d.joueur %}<i class="bi bi-patch-check" style="color:var(--mabb-blue);" title="Fiche joueuse liée"></i>{% endif %}
+                                {% if d.joueur %}
+                                    <a href="{{ path('manager_joueur_show', {id: d.joueur.id}) }}" style="text-decoration:none; color:inherit;"
+                                       title="Voir la fiche joueuse">{{ d.nomComplet }} <i class="bi bi-patch-check" style="color:var(--mabb-blue);"></i></a>
+                                {% else %}
+                                    {{ d.nomComplet }}
+                                {% endif %}
+                                {% if d.typeLicence %}<small style="color:var(--mabb-muted); font-weight:400;"> · {{ d.typeLicence|lower }}</small>{% endif %}
                             </td>
                             <td style="padding:7px;"><code>{{ d.numeroLicence ?? '—' }}</code></td>
-                            <td style="padding:7px;">{{ d.typeLicence ? d.typeLicence|lower|capitalize : '—' }}</td>
-                            <td style="padding:7px;">{{ d.site ?? '—' }}</td>
-                            <td style="padding:7px;">{{ d.categorie ?? '—' }}</td>
+                            <td style="padding:7px;">{{ d.dateNaissance ? d.dateNaissance|date('d/m/Y') : '—' }}</td>
                             <td style="padding:7px;">{{ d.telephone ?? '—' }}</td>
-                            <td style="padding:7px;">{{ d.tarif ?? '—' }}</td>
-                            <td style="padding:7px; font-size:.72rem; color:var(--mabb-muted);">
-                                {% if d.aides %}{{ d.aides|keys|map(k => k|replace({'_':' '}))|join(', ') }}{% else %}—{% endif %}
+                            <td style="padding:7px;">{{ d.categorie ?? '—' }}</td>
+                            <td style="padding:7px;">
+                                {{ d.tarif ?? '—' }}
+                                {% if d.aides %}<small style="color:var(--mabb-muted);" title="{{ d.aides|json_encode }}"> +aides</small>{% endif %}
                             </td>
                             <td style="padding:7px;">
                                 <form method="post" action="{{ path('manager_secretariat_licence_statut', {id: d.id}) }}" style="display:inline;">
@@ -82,9 +202,22 @@
                                     <select name="statut" class="form-select" style="font-size:.72rem; padding:2px 4px; width:auto; height:auto;
                                             color:{{ d.paiementStatut == 'PAYE' or d.paiementStatut == 'EXONERE' ? '#16a34a' : (d.paiementStatut == 'PARTIEL' ? '#a16207' : '#b91c1c') }};"
                                             onchange="this.form.submit()">
-                                        {% for code, label in statuts %}
-                                            <option value="{{ code }}" {{ code == d.paiementStatut ? 'selected' : '' }}>{{ label }}</option>
-                                        {% endfor %}
+                                        {% for code, label in statuts %}<option value="{{ code }}" {{ code == d.paiementStatut ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                            <td style="padding:7px;">
+                                <form method="post" action="{{ path('manager_secretariat_licence_site', {id: d.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('secretariat_site_' ~ d.id) }}">
+                                    <input type="hidden" name="retour_site" value="{{ filtre_site }}">
+                                    <input type="hidden" name="retour_categorie" value="{{ filtre_categorie }}">
+                                    <input type="hidden" name="retour_statut" value="{{ filtre_statut }}">
+                                    <select name="site" class="form-select" style="font-size:.72rem; padding:2px 4px; width:auto; height:auto;" onchange="this.form.submit()">
+                                        {% if d.site and d.site not in noms_secteurs and d.site != 'À placer' %}
+                                            <option value="{{ d.site }}" selected>{{ d.site }}</option>
+                                        {% endif %}
+                                        <option value="À placer" {{ d.site == 'À placer' ? 'selected' : '' }}>À placer</option>
+                                        {% for n in noms_secteurs %}<option value="{{ n }}" {{ d.site == n ? 'selected' : '' }}>{{ n }}</option>{% endfor %}
                                     </select>
                                 </form>
                             </td>
@@ -103,6 +236,10 @@
                                 {% else %}
                                     <span style="font-size:.72rem; color:#16a34a;"><i class="bi bi-check-circle"></i></span>
                                 {% endif %}
+                            </td>
+                            <td style="padding:7px; text-align:right;">
+                                <a href="{{ path('manager_secretariat_licence_modifier', {id: d.id}) }}" class="btn-mabb-ghost"
+                                   style="font-size:.7rem; padding:2px 8px;" title="Modifier le dossier complet"><i class="bi bi-pencil"></i></a>
                             </td>
                         </tr>
                         {% endfor %}

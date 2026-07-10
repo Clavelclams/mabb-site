@@ -39,6 +39,11 @@ class SecretariatController extends AbstractController
         private readonly SaisonService $saisonService,
         private readonly SecretariatImportService $importService,
         private readonly EntityManagerInterface $em,
+        // [V2.4h] classeur par secteur + pré-inscriptions publiques
+        private readonly \App\Repository\Sport\SecteurRepository $secteurRepo,
+        private readonly \App\Repository\Sport\PreInscriptionRepository $preInscriptionRepo,
+        private readonly \App\Service\Secretariat\PreInscriptionConverter $converter,
+        private readonly \App\Repository\Sport\JoueurRepository $joueurRepo,
     ) {}
 
     // ────────────────────────────────────────────────────────────────────
@@ -71,6 +76,8 @@ class SecretariatController extends AbstractController
             'saisons'   => $this->saisonService->getSaisonsDisponibles(),
             'stats'     => $stats,
             'a_relancer' => array_slice($aRelancer, 0, 15),
+            // [V2.4h] demandes déposées via la vitrine, à traiter
+            'nb_pre_inscriptions' => $this->preInscriptionRepo->compterNouvelles($club),
         ]);
     }
 
@@ -78,6 +85,10 @@ class SecretariatController extends AbstractController
     // Tableau des dossiers licences
     // ────────────────────────────────────────────────────────────────────
 
+    /**
+     * [V2.4h] LE CLASSEUR — la page licences reproduit l'environnement Excel
+     * de la secrétaire : onglets SECTEURS → onglets CATÉGORIES → lignes.
+     */
     #[Route('/licences', name: 'licences', methods: ['GET'])]
     public function licences(Request $request): Response
     {
@@ -90,18 +101,352 @@ class SecretariatController extends AbstractController
         $categorie = (string) $request->query->get('categorie', '');
         $statut    = (string) $request->query->get('statut', '');
 
+        // Onglets secteurs : référentiel Secteur ∪ sites présents dans les
+        // dossiers (compat : un site importé sans fiche Secteur reste visible).
+        $secteurs = $this->secteurRepo->findByClub($club);
+        $nomsSecteurs = array_map(fn($s) => $s->getNom(), $secteurs);
+        foreach ($this->dossierRepo->sites($club, $saison) as $s) {
+            if (!in_array(mb_strtoupper($s), array_map('mb_strtoupper', $nomsSecteurs), true)) {
+                $nomsSecteurs[] = $s;
+            }
+        }
+
+        // Compteurs par secteur (onglets) — sur la saison complète
+        $stats = $this->dossierRepo->statsDashboard($club, $saison);
+
+        // Lignes du secteur affiché ; catégories (sous-onglets) issues du secteur
+        $dossiersSecteur = $this->dossierRepo->rechercher($club, $saison, $site ?: null);
+        $categoriesSecteur = array_values(array_unique(array_filter(array_map(
+            fn(DossierLicence $d) => $d->getCategorie(), $dossiersSecteur
+        ))));
+        sort($categoriesSecteur);
+
+        $dossiers = array_values(array_filter($dossiersSecteur, function (DossierLicence $d) use ($categorie, $statut) {
+            if ($categorie !== '' && $d->getCategorie() !== $categorie) { return false; }
+            if ($statut !== '' && $d->getPaiementStatut() !== $statut) { return false; }
+            return true;
+        }));
+
         return $this->render('manager/secretariat/licences.html.twig', [
             'club'       => $club,
             'saison'     => $saison,
             'saisons'    => $this->saisonService->getSaisonsDisponibles(),
-            'dossiers'   => $this->dossierRepo->rechercher($club, $saison, $site ?: null, $categorie ?: null, $statut ?: null),
-            'sites'      => $this->dossierRepo->sites($club, $saison),
-            'categories' => $this->dossierRepo->categories($club, $saison),
+            'dossiers'   => $dossiers,
+            'secteurs'   => $secteurs,
+            'noms_secteurs' => $nomsSecteurs,
+            'compteurs_site' => $stats['par_site'],
+            'categories' => $categoriesSecteur,
             'filtre_site'      => $site,
             'filtre_categorie' => $categorie,
             'filtre_statut'    => $statut,
             'statuts'    => DossierLicence::PAIEMENT_LABELS,
+            'nb_pre_inscriptions' => $this->preInscriptionRepo->compterNouvelles($club),
         ]);
+    }
+
+    /** [V2.4h] Ajout manuel d'une licenciée depuis le classeur. */
+    #[Route('/licences/ajouter', name: 'licence_ajouter', methods: ['POST'])]
+    public function ajouterLicence(Request $request): Response
+    {
+        $club = $this->clubOuRedirect();
+        if ($club instanceof Response) { return $club; }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $club);
+        if (!$this->isCsrfTokenValid('secretariat_licence_ajouter', (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_secretariat_licences');
+        }
+
+        $saison = (string) $request->request->get('saison', '');
+        if (!$this->saisonService->isValide($saison)) {
+            $saison = $this->saisonService->getSaisonActive();
+        }
+        $nom = trim((string) $request->request->get('nom_complet', ''));
+        if ($nom === '') {
+            $this->addFlash('error', 'Le nom est obligatoire.');
+            return $this->redirectToRoute('manager_secretariat_licences', ['saison' => $saison]);
+        }
+
+        // Anti-doublon : si un dossier existe déjà (n° ou nom), on COMPLÈTE
+        $numero  = trim((string) $request->request->get('numero_licence', ''));
+        $dossier = $this->dossierRepo->trouverPourImport($club, $saison, $numero !== '' ? strtoupper($numero) : null, $nom);
+        $nouveau = ($dossier === null);
+        if ($nouveau) {
+            $dossier = new DossierLicence();
+            $dossier->setClub($club)->setSaison($saison)->setNomComplet($nom);
+            $this->em->persist($dossier);
+        }
+        $site = trim((string) $request->request->get('site', ''));
+        $dossier->setSite($site ?: ($dossier->getSite() ?? 'À placer'))
+            ->setCategorie(trim((string) $request->request->get('categorie', '')) ?: $dossier->getCategorie())
+            ->setNumeroLicence($numero ?: $dossier->getNumeroLicence())
+            ->setTelephone(trim((string) $request->request->get('telephone', '')) ?: $dossier->getTelephone())
+            ->setTarif(trim((string) $request->request->get('tarif', '')) ?: $dossier->getTarif());
+
+        // Lien fiche joueuse si trouvable (anti-doublon nom+prénom normalisés)
+        if ($dossier->getJoueur() === null) {
+            $cible = \App\Service\Secretariat\NomOutil::normaliser($nom);
+            foreach ($this->joueurRepo->findBy(['club' => $club, 'isActive' => true]) as $j) {
+                $n1 = \App\Service\Secretariat\NomOutil::normaliser(($j->getNom() ?? '') . ' ' . ($j->getPrenom() ?? ''));
+                $n2 = \App\Service\Secretariat\NomOutil::normaliser(($j->getPrenom() ?? '') . ' ' . ($j->getNom() ?? ''));
+                if ($cible === $n1 || $cible === $n2) { $dossier->setJoueur($j); break; }
+            }
+        }
+
+        $this->em->flush();
+        $this->addFlash('success', $nouveau
+            ? sprintf('%s ajoutée au classeur (%s).', $nom, $dossier->getSite())
+            : sprintf('%s existait déjà — dossier complété (pas de doublon).', $nom));
+        return $this->redirectToRoute('manager_secretariat_licences', ['saison' => $saison, 'site' => $dossier->getSite()]);
+    }
+
+    /** [V2.4h] Déplacer une joueuse vers un autre secteur. */
+    #[Route('/licences/{id}/site', name: 'licence_site', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function changerSite(Request $request, DossierLicence $dossier): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $dossier);
+        if (!$this->isCsrfTokenValid('secretariat_site_' . $dossier->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectDossiers($request, $dossier);
+        }
+        $site = trim((string) $request->request->get('site', ''));
+        if ($site !== '') {
+            $dossier->setSite($site);
+            $this->em->flush();
+            $this->addFlash('success', sprintf('%s placée sur %s.', $dossier->getNomComplet(), $site));
+        }
+        return $this->redirectDossiers($request, $dossier);
+    }
+
+    /** [V2.4h] Édition complète d'un dossier (page dédiée, simple et robuste). */
+    #[Route('/licences/{id}/modifier', name: 'licence_modifier', methods: ['GET', 'POST'], requirements: ['id' => '\d+'])]
+    public function modifierLicence(Request $request, DossierLicence $dossier): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $dossier);
+
+        if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('secretariat_modifier_' . $dossier->getId(), (string) $request->request->get('_token'))) {
+                $this->addFlash('error', 'Jeton de sécurité invalide.');
+                return $this->redirectToRoute('manager_secretariat_licence_modifier', ['id' => $dossier->getId()]);
+            }
+            $nom = trim((string) $request->request->get('nom_complet', ''));
+            if ($nom !== '') { $dossier->setNomComplet($nom); }
+            $dossier->setSite(trim((string) $request->request->get('site', '')) ?: null)
+                ->setCategorie(trim((string) $request->request->get('categorie', '')) ?: null)
+                ->setTypeLicence(trim((string) $request->request->get('type_licence', '')) ?: null)
+                ->setNumeroLicence(trim((string) $request->request->get('numero_licence', '')) ?: null)
+                ->setTelephone(trim((string) $request->request->get('telephone', '')) ?: null)
+                ->setTarif(trim((string) $request->request->get('tarif', '')) ?: null)
+                ->setPaiementStatut((string) $request->request->get('paiement_statut', $dossier->getPaiementStatut()))
+                ->setNotes(trim((string) $request->request->get('notes', '')) ?: null);
+            $ddn = trim((string) $request->request->get('date_naissance', ''));
+            if ($ddn !== '') {
+                try { $dossier->setDateNaissance(new \DateTimeImmutable($ddn)); } catch (\Exception) {}
+            }
+            // Aides : champs libres conservés dans le JSON
+            $aides = array_filter([
+                'aide_mairie'     => trim((string) $request->request->get('aide_mairie', '')),
+                'pass'            => trim((string) $request->request->get('pass', '')),
+                'cheques_college' => trim((string) $request->request->get('cheques_college', '')),
+                'cheques'         => trim((string) $request->request->get('cheques', '')),
+                'especes'         => trim((string) $request->request->get('especes', '')),
+            ], fn(string $v) => $v !== '');
+            $dossier->setAides($aides ?: null);
+
+            $this->em->flush();
+            $this->addFlash('success', 'Dossier mis à jour.');
+            return $this->redirectToRoute('manager_secretariat_licences', [
+                'saison' => $dossier->getSaison(), 'site' => $dossier->getSite(),
+            ]);
+        }
+
+        $club = $dossier->getClub();
+        return $this->render('manager/secretariat/licence_modifier.html.twig', [
+            'dossier'  => $dossier,
+            'secteurs' => $club ? $this->secteurRepo->findByClub($club) : [],
+            'statuts'  => DossierLicence::PAIEMENT_LABELS,
+        ]);
+    }
+
+    /**
+     * [V2.4h] « Préparer la saison » : crée les dossiers manquants depuis les
+     * fiches Joueur ACTIVES du club (secteur « À placer », statut À payer).
+     * Anti-doublon : une joueuse ayant déjà un dossier cette saison est sautée.
+     */
+    #[Route('/licences/generer', name: 'licences_generer', methods: ['POST'])]
+    public function genererDepuisJoueuses(Request $request): Response
+    {
+        $club = $this->clubOuRedirect();
+        if ($club instanceof Response) { return $club; }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $club);
+        if (!$this->isCsrfTokenValid('secretariat_generer', (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_secretariat_licences');
+        }
+
+        $saison = (string) $request->request->get('saison', '');
+        if (!$this->saisonService->isValide($saison)) {
+            $saison = $this->saisonService->getSaisonActive();
+        }
+
+        // IDs des joueuses ayant DÉJÀ un dossier cette saison
+        $dejaDossier = [];
+        foreach ($this->dossierRepo->findBy(['club' => $club, 'saison' => $saison]) as $d) {
+            if ($d->getJoueur() !== null) { $dejaDossier[(int) $d->getJoueur()->getId()] = true; }
+        }
+
+        $crees = 0;
+        foreach ($this->joueurRepo->findBy(['club' => $club, 'isActive' => true, 'isTemporaire' => false]) as $j) {
+            if (isset($dejaDossier[(int) $j->getId()])) { continue; }
+            // Double filet : rapprochement par nom (dossier importé sans lien fiche)
+            $nomComplet = mb_strtoupper((string) $j->getNom()) . ' ' . (string) $j->getPrenom();
+            $existant = $this->dossierRepo->trouverPourImport($club, $saison, null, $nomComplet);
+            if ($existant !== null) {
+                if ($existant->getJoueur() === null) { $existant->setJoueur($j); }
+                continue;
+            }
+            $dossier = new DossierLicence();
+            $dossier->setClub($club)
+                ->setSaison($saison)
+                ->setJoueur($j)
+                ->setNomComplet($nomComplet)
+                ->setDateNaissance($j->getDateNaissance())
+                ->setTelephone($j->getTelephone())
+                ->setSite('À placer')
+                ->setCategorie($j->getEquipe()?->getNom());
+            $this->em->persist($dossier);
+            $crees++;
+        }
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf(
+            '%d dossier(s) créé(s) depuis les fiches joueuses (secteur « À placer »). Les joueuses déjà dans le classeur n\'ont PAS été dupliquées.',
+            $crees
+        ));
+        return $this->redirectToRoute('manager_secretariat_licences', ['saison' => $saison, 'site' => 'À placer']);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // [V2.4h] Secteurs (référentiel : nom + responsable de secteur)
+    // ────────────────────────────────────────────────────────────────────
+
+    #[Route('/secteurs', name: 'secteur_enregistrer', methods: ['POST'])]
+    public function enregistrerSecteur(Request $request): Response
+    {
+        $club = $this->clubOuRedirect();
+        if ($club instanceof Response) { return $club; }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $club);
+        if (!$this->isCsrfTokenValid('secretariat_secteur', (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_secretariat_licences');
+        }
+
+        $nom = trim((string) $request->request->get('nom', ''));
+        if ($nom === '') {
+            $this->addFlash('error', 'Le nom du secteur est obligatoire.');
+            return $this->redirectToRoute('manager_secretariat_licences');
+        }
+
+        $secteur = $this->secteurRepo->findOneByClubEtNom($club, $nom) ?? new \App\Entity\Sport\Secteur();
+        if ($secteur->getId() === null) {
+            $secteur->setClub($club)->setNom($nom);
+            $this->em->persist($secteur);
+        }
+        $secteur->setResponsableNom(trim((string) $request->request->get('responsable_nom', '')) ?: null);
+        $secteur->setResponsableTelephone(trim((string) $request->request->get('responsable_telephone', '')) ?: null);
+        $this->em->flush();
+
+        $this->addFlash('success', sprintf('Secteur %s enregistré%s.', $secteur->getNom(),
+            $secteur->getResponsableNom() ? ' (resp. ' . $secteur->getResponsableNom() . ')' : ''));
+        return $this->redirectToRoute('manager_secretariat_licences', ['site' => $secteur->getNom()]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // [V2.4h] Pré-inscriptions (déposées via la vitrine publique)
+    // ────────────────────────────────────────────────────────────────────
+
+    #[Route('/pre-inscriptions', name: 'pre_inscriptions', methods: ['GET'])]
+    public function preInscriptions(Request $request): Response
+    {
+        $club = $this->clubOuRedirect();
+        if ($club instanceof Response) { return $club; }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $club);
+
+        $statut = (string) $request->query->get('statut', \App\Entity\Sport\PreInscription::STATUT_NOUVELLE);
+        $liste  = $this->preInscriptionRepo->findByClubEtStatut($club, $statut ?: null);
+
+        // Détection de fiche existante pour chaque demande (affiche « fiche
+        // trouvée : lier » AVANT conversion — anti-doublon visible)
+        $fichesDetectees = [];
+        foreach ($liste as $pre) {
+            if ($pre->isNouvelle()) {
+                $fichesDetectees[$pre->getId()] = $this->converter->detecterJoueuse($pre);
+            }
+        }
+
+        return $this->render('manager/secretariat/pre_inscriptions.html.twig', [
+            'club'     => $club,
+            'liste'    => $liste,
+            'statut'   => $statut,
+            'fiches_detectees' => $fichesDetectees,
+            'secteurs' => $this->secteurRepo->findByClub($club),
+            'nb_nouvelles' => $this->preInscriptionRepo->compterNouvelles($club),
+        ]);
+    }
+
+    #[Route('/pre-inscriptions/{id}/convertir', name: 'pre_inscription_convertir', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function convertirPreInscription(Request $request, \App\Entity\Sport\PreInscription $pre): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $pre);
+        if (!$this->isCsrfTokenValid('pre_convertir_' . $pre->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_secretariat_pre_inscriptions');
+        }
+
+        $user = $this->getUser();
+        if (!$user instanceof \App\Entity\Core\User) {
+            throw $this->createAccessDeniedException();
+        }
+
+        try {
+            $dossier = $this->converter->convertir(
+                $pre,
+                $user,
+                $request->request->getBoolean('creer_fiche'),
+                trim((string) $request->request->get('secteur', '')) ?: null,
+                trim((string) $request->request->get('categorie', '')) ?: null,
+                trim((string) $request->request->get('tarif', '')) ?: null,
+            );
+        } catch (\RuntimeException $e) {
+            $this->addFlash('error', $e->getMessage());
+            return $this->redirectToRoute('manager_secretariat_pre_inscriptions');
+        }
+
+        $this->addFlash('success', sprintf(
+            'Pré-inscription convertie : %s → classeur %s.',
+            $pre->getNomComplet(),
+            $dossier->getSite() ?? '?'
+        ));
+        return $this->redirectToRoute('manager_secretariat_pre_inscriptions');
+    }
+
+    #[Route('/pre-inscriptions/{id}/refuser', name: 'pre_inscription_refuser', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function refuserPreInscription(Request $request, \App\Entity\Sport\PreInscription $pre): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $pre);
+        if (!$this->isCsrfTokenValid('pre_refuser_' . $pre->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_secretariat_pre_inscriptions');
+        }
+
+        $user = $this->getUser();
+        $pre->setStatut(\App\Entity\Sport\PreInscription::STATUT_REFUSEE);
+        $pre->setTraiteLe(new \DateTimeImmutable());
+        $pre->setTraitePar($user instanceof \App\Entity\Core\User ? $user : null);
+        $pre->setNoteTraitement(trim((string) $request->request->get('note', '')) ?: null);
+        $this->em->flush();
+
+        $this->addFlash('warning', sprintf('Pré-inscription de %s refusée.', $pre->getNomComplet()));
+        return $this->redirectToRoute('manager_secretariat_pre_inscriptions');
     }
 
     #[Route('/licences/{id}/statut', name: 'licence_statut', methods: ['POST'], requirements: ['id' => '\d+'])]

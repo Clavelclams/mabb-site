@@ -13,6 +13,12 @@ parameters:
     # directement dans les fichiers de routing pour des raisons de sécurité.
     app.host_domain: '%env(APP_HOST_DOMAIN)%'
 
+    # [V2.4h] Slug du club servi par la VITRINE publique (mabb.fr).
+    # La vitrine est mono-club : les formulaires publics (pré-inscription
+    # licence) se rattachent à CE club. En multi-club SaaS, ce paramètre
+    # deviendra une résolution par host — point noté au backlog.
+    app.club_vitrine_slug: 'mabb'
+
 services:
     # default configuration for services in *this* file
     _defaults:

@@ -1,0 +1,90 @@
+{% extends 'manager/base.html.twig' %}
+
+{# [V2.4h] Édition complète d'un dossier licence (tout ce que l'Excel savait faire) #}
+
+{% block title %}Modifier — {{ dossier.nomComplet }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-pencil-square"></i> {{ dossier.nomComplet }}</h1>
+            <p class="subtitle">Dossier licence — saison {{ dossier.saison }}</p>
+        </div>
+        <a href="{{ path('manager_secretariat_licences', {saison: dossier.saison, site: dossier.site}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour au classeur
+        </a>
+    </div>
+
+    <form method="post" class="card-mabb">
+        <div class="card-body" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+            <input type="hidden" name="_token" value="{{ csrf_token('secretariat_modifier_' ~ dossier.id) }}">
+
+            <div style="grid-column: 1 / -1;">
+                <label class="form-label">Nom complet *</label>
+                <input type="text" name="nom_complet" class="form-control" value="{{ dossier.nomComplet }}" required>
+                {% if dossier.joueur %}
+                    <small style="color:var(--mabb-muted);">Liée à la fiche
+                        <a href="{{ path('manager_joueur_show', {id: dossier.joueur.id}) }}">{{ dossier.joueur.prenom }} {{ dossier.joueur.nom }}</a>
+                    </small>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="form-label">Secteur</label>
+                <select name="site" class="form-select">
+                    <option value="À placer" {{ dossier.site == 'À placer' ? 'selected' : '' }}>À placer</option>
+                    {% for s in secteurs %}
+                        <option value="{{ s.nom }}" {{ dossier.site == s.nom ? 'selected' : '' }}>{{ s.nom }}</option>
+                    {% endfor %}
+                    {% if dossier.site and dossier.site != 'À placer' and dossier.site not in secteurs|map(s => s.nom) %}
+                        <option value="{{ dossier.site }}" selected>{{ dossier.site }}</option>
+                    {% endif %}
+                </select>
+            </div>
+            <div><label class="form-label">Catégorie</label><input type="text" name="categorie" class="form-control" value="{{ dossier.categorie }}"></div>
+            <div>
+                <label class="form-label">Type de licence</label>
+                <select name="type_licence" class="form-select">
+                    <option value="">—</option>
+                    {% for t in ['CREATION', 'RENOUVELLEMENT', 'MUTATION'] %}
+                        <option value="{{ t }}" {{ dossier.typeLicence == t ? 'selected' : '' }}>{{ t|lower|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div><label class="form-label">N° licence</label><input type="text" name="numero_licence" class="form-control" value="{{ dossier.numeroLicence }}"></div>
+            <div><label class="form-label">Date de naissance</label><input type="date" name="date_naissance" class="form-control" value="{{ dossier.dateNaissance ? dossier.dateNaissance|date('Y-m-d') : '' }}"></div>
+            <div><label class="form-label">Téléphone</label><input type="text" name="telephone" class="form-control" value="{{ dossier.telephone }}"></div>
+            <div><label class="form-label">Tarif</label><input type="text" name="tarif" class="form-control" value="{{ dossier.tarif }}" placeholder="110, Gratuit…"></div>
+            <div>
+                <label class="form-label">Paiement</label>
+                <select name="paiement_statut" class="form-select">
+                    {% for code, label in statuts %}<option value="{{ code }}" {{ code == dossier.paiementStatut ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+                <label class="form-label">Aides &amp; règlements <small style="color:var(--mabb-muted);">(mêmes colonnes que l'Excel)</small></label>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
+                    <input type="text" name="aide_mairie" class="form-control" placeholder="Aide Mairie" value="{{ dossier.aides['aide_mairie'] ?? '' }}">
+                    <input type="text" name="pass" class="form-control" placeholder="PASS" value="{{ dossier.aides['pass'] ?? '' }}">
+                    <input type="text" name="cheques_college" class="form-control" placeholder="Chèques collège" value="{{ dossier.aides['cheques_college'] ?? '' }}">
+                    <input type="text" name="cheques" class="form-control" placeholder="Chèques" value="{{ dossier.aides['cheques'] ?? '' }}">
+                    <input type="text" name="especes" class="form-control" placeholder="Espèces" value="{{ dossier.aides['especes'] ?? '' }}">
+                </div>
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" class="form-control" rows="2">{{ dossier.notes }}</textarea>
+                {% if dossier.relanceLe %}
+                    <small style="color:var(--mabb-muted);">Dernière relance : {{ dossier.relanceLe|date('d/m/Y') }}{% if dossier.relanceNote %} — {{ dossier.relanceNote }}{% endif %}</small>
+                {% endif %}
+            </div>
+
+            <div style="grid-column: 1 / -1; display:flex; gap:10px; justify-content:flex-end;">
+                <a href="{{ path('manager_secretariat_licences', {saison: dossier.saison, site: dossier.site}) }}" class="btn-mabb-ghost">Annuler</a>
+                <button type="submit" class="btn-mabb-orange"><i class="bi bi-check2"></i> Enregistrer</button>
+            </div>
+        </div>
+    </form>
+{% endblock %}

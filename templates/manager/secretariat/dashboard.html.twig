@@ -44,7 +44,11 @@
 
     {# ===== Actions rapides ===== #}
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
-        <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="btn-mabb-orange"><i class="bi bi-table"></i> Tableau des licences</a>
+        <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="btn-mabb-orange"><i class="bi bi-journal-bookmark"></i> Classeur licences</a>
+        {# [V2.4h] Demandes déposées par les familles sur mabb.fr/pre-inscription #}
+        <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="{{ nb_pre_inscriptions > 0 ? 'btn-mabb-orange' : 'btn-mabb-ghost' }}">
+            <i class="bi bi-inbox"></i> Pré-inscriptions{% if nb_pre_inscriptions > 0 %} ({{ nb_pre_inscriptions }}){% endif %}
+        </a>
         <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost"><i class="bi bi-upload"></i> Importer les Excel</a>
         <a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="btn-mabb-ghost"><i class="bi bi-calendar-week"></i> Organisation du week-end</a>
     </div>
