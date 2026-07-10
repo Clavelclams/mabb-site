@@ -133,11 +133,16 @@ final class SecretariatImportService
     /**
      * Import des contacts parents depuis le « Formulaire Brut licence ».
      *
-     * @return array{crees:int, doublons:int, non_matchees:string[], erreurs:string[]}
+     * [V2.4m] $saison : les lignes SANS fiche joueuse ne sont plus perdues —
+     * elles deviennent des DossierLicence (annuaire), avec les coordonnées
+     * du parent conservées en notes. Quand la fiche sera créée plus tard,
+     * un ré-import rattachera le vrai contact (idempotent).
+     *
+     * @return array{crees:int, doublons:int, dossiers_crees:int, non_matchees:string[], erreurs:string[]}
      */
-    public function importParents(string $cheminXlsx, Club $club, bool $dryRun): array
+    public function importParents(string $cheminXlsx, Club $club, bool $dryRun, string $saison): array
     {
-        $rapport = ['crees' => 0, 'doublons' => 0, 'non_matchees' => [], 'erreurs' => []];
+        $rapport = ['crees' => 0, 'doublons' => 0, 'dossiers_crees' => 0, 'non_matchees' => [], 'erreurs' => []];
 
         $spreadsheet = IOFactory::load($cheminXlsx);
         $joueusesParNom = $this->indexJoueusesParNom($club);
@@ -169,7 +174,11 @@ final class SecretariatImportService
                    ?? $joueusesParNom[$this->normaliserNom($prenom . ' ' . $nom)]
                    ?? null;
             if (!$joueur instanceof Joueur) {
-                $rapport['non_matchees'][] = trim($prenom . ' ' . $nom) . ' (L' . ($i + 2) . ')';
+                // [V2.4m] Pas de fiche joueuse → on n'abandonne PLUS la ligne :
+                // elle devient un dossier licence « À définir » dans l'annuaire,
+                // avec toutes les infos parents en notes.
+                $rapport['non_matchees'][] = trim($prenom . ' ' . $nom) . ' (L' . ($i + 2) . ' — mise à l\'annuaire comme dossier sans fiche)';
+                $this->sauverLigneSansFiche($row, $club, $saison, $dryRun, $rapport);
                 continue;
             }
 
@@ -225,6 +234,53 @@ final class SecretariatImportService
     // ====================================================================
     // Helpers privés
     // ====================================================================
+
+    /**
+     * [V2.4m] Ligne du formulaire SANS fiche joueuse → DossierLicence
+     * « À définir » (upsert par nom+saison, idempotent). Les coordonnées du
+     * parent partent en notes — RIEN ne se perd, tout est dans l'annuaire.
+     */
+    private function sauverLigneSansFiche(array $row, Club $club, string $saison, bool $dryRun, array &$rapport): void
+    {
+        $nomComplet = trim(mb_strtoupper(trim((string) ($row[2] ?? ''))) . ' ' . trim((string) ($row[3] ?? '')));
+        if ($nomComplet === '') {
+            return;
+        }
+
+        $dossier = $this->dossierRepo->trouverPourImport($club, $saison, null, $nomComplet);
+        $nouveau = ($dossier === null);
+        if ($nouveau) {
+            $dossier = new DossierLicence();
+            $dossier->setClub($club)
+                ->setSaison($saison)
+                ->setNomComplet($nomComplet)
+                ->setSite('À placer')
+                ->setPaiementStatut(DossierLicence::PAIEMENT_NON_RENSEIGNE);
+        }
+        if ($dossier->getCategorie() === null)     { $dossier->setCategorie(trim((string) ($row[4] ?? '')) ?: null); }
+        if ($dossier->getDateNaissance() === null) { $dossier->setDateNaissance($this->lireDate($row[1] ?? null)); }
+        if ($dossier->getTelephone() === null)     { $dossier->setTelephone(trim((string) ($row[5] ?? '')) ?: null); }
+
+        // Coordonnées parent en notes (affichées dans l'annuaire) — un
+        // ré-import après création de la fiche créera le vrai contact lié.
+        $bouts = array_filter([
+            trim((string) ($row[6] ?? '')) !== ''  ? 'Parent : ' . trim((string) ($row[6] ?? '')) : null,
+            trim((string) ($row[11] ?? '')) !== '' ? 'Tél parent : ' . trim((string) ($row[11] ?? '')) : null,
+            trim((string) ($row[9] ?? '')) !== ''  ? 'Mail : ' . trim((string) ($row[9] ?? '')) : null,
+            trim((string) ($row[7] ?? '')) !== ''  ? 'Adresse : ' . trim((string) ($row[7] ?? '')) . ' ' . $this->lireCodePostal($row[8] ?? null) : null,
+            trim((string) ($row[10] ?? '')) !== '' ? 'Responsable secteur : ' . trim((string) ($row[10] ?? '')) : null,
+        ]);
+        if ($bouts !== [] && ($dossier->getNotes() === null || !str_contains($dossier->getNotes(), 'Parent :'))) {
+            $dossier->setNotes(trim(($dossier->getNotes() ?? '') . "\n" . implode(' · ', $bouts)));
+        }
+
+        if (!$dryRun && $nouveau) {
+            $this->em->persist($dossier);
+        }
+        if ($nouveau) {
+            $rapport['dossiers_crees']++;
+        }
+    }
 
     /** L'onglet a-t-il les en-têtes du format licenciés ? */
     private function estOngletLicencies(array $entetes): bool

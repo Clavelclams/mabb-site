@@ -20,10 +20,17 @@
             <div class="card-header"><i class="bi bi-clipboard-check"></i> Rapport d'import</div>
             <div class="card-body" style="font-size:.86rem;">
                 {% if type == 'parents' %}
-                    <p style="margin:0 0 8px;"><strong>{{ rapport.crees }}</strong> contact(s) parent créé(s) · {{ rapport.doublons }} doublon(s) ignoré(s).</p>
+                    <p style="margin:0 0 8px;">
+                        <strong>{{ rapport.crees }}</strong> contact(s) parent créé(s) · {{ rapport.doublons }} doublon(s) ignoré(s)
+                        {% if rapport.dossiers_crees is defined and rapport.dossiers_crees > 0 %}
+                            · <strong>{{ rapport.dossiers_crees }}</strong> dossier(s) « sans fiche » ajouté(s) à l'annuaire (infos parents en notes)
+                        {% endif %}.
+                    </p>
                     {% if rapport.non_matchees|length > 0 %}
-                        <p style="margin:0 0 4px; color:#a16207;"><i class="bi bi-exclamation-triangle"></i>
-                            {{ rapport.non_matchees|length }} ligne(s) sans fiche joueuse correspondante (rien n'est perdu, corrige le nom ou crée la fiche puis réimporte) :</p>
+                        <p style="margin:0 0 4px; color:#a16207;"><i class="bi bi-info-circle"></i>
+                            {{ rapport.non_matchees|length }} ligne(s) sans fiche joueuse — leurs données sont CONSERVÉES dans
+                            <a href="{{ path('manager_secretariat_annuaire') }}">l'annuaire</a> (dossier « À définir »).
+                            Quand la fiche existera, réimporte ce fichier : le contact parent se rattachera tout seul.</p>
                         <ul style="margin:0; font-size:.8rem; color:var(--mabb-muted);">
                             {% for n in rapport.non_matchees %}<li>{{ n }}</li>{% endfor %}
                         </ul>

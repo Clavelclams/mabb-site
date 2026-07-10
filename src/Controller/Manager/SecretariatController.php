@@ -318,7 +318,10 @@ class SecretariatController extends AbstractController
                 ->setDateNaissance($j->getDateNaissance())
                 ->setTelephone($j->getTelephone())
                 ->setSite('À placer')
-                ->setCategorie($j->getEquipe()?->getNom());
+                ->setCategorie($j->getEquipe()?->getNom())
+                // [V2.4m] « À définir » : pas de relance tant que la secrétaire
+                // n'a pas fixé le tarif/paiement (on n'en sait rien à ce stade).
+                ->setPaiementStatut(DossierLicence::PAIEMENT_NON_RENSEIGNE);
             $this->em->persist($dossier);
             $crees++;
         }
@@ -692,7 +695,12 @@ class SecretariatController extends AbstractController
             } else {
                 try {
                     if ($type === 'parents') {
-                        $rapport = $this->importService->importParents($fichier->getPathname(), $club, $dryRun);
+                        $rapport = $this->importService->importParents(
+                            $fichier->getPathname(),
+                            $club,
+                            $dryRun,
+                            $this->saisonService->getSaisonActive() // [V2.4m] dossiers « sans fiche »
+                        );
                     } else {
                         $saison = (string) $request->request->get('saison', '');
                         if (!$this->saisonService->isValide($saison)) {
