@@ -66,7 +66,14 @@ class ManagerBilanController extends AbstractController
             ->orderBy('b.saison', 'DESC')
             ->getQuery()
             ->getScalarResult();
-        $saisons = array_column($saisonsRaw, 'saison');
+        // [V2.4g] Union avec les saisons de SaisonService : la saison EN COURS
+        // apparaît dans le sélecteur même si aucun bilan n'existe encore
+        // (avant : dropdown bloqué sur les saisons ayant déjà des bilans).
+        $saisons = array_values(array_unique(array_merge(
+            $this->saisonService->getSaisonsDisponibles(),
+            array_column($saisonsRaw, 'saison'),
+        )));
+        rsort($saisons);
 
         return $this->render('manager/bilan/index.html.twig', [
             'bilans'         => $bilans,

@@ -107,3 +107,14 @@ Centraliser les obligations de securite + RGPD (tracabilite, conservation, droit
 - A planifier : cron annuel (ex. 15 juillet) — meme mecanique que RGPD-0003.
 - Decharge signee v2 (09/07/2026) : upload/consultation/suppression via `DechargeSortieUploader` — stockage `var/decharges/{clubId}/` HORS `public/` (jamais servi en direct), lecture uniquement via controleur (`BinaryFileResponse`) derriere `ClubVoter::CLUB_STAFF`, CSRF sur upload/suppression, MIME whitelist (PDF/JPG/PNG/WEBP, 10 Mo). La purge supprime aussi le fichier physique.
 - Statut : fait (09/07/2026) — reste : cron annuel a poser sur OVH (ex. 15 juillet)
+
+---
+
+### RGPD-0011 — Secretariat : dossiers licences + contacts responsables legaux
+- Categorie : RGPD
+- Date : 2026-07-09
+- Traitement 1 : `DossierLicence` (table `sport_dossier_licence`) — suivi administratif des licences par saison : identite (nom, date de naissance), telephone, n° licence FFBB, tarif, aides sociales (Mairie/PASS/cheques colleges — donnees potentiellement sensibles socialement), statut de paiement, suivi de relance. Source : import des Excel de la secretaire. Base legale : gestion de l'adhesion.
+- Traitement 2 : `ResponsableLegal` (table `sport_responsable_legal`) — carnet d'adresses des parents/responsables (nom, telephones, email, adresse) rattache a la fiche Joueur (mineures). Source : formulaire licence (Google Form). ≠ `ParentJoueur` (comptes connectes PIRB).
+- Acces : `ClubVoter::CLUB_SECRETARIAT` UNIQUEMENT (DIRIGEANT + nouveau role SECRETAIRE). Pas COACH/STAFF, jamais PIRB/public. CSRF sur toutes les ecritures. Multi-tenant via ClubAwareInterface.
+- Conservation : dossiers licences conserves par saison (historique administratif legitime) ; contacts responsables suivent le cycle de vie de la fiche joueuse (purge RGPD-0008). A REVOIR au premier bilan : duree de conservation des aides sociales (minimisation possible en N+2).
+- Statut : fait (09/07/2026) — migration `Version20260709210000` a passer en prod ; duree de conservation des aides a arbitrer

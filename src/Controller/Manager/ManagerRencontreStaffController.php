@@ -134,9 +134,13 @@ class ManagerRencontreStaffController extends AbstractController
             return $this->redirectToRoute('manager_rencontre_staff_show', ['id' => $rencontre->getId()]);
         }
 
-        $role   = (string) $request->request->get('role', '');
-        $userId = (int)    $request->request->get('user_id', 0);
-        $note   = (string) $request->request->get('note', '');
+        $role     = (string) $request->request->get('role', '');
+        $userId   = (int)    $request->request->get('user_id', 0);
+        $note     = (string) $request->request->get('note', '');
+        // [V2.4g] Saisie libre (service civique / externe sans compte) + infos terrain
+        $nomLibre = trim((string) $request->request->get('nom_libre', ''));
+        $numLic   = trim((string) $request->request->get('numero_licence', ''));
+        $heureRdv = trim((string) $request->request->get('heure_rdv', ''));
 
         if (!isset(AffectationMatch::ROLES[$role])) {
             $this->addFlash('error', 'Rôle invalide.');
@@ -144,6 +148,11 @@ class ManagerRencontreStaffController extends AbstractController
         }
 
         $user = $userId > 0 ? $this->em->getRepository(User::class)->find($userId) : null;
+
+        if ($user === null && $nomLibre === '') {
+            $this->addFlash('error', 'Choisis un membre OU saisis un nom libre (service civique, externe…).');
+            return $this->redirectToRoute('manager_rencontre_staff_show', ['id' => $rencontre->getId()]);
+        }
 
         // Supprimer toute affectation ASSIGNE/CONFIRME existante sur ce rôle
         foreach ($this->affectationRepo->findByRencontre($rencontre)[$role] ?? [] as $existing) {
@@ -155,6 +164,9 @@ class ManagerRencontreStaffController extends AbstractController
         $affectation = new AffectationMatch();
         $affectation->setRencontre($rencontre);
         $affectation->setUser($user);
+        $affectation->setNomLibre($user === null ? $nomLibre : null);
+        $affectation->setNumeroLicence($numLic ?: null);
+        $affectation->setHeureRdv($heureRdv ?: null);
         $affectation->setRole($role);
         $affectation->setStatut(AffectationMatch::STATUT_ASSIGNE);
         $affectation->setNote($note ?: null);
@@ -162,7 +174,7 @@ class ManagerRencontreStaffController extends AbstractController
         $this->em->persist($affectation);
         $this->em->flush();
 
-        $nomUser = $user ? $user->getPrenom() . ' ' . $user->getNom() : 'Poste réservé (sans user)';
+        $nomUser = $affectation->getPersonneNom();
         $this->addFlash('success', "✅ {$nomUser} assigné(e) au rôle « " . AffectationMatch::ROLES[$role] . " ».");
 
         return $this->redirectToRoute('manager_rencontre_staff_show', ['id' => $rencontre->getId()]);
@@ -352,6 +364,70 @@ class ManagerRencontreStaffController extends AbstractController
     // ────────────────────────────────────────────────────────────────────────
     // Mes missions (vue personnelle pour tout membre connecté)
     // ────────────────────────────────────────────────────────────────────────
+
+    // ────────────────────────────────────────────────────────────────────────
+    // [V2.4g 09/07/2026] Organisation du WEEK-END — vue globale
+    // Remplace l'Excel « Organisation match » : tous les matchs du week-end
+    // groupés par jour puis par salle, avec l'état des postes (pourvu/vacant),
+    // heures de RDV et n° de licence. Imprimable pour l'affichage en salle.
+    // ────────────────────────────────────────────────────────────────────────
+
+    #[Route('/organisation-weekend', name: 'organisation_weekend', methods: ['GET'])]
+    public function organisationWeekend(Request $request): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        if ($club === null) {
+            return $this->redirectToRoute('manager_dashboard');
+        }
+        // Secrétaire OU staff (coach/dirigeant/staff) : les deux organisent.
+        if (!$this->isGranted(ClubVoter::CLUB_SECRETARIAT, $club)
+            && !$this->isGranted(ClubVoter::CLUB_STAFF, $club)) {
+            throw $this->createAccessDeniedException();
+        }
+
+        // Samedi de référence : ?date=YYYY-MM-DD (n'importe quel jour de la
+        // semaine visée) — défaut : le week-end courant ou à venir.
+        $param = (string) $request->query->get('date', '');
+        try {
+            $ref = $param !== '' ? new \DateTimeImmutable($param) : new \DateTimeImmutable('today');
+        } catch (\Exception) {
+            $ref = new \DateTimeImmutable('today');
+        }
+        // 'saturday this week' sur un dimanche renverrait le samedi passé →
+        // on se cale sur le samedi de la semaine ISO du jour de référence.
+        $samedi = $ref->modify('monday this week')->modify('+5 days')->setTime(0, 0);
+        $lundi  = $samedi->modify('+2 days');
+
+        $rencontres = $this->rencontreRepo->createQueryBuilder('r')
+            ->andWhere('r.club = :club')->setParameter('club', $club)
+            ->andWhere('r.date >= :debut')->setParameter('debut', $samedi)
+            ->andWhere('r.date < :fin')->setParameter('fin', $lundi)
+            ->orderBy('r.date', 'ASC')
+            ->getQuery()->getResult();
+
+        // Groupement jour → salle → rencontres, avec les affectations par rôle
+        $parJourEtSalle = [];
+        foreach ($rencontres as $r) {
+            $jour  = $r->getDate()?->format('Y-m-d') ?? '???';
+            $salle = $r->isDomicile() ? ($r->getLieu() ?: 'Salle non précisée') : 'Extérieur';
+            $parJourEtSalle[$jour][$salle][] = [
+                'rencontre'    => $r,
+                'affectations' => $this->affectationRepo->findByRencontre($r),
+            ];
+        }
+        ksort($parJourEtSalle);
+
+        return $this->render('manager/rencontre/organisation_weekend.html.twig', [
+            'club'             => $club,
+            'samedi'           => $samedi,
+            'dimanche'         => $samedi->modify('+1 day'),
+            'weekend_prec'     => $samedi->modify('-7 days')->format('Y-m-d'),
+            'weekend_suiv'     => $samedi->modify('+7 days')->format('Y-m-d'),
+            'par_jour_et_salle' => $parJourEtSalle,
+            'roles'            => AffectationMatch::ROLES,
+            'nb_rencontres'    => count($rencontres),
+        ]);
+    }
 
     #[Route('/missions', name: 'mes_missions', methods: ['GET'])]
     public function mesMissions(): Response

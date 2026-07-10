@@ -68,7 +68,9 @@
                         <div class="display-6 fw-bold mt-2 chiffre-number counter-anim"
                              data-target="{{ cms('accueil_nb_licenciees', '373') }}"
                              data-suffix="">0</div>
-                        <div class="text-muted small">{{ cms('accueil_label_licenciees', 'Licenciées — Saison 2025/26') }}</div>
+                        {# [V2.4g] Défaut dynamique. ⚠️ La clé CMS est déjà enregistrée en prod
+                           avec « Saison 2025/26 » : mettre à jour le libellé dans Admin → Contenus. #}
+                        <div class="text-muted small">{{ cms('accueil_label_licenciees', 'Licenciées — Saison ' ~ saison_active()) }}</div>
                     </div>
                 </div>
 

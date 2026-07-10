@@ -1,0 +1,115 @@
+{% extends 'manager/base.html.twig' %}
+
+{# [V2.4g] Tableau des dossiers licences — l'équivalent des Excel
+   « LICENCIÉS <SITE> » avec filtres, changement de statut et relances. #}
+
+{% block title %}Licences {{ saison }} — Secrétariat{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-table"></i> Dossiers licences</h1>
+            <p class="subtitle">{{ dossiers|length }} dossier{{ dossiers|length > 1 ? 's' : '' }} — saison {{ saison }}</p>
+        </div>
+        <a href="{{ path('manager_secretariat_dashboard', {saison: saison}) }}" class="btn-mabb-ghost"><i class="bi bi-arrow-left"></i> Secrétariat</a>
+    </div>
+
+    {# ===== Filtres ===== #}
+    <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+        <select name="saison" class="form-select" style="width:auto;" onchange="this.form.submit()">
+            {% for s in saisons %}<option value="{{ s }}" {{ s == saison ? 'selected' : '' }}>Saison {{ s }}</option>{% endfor %}
+        </select>
+        <select name="site" class="form-select" style="width:auto;" onchange="this.form.submit()">
+            <option value="">Tous les sites</option>
+            {% for s in sites %}<option value="{{ s }}" {{ s == filtre_site ? 'selected' : '' }}>{{ s }}</option>{% endfor %}
+        </select>
+        <select name="categorie" class="form-select" style="width:auto;" onchange="this.form.submit()">
+            <option value="">Toutes les catégories</option>
+            {% for c in categories %}<option value="{{ c }}" {{ c == filtre_categorie ? 'selected' : '' }}>{{ c }}</option>{% endfor %}
+        </select>
+        <select name="statut" class="form-select" style="width:auto;" onchange="this.form.submit()">
+            <option value="">Tous les statuts</option>
+            {% for code, label in statuts %}<option value="{{ code }}" {{ code == filtre_statut ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
+        </select>
+    </form>
+
+    <div class="card-mabb">
+        <div class="card-body">
+            {% if dossiers is empty %}
+                <p style="color:var(--mabb-muted); font-style:italic; margin:0;">
+                    Aucun dossier pour ces filtres.
+                    <a href="{{ path('manager_secretariat_import') }}">Importer les Excel de la saison →</a>
+                </p>
+            {% else %}
+                <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:.82rem; white-space:nowrap;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:2px solid var(--mabb-border);">
+                            <th style="padding:7px;">Nom</th>
+                            <th style="padding:7px;">N° licence</th>
+                            <th style="padding:7px;">Type</th>
+                            <th style="padding:7px;">Site</th>
+                            <th style="padding:7px;">Catégorie</th>
+                            <th style="padding:7px;">Téléphone</th>
+                            <th style="padding:7px;">Tarif</th>
+                            <th style="padding:7px;">Aides</th>
+                            <th style="padding:7px;">Paiement</th>
+                            <th style="padding:7px;">Relance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in dossiers %}
+                        <tr style="border-bottom:1px solid var(--mabb-border);">
+                            <td style="padding:7px; font-weight:600;">
+                                {{ d.nomComplet }}
+                                {% if d.joueur %}<i class="bi bi-patch-check" style="color:var(--mabb-blue);" title="Fiche joueuse liée"></i>{% endif %}
+                            </td>
+                            <td style="padding:7px;"><code>{{ d.numeroLicence ?? '—' }}</code></td>
+                            <td style="padding:7px;">{{ d.typeLicence ? d.typeLicence|lower|capitalize : '—' }}</td>
+                            <td style="padding:7px;">{{ d.site ?? '—' }}</td>
+                            <td style="padding:7px;">{{ d.categorie ?? '—' }}</td>
+                            <td style="padding:7px;">{{ d.telephone ?? '—' }}</td>
+                            <td style="padding:7px;">{{ d.tarif ?? '—' }}</td>
+                            <td style="padding:7px; font-size:.72rem; color:var(--mabb-muted);">
+                                {% if d.aides %}{{ d.aides|keys|map(k => k|replace({'_':' '}))|join(', ') }}{% else %}—{% endif %}
+                            </td>
+                            <td style="padding:7px;">
+                                <form method="post" action="{{ path('manager_secretariat_licence_statut', {id: d.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('secretariat_statut_' ~ d.id) }}">
+                                    <input type="hidden" name="retour_site" value="{{ filtre_site }}">
+                                    <input type="hidden" name="retour_categorie" value="{{ filtre_categorie }}">
+                                    <input type="hidden" name="retour_statut" value="{{ filtre_statut }}">
+                                    <select name="statut" class="form-select" style="font-size:.72rem; padding:2px 4px; width:auto; height:auto;
+                                            color:{{ d.paiementStatut == 'PAYE' or d.paiementStatut == 'EXONERE' ? '#16a34a' : (d.paiementStatut == 'PARTIEL' ? '#a16207' : '#b91c1c') }};"
+                                            onchange="this.form.submit()">
+                                        {% for code, label in statuts %}
+                                            <option value="{{ code }}" {{ code == d.paiementStatut ? 'selected' : '' }}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
+                            <td style="padding:7px;">
+                                {% if d.estArelancer %}
+                                    <form method="post" action="{{ path('manager_secretariat_licence_relance', {id: d.id}) }}" style="display:flex; gap:4px; align-items:center;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('secretariat_relance_' ~ d.id) }}">
+                                        <input type="hidden" name="retour_site" value="{{ filtre_site }}">
+                                        <input type="hidden" name="retour_categorie" value="{{ filtre_categorie }}">
+                                        <input type="hidden" name="retour_statut" value="{{ filtre_statut }}">
+                                        <span style="font-size:.72rem; color:var(--mabb-muted);">{{ d.relanceLe ? d.relanceLe|date('d/m') : 'jamais' }}</span>
+                                        <button type="submit" class="btn-mabb-ghost" style="font-size:.7rem; padding:2px 8px;" title="Marquer relancé aujourd'hui{{ d.relanceNote ? ' — ' ~ d.relanceNote : '' }}">
+                                            <i class="bi bi-telephone"></i>
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span style="font-size:.72rem; color:#16a34a;"><i class="bi bi-check-circle"></i></span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

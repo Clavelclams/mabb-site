@@ -141,8 +141,20 @@
                                 <span style="font-weight:600; font-size:.88rem;">
                                     {{ actif.user.prenom }} {{ actif.user.nom|upper }}
                                 </span>
+                            {% elseif actif.nomLibre %}
+                                {# [V2.4g] Saisie libre : service civique / externe sans compte #}
+                                <span style="font-weight:600; font-size:.88rem;">
+                                    {{ actif.nomLibre }}
+                                    <small style="color:var(--mabb-muted); font-weight:400;">(externe)</small>
+                                </span>
                             {% else %}
                                 <span style="color:var(--mabb-muted); font-size:.82rem;">Poste réservé</span>
+                            {% endif %}
+                            {% if actif.numeroLicence %}
+                                <span style="font-size:.72rem; color:var(--mabb-muted);"><i class="bi bi-person-badge"></i> {{ actif.numeroLicence }}</span>
+                            {% endif %}
+                            {% if actif.heureRdv %}
+                                <span style="font-size:.72rem; color:var(--mabb-muted);"><i class="bi bi-clock"></i> rdv {{ actif.heureRdv }}</span>
                             {% endif %}
 
                             <span class="chip chip-{{ actif.statut|lower }}">
@@ -277,11 +289,30 @@
             <div style="margin-bottom:14px;">
                 <label style="font-weight:600; font-size:.85rem; display:block; margin-bottom:6px;">Membre du staff</label>
                 <select name="user_id" class="form-select">
-                    <option value="0">— Réserver sans user —</option>
+                    <option value="0">— Pas de compte : saisie libre ci-dessous —</option>
                     {% for u in users_club %}
                         <option value="{{ u.id }}">{{ u.prenom }} {{ u.nom|upper }}</option>
                     {% endfor %}
                 </select>
+            </div>
+
+            {# [V2.4g] Saisie libre : service civique, parent, externe SANS compte #}
+            <div style="margin-bottom:14px;">
+                <label style="font-weight:600; font-size:.85rem; display:block; margin-bottom:6px;">
+                    OU nom libre <small style="color:var(--mabb-muted); font-weight:400;">(service civique, externe…)</small>
+                </label>
+                <input type="text" name="nom_libre" class="form-control" placeholder="Ex: Abderrahmane (service civique)">
+            </div>
+
+            <div style="display:flex; gap:10px; margin-bottom:14px;">
+                <div style="flex:1;">
+                    <label style="font-weight:600; font-size:.85rem; display:block; margin-bottom:6px;">N° licence <small style="color:var(--mabb-muted); font-weight:400;">(e-marque)</small></label>
+                    <input type="text" name="numero_licence" class="form-control" placeholder="Ex: VT991127">
+                </div>
+                <div style="flex:1;">
+                    <label style="font-weight:600; font-size:.85rem; display:block; margin-bottom:6px;">Heure de RDV</label>
+                    <input type="text" name="heure_rdv" class="form-control" placeholder="Ex: 12h30">
+                </div>
             </div>
 
             <div style="margin-bottom:18px;">

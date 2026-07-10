@@ -979,6 +979,12 @@
         <li><a href="{{ path('manager_ent_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_ent' ? 'active' : '' }}">
             <i class="bi bi-folder2-open"></i> ENT
         </a></li>
+        {# [V2.4g] Secrétariat — dirigeant + rôle SECRETAIRE uniquement #}
+        {% if club is defined and club and is_granted('CLUB_SECRETARIAT', club) %}
+        <li><a href="{{ path('manager_secretariat_dashboard') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_secretariat' ? 'active' : '' }}">
+            <i class="bi bi-journal-text"></i> Secrétariat
+        </a></li>
+        {% endif %}
         {% if club is defined and club and is_granted('CLUB_STAFF_ELARGI', club) %}
         <li><a href="{{ path('manager_coach_dashboard') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_bilan' or app.request.attributes.get('_route') == 'manager_coach_dashboard' ? 'active' : '' }}">
             <i class="bi bi-speedometer2"></i> Coach

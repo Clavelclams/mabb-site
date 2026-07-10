@@ -10,6 +10,26 @@
 
 ---
 
+### 2026-07-09 (nuit) — V2.4g : saisons partout + Dashboard Secrétaire + Organisation week-end
+
+- Objectif : (1) dropdown bilan de compétences bloqué sur 2025-2026 + saisons en dur résiduelles ; (2) espace secrétaire (licences/relances, ex-Excel) ; (3) contacts parents du formulaire licence à ne pas perdre ; (4) organisation des week-ends (services civiques). Décisions Clavel : entité contact liée à la joueuse / import xlsx en base / licenciés + saisie libre pour les postes / nouveau rôle SECRETAIRE.
+- **Bloc saisons** :
+  1. PIRB bilan de compétences : dropdown = TOUTES les saisons (SaisonService ∪ saisons avec bilan), défaut = saison active, état vide propre « pas encore de bilan pour X ». Manager bilans : même union dans le sélecteur.
+  2. Saisons en dur remplacées par `saison_active()` (extension Twig existante) : vitrine calendrier + équipes, défaut du champ saison de `manager/bilan/edit`, défaut CMS `accueil_label_licenciees` (⚠️ la clé CMS déjà enregistrée en prod doit être mise à jour dans Admin → Contenus).
+- **Bloc RBAC** : rôle `SECRETAIRE` (UserClubRole) + attribut `ClubVoter::CLUB_SECRETARIAT` (DIRIGEANT|SECRETAIRE) + SECRETAIRE ajouté au staff élargi.
+- **Bloc Secrétariat** (`/secretariat`, navbar dédiée) :
+  1. Entité `DossierLicence` (site/catégorie/type/n°/tarif/aides JSON brutes/statut paiement/relances) — réplique les Excel « LICENCIÉS <SITE> » analysés (onglets par catégorie).
+  2. Entité `ResponsableLegal` (contacts parents SANS compte, ≠ ParentJoueur qui lie des comptes PIRB) — affichée + gérable sur la fiche joueuse (section dédiée CLUB_SECRETARIAT).
+  3. `SecretariatImportService` : import idempotent des xlsx licenciés (upsert par n° licence, types/paiements normalisés, RIEN perdu : aides brutes en JSON) + import des contacts parents du « Formulaire Brut licence » (match nom+prénom normalisés, non-matchées LISTÉES dans le rapport, jamais jetées). Dry-run par défaut dans l'UI.
+  4. Écrans : dashboard (compteurs, à relancer en priorité, bouton « Relancé·e »), tableau filtrable (saison/site/catégorie/statut, changement de statut inline), page import.
+- **Bloc Organisation week-end** : PAS de nouvelle entité — `AffectationMatch` existait déjà (rôles + candidatures) ! Étendue : `nomLibre` (service civique/externe sans compte), `numeroLicence`, `heureRdv` + formulaire d'assignation enrichi + NOUVELLE vue `/rencontres/organisation-weekend` (matchs groupés jour→salle, postes pourvus/vacants, RDV, licences, navigation ±1 week-end, imprimable). ⚠️ Deux fichiers morts à supprimer : `src/Entity/Sport/AffectationRencontre.php` + son repository (doublon créé puis neutralisé — contenu inerte).
+- Migration : `Version20260709210000` (2 tables + 3 colonnes affectation_match, delta à la main).
+- Docs : RGPD-0011 au registre (licences + responsables légaux, accès CLUB_SECRETARIAT, conservation à arbitrer pour les aides sociales).
+- Vérifications : 10 fichiers PHP parsés OK (php8), 7 templates Twig équilibrés, 12 routes référencées trouvées, méthodes d'entités vérifiées.
+- Reste à faire : donner le rôle SECRETAIRE à la secrétaire (écran Staff/Demandes), passer la migration en prod, imports réels des 3 fichiers sites + formulaire, arbitrer la conservation des aides.
+
+---
+
 ### 2026-07-09 (soir) — Stats Live V2.4f : peaufinage complet (7 demandes Clavel)
 
 - Objectif : fluidifier Stats Live — chrono, scores auto, éphémères sur le terrain, cartographie, mode Débutant, résumé de match « équivalent Easy Stats ».

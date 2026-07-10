@@ -47,6 +47,15 @@ class ClubVoter extends Voter
      */
     public const CLUB_STAFF_ELARGI  = 'CLUB_STAFF_ELARGI'; // DIRIGEANT+COACH+STAFF+TRESORIER+EMPLOYE
 
+    /**
+     * CLUB_SECRETARIAT — accès au secrétariat du club [V2.4g].
+     * Inclut : DIRIGEANT + SECRETAIRE (et ROLE_SUPER_ADMIN via court-circuit).
+     * Couvre : dashboard secrétaire, dossiers licences, relances paiements,
+     * coordonnées des responsables légaux, organisation des week-ends.
+     * Données sensibles (contacts de mineures) → PAS ouvert à COACH/STAFF.
+     */
+    public const CLUB_SECRETARIAT   = 'CLUB_SECRETARIAT';
+
     private const SUPPORTED_ATTRIBUTES = [
         self::CLUB_MEMBER,
         self::CLUB_COACH,
@@ -54,6 +63,7 @@ class ClubVoter extends Voter
         self::CLUB_STAFF,
         self::CLUB_JOUEUR,
         self::CLUB_STAFF_ELARGI,
+        self::CLUB_SECRETARIAT,
     ];
 
     public function __construct(
@@ -106,6 +116,8 @@ class ClubVoter extends Voter
             self::CLUB_STAFF         => $this->isStaffOrAbove($user, $club),
             self::CLUB_JOUEUR        => $this->hasMetaRole($user, $club, UserClubRole::ROLE_JOUEUR),
             self::CLUB_STAFF_ELARGI  => $this->isStaffElargi($user, $club),
+            self::CLUB_SECRETARIAT   => $this->hasMetaRole($user, $club, UserClubRole::ROLE_DIRIGEANT)
+                                     || $this->hasMetaRole($user, $club, UserClubRole::ROLE_SECRETAIRE),
             default                  => false,
         };
     }
@@ -166,6 +178,7 @@ class ClubVoter extends Voter
             UserClubRole::ROLE_STAFF,
             UserClubRole::ROLE_TRESORIER,
             UserClubRole::ROLE_EMPLOYE,
+            UserClubRole::ROLE_SECRETAIRE, // [V2.4g] personnel administratif
         ];
         foreach ($rolesElargi as $role) {
             if ($this->hasMetaRole($user, $club, $role)) {

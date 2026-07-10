@@ -1,0 +1,99 @@
+{% extends 'manager/base.html.twig' %}
+
+{# [V2.4g] Dashboard Secrétaire — la vue d'entrée : où en sont les licences,
+   qui relancer, accès rapide au tableau complet, aux imports et au week-end. #}
+
+{% block title %}Secrétariat — {{ saison }}{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-journal-text"></i> Secrétariat</h1>
+            <p class="subtitle">Licences, paiements, relances — saison {{ saison }}</p>
+        </div>
+        <form method="get">
+            <select name="saison" class="form-select" onchange="this.form.submit()">
+                {% for s in saisons %}
+                    <option value="{{ s }}" {{ s == saison ? 'selected' : '' }}>Saison {{ s }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {# ===== Compteurs ===== #}
+    <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+        <div class="card-mabb" style="flex:1; min-width:150px;"><div class="card-body">
+            <div style="font-size:1.9rem; font-weight:800; color:var(--mabb-blue);">{{ stats.total }}</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">dossiers licences</div>
+        </div></div>
+        <div class="card-mabb" style="flex:1; min-width:150px;"><div class="card-body">
+            <div style="font-size:1.9rem; font-weight:800; color:#16a34a;">{{ stats.payes }}</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">payés / exonérés</div>
+        </div></div>
+        <div class="card-mabb" style="flex:1; min-width:150px;"><div class="card-body">
+            <div style="font-size:1.9rem; font-weight:800; color:var(--mabb-red);">{{ stats.a_relancer }}</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">à relancer{% if stats.jamais_relances > 0 %} · dont {{ stats.jamais_relances }} jamais relancé·s{% endif %}</div>
+        </div></div>
+        {% for site, nb in stats.par_site %}
+        <div class="card-mabb" style="flex:1; min-width:130px;"><div class="card-body">
+            <div style="font-size:1.9rem; font-weight:800;">{{ nb }}</div>
+            <div style="font-size:.78rem; color:var(--mabb-muted);">{{ site }}</div>
+        </div></div>
+        {% endfor %}
+    </div>
+
+    {# ===== Actions rapides ===== #}
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
+        <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="btn-mabb-orange"><i class="bi bi-table"></i> Tableau des licences</a>
+        <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost"><i class="bi bi-upload"></i> Importer les Excel</a>
+        <a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="btn-mabb-ghost"><i class="bi bi-calendar-week"></i> Organisation du week-end</a>
+    </div>
+
+    {# ===== À relancer en priorité ===== #}
+    <div class="card-mabb">
+        <div class="card-header"><i class="bi bi-telephone-outbound"></i> À relancer en priorité</div>
+        <div class="card-body">
+            {% if a_relancer is empty %}
+                <p style="color:var(--mabb-muted); font-style:italic; margin:0;">Personne à relancer — tout est carré. ✅</p>
+            {% else %}
+                <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:.84rem;">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:2px solid var(--mabb-border);">
+                            <th style="padding:8px;">Nom</th>
+                            <th style="padding:8px;">Site / catégorie</th>
+                            <th style="padding:8px;">Téléphone</th>
+                            <th style="padding:8px;">Tarif</th>
+                            <th style="padding:8px;">Statut</th>
+                            <th style="padding:8px;">Dernière relance</th>
+                            <th style="padding:8px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in a_relancer %}
+                        <tr style="border-bottom:1px solid var(--mabb-border);">
+                            <td style="padding:8px; font-weight:600;">{{ d.nomComplet }}</td>
+                            <td style="padding:8px;">{{ d.site ?? '—' }}{% if d.categorie %} · {{ d.categorie }}{% endif %}</td>
+                            <td style="padding:8px;">{{ d.telephone ?? '—' }}</td>
+                            <td style="padding:8px;">{{ d.tarif ?? '—' }}</td>
+                            <td style="padding:8px;">
+                                <span style="font-size:.72rem; padding:2px 8px; border-radius:999px; background:{{ d.paiementStatut == 'PARTIEL' ? 'rgba(161,98,7,.12)' : 'rgba(220,38,38,.1)' }}; color:{{ d.paiementStatut == 'PARTIEL' ? '#a16207' : '#b91c1c' }};">{{ d.paiementLabel }}</span>
+                            </td>
+                            <td style="padding:8px; color:var(--mabb-muted);">{{ d.relanceLe ? d.relanceLe|date('d/m/Y') : 'jamais' }}</td>
+                            <td style="padding:8px; text-align:right;">
+                                <form method="post" action="{{ path('manager_secretariat_licence_relance', {id: d.id}) }}" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('secretariat_relance_' ~ d.id) }}">
+                                    <button type="submit" class="btn-mabb-ghost" style="font-size:.72rem; padding:3px 10px;" title="Marquer relancé aujourd'hui">
+                                        <i class="bi bi-telephone"></i> Relancé·e
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

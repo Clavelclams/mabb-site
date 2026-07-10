@@ -301,7 +301,11 @@ function finirPartie() {
   $("finScore").textContent = `${score} pts`;
   $("finNiveau").textContent = `Niveau ${niveau} atteint`;
   const pct = apparues > 0 ? Math.round((hits / apparues) * 100) : 0;
-  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%). Compté par la caméra, pas par toi.`;
+  // Dans l'app : on annonce l'enregistrement (récompense visible = boucle
+  // d'engagement qui se referme). Hors app : pas de promesse.
+  const dansApp = typeof window.ReactNativeWebView !== "undefined";
+  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%). Compté par la caméra, pas par toi.`
+    + (dansApp ? " Séance enregistrée dans ton Playground ✓" : "");
   $("fin").style.display = "flex";
   // Pont vers l'app PIRB (WebView) : la séance rejoint l'historique
   // Playground (AsyncStorage), comme une séance manuelle. Hors app,

@@ -73,6 +73,23 @@ class AffectationMatch
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $user = null;
 
+    /**
+     * [V2.4g 09/07/2026] Saisie LIBRE : service civique, parent ou externe
+     * SANS compte User (décision Clavel — coller à l'Excel « Organisation
+     * match » où la moitié des noms n'ont pas de compte). Si `user` est nul,
+     * `nomLibre` porte l'identité.
+     */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $nomLibre = null;
+
+    /** N° licence FFBB (utile e-marque officielle), même pour les saisies libres. */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $numeroLicence = null;
+
+    /** Heure de rendez-vous à la salle — « rdv 12h30 » dans l'ancien Excel. */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $heureRdv = null;
+
     /** @see self::ROLES */
     #[ORM\Column(length: 30)]
     private string $role = self::ROLE_DELEGUE;
@@ -105,6 +122,32 @@ class AffectationMatch
 
     public function getUser(): ?User { return $this->user; }
     public function setUser(?User $u): self { $this->user = $u; return $this; }
+
+    public function getNomLibre(): ?string { return $this->nomLibre; }
+    public function setNomLibre(?string $v): self { $this->nomLibre = ($v !== null && trim($v) !== '') ? trim($v) : null; return $this; }
+
+    public function getNumeroLicence(): ?string { return $this->numeroLicence; }
+    public function setNumeroLicence(?string $v): self
+    {
+        $v = $v !== null ? strtoupper(trim($v)) : null;
+        $this->numeroLicence = $v !== '' ? $v : null;
+        return $this;
+    }
+
+    public function getHeureRdv(): ?string { return $this->heureRdv; }
+    public function setHeureRdv(?string $v): self { $this->heureRdv = ($v !== null && trim($v) !== '') ? trim($v) : null; return $this; }
+
+    /**
+     * [V2.4g] Nom affiché : compte User si lié, sinon la saisie libre.
+     * Centralisé ici pour l'écran staff + la vue « organisation week-end ».
+     */
+    public function getPersonneNom(): string
+    {
+        if ($this->user !== null) {
+            return trim(($this->user->getPrenom() ?? '') . ' ' . ($this->user->getNom() ?? ''));
+        }
+        return $this->nomLibre ?? '—';
+    }
 
     public function getRole(): string { return $this->role; }
     public function setRole(string $r): self { $this->role = $r; return $this; }

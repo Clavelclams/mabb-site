@@ -1,0 +1,100 @@
+{% extends 'manager/base.html.twig' %}
+
+{#
+    [V2.4g 09/07/2026] ORGANISATION DU WEEK-END — remplace l'Excel
+    « Organisation match » : matchs groupés par jour puis salle, état des
+    postes (délégué, chrono, e-marque, arbitres, buvette…), RDV, licences.
+    Print-friendly pour affichage en salle / envoi aux services civiques.
+#}
+
+{% block title %}Organisation du week-end du {{ samedi|date('d/m/Y') }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .ow-nav { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+        .ow-jour { margin: 18px 0 8px; font-size: 1.05rem; font-weight: 800; text-transform: capitalize; }
+        .ow-salle { font-size:.8rem; font-weight:700; color:var(--mabb-muted); text-transform:uppercase; letter-spacing:.04em; margin:10px 0 6px; }
+        .ow-match { border:1px solid var(--mabb-border); border-radius:10px; padding:10px 12px; margin-bottom:10px; }
+        .ow-match-head { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:baseline; }
+        .ow-roles { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+        .ow-role { font-size:.75rem; border-radius:6px; padding:3px 8px; border:1px solid var(--mabb-border); }
+        .ow-role.pourvu { background:rgba(22,163,74,.08); border-color:#16a34a55; }
+        .ow-role.vacant { background:rgba(220,38,38,.06); border-color:#dc262655; color:#b91c1c; }
+        .ow-role small { opacity:.75; }
+        @media print {
+            .ow-nav, .navbar, nav, .btn-mabb-ghost, .btn-mabb-orange { display:none !important; }
+            .ow-match { break-inside: avoid; }
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-calendar-week"></i> Organisation du week-end</h1>
+            <p class="subtitle">Samedi {{ samedi|date('d/m') }} &amp; dimanche {{ dimanche|date('d/m/Y') }} — {{ nb_rencontres }} rencontre{{ nb_rencontres > 1 ? 's' : '' }}</p>
+        </div>
+        <button type="button" class="btn-mabb-ghost" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer</button>
+    </div>
+
+    <div class="ow-nav">
+        <a href="{{ path('manager_rencontre_staff_organisation_weekend', {date: weekend_prec}) }}" class="btn-mabb-ghost">← Week-end précédent</a>
+        <form method="get" style="display:inline;">
+            <input type="date" name="date" value="{{ samedi|date('Y-m-d') }}" class="form-control" style="display:inline-block; width:auto;" onchange="this.form.submit()">
+        </form>
+        <a href="{{ path('manager_rencontre_staff_organisation_weekend', {date: weekend_suiv}) }}" class="btn-mabb-ghost">Week-end suivant →</a>
+    </div>
+
+    {% if par_jour_et_salle is empty %}
+        <div class="card-mabb"><div class="card-body" style="text-align:center; color:var(--mabb-muted); padding:40px;">
+            <i class="bi bi-cup-hot" style="font-size:2rem;"></i>
+            <p style="margin:10px 0 0;">Aucune rencontre ce week-end. Repos (ou entraînement 😄).</p>
+        </div></div>
+    {% endif %}
+
+    {% for jour, salles in par_jour_et_salle %}
+        <div class="ow-jour">📅 {{ jour|date('l d/m/Y')|replace({'Saturday':'Samedi','Sunday':'Dimanche','Monday':'Lundi','Friday':'Vendredi'}) }}</div>
+        {% for salle, matchs in salles %}
+            <div class="ow-salle"><i class="bi bi-geo-alt"></i> {{ salle }}</div>
+            {% for m in matchs %}
+                {% set r = m.rencontre %}
+                <div class="ow-match">
+                    <div class="ow-match-head">
+                        <div>
+                            <strong>{{ r.date|date('H\\hi') }}</strong> —
+                            {{ r.equipe ? r.equipe.nom : '?' }}
+                            {{ r.domicile ? 'vs' : '@' }}
+                            {{ r.adversaire }}
+                            {% if not r.domicile %}<span style="font-size:.72rem; color:var(--mabb-muted);">(extérieur)</span>{% endif %}
+                        </div>
+                        <a href="{{ path('manager_rencontre_staff_show', {id: r.id}) }}" class="btn-mabb-ghost" style="font-size:.75rem; padding:3px 10px;">
+                            <i class="bi bi-people"></i> Gérer le staff
+                        </a>
+                    </div>
+                    {% if r.domicile %}
+                        <div class="ow-roles">
+                            {% for roleCode, roleLabel in roles %}
+                                {% set couverte = null %}
+                                {% for a in m.affectations[roleCode] ?? [] %}
+                                    {% if couverte is null and a.isCouvert %}{% set couverte = a %}{% endif %}
+                                {% endfor %}
+                                <span class="ow-role {{ couverte ? 'pourvu' : 'vacant' }}"
+                                      title="{{ roleLabel }}{{ couverte and couverte.note ? ' — ' ~ couverte.note : '' }}">
+                                    {{ roleLabel }} :
+                                    {% if couverte %}
+                                        <strong>{{ couverte.personneNom }}</strong>
+                                        {% if couverte.numeroLicence %}<small> · {{ couverte.numeroLicence }}</small>{% endif %}
+                                        {% if couverte.heureRdv %}<small> · rdv {{ couverte.heureRdv }}</small>{% endif %}
+                                    {% else %}
+                                        <em>à pourvoir</em>
+                                    {% endif %}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endfor %}
+    {% endfor %}
+{% endblock %}

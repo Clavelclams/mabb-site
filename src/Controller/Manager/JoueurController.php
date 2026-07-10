@@ -146,6 +146,7 @@ class JoueurController extends AbstractController
         \App\Repository\Sport\JoueurRepository $joueurRepository,
         \App\Repository\Sport\ParentJoueurRepository $parentJoueurRepository,
         \App\Repository\Sport\BilanCompetenceRepository $bilanRepo,
+        \App\Repository\Sport\ResponsableLegalRepository $responsableLegalRepo,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $joueur);
 
@@ -338,6 +339,12 @@ class JoueurController extends AbstractController
             'bilan_recent'                  => $bilanRepo->findByJoueur($joueur)[0] ?? null,
             // Liens Parents — tous les ParentJoueur de cette joueuse (actifs + pending)
             'parent_joueurs'                => $parentJoueurRepository->findByJoueur($joueur),
+            // [V2.4g] Carnet d'adresses responsables légaux (contacts SANS compte,
+            // importés du formulaire licence) — visible secrétariat uniquement
+            'responsables_legaux' => $this->isGranted(ClubVoter::CLUB_SECRETARIAT, $joueur)
+                ? $responsableLegalRepo->findByJoueur($joueur)
+                : [],
+            'is_secretariat'      => $this->isGranted(ClubVoter::CLUB_SECRETARIAT, $joueur),
         ]);
     }
 

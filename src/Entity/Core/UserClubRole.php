@@ -46,6 +46,15 @@ class UserClubRole
      */
     public const ROLE_TRESORIER  = 'TRESORIER';
 
+    /**
+     * SECRETAIRE : gestion administrative du club (dossiers licences, relances
+     * paiements, coordonnées parents, organisation des week-ends de match).
+     * Distinct de DIRIGEANT : la secrétaire n'a PAS accès à la trésorerie ni
+     * aux outils coach. Un user peut cumuler (2 UserClubRole distincts).
+     * [V2.4g 09/07/2026 — chantier Dashboard Secrétaire]
+     */
+    public const ROLE_SECRETAIRE = 'SECRETAIRE';
+
     public const ROLES_DISPONIBLES = [
         self::ROLE_DIRIGEANT,
         self::ROLE_COACH,
@@ -55,6 +64,7 @@ class UserClubRole
         self::ROLE_BENEVOLE,
         self::ROLE_EMPLOYE,
         self::ROLE_TRESORIER,
+        self::ROLE_SECRETAIRE,
     ];
 
     /**

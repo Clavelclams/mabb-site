@@ -25,6 +25,7 @@ class PirbBilanController extends AbstractController
         private readonly JoueurRepository          $joueurRepo,
         private readonly JoueurBadgeRepository     $badgeRepo,
         private readonly BilanCompetenceRepository $bilanRepo,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     #[Route('/bilan', name: 'pirb_bilan', methods: ['GET'])]
@@ -111,18 +112,30 @@ class PirbBilanController extends AbstractController
         // Trier les saisons de la plus récente à la plus ancienne
         krsort($bilanParSaison);
 
-        // Saison sélectionnée : query param ?saison= ou la plus récente par défaut
+        // [V2.4g] Le dropdown propose TOUTES les saisons connues (SaisonService,
+        // bascule auto au 1er juillet) + celles des bilans existants — avant,
+        // seules les saisons AYANT un bilan apparaissaient, donc la nouvelle
+        // saison en cours était invisible tant que le coach n'avait rien créé.
+        $saisonsDropdown = array_values(array_unique(array_merge(
+            $this->saisonService->getSaisonsDisponibles(),
+            array_keys($bilanParSaison),
+        )));
+        rsort($saisonsDropdown);
+
+        // Saison sélectionnée : ?saison= si valide, sinon la saison ACTIVE
+        // (même vide → un état "pas encore de bilan cette saison" est affiché).
         $saisonSelectionnee = $request->query->get('saison');
-        if ($saisonSelectionnee === null || !isset($bilanParSaison[$saisonSelectionnee])) {
-            $saisonSelectionnee = array_key_first($bilanParSaison);
+        if ($saisonSelectionnee === null || !in_array($saisonSelectionnee, $saisonsDropdown, true)) {
+            $saisonSelectionnee = $this->saisonService->getSaisonActive();
         }
 
-        $bilan = isset($saisonSelectionnee) ? ($bilanParSaison[$saisonSelectionnee] ?? null) : null;
+        $bilan = $bilanParSaison[$saisonSelectionnee] ?? null;
 
         return $this->render('pirb/bilan_competences.html.twig', [
             'joueur'              => $joueur,
             'bilan'               => $bilan,
-            'bilan_par_saison'    => $bilanParSaison,   // map saison→bilan pour le dropdown
+            'bilan_par_saison'    => $bilanParSaison,   // saisons AVEC bilan (section "autres saisons")
+            'saisons_dropdown'    => $saisonsDropdown,  // [V2.4g] toutes les saisons sélectionnables
             'saison_selectionnee' => $saisonSelectionnee,
         ]);
     }

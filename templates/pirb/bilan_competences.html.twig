@@ -60,8 +60,8 @@
         Évaluation basketball réalisée par ton coach
     </p>
 
-    {# Dropdown saison — visible uniquement si au moins 1 bilan #}
-    {% if bilan_par_saison|length > 0 %}
+    {# [V2.4g] Dropdown saison : TOUTES les saisons (y compris la saison en
+       cours sans bilan — état vide propre), plus seulement celles avec bilan. #}
     <div style="margin-top:14px;">
         <select id="saison-select"
                 onchange="window.location.href='{{ path('pirb_bilan_competences') }}?saison=' + this.value"
@@ -69,16 +69,16 @@
                        color:var(--pirb-text); border-radius:20px; padding:7px 32px 7px 16px;
                        font-size:.82rem; font-weight:600; cursor:pointer; appearance:none;
                        -webkit-appearance:none; min-width:160px;">
-            {% for saison, b in bilan_par_saison %}
+            {% for saison in saisons_dropdown %}
+                {% set b = bilan_par_saison[saison] ?? null %}
                 <option value="{{ saison }}"
                         {{ saison == saison_selectionnee ? 'selected' : '' }}
                         style="background:#1e293b; color:#f1f5f9;">
-                    {{ saison }}{% if b.contexte %} — {{ b.contexte }}{% endif %}
+                    {{ saison }}{% if b and b.contexte %} — {{ b.contexte }}{% elseif b is null %} — (aucun bilan){% endif %}
                 </option>
             {% endfor %}
         </select>
     </div>
-    {% endif %}
 </div>
 
 {% if bilan is null %}
@@ -86,10 +86,13 @@
 {# Aucun bilan du tout #}
 <div class="pirb-card" style="text-align:center; padding:32px 20px;">
     <i class="bi bi-hourglass" style="font-size:2.8rem; opacity:.35;"></i>
-    <h3 style="margin:16px 0 8px; font-size:1rem;">Pas encore de bilan disponible</h3>
+    <h3 style="margin:16px 0 8px; font-size:1rem;">Pas encore de bilan pour {{ saison_selectionnee }}</h3>
     <p style="color:var(--pirb-text-muted); font-size:.84rem; margin:0; line-height:1.6;">
-        Ton coach n'a pas encore créé de bilan pour toi.<br>
+        Ton coach n'a pas encore créé de bilan pour cette saison.<br>
         Il apparaîtra ici dès qu'il sera prêt. 👊
+        {% if bilan_par_saison|length > 0 %}
+            <br><br>Tu peux consulter tes bilans des saisons passées avec le sélecteur ci-dessus.
+        {% endif %}
     </p>
 </div>
 

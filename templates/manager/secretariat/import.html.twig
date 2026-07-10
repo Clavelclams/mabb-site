@@ -1,0 +1,98 @@
+{% extends 'manager/base.html.twig' %}
+
+{# [V2.4g] Import des Excel de la secrétaire — deux formats :
+   1. LICENCIÉS <SITE> <SAISON>.xlsx (un onglet par catégorie)
+   2. Organisation match (onglet « Formulaire Brut licence » → contacts parents) #}
+
+{% block title %}Import Excel — Secrétariat{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-upload"></i> Importer les Excel</h1>
+            <p class="subtitle">Tes fichiers actuels rentrent tels quels — rien à ressaisir.</p>
+        </div>
+        <a href="{{ path('manager_secretariat_dashboard') }}" class="btn-mabb-ghost"><i class="bi bi-arrow-left"></i> Secrétariat</a>
+    </div>
+
+    {% if rapport %}
+        <div class="card-mabb" style="margin-bottom:16px;">
+            <div class="card-header"><i class="bi bi-clipboard-check"></i> Rapport d'import</div>
+            <div class="card-body" style="font-size:.86rem;">
+                {% if type == 'parents' %}
+                    <p style="margin:0 0 8px;"><strong>{{ rapport.crees }}</strong> contact(s) parent créé(s) · {{ rapport.doublons }} doublon(s) ignoré(s).</p>
+                    {% if rapport.non_matchees|length > 0 %}
+                        <p style="margin:0 0 4px; color:#a16207;"><i class="bi bi-exclamation-triangle"></i>
+                            {{ rapport.non_matchees|length }} ligne(s) sans fiche joueuse correspondante (rien n'est perdu, corrige le nom ou crée la fiche puis réimporte) :</p>
+                        <ul style="margin:0; font-size:.8rem; color:var(--mabb-muted);">
+                            {% for n in rapport.non_matchees %}<li>{{ n }}</li>{% endfor %}
+                        </ul>
+                    {% endif %}
+                {% else %}
+                    <p style="margin:0 0 8px;">
+                        <strong>{{ rapport.crees }}</strong> dossier(s) créé(s) ·
+                        <strong>{{ rapport.maj }}</strong> mis à jour ·
+                        {{ rapport.ignorees }} ignoré(s).
+                        Onglets lus : {{ rapport.onglets|join(', ') ?: 'aucun' }}.
+                    </p>
+                {% endif %}
+                {% if rapport.erreurs|length > 0 %}
+                    <p style="margin:8px 0 4px; color:var(--mabb-red);">Erreurs :</p>
+                    <ul style="margin:0; font-size:.8rem; color:var(--mabb-red);">
+                        {% for e in rapport.erreurs %}<li>{{ e }}</li>{% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:16px;">
+
+        {# ===== 1. Licenciés par site ===== #}
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-people"></i> Licenciés d'un site</div>
+            <div class="card-body">
+                <p style="font-size:.8rem; color:var(--mabb-muted);">
+                    Fichier « LICENCIÉS AMIENS NORD / SUD / ETOUVIE… » — un onglet par
+                    catégorie. Réimportable sans doublon (mise à jour par n° de licence).
+                </p>
+                <form method="post" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:10px;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('secretariat_import') }}">
+                    <input type="hidden" name="type" value="licencies">
+                    <input type="file" name="fichier" accept=".xlsx,.xls" required class="form-control">
+                    <div style="display:flex; gap:8px;">
+                        <select name="saison" class="form-select">
+                            {% for s in saisons %}<option value="{{ s }}" {{ s == saison_active ? 'selected' : '' }}>Saison {{ s }}</option>{% endfor %}
+                        </select>
+                        <input type="text" name="site" class="form-control" placeholder="Site (ex: AMIENS NORD)" required>
+                    </div>
+                    <label style="font-size:.8rem; display:flex; gap:6px; align-items:center;">
+                        <input type="checkbox" name="dry_run" value="1" checked> Simulation d'abord (rien n'est enregistré)
+                    </label>
+                    <button type="submit" class="btn-mabb-orange"><i class="bi bi-upload"></i> Importer les licenciés</button>
+                </form>
+            </div>
+        </div>
+
+        {# ===== 2. Contacts parents ===== #}
+        <div class="card-mabb">
+            <div class="card-header"><i class="bi bi-person-hearts"></i> Contacts parents</div>
+            <div class="card-body">
+                <p style="font-size:.8rem; color:var(--mabb-muted);">
+                    Fichier « Organisation match » (ou tout export du formulaire licence).
+                    Les coordonnées parents sont rattachées aux fiches joueuses —
+                    visibles sur la fiche et réutilisées pour les sorties.
+                </p>
+                <form method="post" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:10px;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('secretariat_import') }}">
+                    <input type="hidden" name="type" value="parents">
+                    <input type="file" name="fichier" accept=".xlsx,.xls" required class="form-control">
+                    <label style="font-size:.8rem; display:flex; gap:6px; align-items:center;">
+                        <input type="checkbox" name="dry_run" value="1" checked> Simulation d'abord (rien n'est enregistré)
+                    </label>
+                    <button type="submit" class="btn-mabb-orange"><i class="bi bi-upload"></i> Importer les parents</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

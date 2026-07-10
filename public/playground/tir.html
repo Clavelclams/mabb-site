@@ -469,8 +469,12 @@ function finirSeance() {
   const pct = tentes > 0 ? Math.round((reussis / tentes) * 100) : 0;
   $("finScore").textContent = `${reussis} / ${tentes}`;
   $("finPct").textContent = tentes > 0 ? `${pct}% d'adresse` : "Aucun tir détecté";
+  // Dans l'app, la séance part dans l'historique Playground → on le DIT
+  // (une récompense invisible n'existe pas). Hors app, pas de promesse.
+  const dansApp = typeof window.ReactNativeWebView !== "undefined";
   $("finDetail").textContent = tentes > 0
     ? `Meilleure série : ${meilleureSerie}. Compté par la caméra, pas par toi.`
+      + (dansApp ? " Séance enregistrée dans ton Playground ✓" : "")
     : "Vérifie que l'arceau calibré et tes tirs sont bien dans le cadre.";
   $("fin").style.display = "flex";
   envoyerALApp();

@@ -14,6 +14,10 @@
         </div>
         {% if is_granted('CLUB_STAFF', club) %}
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                {# [V2.4g] Vue globale des postes du week-end (délégué, chrono, buvette…) #}
+                <a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="btn-mabb-ghost">
+                    <i class="bi bi-calendar-week"></i> Week-end
+                </a>
                 <a href="{{ path('manager_rencontre_import_ffbb') }}" class="btn-mabb-ghost">
                     <i class="bi bi-calendar-plus"></i> Importer FFBB
                 </a>

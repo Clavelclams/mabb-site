@@ -45,6 +45,47 @@ Objectif produit : rapprocher la sortie store — plus rien de « verrouillé »
 
 ---
 
+## 0-bis. Engagement V1 (10/07) — paliers + classement Playground
+
+Objectif produit (Clavel) : la joueuse arrive parce que le coach a imposé
+l'app → il faut qu'elle REVIENNE d'elle-même. Deux mécaniques livrées :
+
+**1. Paliers de progression** (`src/services/practice/paliers.ts` + carte
+dans l'écran Playground) : 6 statuts basket — Rookie → Espoir (50) →
+Titulaire (150) → Capitaine (300) → MVP (500) → Légende (800) — sur le
+TOTAL de réussis cumulés PAR MODE. Choix délibéré : le cumul récompense la
+régularité (chaque séance fait avancer la barre, on ne recule jamais),
+et l'écran ne montre QUE le prochain objectif (« encore 23 réussis pour
+Titulaire »), jamais le sommet lointain. Calcul local (historique du tel).
+
+**2. Classement du club** — il fallait que les séances montent au serveur
+(avant : AsyncStorage local, personne ne pouvait se comparer) :
+- Serveur : entité `Pirb\SeancePlayground` + repo (agrégat SQL) +
+  `PirbPlaygroundController` (`POST /api/pirb/playground/seance`,
+  `GET /api/pirb/playground/classement?mode=`) + migration
+  `Version20260710120000` (⚠️ 2e migration à passer avec celle du Follow).
+- Règles produit : **prénom + club SEULEMENT** (jamais le nom — mineures),
+  périmètre club (même RGPD que /commu), **fenêtre 7 jours glissants**
+  (le tableau repart de zéro chaque semaine → chaque lundi est une
+  nouvelle chance, c'est ça qui fait revenir).
+- App : `saveSeancePractice` = local D'ABORD (offline-first, on ne perd
+  jamais une séance) puis push serveur en tâche de fond ;
+  `getClassementPlayground()` (Mock : rivales crédibles + toi calculée
+  depuis ton vrai historique ; Api : réel, vide pré-déploiement).
+- Écran Playground refondu : carte palier (badge + barre + objectif),
+  classement top 5 (🥇🥈🥉, ta ligne surlignée), état vide qui provoque
+  (« sois la première, ça repart de zéro chaque semaine »), historique.
+- Fin de partie des jeux : « Séance enregistrée dans ton Playground ✓ »
+  affiché dans l'app (une récompense invisible n'existe pas).
+
+**Limites/anti-triche** : les chiffres viennent du client (bornés serveur).
+Assumé en V1 — c'est un classement de vestiaire. Pistes suivantes (non
+codées, dans l'ordre de valeur) : défi hebdo (« 3 séances cette semaine »),
+notification douce le lundi (« le classement est remis à zéro »), palier
+affiché sur le profil, onboarding 3 écrans au premier lancement.
+
+---
+
 ## 1. Ce qui a été construit
 
 ### A. Le système Follow (abonnés / suivis) — de bout en bout

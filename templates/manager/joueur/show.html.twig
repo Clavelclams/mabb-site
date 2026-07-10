@@ -833,6 +833,62 @@
         {% endif %}
 
         {# ========================================================
+           [V2.4g] Coordonnées des responsables légaux (carnet d'adresses
+           administratif — contacts SANS compte, importés du formulaire
+           licence). Visible CLUB_SECRETARIAT uniquement (données de tiers
+           liées à une mineure). ≠ « Parents/Tuteurs liés » ci-dessous qui
+           concerne les COMPTES ParentJoueur (accès PIRB).
+           ======================================================== #}
+        {% if is_secretariat is defined and is_secretariat %}
+        <div class="card-mabb" style="margin-top:16px;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-person-lines-fill"></i> Responsables légaux (contacts)</span>
+                <span style="color:var(--mabb-muted); font-size:.78rem;">{{ responsables_legaux|length }}</span>
+            </div>
+            <div class="card-body">
+                {% if responsables_legaux is empty %}
+                    <p style="color:var(--mabb-muted); font-size:.82rem; margin:0 0 10px;">
+                        Aucun contact enregistré. Ajoute-le ci-dessous ou importe le
+                        <a href="{{ path('manager_secretariat_import') }}">formulaire licence</a>.
+                    </p>
+                {% else %}
+                    <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                        {% for r in responsables_legaux %}
+                            <div style="display:flex; align-items:center; gap:12px; padding:9px 12px; background:#f8fafc; border:1px solid var(--mabb-border); border-radius:8px; flex-wrap:wrap;">
+                                <div style="flex:1; min-width:180px;">
+                                    <div style="font-weight:600; font-size:.86rem;">{{ r.nomComplet }}</div>
+                                    <div style="font-size:.76rem; color:var(--mabb-muted);">
+                                        {% if r.telephone %}<i class="bi bi-telephone"></i> {{ r.telephone }}{% endif %}
+                                        {% if r.telephone2 %} · {{ r.telephone2 }}{% endif %}
+                                        {% if r.email %} · <i class="bi bi-envelope"></i> {{ r.email }}{% endif %}
+                                    </div>
+                                    {% if r.adresse %}<div style="font-size:.74rem; color:var(--mabb-muted);"><i class="bi bi-geo-alt"></i> {{ r.adresse }}{% if r.codePostal %}, {{ r.codePostal }}{% endif %}</div>{% endif %}
+                                </div>
+                                <form method="post" action="{{ path('manager_secretariat_responsable_delete', {id: r.id}) }}"
+                                      onsubmit="return confirm('Supprimer ce contact ?');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('responsable_delete_' ~ r.id) }}">
+                                    <button type="submit" style="border:none; background:none; cursor:pointer; color:var(--mabb-red);" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <form method="post" action="{{ path('manager_secretariat_responsable_add', {id: joueur.id}) }}"
+                      style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px; align-items:end;">
+                    <input type="hidden" name="_token" value="{{ csrf_token('responsable_add_' ~ joueur.id) }}">
+                    <input type="text" name="nom_complet" class="form-control" placeholder="Nom du responsable *" required style="grid-column: span 2;">
+                    <input type="text" name="telephone" class="form-control" placeholder="Téléphone">
+                    <input type="email" name="email" class="form-control" placeholder="Email">
+                    <input type="text" name="adresse" class="form-control" placeholder="Adresse">
+                    <input type="text" name="code_postal" class="form-control" placeholder="CP" style="max-width:90px;">
+                    <button type="submit" class="btn-mabb-ghost"><i class="bi bi-plus-lg"></i> Ajouter</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ========================================================
            Section "Parents / Tuteurs liés"
            Visible CLUB_STAFF uniquement.
            Affiche les liens ParentJoueur actifs/pending pour cette joueuse.
