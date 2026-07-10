@@ -221,6 +221,10 @@ security:
         # -----------------------------------------------------------------
         # Page login PIRB : publique
         - { path: ^/login$, host: '^pirb\.', roles: PUBLIC_ACCESS }
+        # SSO app → web [UX V1 10/07] : publique par nécessité (la WebView
+        # arrive SANS session — c'est justement cette route qui la crée).
+        # La sécurité est DANS le ticket : signé HMAC kernel.secret, 90 s.
+        - { path: ^/sso/pirb$, host: '^pirb\.', roles: PUBLIC_ACCESS }
         # Tout le PIRB : utilisateur authentifié minimum
         - { path: ^/, host: '^pirb\.', roles: ROLE_USER }
 
