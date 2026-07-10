@@ -73,7 +73,7 @@ class PirbShotChartController extends AbstractController
      *   type   : 2pt_int | 2pt_ext | 3pt | lancer | '' (tous)
      */
     #[Route('/shot-chart', name: 'pirb_shot_chart', methods: ['GET'])]
-    public function index(Request $request): Response
+    public function index(Request $request, \App\Service\SaisonService $saisonService): Response
     {
         /** @var User $user */
         $user   = $this->getUser();
@@ -127,10 +127,25 @@ class PirbShotChartController extends AbstractController
         $zonesSeances = $this->buildZonesJson($seancesValidees);
 
         // --- TirFfbb : tirs des matchs importés depuis FFBB ---
+        // [V2.4i 10/07/2026] FILTRÉS PAR SAISON ACTIVE (bug : en 2026-2027 on
+        // voyait encore les tirs des matchs 2025-26). Bornes = fenêtre de la
+        // saison active (bascule 1er juillet, même règle que SaisonService),
+        // sauf si l'utilisatrice a posé ses propres filtres de dates (from/to
+        // explicites → ils priment). Les SÉANCES DE SHOOT, elles, restent
+        // TOUTES visibles (demande explicite : « juste laisser les séances »).
+        $saisonActive = $saisonService->getSaisonActive();
+        $anneeDebut   = (int) explode('-', $saisonActive)[0];
+        $debutSaison  = new \DateTimeImmutable($anneeDebut . '-07-01 00:00:00');
+        $finSaison    = $debutSaison->modify('+1 year');
+
         $tirsFfbb  = $this->tirFfbbRepo->findForJoueur($joueur);
         $zonesFfbb = [];
         if ($source === '' || $source === SeanceTir::SOURCE_MATCH) {
-            $zonesFfbb = $this->buildZonesJsonFromTirFfbb($tirsFfbb, $fromDate, $toDate);
+            $zonesFfbb = $this->buildZonesJsonFromTirFfbb(
+                $tirsFfbb,
+                $fromDate ?? $debutSaison,
+                $toDate   ?? $finSaison,
+            );
         }
 
         // [V2.4 05/07/2026] Les tirs FFBB ne sont PLUS fusionnés dans la shot

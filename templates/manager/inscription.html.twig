@@ -187,11 +187,13 @@
         <h1>Rejoindre un club</h1>
         <p class="subtitle">Crée ton compte sur la plateforme MABB Manager.</p>
 
+        {# [V2.4i] Nom du club corrigé (Amiens Métropole Basket Ball depuis 2025)
+           + la création de club est OUVERTE (plus « V2 »). #}
         <div class="multi-tenant-info">
             <i class="bi bi-info-circle"></i>
-            <strong>MABB Manager</strong> est une plateforme <strong>multi-clubs</strong>.
-            En version 1, seul le club <strong>Métropole Amiénoise Basketball</strong> est actif.
-            La création de nouveaux clubs viendra en V2 — chaque président d'asso pourra provisionner le sien.
+            <strong>MABB Manager</strong> est une plateforme <strong>multi-clubs</strong> :
+            rejoins ton club ci-dessous, comme <strong>Amiens Métropole Basket Ball</strong> —
+            ou crée le tien si tu es président d'asso.
         </div>
 
         {% if errors|length > 0 %}
@@ -211,7 +213,7 @@
             <div class="clubs-grid">
                 {% for c in clubs_actifs %}
                     {# Calcule l'acronyme du nom (premières lettres significatives).
-                       Ex: "Métropole Amiénoise Basketball" → "MAB"
+                       Ex: "Amiens Métropole Basket Ball" → "AMBB"
                        On retire les mots vides courts comme "de", "du", "la"... #}
                     {% set mots = c.nom|split(' ')|filter(m => m|length > 1 and m|lower not in ['de','du','la','le','les','d','l']) %}
                     {% set acronyme = '' %}
@@ -237,13 +239,14 @@
                     </label>
                 {% endfor %}
 
-                {# Carte "Créer mon club" désactivée — vision V2 visible #}
-                <div class="club-card disabled" title="Création de club disponible en V2">
-                    <span class="badge-v2">V2</span>
+                {# [V2.4i] Carte "Créer mon club" ACTIVE — la création publique
+                   de club est ouverte (route manager_creer_club, cf. security.yaml). #}
+                <a href="{{ path('manager_creer_club') }}" class="club-card" style="text-decoration:none; color:inherit;"
+                   title="Créer ton club sur la plateforme (président d'asso)">
                     <div class="club-logo">➕</div>
                     <div class="club-name">Créer mon club</div>
-                    <div class="club-meta">Bientôt disponible</div>
-                </div>
+                    <div class="club-meta">Président d'asso ? Provisionne le tien</div>
+                </a>
             </div>
 
             {# ============ Rôle demandé ============ #}

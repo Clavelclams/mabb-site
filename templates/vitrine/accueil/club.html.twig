@@ -35,7 +35,9 @@
 					<span>{{ cms('club.histoire.titre_accent', '23 ans') }}</span>
 					{{ cms('club.histoire.titre_apres', "d'engagement") }}</h2>
 				<p class="text-white-force">
-					{{ cms('club.histoire.paragraphe1', "La Métropole Amiénoise Basket Ball (MABB) est une association sportive loi 1901 dédiée au basket-ball féminin. Implantée sur le territoire d'Amiens Métropole, elle accueille chaque année plus de 400 licenciées, du Micro Basket (dès 3 ans) jusqu'aux équipes Seniors.", 'long') }}
+					{# [V2.4i] Nouveau nom (depuis 2025). ⚠️ Si la clé CMS est déjà enregistrée
+					   en prod avec l'ancien nom, corriger aussi dans Admin → Contenus. #}
+					{{ cms('club.histoire.paragraphe1', "L'Amiens Métropole Basket Ball (MABB) est une association sportive loi 1901 dédiée au basket-ball féminin. Implantée sur le territoire d'Amiens Métropole, elle accueille chaque année plus de 400 licenciées, du Micro Basket (dès 3 ans) jusqu'aux équipes Seniors.", 'long') }}
 				</p>
 				<p class="text-white-force">
 					{{ cms('club.histoire.paragraphe2', "Le club se distingue par la qualité de son encadrement technique et sportif. La MABB a formé et continue de former d'excellentes joueuses, dont certaines ont été sélectionnées en équipes de France jeunes. Le projet du club s'articule autour de trois piliers : l'école, le terrain et la performance.", 'long') }}
