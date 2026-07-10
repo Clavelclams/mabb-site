@@ -38,6 +38,11 @@ class PirbPlaygroundController extends AbstractController
 {
     private const MODES = ['tir', 'dribble'];
     private const FENETRE_JOURS = 7;
+    /** Les 8 zones du contrat (ShotChartCalculator / types/pirb.ts). */
+    private const ZONES = [
+        'raquette', 'courte_distance', 'mi_distance',
+        '3pts_coin_g', '3pts_coin_d', '3pts_aile_g', '3pts_aile_d', '3pts_haut',
+    ];
 
     public function __construct(
         private readonly JoueurRepository $joueurRepo,
@@ -77,6 +82,27 @@ class PirbPlaygroundController extends AbstractController
             $borner($data['score'] ?? 0, 1_000_000),
             $borner($data['dureeSecondes'] ?? 0, 7200),
         );
+
+        // [Recap v4] Détail par tir, OPTIONNEL (mode tir auto). Revalidé
+        // entrée par entrée — zone hors liste ou forme inattendue = ignorée,
+        // plafond 300. On ne stocke QUE reussi + zone (pas de données brutes).
+        if (isset($data['tirs']) && is_array($data['tirs'])) {
+            $tirs = [];
+            foreach (array_slice($data['tirs'], 0, 300) as $t) {
+                if (
+                    is_array($t)
+                    && isset($t['reussi'], $t['zone'])
+                    && is_bool($t['reussi'])
+                    && in_array($t['zone'], self::ZONES, true)
+                ) {
+                    $tirs[] = ['reussi' => $t['reussi'], 'zone' => $t['zone']];
+                }
+            }
+            if ($tirs !== []) {
+                $seance->setTirs($tirs);
+            }
+        }
+
         $this->em->persist($seance);
         $this->em->flush();
 

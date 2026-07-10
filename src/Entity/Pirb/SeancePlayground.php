@@ -61,6 +61,17 @@ class SeancePlayground implements ClubAwareInterface
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private ?\DateTimeImmutable $createdAt = null;
 
+    /**
+     * [Recap v4, 10/07] Détail par tir (mode tir auto uniquement) :
+     * [{ reussi: bool, zone: string }] — réussite détectée par la caméra
+     * (jamais éditable), zone estimée puis ajustée par la joueuse au
+     * debrief. Null pour le dribble et les séances d'avant cette version.
+     * JSON assumé : donnée de détail, lue en bloc, jamais filtrée en SQL
+     * (les agrégats par zone se feront en PHP le jour où on en aura besoin).
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $tirs = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTimeImmutable();
@@ -87,6 +98,9 @@ class SeancePlayground implements ClubAwareInterface
     public function getScore(): int { return $this->score; }
     public function getDureeSecondes(): int { return $this->dureeSecondes; }
     public function getCreatedAt(): ?\DateTimeImmutable { return $this->createdAt; }
+    /** @return array<array{reussi: bool, zone: string}>|null */
+    public function getTirs(): ?array { return $this->tirs; }
+    public function setTirs(?array $tirs): static { $this->tirs = $tirs; return $this; }
 
     public function getClub(): ?Club
     {
