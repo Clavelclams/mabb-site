@@ -58,6 +58,10 @@
         <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="btn-mabb-ghost" style="padding:16px; font-size:1rem; text-align:center;">
             <i class="bi bi-journal-bookmark"></i> Le classeur<br><small style="font-weight:400; opacity:.75;">licences &amp; paiements</small>
         </a>
+        {# [V2.4n] Placement : glisser-déposer les joueuses dans leur secteur #}
+        <a href="{{ path('manager_secretariat_placement', {saison: saison}) }}" class="btn-mabb-ghost" style="padding:16px; font-size:1rem; text-align:center;">
+            <i class="bi bi-grid-1x2"></i> Le placement<br><small style="font-weight:400; opacity:.75;">glisser les joueuses par secteur</small>
+        </a>
         <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="{{ nb_pre_inscriptions > 0 ? 'btn-mabb-orange' : 'btn-mabb-ghost' }}" style="padding:16px; font-size:1rem; text-align:center;">
             <i class="bi bi-inbox"></i> Les demandes{% if nb_pre_inscriptions > 0 %} ({{ nb_pre_inscriptions }}){% endif %}<br><small style="font-weight:400; opacity:.75;">nouvelles licences</small>
         </a>

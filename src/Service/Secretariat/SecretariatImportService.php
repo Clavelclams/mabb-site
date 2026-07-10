@@ -110,6 +110,12 @@ final class SecretariatImportService
                     if ($dossier->getJoueur() === null) {
                         $dossier->setJoueur($joueusesParNom[$this->normaliserNom($nom)] ?? null);
                     }
+                    // [V2.4n] CENTRALISATION : le n° licence de l'Excel remonte
+                    // sur la FICHE joueuse si elle n'en a pas (jamais d'écrasement).
+                    $jLie = $dossier->getJoueur();
+                    if (!$dryRun && $jLie !== null && $jLie->getLicence() === null && $dossier->getNumeroLicence() !== null) {
+                        $jLie->setLicence($dossier->getNumeroLicence());
+                    }
 
                     if ($nouveau) {
                         if (!$dryRun) { $this->em->persist($dossier); }

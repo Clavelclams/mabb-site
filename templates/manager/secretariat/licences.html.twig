@@ -42,6 +42,8 @@
             {% else %}
                 <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="btn-mabb-ghost"><i class="bi bi-inbox"></i> Pré-inscriptions</a>
             {% endif %}
+            {# [V2.4n] Placement kanban : glisser-déposer les joueuses par secteur #}
+            <a href="{{ path('manager_secretariat_placement', {saison: saison}) }}" class="btn-mabb-ghost"><i class="bi bi-grid-1x2"></i> Placement</a>
             <a href="{{ path('manager_secretariat_annuaire', {saison: saison}) }}" class="btn-mabb-ghost"><i class="bi bi-journal-richtext"></i> Annuaire</a>
             <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost"><i class="bi bi-upload"></i> Import Excel</a>
             <form method="get">
@@ -214,7 +216,7 @@
                                     <input type="hidden" name="retour_site" value="{{ filtre_site }}">
                                     <input type="hidden" name="retour_categorie" value="{{ filtre_categorie }}">
                                     <input type="hidden" name="retour_statut" value="{{ filtre_statut }}">
-                                    <select name="statut" class="form-select" style="font-size:.72rem; padding:2px 4px; width:auto; height:auto;
+                                    <select name="statut" class="form-select" style="font-size:.72rem; padding:2px 24px 2px 4px; width:auto; height:auto;
                                             color:{{ d.paiementStatut == 'NON_RENSEIGNE' ? '#64748b' : (d.paiementStatut == 'PAYE' or d.paiementStatut == 'EXONERE' ? '#16a34a' : (d.paiementStatut == 'PARTIEL' ? '#a16207' : '#b91c1c')) }};"
                                             onchange="this.form.submit()">
                                         {% for code, label in statuts %}<option value="{{ code }}" {{ code == d.paiementStatut ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
@@ -227,7 +229,7 @@
                                     <input type="hidden" name="retour_site" value="{{ filtre_site }}">
                                     <input type="hidden" name="retour_categorie" value="{{ filtre_categorie }}">
                                     <input type="hidden" name="retour_statut" value="{{ filtre_statut }}">
-                                    <select name="site" class="form-select" style="font-size:.72rem; padding:2px 4px; width:auto; height:auto;" onchange="this.form.submit()">
+                                    <select name="site" class="form-select" style="font-size:.72rem; padding:2px 24px 2px 4px; width:auto; height:auto;" onchange="this.form.submit()">
                                         {% if d.site and d.site not in noms_secteurs and d.site != 'À placer' %}
                                             <option value="{{ d.site }}" selected>{{ d.site }}</option>
                                         {% endif %}

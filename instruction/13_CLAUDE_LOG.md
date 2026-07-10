@@ -10,6 +10,24 @@
 
 ---
 
+### 2026-07-10 — V2.4m/n : OTM en card, relances assainies, PLACEMENT kanban, licence centralisée
+
+- **V2.4m** (retours Clavel en rafale) :
+  1. Secteurs officiels seedés : OUEST (ETOUVIE) / NORD / SUD (migration idempotente Version20260710123000).
+  2. Doublon « À placer » corrigé (l'option sortait 2× : en dur + via la liste des sites) → exclu de noms_secteurs, onglet dédié « 📍 À placer » dans le classeur.
+  3. Dashboard OTM : sorti du Secrétariat, renommé, accès CLUB_STAFF_ELARGI (services civiques), d'abord en navbar puis déplacé en CARD sur l'accueil (demande).
+  4. FIX 500 prod : `findRencontresAvecRolesVacants` faisait `select('DISTINCT r')` sur un alias JOINT — Doctrine 3 refuse. Bug LATENT jamais appelé avant la card « Le club cherche du monde ». Réécrite avec Rencontre en racine. (Diag : APP_DEBUG=1 temporaire, pas de prod.log sur OVH mutualisé.)
+  5. Navbar amputée selon les pages : les items gated dépendaient d'un `club` que chaque contrôleur devait passer → extension Twig `club_actif()` (TenantResolver, try/catch), la navbar se résout seule.
+  6. Fausses relances : les dossiers « Préparer la saison » naissaient « À payer » → tout l'effectif (dont la secrétaire !) sortait « à relancer ». Nouveau statut NON_RENSEIGNE (« À définir », gris, hors relances) + data-fix Version20260710174500 (vierges uniquement, les imports Excel gardent leur statut).
+  7. Import parents : les lignes SANS fiche deviennent des dossiers annuaire (infos parents en notes) — zéro perte ; ré-import ultérieur rattache le vrai contact. Signature importParents(+saison).
+  8. UI : padding-droit des selects (flèche vs libellés longs).
+- **V2.4n** :
+  1. **PLACEMENT kanban** `/secretariat/placement` : colonnes À placer + secteurs (+ « Autres » pour les sites hérités), cartes joueuses en glisser-déposer (HTML5 DnD vanilla, commenté ligne à ligne), endpoint JSON `licences/{id}/site-json` (CSRF header, voter), compteurs live, filtre par nom, toast. Boutons depuis classeur + dashboard.
+  2. **Licence centralisée** fiche ↔ dossier (cas Laya : n° sur la fiche mais pas au dossier) : remplissage croisé des VIDES partout — Préparer la saison (fiche→dossier), import Excel (dossier→fiche), édition dossier (dossier→fiche), pré-remplissage du champ depuis la fiche, annuaire affiche le n° centralisé (dossier ?? fiche). Jamais d'écrasement.
+- Vérifications : PHP parsé (868 l. contrôleur), 5 templates équilibrés, JS node --check OK, routes/URL modèle/getters croisés.
+
+---
+
 ### 2026-07-10 — V2.4l : l'ANNUAIRE — l'espace secrétaire pensé pour elle
 
 - Objectif (Clavel) : optimiser l'espace secrétaire pour une personne senior qui vient du PAPIER (« qu'elle ne se sente pas submergée par la technologie ») ; une page avec LA FICHE DE CHACUN (toutes les colonnes de son Excel, rien de perdu) ; filtrer/affecter les joueuses PAR SECTEUR ; le détail du règlement (« pas juste payé/pas payé »).

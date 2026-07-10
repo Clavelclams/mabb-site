@@ -1,0 +1,170 @@
+{% extends 'manager/base.html.twig' %}
+
+{# [V2.4n] PLACEMENT PAR GLISSER-DÉPOSER — « tu glisses la card d'une joueuse
+   au bon endroit » (Clavel). Une colonne À placer + une par secteur.
+   Vanilla JS (HTML5 drag & drop), chaque étape commentée. #}
+
+{% block title %}Placement par secteur — {{ saison }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .plc-board {
+            display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr));
+            gap:12px; align-items:start;
+        }
+        .plc-col {
+            background:#f8fafc; border:1px solid var(--mabb-border);
+            border-radius:12px; padding:10px; min-height:220px;
+            transition:background .15s, border-color .15s;
+        }
+        .plc-col.drag-over { background:#fff7ed; border-color:var(--mabb-orange, #ea580c); border-style:dashed; }
+        .plc-col-titre {
+            font-weight:800; font-size:.9rem; margin-bottom:8px;
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        .plc-col-titre .cnt { font-size:.72rem; font-weight:600; color:var(--mabb-muted); background:#fff; border:1px solid var(--mabb-border); border-radius:999px; padding:1px 8px; }
+        .plc-card {
+            background:#fff; border:1px solid var(--mabb-border); border-radius:9px;
+            padding:8px 10px; margin-bottom:6px; cursor:grab; user-select:none;
+            font-size:.85rem;
+        }
+        .plc-card:active { cursor:grabbing; }
+        .plc-card.dragging { opacity:.4; }
+        .plc-card small { color:var(--mabb-muted); }
+        .plc-card.cachee { display:none; }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-grid-1x2"></i> Placement par secteur</h1>
+            <p class="subtitle">Attrape une carte et lâche-la dans la bonne colonne — c'est enregistré aussitôt. Saison {{ saison }}.</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <form method="get">
+                <select name="saison" class="form-select" onchange="this.form.submit()">
+                    {% for s in saisons %}<option value="{{ s }}" {{ s == saison ? 'selected' : '' }}>Saison {{ s }}</option>{% endfor %}
+                </select>
+            </form>
+            <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="btn-mabb-ghost"><i class="bi bi-journal-bookmark"></i> Classeur</a>
+        </div>
+    </div>
+
+    {# Recherche instantanée : masque les cartes qui ne correspondent pas #}
+    <input type="search" id="plcRecherche" class="form-control" placeholder="🔍 Filtrer par nom…"
+           style="max-width:340px; margin-bottom:12px; font-size:1rem;">
+
+    <div class="plc-board">
+        {% for nomColonne, dossiers in colonnes %}
+            {# data-site = valeur envoyée au serveur quand on lâche une carte ici #}
+            <div class="plc-col" data-site="{{ nomColonne == 'Autres' ? '' : nomColonne }}" {{ nomColonne == 'Autres' ? 'data-fixe="1"' : '' }}>
+                <div class="plc-col-titre">
+                    <span>{{ nomColonne == 'À placer' ? '📍 À placer' : (nomColonne == 'Autres' ? '❓ Autres sites' : nomColonne) }}</span>
+                    <span class="cnt" data-compteur>{{ dossiers|length }}</span>
+                </div>
+                {% for d in dossiers %}
+                    <div class="plc-card" draggable="true" data-id="{{ d.id }}" data-nom="{{ (d.nomComplet ~ ' ' ~ (d.categorie ?? ''))|lower }}">
+                        <strong>{{ d.nomComplet }}</strong>
+                        <br><small>{{ d.categorie ?? '—' }}{% if d.numeroLicence %} · {{ d.numeroLicence }}{% endif %}</small>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <p style="font-size:.76rem; color:var(--mabb-muted); margin-top:10px;">
+        Astuce : la colonne « Autres sites » regroupe les anciens noms de secteur — glisse ses cartes
+        vers Ouest/Nord/Sud pour tout ranger. Sur tablette/téléphone, passe par l'<a href="{{ path('manager_secretariat_annuaire', {saison: saison}) }}">annuaire</a> (menus déroulants).
+    </p>
+
+    <div id="toastPlacement" style="position:fixed; bottom:20px; right:20px; background:#16a34a; color:#fff; padding:10px 18px; border-radius:10px; display:none; z-index:1000;"></div>
+
+    <script>
+    (function () {
+        // ================================================================
+        // GLISSER-DÉPOSER — 3 temps : (1) on attrape une carte,
+        // (2) on survole une colonne, (3) on lâche → requête au serveur.
+        // ================================================================
+        const CSRF = '{{ csrf_token('secretariat_placement') }}';
+        // path() ne peut pas générer une URL avec un id variable côté JS :
+        // on prend l'URL d'un id bidon (0) et on remplacera le 0 par le vrai id.
+        const URL_MODELE = '{{ path('manager_secretariat_licence_site_json', {id: 0}) }}';
+
+        let carteEnCours = null; // la carte qu'on est en train de déplacer
+
+        // (1) DÉBUT du glisser : on mémorise la carte et on la rend translucide
+        document.querySelectorAll('.plc-card').forEach(carte => {
+            carte.addEventListener('dragstart', () => {
+                carteEnCours = carte;
+                carte.classList.add('dragging');
+            });
+            carte.addEventListener('dragend', () => {
+                carte.classList.remove('dragging');
+                carteEnCours = null;
+            });
+        });
+
+        // (2) SURVOL d'une colonne : preventDefault() est OBLIGATOIRE pour
+        // autoriser le drop (comportement HTML5), et on surligne la colonne.
+        document.querySelectorAll('.plc-col').forEach(col => {
+            col.addEventListener('dragover', (e) => {
+                if (col.dataset.fixe) return; // « Autres » : on ne dépose pas dedans
+                e.preventDefault();
+                col.classList.add('drag-over');
+            });
+            col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+
+            // (3) LÂCHER : on envoie le nouveau secteur au serveur, et si OK
+            // on déplace la carte dans la colonne + on met à jour les compteurs.
+            col.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                col.classList.remove('drag-over');
+                if (!carteEnCours || col.dataset.fixe) return;
+                const carte = carteEnCours;
+                const site  = col.dataset.site;
+                const url   = URL_MODELE.replace('/0/', '/' + carte.dataset.id + '/');
+                try {
+                    const res  = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+                        body: JSON.stringify({ site: site }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) { throw new Error(data.error || 'Erreur serveur'); }
+                    col.appendChild(carte);       // la carte rejoint sa colonne
+                    majCompteurs();               // les petits (n) se recalculent
+                    toast(carte.querySelector('strong').textContent + ' → ' + (site || '?'));
+                } catch (err) {
+                    toast('❌ ' + err.message, true);
+                }
+            });
+        });
+
+        // Compteurs de colonnes = nombre de cartes visibles dedans
+        function majCompteurs() {
+            document.querySelectorAll('.plc-col').forEach(col => {
+                col.querySelector('[data-compteur]').textContent = col.querySelectorAll('.plc-card').length;
+            });
+        }
+
+        // Petit toast de confirmation (disparaît après 2 s)
+        function toast(msg, erreur) {
+            const t = document.getElementById('toastPlacement');
+            t.textContent = msg;
+            t.style.background = erreur ? '#dc2626' : '#16a34a';
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2000);
+        }
+
+        // Recherche instantanée : cache les cartes dont le nom ne matche pas
+        document.getElementById('plcRecherche').addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase().trim();
+            document.querySelectorAll('.plc-card').forEach(carte => {
+                carte.classList.toggle('cachee', q !== '' && !carte.dataset.nom.includes(q));
+            });
+        });
+    })();
+    </script>
+{% endblock %}

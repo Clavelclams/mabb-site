@@ -114,7 +114,9 @@
                             <input type="hidden" name="retour" value="annuaire">
                             <input type="hidden" name="retour_q" value="{{ q }}">
                             <input type="hidden" name="retour_secteur" value="{{ filtre_secteur }}">
-                            <select name="site" class="form-select" style="font-size:.82rem; padding:4px 8px; width:auto;" onchange="this.form.submit()" title="Secteur de la joueuse">
+                            {# padding-droit 28px : réserve la place de la flèche du select
+                               (sinon elle se superpose aux libellés longs type OUEST (ETOUVIE)) #}
+                            <select name="site" class="form-select" style="font-size:.82rem; padding:4px 28px 4px 8px; width:auto;" onchange="this.form.submit()" title="Secteur de la joueuse">
                                 <option value="À placer" {{ f.site == 'À placer' or f.site is null ? 'selected' : '' }}>📍 À placer</option>
                                 {% for s in secteurs %}<option value="{{ s.nom }}" {{ f.site == s.nom ? 'selected' : '' }}>📍 {{ s.nom }}</option>{% endfor %}
                                 {% if f.site and f.site != 'À placer' and f.site not in secteurs|map(s => s.nom) %}<option value="{{ f.site }}" selected>📍 {{ f.site }}</option>{% endif %}
@@ -133,7 +135,8 @@
             {# Ligne identité — les colonnes de SON Excel, dans SON ordre #}
             <div class="ann-ligne">
                 {% if f.dossier and f.dossier.typeLicence %}<span class="ann-badge" style="background:#f1f5f9; color:#475569;">{{ f.dossier.typeLicence|lower|capitalize }}</span> {% endif %}
-                {% if f.dossier and f.dossier.numeroLicence %}<span class="lbl">Licence</span> <code>{{ f.dossier.numeroLicence }}</code> · {% endif %}
+                {# [V2.4n] n° centralisé (dossier saison, sinon fiche joueuse) #}
+                {% if f.numero %}<span class="lbl">Licence</span> <code>{{ f.numero }}</code> · {% endif %}
                 {% if f.naissance %}<span class="lbl">née le</span> <strong>{{ f.naissance|date('d/m/Y') }}</strong>{% endif %}
                 {% if f.telephone %} · <span class="lbl">Tél :</span> <strong>{{ f.telephone }}</strong>{% endif %}
                 {# Version imprimée : le secteur en toutes lettres #}

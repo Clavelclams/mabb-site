@@ -258,6 +258,17 @@ class SecretariatController extends AbstractController
             ], fn(string $v) => $v !== '');
             $dossier->setAides($aides ?: null);
 
+            // [V2.4n] CENTRALISATION : ce qui est saisi ici complète la FICHE
+            // joueuse si elle est liée et que le champ y est vide (n° licence,
+            // téléphone, date de naissance). Jamais d'écrasement : la fiche
+            // reste la référence quand elle est renseignée.
+            $j = $dossier->getJoueur();
+            if ($j !== null) {
+                if ($j->getLicence() === null && $dossier->getNumeroLicence() !== null) { $j->setLicence($dossier->getNumeroLicence()); }
+                if ($j->getTelephone() === null && $dossier->getTelephone() !== null)   { $j->setTelephone($dossier->getTelephone()); }
+                if ($j->getDateNaissance() === null && $dossier->getDateNaissance() !== null) { $j->setDateNaissance($dossier->getDateNaissance()); }
+            }
+
             $this->em->flush();
             $this->addFlash('success', 'Dossier mis à jour.');
             return $this->redirectToRoute('manager_secretariat_licences', [
@@ -308,6 +319,11 @@ class SecretariatController extends AbstractController
             $existant = $this->dossierRepo->trouverPourImport($club, $saison, null, $nomComplet);
             if ($existant !== null) {
                 if ($existant->getJoueur() === null) { $existant->setJoueur($j); }
+                // [V2.4n] CENTRALISATION : complète les VIDES du dossier depuis
+                // la fiche (n° licence, tél, naissance) — jamais d'écrasement.
+                if ($existant->getNumeroLicence() === null && $j->getLicence() !== null) { $existant->setNumeroLicence($j->getLicence()); }
+                if ($existant->getTelephone() === null)     { $existant->setTelephone($j->getTelephone()); }
+                if ($existant->getDateNaissance() === null) { $existant->setDateNaissance($j->getDateNaissance()); }
                 continue;
             }
             $dossier = new DossierLicence();
@@ -317,6 +333,8 @@ class SecretariatController extends AbstractController
                 ->setNomComplet($nomComplet)
                 ->setDateNaissance($j->getDateNaissance())
                 ->setTelephone($j->getTelephone())
+                // [V2.4n] le n° de licence de la FICHE arrive directement dans le dossier
+                ->setNumeroLicence($j->getLicence())
                 ->setSite('À placer')
                 ->setCategorie($j->getEquipe()?->getNom())
                 // [V2.4m] « À définir » : pas de relance tant que la secrétaire
@@ -494,6 +512,84 @@ class SecretariatController extends AbstractController
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // [V2.4n] PLACEMENT — glisser-déposer les joueuses dans leur secteur
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * Tableau de placement façon kanban (demande Clavel : « placer un à un
+     * c'est chiant ») : une colonne « À placer » + une par secteur, on
+     * GLISSE la carte de la joueuse dans la bonne colonne. Plus intuitif
+     * que les menus déroulants, pensé pour la préparation de saison.
+     */
+    #[Route('/placement', name: 'placement', methods: ['GET'])]
+    public function placement(Request $request): Response
+    {
+        $club = $this->clubOuRedirect();
+        if ($club instanceof Response) { return $club; }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $club);
+
+        $saison   = $this->saisonDemandee($request);
+        $secteurs = $this->secteurRepo->findByClub($club);
+        $dossiers = $this->dossierRepo->rechercher($club, $saison);
+
+        // Colonnes : À placer + secteurs officiels + « Autres » (sites importés
+        // qui ne correspondent à aucun secteur — rien ne doit être invisible).
+        $colonnes = ['À placer' => []];
+        foreach ($secteurs as $s) {
+            $colonnes[$s->getNom()] = [];
+        }
+        $autres = [];
+        foreach ($dossiers as $d) {
+            $site = $d->getSite() ?? 'À placer';
+            if (array_key_exists($site, $colonnes)) {
+                $colonnes[$site][] = $d;
+            } elseif (mb_strtoupper($site) === 'À PLACER') {
+                $colonnes['À placer'][] = $d;
+            } else {
+                $autres[] = $d;
+            }
+        }
+        if ($autres !== []) {
+            $colonnes['Autres'] = $autres;
+        }
+
+        return $this->render('manager/secretariat/placement.html.twig', [
+            'club'     => $club,
+            'saison'   => $saison,
+            'saisons'  => $this->saisonService->getSaisonsDisponibles(),
+            'colonnes' => $colonnes,
+            'secteurs' => $secteurs,
+        ]);
+    }
+
+    /**
+     * Endpoint JSON du glisser-déposer : change le secteur d'un dossier.
+     * Body : { "site": "NORD" } — CSRF via header X-CSRF-Token (jeton
+     * unique 'secretariat_placement' pour toute la page kanban).
+     */
+    #[Route('/licences/{id}/site-json', name: 'licence_site_json', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function changerSiteJson(Request $request, DossierLicence $dossier): Response
+    {
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $dossier);
+
+        $token = (string) $request->headers->get('X-CSRF-Token', '');
+        if (!$this->isCsrfTokenValid('secretariat_placement', $token)) {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => 'Jeton invalide — recharge la page.'], 403);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $site = is_array($data) ? trim((string) ($data['site'] ?? '')) : '';
+        if ($site === '') {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => 'Secteur manquant.'], 400);
+        }
+
+        $dossier->setSite($site);
+        $this->em->flush();
+
+        return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => true, 'site' => $dossier->getSite()]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // [V2.4l] L'ANNUAIRE — « la fiche de chacun », tout lisible d'un coup
     // ────────────────────────────────────────────────────────────────────
 
@@ -556,6 +652,8 @@ class SecretariatController extends AbstractController
                 'naissance'    => $j->getDateNaissance(),
                 'categorie'    => $dossier?->getCategorie() ?? $j->getEquipe()?->getNom(),
                 'telephone'    => $j->getTelephone() ?? $dossier?->getTelephone(),
+                // [V2.4n] n° CENTRALISÉ : dossier de la saison, sinon la fiche
+                'numero'       => $dossier?->getNumeroLicence() ?? $j->getLicence(),
                 'site'         => $dossier?->getSite(),
                 'parents'      => $responsablesParJoueur[(int) $j->getId()] ?? [],
             ];
@@ -570,6 +668,7 @@ class SecretariatController extends AbstractController
                 'naissance' => $d->getDateNaissance(),
                 'categorie' => $d->getCategorie(),
                 'telephone' => $d->getTelephone(),
+                'numero'    => $d->getNumeroLicence(),
                 'site'      => $d->getSite(),
                 'parents'   => [],
             ];

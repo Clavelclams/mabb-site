@@ -51,7 +51,16 @@
                     {% endfor %}
                 </select>
             </div>
-            <div><label class="form-label">N° licence</label><input type="text" name="numero_licence" class="form-control" value="{{ dossier.numeroLicence }}"></div>
+            <div>
+                <label class="form-label">N° licence</label>
+                {# [V2.4n] Pré-rempli depuis la FICHE joueuse si le dossier n'en a pas
+                   (centralisation — enregistrer synchronise fiche ↔ dossier) #}
+                <input type="text" name="numero_licence" class="form-control"
+                       value="{{ dossier.numeroLicence ?: (dossier.joueur ? dossier.joueur.licence : '') }}">
+                {% if not dossier.numeroLicence and dossier.joueur and dossier.joueur.licence %}
+                    <small style="color:var(--mabb-muted);">repris de la fiche joueuse — enregistre pour le fixer au dossier</small>
+                {% endif %}
+            </div>
             <div><label class="form-label">Date de naissance</label><input type="date" name="date_naissance" class="form-control" value="{{ dossier.dateNaissance ? dossier.dateNaissance|date('Y-m-d') : '' }}"></div>
             <div><label class="form-label">Téléphone</label><input type="text" name="telephone" class="form-control" value="{{ dossier.telephone }}"></div>
             <div><label class="form-label">Tarif</label><input type="text" name="tarif" class="form-control" value="{{ dossier.tarif }}" placeholder="110, Gratuit…"></div>
