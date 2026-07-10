@@ -145,13 +145,22 @@ class AffectationMatchRepository extends ServiceEntityRepository
      * Rencontres à venir avec au moins un rôle vacant (STATS_LIVE ou autre).
      * Utilisé pour proposer les rôles ouverts aux bénévoles.
      * "Vacant" = aucune affectation ASSIGNE/CONFIRME sur ce rôle.
+     *
+     * [V2.4m FIX 500] Doctrine 3 refuse `select('DISTINCT r')` quand `r` est
+     * un alias JOINT (« Cannot select entity through identification variables
+     * without choosing at least one root entity alias »). Bug latent : la
+     * méthode n'était appelée nulle part avant la card « Le club cherche du
+     * monde » du dashboard. Requête réécrite avec Rencontre en RACINE.
+     *
+     * @return \App\Entity\Sport\Rencontre[]
      */
     public function findRencontresAvecRolesVacants(\DateTimeImmutable $from): array
     {
         // On retourne les rencontres, le filtrage des rôles se fait en PHP
-        return $this->createQueryBuilder('a')
+        return $this->getEntityManager()->createQueryBuilder()
             ->select('DISTINCT r')
-            ->leftJoin('a.rencontre', 'r')
+            ->from(\App\Entity\Sport\Rencontre::class, 'r')
+            ->join(AffectationMatch::class, 'a', 'WITH', 'a.rencontre = r')
             ->where('r.date >= :from')
             ->andWhere('a.statut NOT IN (:actifs)')
             ->setParameter('from', $from)
