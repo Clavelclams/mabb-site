@@ -53,6 +53,7 @@
   </p>
   <button id="btn">Démarrer la séance</button>
   <div id="status">Le modèle (~7 Mo) se charge au premier lancement, ensuite tout est local.</div>
+  <p class="hint">🧪 Mode en phase de test : la détection s'améliore version après version. Un raté flagrant ? Dis-le nous dans Aide &amp; contact.</p>
   <div id="stage" hidden>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
@@ -105,6 +106,12 @@ let trainee = [];                 // trajectoire : [{ x, y, t, src: 'modele'|'mo
 let flottants = [];
 let reussis = 0, tentes = 0, serie = 0, meilleureSerie = 0;
 let debutSeance = 0;
+
+// [Fluidité 10/07] Détection adaptative (même mécanique que dribble.html) :
+// lite2 coûte 40-90 ms par passage — à chaque frame, ça saccade. On mesure
+// sa durée réelle et on espace les passages (1/2, 1/3) ; entre deux, le
+// suiveur de mouvement maintient la trajectoire à pleine cadence.
+let frameN = 0, detIntervalle = 1, detDureeMoy = 30;
 
 // Machine à états du TIR : repos → en_vol → décision → cooldown.
 let tir = { etat: "repos", depuis: 0 };
@@ -290,12 +297,19 @@ function boucle() {
       // 0. Le suiveur mémorise la frame (pour la différence d'images).
       suiveur.nouvelleFrame(video);
 
-      // 1. Détection MODÈLE (elle fait foi quand elle voit le ballon).
-      const res = detector.detectForVideo(video, t);
+      // 1. Détection MODÈLE (elle fait foi quand elle voit le ballon) —
+      //    adaptative : 1 frame sur detIntervalle, forcée si ballon perdu.
+      frameN++;
       let meilleure = null;
-      for (const d of res.detections) {
-        if (d.categories[0].categoryName !== "sports ball") continue;
-        if (!meilleure || d.categories[0].score > meilleure.categories[0].score) meilleure = d;
+      if (frameN % detIntervalle === 0 || !suiveur.actif(t)) {
+        const tDet = performance.now();
+        const res = detector.detectForVideo(video, t);
+        detDureeMoy = 0.8 * detDureeMoy + 0.2 * (performance.now() - tDet);
+        detIntervalle = detDureeMoy > 55 ? 3 : detDureeMoy > 30 ? 2 : 1;
+        for (const d of res.detections) {
+          if (d.categories[0].categoryName !== "sports ball") continue;
+          if (!meilleure || d.categories[0].score > meilleure.categories[0].score) meilleure = d;
+        }
       }
       if (meilleure) {
         const b = meilleure.boundingBox;

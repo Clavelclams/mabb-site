@@ -118,3 +118,15 @@ Centraliser les obligations de securite + RGPD (tracabilite, conservation, droit
 - Acces : `ClubVoter::CLUB_SECRETARIAT` UNIQUEMENT (DIRIGEANT + nouveau role SECRETAIRE). Pas COACH/STAFF, jamais PIRB/public. CSRF sur toutes les ecritures. Multi-tenant via ClubAwareInterface.
 - Conservation : dossiers licences conserves par saison (historique administratif legitime) ; contacts responsables suivent le cycle de vie de la fiche joueuse (purge RGPD-0008). A REVOIR au premier bilan : duree de conservation des aides sociales (minimisation possible en N+2).
 - Statut : fait (09/07/2026) — migration `Version20260709210000` a passer en prod ; duree de conservation des aides a arbitrer
+
+---
+
+### RGPD-0012 — Pre-inscription licence : formulaire PUBLIC (vitrine)
+- Categorie : RGPD
+- Date : 2026-07-09
+- Traitement : `PreInscription` (table `sport_pre_inscription`) — demande de licence deposee par la famille via mabb.fr/pre-inscription (remplace le Google Form). Donnees : identite joueuse (souvent MINEURE), date de naissance, telephone, categorie/secteur souhaites, identite + coordonnees du parent (tel, email, adresse). Base legale : demarches precontractuelles a l'initiative de la famille.
+- Consentement : case explicite NON pre-cochee, horodatee (`consentementAt`), lien politique de confidentialite (coherent RGPD-0006).
+- Anti-spam SANS collecte d'IP (minimisation) : honeypot invisible + plafond 30 depots/heure/club.
+- Acces : CLUB_SECRETARIAT uniquement apres depot ; rien n'est jamais reaffiche cote public. CSRF sur le depot et sur toutes les actions de traitement.
+- Cycle de vie : NOUVELLE → CONVERTIE (donnees recopiees vers DossierLicence/ResponsableLegal/Joueur, cf. RGPD-0011) ou REFUSEE. A PLANIFIER : purge des pre-inscriptions traitees en fin de saison (meme cron que RGPD-0010).
+- Statut : fait (09/07/2026) — purge fin de saison a ajouter au cron annuel

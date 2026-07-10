@@ -53,6 +53,9 @@ class ManagerLoginController extends AbstractController
         \App\Repository\Sport\EvenementRepository $evenementRepository,
         \App\Service\FeedAggregator $feedAggregator,
         \App\Repository\Sport\NoteFraisRepository $noteFraisRepository,
+        // [V2.4k] espace MEMBRE (bénévole/parent) : missions + enfants
+        \App\Repository\Sport\AffectationMatchRepository $affectationRepository,
+        \App\Repository\Sport\ParentJoueurRepository $parentJoueurRepository,
     ): Response {
         $this->denyAccessUnlessGranted('ROLE_USER');
 
@@ -69,6 +72,10 @@ class ManagerLoginController extends AbstractController
         $prochainEvenements = [];
         $mesReunionsAVenir = [];
         $mesPvNonLus = [];
+        // [V2.4k] espace membre
+        $mesMissions = [];
+        $postesVacants = [];
+        $mesEnfants = [];
         // Feed "Pour toi" Phase 1 MVP — items personnalisés en tête de dashboard
         $feedItems = [];
         // Compteur pour le badge "X en attente" sur la card trésorier (D.2)
@@ -125,6 +132,15 @@ class ManagerLoginController extends AbstractController
                 // Le controller ne sait pas COMMENT le feed est construit, il
                 // appelle juste le service et passe le résultat à la vue.
                 $feedItems = $feedAggregator->buildForUser($userConnecte, $club);
+
+                // [V2.4k] Espace MEMBRE — pour que bénévoles et parents aient
+                // un dashboard qui leur parle (pas seulement des cards staff) :
+                //   - mes prochaines missions (chrono, buvette… où je suis affecté)
+                //   - les postes à pourvoir bientôt (un bénévole peut candidater)
+                //   - mes enfants liés (fiche + bilan à un clic)
+                $mesMissions = $affectationRepository->findMissionsAVenir($userConnecte);
+                $postesVacants = $affectationRepository->findRencontresAvecRolesVacants($now);
+                $mesEnfants = $parentJoueurRepository->findEnfantsActifs($userConnecte);
             }
 
             // Badge "X notes à valider" — utile uniquement pour TRESORIER/SUPER_ADMIN
@@ -142,6 +158,11 @@ class ManagerLoginController extends AbstractController
             'mes_pv_non_lus'       => $mesPvNonLus,
             'feed_items'           => $feedItems,
             'nb_notes_a_valider'   => $nbNotesAValider,
+            // [V2.4k] espace membre (bénévole / parent)
+            'mes_missions'         => $mesMissions,
+            'postes_vacants'       => $postesVacants,
+            'mes_enfants'          => $mesEnfants,
+            'is_staff'             => $club && $this->isGranted(\App\Security\Voter\ClubVoter::CLUB_STAFF, $club),
         ]);
     }
 

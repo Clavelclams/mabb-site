@@ -48,6 +48,7 @@
   </p>
   <button id="btn">Démarrer (90 secondes)</button>
   <div id="status">Le modèle (~4 Mo) se charge au premier lancement, ensuite tout est local.</div>
+  <p class="hint">🧪 Mode en phase de test : la détection s'améliore version après version. Un raté flagrant ? Dis-le nous dans Aide &amp; contact.</p>
   <div id="stage" hidden>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
@@ -100,6 +101,35 @@ let cibles = [];
 let flottants = [];
 let balleVue = null;
 let suiveur = creerSuiveur();
+
+// [Fluidité 10/07] Détection ADAPTATIVE : le modèle est LE poste de coût
+// (20-60 ms par passage selon l'appareil). Le faire tourner à chaque frame
+// plombait le framerate (retour terrain : « pas assez fluide »). On mesure
+// sa durée réelle (moyenne glissante) et on espace les passages — 1 frame
+// sur 2, voire sur 3 sur un appareil lent. Entre deux passages, le suiveur
+// de mouvement (quasi gratuit) maintient la position → rendu à pleine
+// cadence, détection au rythme que l'appareil peut se payer.
+let frameN = 0, detIntervalle = 1, detDureeMoy = 20;
+// Dernière position datée du ballon — sert au contact PAR SEGMENT (voir
+// plus bas) : entre deux mesures, un ballon rapide peut "sauter" par-dessus
+// une cible sans qu'aucun point ne tombe dedans.
+let pointPrec = null; // { x, y, t }
+
+/**
+ * Distance d'un point C au SEGMENT [A→B] (pas à la droite infinie).
+ * C'est LE fix des contacts manqués (retour terrain : « la balle est dessus
+ * et parfois ça marche pas ») : on ne teste plus seulement OÙ EST le ballon,
+ * mais TOUT LE CHEMIN qu'il vient de parcourir. S'il a traversé la cible
+ * entre deux frames, le segment passe dedans → hit compté.
+ */
+function distanceAuSegment(cx, cy, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const l2 = dx * dx + dy * dy;
+  if (l2 === 0) return Math.hypot(cx - ax, cy - ay); // A = B : simple distance
+  // Projection de C sur [A→B], bornée au segment (k ∈ [0,1]).
+  const k = Math.max(0, Math.min(1, ((cx - ax) * dx + (cy - ay) * dy) / l2));
+  return Math.hypot(cx - (ax + k * dx), cy - (ay + k * dy));
+}
 
 // ---------- Modèle (une fois) ---------------------------------------------------
 async function chargerModele() {
@@ -194,11 +224,22 @@ function boucle() {
       // détection : il pourra combler le trou si le modèle ne voit rien.
       suiveur.nouvelleFrame(video);
 
-      const res = detector.detectForVideo(video, t);
+      // Détection adaptative : le modèle ne passe qu'1 frame sur
+      // detIntervalle — SAUF si le suiveur a perdu le ballon (là on force
+      // la détection pour raccrocher au plus vite).
+      frameN++;
       let meilleure = null;
-      for (const d of res.detections) {
-        if (d.categories[0].categoryName !== "sports ball") continue;
-        if (!meilleure || d.categories[0].score > meilleure.categories[0].score) meilleure = d;
+      if (frameN % detIntervalle === 0 || !suiveur.actif(t)) {
+        const tDet = performance.now();
+        const res = detector.detectForVideo(video, t);
+        // Moyenne glissante de la durée du modèle → intervalle auto :
+        // rapide (<26 ms) = toutes les frames ; moyen = 1/2 ; lent = 1/3.
+        detDureeMoy = 0.8 * detDureeMoy + 0.2 * (performance.now() - tDet);
+        detIntervalle = detDureeMoy > 45 ? 3 : detDureeMoy > 26 ? 2 : 1;
+        for (const d of res.detections) {
+          if (d.categories[0].categoryName !== "sports ball") continue;
+          if (!meilleure || d.categories[0].score > meilleure.categories[0].score) meilleure = d;
+        }
       }
       if (meilleure) {
         const b = meilleure.boundingBox;
@@ -237,13 +278,25 @@ function boucle() {
         } else {
           ctx.strokeRect(balleVue.x, balleVue.oy, balleVue.w, balleVue.h);
         }
+
+        // ---- CONTACT PAR SEGMENT [fix 10/07] --------------------------------
+        // Si on a une position précédente fraîche (<220 ms), on teste la
+        // cible contre TOUT le trajet parcouru depuis — plus contre le seul
+        // point actuel. Tolérance 0.75 rayon de ballon (le contact visuel
+        // « la balle est dessus » doit TOUJOURS compter : en cas de doute,
+        // on donne le point — c'est un jeu, la frustration coûte plus cher
+        // qu'un hit généreux).
+        const segFrais = pointPrec && (t - pointPrec.t) < 220;
         for (const c of cibles) {
-          // Tolérance de contact montée à 0.6 rayon de ballon (retour
-          // terrain : des contacts nets n'étaient pas comptés).
-          if (c.etat === "live" && Math.hypot(balleVue.bx - c.x, balleVue.by - c.y) < c.r + balleVue.r * 0.6) {
+          if (c.etat !== "live") continue;
+          const dist = segFrais
+            ? distanceAuSegment(c.x, c.y, pointPrec.x, pointPrec.y, balleVue.bx, balleVue.by)
+            : Math.hypot(balleVue.bx - c.x, balleVue.by - c.y);
+          if (dist < c.r + balleVue.r * 0.75) {
             toucher(c, t);
           }
         }
+        pointPrec = { x: balleVue.bx, y: balleVue.by, t };
       }
 
       // Indicateur : vert = modèle, jaune = suivi mouvement, gris = rien.

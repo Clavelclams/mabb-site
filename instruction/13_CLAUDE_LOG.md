@@ -10,6 +10,51 @@
 
 ---
 
+### 2026-07-10 — V2.4j : écosystème UN SEUL COMPTE (mabb.fr ↔ Manager ↔ PIRB)
+
+- Objectif (Clavel) : expérience immersive — compte mabb.fr = compte Manager du club MABB ; manager d'un AUTRE club = pas d'espace mabb.fr ; membre Manager MABB = a « son petit compte mabb.fr » sans rien faire ; tout intuitif, à portée de main, sans pavés.
+- Constat de départ : la table `user` est DÉJÀ commune à tout le monolithe (mêmes identifiants partout) — mais l'inscription vitrine créait un User SANS UserClubRole (pas membre du club), et /compte/mon-compte était ouvert à tout ROLE_USER (y compris managers externes).
+- Actions :
+  1. **Inscription vitrine → adhésion club auto** : `CompteController::sInscrire` crée un `UserClubRole` BENEVOLE **pending** pour le club de la vitrine (même workflow de validation dirigeant que l'inscription Manager). Flash : « mêmes identifiants sur Manager et PIRB ».
+  2. **Gate mon-compte** : un user dont TOUS les rôles club sont ailleurs → page `hors_club.html.twig` (courte : « ton espace est MABB Manager », bouton, logout). Super-admin passe. Comptes vitrine purs (aucun club) passent.
+  3. **Cards « Mes espaces » intelligentes** (mon_compte) : Manager selon statut réel (✅ membre + rôle / ⏳ demande en attente / bouton « Rejoindre en 1 clic » → nouvelle route POST `vitrine_compte_rejoindre_club`, CSRF) ; PIRB selon fiche joueuse liée (✅ Ta fiche : X / grisée « réservé aux joueuses » sinon). + une ligne « Un seul compte pour tout ».
+  4. **Ponts partout (une ligne, pas de pavé)** : login Manager (« déjà un compte mabb.fr ? mêmes identifiants ») ; login vitrine (« membre du club ? tes identifiants marchent ici ») ; menu utilisateur Manager → « Mon compte mabb.fr » visible UNIQUEMENT si le club actif est celui de la vitrine (global Twig `club_vitrine_slug`, cf. twig.yaml).
+- Fichiers : CompteController.php, mon_compte/hors_club/se_connecter (vitrine), manager/login + manager/base, twig.yaml.
+- Vérifications : 2 PHP parsés OK, 4 templates équilibrés, routes/méthodes/param croisés, variables Twig de mon_compte toutes fournies.
+- Vigilance : les comptes vitrine EXISTANTS (créés avant) n'ont pas de UserClubRole → ils voient le bouton « Rejoindre » (voulu). Les demandes pending arrivent dans Manager → Demandes (dirigeants) : prévenir Willy/Romy que les inscriptions vitrine y apparaissent désormais.
+
+---
+
+### 2026-07-10 — V2.4i : nom du club, création de club ouverte, saison du shot chart PIRB
+
+- Objectif (3 retours Clavel) : (1) « Métropole Amiénoise Basket Ball » = ANCIEN nom (renommé Amiens Métropole Basket Ball il y a un an) affiché sur login/inscription Manager ; (2) carte « Créer mon club » encore désactivée/« V2 » alors que la création publique est ouverte ; (3) pirb.mabb.fr/shot-chart affichait les tirs des matchs 2025-26 en saison 2026-2027.
+- Actions :
+  1. `manager/inscription.html.twig` : texte multi-tenant réécrit (nouveau nom + création ouverte), carte « Créer mon club » → LIEN actif vers `manager_creer_club` (route publique existante, le login y liait déjà). Commentaire d'exemple d'acronyme mis à jour.
+  2. `vitrine/accueil/club.html.twig` : défaut CMS `club.histoire.paragraphe1` → nouveau nom. ⚠️ Les clés CMS déjà enregistrées en prod gardent l'ancien texte → corriger dans Admin → Contenus.
+  3. ⚠️ DONNÉE, pas code : le nom affiché sur les cartes club de l'inscription vient de `club.nom` en BASE. À corriger en prod : `UPDATE club SET nom = 'Amiens Métropole Basket Ball' WHERE slug = 'mabb';`. NE PAS toucher aux chaînes « METROPOLE AMIENOISE » des imports FFBB (parsers/commandes) : elles matchent les documents FFBB officiels.
+  4. `PirbShotChartController::index` : les tirs FFBB (matchs) sont désormais bornés à la FENÊTRE DE LA SAISON ACTIVE (1er juillet → 1er juillet, même règle que SaisonService) par défaut ; les filtres de dates explicites de l'utilisatrice priment ; les SÉANCES DE SHOOT restent toutes visibles (demande explicite). La liste des matchs et les stats globales suivent automatiquement (construites depuis les zones filtrées).
+- Vigilance : /stats/shotchart (page « shot chart complet ») était déjà filtrée par saison (b41970f) — c'était bien /shot-chart (page séances) qui avait le trou.
+
+---
+
+### 2026-07-10 — V2.4h : le CLASSEUR secrétariat, secteurs & pré-inscriptions publiques
+
+- Objectif : rapprocher l'espace secrétaire de SON environnement Excel (un fichier par secteur, un onglet par catégorie), exploiter TOUTES les colonnes du formulaire licence (retour de Clavel : « le responsable secteur, on doit s'en servir »), et remplacer le Google Form par une pré-inscription publique. Règle d'or : ZÉRO doublon quand les joueuses de l'an dernier re-signent.
+- Actions réalisées :
+  1. **Entité `Secteur`** (sport_secteur) : référentiel des sites + RESPONSABLE DE SECTEUR (chapote les coachs — Willy/Romy DUFOSSE) + gestion inline depuis le classeur. `DossierLicence.site` reste une string (= Secteur.nom) pour ne pas migrer l'existant.
+  2. **LE CLASSEUR** (page licences réécrite) : onglets SECTEURS avec compteurs → sous-onglets CATÉGORIES → lignes ; ajout manuel anti-doublon (complète au lieu de dupliquer), déplacement de secteur par ligne, paiement inline, relances, édition complète (page dédiée avec les colonnes d'aides de l'Excel), panneau secteurs & responsables.
+  3. **« Préparer la saison »** : crée les dossiers manquants depuis les fiches Joueur actives (secteur « À placer ») — les joueuses déjà au classeur sont sautées (rapprochement id + nom normalisé, double filet).
+  4. **Pré-inscription PUBLIQUE** (`vitrine_pre_inscription`, mabb.fr/pre-inscription, lien navbar) : joueuse + parent + secteur souhaité + consentement RGPD horodaté. Anti-spam sans IP (honeypot + plafond 30/h). Entité `PreInscription` (NOUVELLE/CONVERTIE/REFUSEE).
+  5. **Conversion en 1 clic** (`PreInscriptionConverter`) : dossier licence (upsert) + contact parent (idempotent) + fiche Joueur optionnelle. La détection de fiche existante est AFFICHÉE avant conversion (« fiche trouvée : lier — pas de doublon »). Normalisation des noms centralisée dans `NomOutil` (minuscules/sans accents), partagée par import + conversion + génération.
+  6. **Import parents ENRICHI** (retours de Clavel sur son test réel) : backfill des champs VIDES de la fiche joueuse (téléphone col5, date de naissance col1 — jamais d'écrasement) ; « Ton responsable » (col10) conservé en note du contact ; adresse/CP déjà capturés. Clarifié : la liste « non matchées » du rapport affiche des noms de JOUEUSES sans fiche (voulu), pas un bug de colonnes.
+  7. Dashboard secrétariat : compteur pré-inscriptions ; paramètre `app.club_vitrine_slug` (vitrine mono-club, résolution par host à prévoir en SaaS).
+- Migration : `Version20260709233000` (sport_secteur + sport_pre_inscription). NB : `Version20260709230000` était déjà pris par le chantier Follow (session parallèle).
+- Docs : RGPD-0012 (pré-inscription publique : consentement, anti-spam sans IP, purge à planifier).
+- Vérifications : 10 PHP parsés OK, 5 templates équilibrés, 9 routes croisées, Autowire/reduce/isTemporaire confirmés. Constat mineur : la vitrine n'affiche les flashes que sur 3 pages (couvert pour ce flux, à généraliser un jour).
+- Reste : migration prod, créer les 3 secteurs (AMIENS NORD/SUD/ETOUVIE + responsables), « Préparer la saison », rejouer les imports, purge fin de saison des pré-inscriptions dans le cron.
+
+---
+
 ### 2026-07-09 (nuit) — V2.4g : saisons partout + Dashboard Secrétaire + Organisation week-end
 
 - Objectif : (1) dropdown bilan de compétences bloqué sur 2025-2026 + saisons en dur résiduelles ; (2) espace secrétaire (licences/relances, ex-Excel) ; (3) contacts parents du formulaire licence à ne pas perdre ; (4) organisation des week-ends (services civiques). Décisions Clavel : entité contact liée à la joueuse / import xlsx en base / licenciés + saisie libre pour les postes / nouveau rôle SECRETAIRE.
