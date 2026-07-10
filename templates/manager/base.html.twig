@@ -1031,6 +1031,14 @@
                     <a href="{{ path('manager_profil') }}" class="user-menu-item">
                         <i class="bi bi-person"></i> Mon profil
                     </a>
+                    {# [V2.4j] Pont écosystème : les membres du club de la vitrine
+                       ont AUSSI leur compte mabb.fr (même login) — on le leur montre.
+                       Invisible pour les clubs externes (mabb.fr n'est pas leur site). #}
+                    {% if club is defined and club and club.slug == club_vitrine_slug %}
+                        <a href="https://mabb.fr/compte/mon-compte" class="user-menu-item" target="_blank" rel="noopener">
+                            <i class="bi bi-globe"></i> Mon compte mabb.fr
+                        </a>
+                    {% endif %}
                     <div class="user-menu-item user-menu-saison">
                         <label for="saisonSelect"><i class="bi bi-calendar3"></i> Saison</label>
                         <form method="post" action="{{ path('saison_changer') }}">

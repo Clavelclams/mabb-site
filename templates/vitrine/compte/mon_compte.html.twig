@@ -91,44 +91,90 @@
             <div class="col-lg-4">
                 <div class="card card-mabb p-4 mb-4">
                     <h2 class="section-title mb-3" style="font-size:1.3rem"><i class="bi bi-grid me-2 text-mabb-blue"></i>Mes espaces</h2>
+                    {# [V2.4j] Écosystème : UN seul compte partout — cards avec STATUT réel #}
+                    <p style="font-size:.74rem; color:#64748b; margin-top:-8px;">
+                        Un seul compte pour tout : mêmes identifiants ici, sur Manager et sur PIRB.
+                    </p>
 
-                    {# ===== MABB Manager : en ligne, lien externe ===== #}
-                    <a href="https://manager.mabb.fr" target="_blank" rel="noopener"
-                       class="d-flex align-items-center gap-3 p-3 mb-2 text-decoration-none rounded"
-                       style="border:2px solid var(--mabb-blue); background:#eff6ff; transition:transform .15s"
-                       onmouseover="this.style.transform='translateY(-2px)'"
-                       onmouseout="this.style.transform='none'">
-                        <div style="width:42px;height:42px;border-radius:10px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <i class="bi bi-gear-fill" style="color:#fff;font-size:1.1rem"></i>
-                        </div>
-                        <div style="flex:1;min-width:0">
-                            <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">
-                                MABB Manager
-                                <span style="background:#dcfce7;color:#166534;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">✅ En ligne</span>
+                    {# ===== MABB Manager — card selon le statut d'appartenance au club ===== #}
+                    {% if statut_mabb == 'active' %}
+                        <a href="https://manager.mabb.fr" target="_blank" rel="noopener"
+                           class="d-flex align-items-center gap-3 p-3 mb-2 text-decoration-none rounded"
+                           style="border:2px solid var(--mabb-blue); background:#eff6ff; transition:transform .15s"
+                           onmouseover="this.style.transform='translateY(-2px)'"
+                           onmouseout="this.style.transform='none'">
+                            <div style="width:42px;height:42px;border-radius:10px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                <i class="bi bi-gear-fill" style="color:#fff;font-size:1.1rem"></i>
                             </div>
-                            <div style="font-size:.72rem;color:#64748b">Gestion club — équipes, calendrier, présences</div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">
+                                    MABB Manager
+                                    <span style="background:#dcfce7;color:#166534;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">✅ Membre{{ role_mabb ? ' · ' ~ role_mabb|lower : '' }}</span>
+                                </div>
+                                <div style="font-size:.72rem;color:#64748b">Ton espace club — équipes, rencontres, missions</div>
+                            </div>
+                            <i class="bi bi-box-arrow-up-right" style="color:var(--mabb-blue)"></i>
+                        </a>
+                    {% elseif statut_mabb == 'pending' %}
+                        <div class="d-flex align-items-center gap-3 p-3 mb-2 rounded"
+                             style="border:2px dashed #f59e0b; background:#fffbeb;">
+                            <div style="width:42px;height:42px;border-radius:10px;background:#f59e0b;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                <i class="bi bi-hourglass-split" style="color:#fff;font-size:1.1rem"></i>
+                            </div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">MABB Manager
+                                    <span style="background:#fef3c7;color:#92400e;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">⏳ En attente</span>
+                                </div>
+                                <div style="font-size:.72rem;color:#64748b">Ta demande d'accès au club est chez les dirigeants — rien d'autre à faire.</div>
+                            </div>
                         </div>
-                        <i class="bi bi-box-arrow-up-right" style="color:var(--mabb-blue)"></i>
-                    </a>
+                    {% else %}
+                        <form method="post" action="{{ path('vitrine_compte_rejoindre_club') }}"
+                              class="d-flex align-items-center gap-3 p-3 mb-2 rounded"
+                              style="border:2px dashed var(--mabb-blue); background:#eff6ff;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('rejoindre_club') }}">
+                            <div style="width:42px;height:42px;border-radius:10px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                <i class="bi bi-gear-fill" style="color:#fff;font-size:1.1rem"></i>
+                            </div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">MABB Manager</div>
+                                <div style="font-size:.72rem;color:#64748b">Rejoins l'espace club en 1 clic (validé par un dirigeant)</div>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-mabb rounded-pill" style="white-space:nowrap;">Rejoindre</button>
+                        </form>
+                    {% endif %}
 
-                    {# ===== PIRB : sous-domaine en prod ===== #}
-                    <a href="https://pirb.mabb.fr" target="_blank" rel="noopener"
-                       class="d-flex align-items-center gap-3 p-3 mb-2 text-decoration-none rounded"
-                       style="border:2px solid var(--mabb-orange); background:#fff7ed; transition:transform .15s"
-                       onmouseover="this.style.transform='translateY(-2px)'"
-                       onmouseout="this.style.transform='none'">
-                        <div style="width:42px;height:42px;border-radius:10px;background:var(--mabb-orange);display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                            <i class="bi bi-person-badge-fill" style="color:#fff;font-size:1.1rem"></i>
-                        </div>
-                        <div style="flex:1;min-width:0">
-                            <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">
-                                PIRB
-                                <span style="background:#dcfce7;color:#166534;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">✅ En ligne</span>
+                    {# ===== PIRB — card selon la fiche joueuse liée ===== #}
+                    {% if joueuse %}
+                        <a href="https://pirb.mabb.fr" target="_blank" rel="noopener"
+                           class="d-flex align-items-center gap-3 p-3 mb-2 text-decoration-none rounded"
+                           style="border:2px solid var(--mabb-orange); background:#fff7ed; transition:transform .15s"
+                           onmouseover="this.style.transform='translateY(-2px)'"
+                           onmouseout="this.style.transform='none'">
+                            <div style="width:42px;height:42px;border-radius:10px;background:var(--mabb-orange);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                <i class="bi bi-person-badge-fill" style="color:#fff;font-size:1.1rem"></i>
                             </div>
-                            <div style="font-size:.72rem;color:#64748b">L'espace perso joueuse — profil, stats, bilan</div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">
+                                    PIRB
+                                    <span style="background:#dcfce7;color:#166534;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px">✅ Ta fiche : {{ joueuse.prenom }}</span>
+                                </div>
+                                <div style="font-size:.72rem;color:#64748b">Ton espace joueuse — stats, shot chart, bilan</div>
+                            </div>
+                            <i class="bi bi-box-arrow-up-right" style="color:var(--mabb-orange)"></i>
+                        </a>
+                    {% else %}
+                        <div class="d-flex align-items-center gap-3 p-3 mb-2 rounded"
+                             style="border:2px solid #e2e8f0; background:#f8fafc; opacity:.85;">
+                            <div style="width:42px;height:42px;border-radius:10px;background:#94a3b8;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                <i class="bi bi-person-badge-fill" style="color:#fff;font-size:1.1rem"></i>
+                            </div>
+                            <div style="flex:1;min-width:0">
+                                <div style="font-weight:700;color:var(--mabb-dark);font-size:.92rem">PIRB <span style="font-size:.62rem; color:#64748b; font-weight:400;">(joueuses)</span></div>
+                                <div style="font-size:.72rem;color:#64748b">Réservé aux joueuses licenciées — demande au staff de lier ta fiche.</div>
+                            </div>
                         </div>
-                        <i class="bi bi-box-arrow-up-right" style="color:var(--mabb-orange)"></i>
-                    </a>
+                    {% endif %}
 
                     <div class="d-flex flex-column gap-2 mt-3">
                         <a href="{{ path('vitrine_membres') }}" class="btn btn-sm btn-outline-secondary rounded-pill">

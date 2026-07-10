@@ -3,8 +3,11 @@
 namespace App\Controller\Vitrine;
 
 use App\Entity\Core\User;
+use App\Entity\Core\UserClubRole;
+use App\Repository\Core\ClubRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -12,9 +15,53 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\String\Slugger\SluggerInterface;
 
+/**
+ * [V2.4j 10/07/2026] UN SEUL COMPTE pour tout l'écosystème MABB :
+ *   - un compte créé sur mabb.fr demande AUTOMATIQUEMENT l'accès au club MABB
+ *     (UserClubRole BENEVOLE en attente de validation dirigeant) → il EST un
+ *     compte Manager du club ;
+ *   - un compte Manager du club MABB a automatiquement « son petit compte
+ *     mabb.fr » (mêmes identifiants, même User) — mon-compte l'accueille ;
+ *   - un compte Manager d'un AUTRE club n'a PAS d'espace mabb.fr : mabb.fr
+ *     est le site DU club — il est redirigé proprement vers Manager.
+ */
 #[Route('/compte')]
 final class CompteController extends AbstractController
 {
+    public function __construct(
+        private readonly ClubRepository $clubRepository,
+        #[Autowire(param: 'app.club_vitrine_slug')]
+        private readonly string $clubVitrineSlug,
+    ) {}
+
+    /** Le club servi par la vitrine (MABB), ou null si base non provisionnée. */
+    private function clubVitrine(): ?\App\Entity\Core\Club
+    {
+        return $this->clubRepository->findOneBy(['slug' => $this->clubVitrineSlug]);
+    }
+
+    /**
+     * Lien d'appartenance de l'user au club de la vitrine (le plus « avancé » :
+     * un rôle actif prime sur un pending), et détection d'autres clubs.
+     *
+     * @return array{ucr: ?UserClubRole, autres_clubs: bool}
+     */
+    private function appartenanceVitrine(User $user): array
+    {
+        $clubVitrine = $this->clubVitrine();
+        $ucrMabb = null;
+        $autresClubs = false;
+        foreach ($user->getUserClubRoles() as $ucr) {
+            if ($clubVitrine !== null && $ucr->getClub()?->getId() === $clubVitrine->getId()) {
+                if ($ucrMabb === null || ($ucr->isStatusActive() && !$ucrMabb->isStatusActive())) {
+                    $ucrMabb = $ucr;
+                }
+            } else {
+                $autresClubs = true;
+            }
+        }
+        return ['ucr' => $ucrMabb, 'autres_clubs' => $autresClubs];
+    }
     /**
      * Page de connexion.
      *
@@ -110,9 +157,24 @@ final class CompteController extends AbstractController
                 $user->setRgpdConsent(true);
 
                 $em->persist($user);
+
+                // [V2.4j] UN compte mabb.fr = UN compte Manager du club MABB.
+                // On crée la demande d'adhésion au club (BENEVOLE, en attente
+                // de validation dirigeant — même workflow que l'inscription
+                // Manager). L'utilisateur n'a RIEN à refaire ailleurs.
+                $clubVitrine = $this->clubVitrine();
+                if ($clubVitrine !== null) {
+                    $ucr = new UserClubRole();
+                    $ucr->setUser($user);
+                    $ucr->setClub($clubVitrine);
+                    $ucr->setRole(UserClubRole::ROLE_BENEVOLE);
+                    $ucr->setStatus(UserClubRole::STATUS_PENDING);
+                    $em->persist($ucr);
+                }
+
                 $em->flush();
 
-                $this->addFlash('success', 'Compte créé avec succès ! Vous pouvez maintenant vous connecter.');
+                $this->addFlash('success', 'Compte créé ! Connecte-toi — les mêmes identifiants marchent aussi sur MABB Manager et PIRB.');
                 return $this->redirectToRoute('vitrine_compte_se_connecter');
             }
         }
@@ -123,11 +185,74 @@ final class CompteController extends AbstractController
     }
 
     #[Route('/mon-compte', name: 'vitrine_compte_mon_compte')]
-    public function monCompte(): Response
+    public function monCompte(\App\Repository\Sport\JoueurRepository $joueurRepo): Response
     {
         $this->denyAccessUnlessGranted('ROLE_USER');
+        /** @var User $user */
+        $user = $this->getUser();
 
-        return $this->render('vitrine/compte/mon_compte.html.twig');
+        $app = $this->appartenanceVitrine($user);
+
+        // [V2.4j] GATE : un membre d'AUTRES clubs uniquement (manager externe)
+        // n'a pas d'espace mabb.fr — le site EST celui du club MABB. Accueil
+        // propre + renvoi vers son vrai espace (Manager). Les super-admins
+        // passent (support).
+        if ($app['ucr'] === null && $app['autres_clubs'] && !$this->isGranted('ROLE_SUPER_ADMIN')) {
+            return $this->render('vitrine/compte/hors_club.html.twig', [
+                'club_vitrine' => $this->clubVitrine(),
+            ]);
+        }
+
+        // Statut d'appartenance au club MABB pour la card écosystème :
+        //   'active'  → membre validé (accès Manager complet selon rôle)
+        //   'pending' → demande en attente de validation dirigeant
+        //   'aucun'   → compte vitrine pur, pas encore rattaché
+        $statutMabb = 'aucun';
+        if ($app['ucr'] !== null) {
+            $statutMabb = $app['ucr']->isStatusActive() ? 'active' : ($app['ucr']->isPending() ? 'pending' : 'aucun');
+        }
+
+        return $this->render('vitrine/compte/mon_compte.html.twig', [
+            'statut_mabb' => $statutMabb,
+            'role_mabb'   => $app['ucr']?->getRole(),
+            // Fiche joueuse liée → l'espace PIRB a du sens pour elle
+            'joueuse'     => $joueurRepo->findOneBy(['user' => $user]),
+        ]);
+    }
+
+    /**
+     * [V2.4j] Rattachement au club MABB en 1 clic depuis mon-compte
+     * (comptes vitrine créés AVANT l'auto-rattachement, ou demande refusée
+     * à refaire). Même workflow : BENEVOLE en attente de validation.
+     */
+    #[Route('/rejoindre-le-club', name: 'vitrine_compte_rejoindre_club', methods: ['POST'])]
+    public function rejoindreClub(Request $request, EntityManagerInterface $em): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        /** @var User $user */
+        $user = $this->getUser();
+
+        if (!$this->isCsrfTokenValid('rejoindre_club', (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Session expirée — réessaie.');
+            return $this->redirectToRoute('vitrine_compte_mon_compte');
+        }
+
+        $clubVitrine = $this->clubVitrine();
+        $app = $this->appartenanceVitrine($user);
+        if ($clubVitrine === null || $app['ucr'] !== null) {
+            return $this->redirectToRoute('vitrine_compte_mon_compte');
+        }
+
+        $ucr = new UserClubRole();
+        $ucr->setUser($user);
+        $ucr->setClub($clubVitrine);
+        $ucr->setRole(UserClubRole::ROLE_BENEVOLE);
+        $ucr->setStatus(UserClubRole::STATUS_PENDING);
+        $em->persist($ucr);
+        $em->flush();
+
+        $this->addFlash('success', 'Demande envoyée au club ! Un dirigeant va la valider — tu auras alors accès à MABB Manager.');
+        return $this->redirectToRoute('vitrine_compte_mon_compte');
     }
 
     #[Route('/update-profil', name: 'vitrine_compte_update_profil', methods: ['POST'])]

@@ -1,0 +1,28 @@
+{% extends 'vitrine/base.html.twig' %}
+
+{# [V2.4j] Un membre d'un AUTRE club atterrit ici : mabb.fr est le site DU club
+   MABB — son espace à lui, c'est MABB Manager. Message court, sortie claire. #}
+
+{% block title %}Mon compte — MABB{% endblock %}
+
+{% block body %}
+<section class="section">
+    <div class="container" style="max-width: 560px;">
+        <div class="card card-mabb p-5 text-center">
+            <div style="font-size:2.6rem;">🏀</div>
+            <h1 class="h4 mt-3">Ton espace est sur MABB Manager</h1>
+            <p class="text-muted">
+                mabb.fr est le site du club <strong>{{ club_vitrine ? club_vitrine.nom : 'Amiens Métropole Basket Ball' }}</strong>.
+                Ton compte est rattaché à un autre club : retrouve tout ton espace
+                (équipes, rencontres, missions) sur la plateforme Manager — mêmes identifiants.
+            </p>
+            <a href="https://manager.mabb.fr" class="btn btn-mabb rounded-pill mt-2">
+                <i class="bi bi-clipboard-data me-1"></i> Aller sur MABB Manager
+            </a>
+            <a href="{{ path('vitrine_logout') }}" class="btn btn-sm btn-outline-secondary rounded-pill mt-3">
+                Se déconnecter
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

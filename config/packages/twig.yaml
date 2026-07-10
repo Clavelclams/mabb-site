@@ -1,5 +1,10 @@
 twig:
     file_name_pattern: '*.twig'
+    globals:
+        # [V2.4j] Slug du club servi par la vitrine mabb.fr — permet aux
+        # templates Manager d'afficher les ponts écosystème (« Mon compte
+        # mabb.fr ») UNIQUEMENT aux membres de CE club.
+        club_vitrine_slug: '%app.club_vitrine_slug%'
 
 when@test:
     twig:
