@@ -1039,6 +1039,10 @@
                             <i class="bi bi-globe"></i> Mon compte mabb.fr
                         </a>
                     {% endif %}
+                    {# [V2.4k] Guide « première fois » — toujours à portée de main #}
+                    <a href="{{ path('manager_bienvenue') }}" class="user-menu-item">
+                        <i class="bi bi-question-circle"></i> Guide du site
+                    </a>
                     <div class="user-menu-item user-menu-saison">
                         <label for="saisonSelect"><i class="bi bi-calendar3"></i> Saison</label>
                         <form method="post" action="{{ path('saison_changer') }}">

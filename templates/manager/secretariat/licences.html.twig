@@ -42,6 +42,7 @@
             {% else %}
                 <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="btn-mabb-ghost"><i class="bi bi-inbox"></i> Pré-inscriptions</a>
             {% endif %}
+            <a href="{{ path('manager_secretariat_annuaire', {saison: saison}) }}" class="btn-mabb-ghost"><i class="bi bi-journal-richtext"></i> Annuaire</a>
             <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost"><i class="bi bi-upload"></i> Import Excel</a>
             <form method="get">
                 <select name="saison" class="form-select" onchange="this.form.submit()">
@@ -167,6 +168,12 @@
                             <th style="padding:7px;">Téléphone</th>
                             <th style="padding:7px;">Catégorie</th>
                             <th style="padding:7px;">Tarif</th>
+                            {# [V2.4l] Les colonnes d'aides de SON Excel, telles quelles #}
+                            <th style="padding:7px;" title="Aides Mairie">Mairie</th>
+                            <th style="padding:7px;" title="PASS">PASS</th>
+                            <th style="padding:7px;" title="Chèques Collège">Chq coll.</th>
+                            <th style="padding:7px;" title="Chèques">Chq</th>
+                            <th style="padding:7px;" title="Espèces">Esp.</th>
                             <th style="padding:7px;">Paiement</th>
                             <th style="padding:7px;">Secteur</th>
                             <th style="padding:7px;">Relance</th>
@@ -189,10 +196,12 @@
                             <td style="padding:7px;">{{ d.dateNaissance ? d.dateNaissance|date('d/m/Y') : '—' }}</td>
                             <td style="padding:7px;">{{ d.telephone ?? '—' }}</td>
                             <td style="padding:7px;">{{ d.categorie ?? '—' }}</td>
-                            <td style="padding:7px;">
-                                {{ d.tarif ?? '—' }}
-                                {% if d.aides %}<small style="color:var(--mabb-muted);" title="{{ d.aides|json_encode }}"> +aides</small>{% endif %}
-                            </td>
+                            <td style="padding:7px;">{{ d.tarif ?? '—' }}</td>
+                            <td style="padding:7px;">{{ d.aides['aide_mairie'] ?? '' }}</td>
+                            <td style="padding:7px;">{{ d.aides['pass'] ?? '' }}</td>
+                            <td style="padding:7px;">{{ d.aides['cheques_college'] ?? '' }}</td>
+                            <td style="padding:7px;">{{ d.aides['cheques'] ?? '' }}</td>
+                            <td style="padding:7px;">{{ d.aides['especes'] ?? '' }}</td>
                             <td style="padding:7px;">
                                 <form method="post" action="{{ path('manager_secretariat_licence_statut', {id: d.id}) }}" style="display:inline;">
                                     <input type="hidden" name="_token" value="{{ csrf_token('secretariat_statut_' ~ d.id) }}">

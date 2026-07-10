@@ -485,6 +485,127 @@ class SecretariatController extends AbstractController
     }
 
     // ────────────────────────────────────────────────────────────────────
+    // [V2.4l] L'ANNUAIRE — « la fiche de chacun », tout lisible d'un coup
+    // ────────────────────────────────────────────────────────────────────
+
+    /**
+     * L'annuaire du club : UNE recherche, et pour chaque personne TOUT est
+     * visible sans cliquer (naissance, catégorie, téléphones, parents et
+     * leurs coordonnées, adresse, responsable de secteur, paiement).
+     *
+     * Pensé pour une secrétaire qui vient du PAPIER : gros caractères,
+     * zéro manipulation, bouton Imprimer. Fusionne les fiches Joueur, les
+     * dossiers licences de la saison, les contacts parents et signale les
+     * pré-inscriptions à traiter. Recherche insensible aux accents
+     * (NomOutil), sur les noms ET les noms de parents.
+     */
+    #[Route('/annuaire', name: 'annuaire', methods: ['GET'])]
+    public function annuaire(Request $request): Response
+    {
+        $club = $this->clubOuRedirect();
+        if ($club instanceof Response) { return $club; }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_SECRETARIAT, $club);
+
+        $saison = $this->saisonDemandee($request);
+        $q      = trim((string) $request->query->get('q', ''));
+        $qNorm  = $q !== '' ? \App\Service\Secretariat\NomOutil::normaliser($q) : '';
+        // [V2.4l] Filtre par SECTEUR (demande secrétaire : « tel joueur = tel
+        // secteur » pour gérer ses classeurs) — s'applique sur le site du dossier.
+        $secteurFiltre = trim((string) $request->query->get('secteur', ''));
+
+        // --- Sources ---
+        $joueuses = $this->joueurRepo->findBy(['club' => $club, 'isActive' => true, 'isTemporaire' => false], ['nom' => 'ASC', 'prenom' => 'ASC']);
+        $dossiers = $this->dossierRepo->findBy(['club' => $club, 'saison' => $saison]);
+        $dossierParJoueur = [];
+        $dossiersSansFiche = [];
+        foreach ($dossiers as $d) {
+            if ($d->getJoueur() !== null) {
+                $dossierParJoueur[(int) $d->getJoueur()->getId()] = $d;
+            } else {
+                $dossiersSansFiche[] = $d;
+            }
+        }
+        // Contacts parents en une requête (indexés par joueuse)
+        $responsablesParJoueur = [];
+        if ($joueuses !== []) {
+            foreach ($this->em->getRepository(\App\Entity\Sport\ResponsableLegal::class)
+                ->findBy(['joueur' => $joueuses]) as $r) {
+                $responsablesParJoueur[(int) $r->getJoueur()->getId()][] = $r;
+            }
+        }
+
+        // --- Fiches unifiées ---
+        $fiches = [];
+        foreach ($joueuses as $j) {
+            $dossier = $dossierParJoueur[(int) $j->getId()] ?? null;
+            $fiches[] = [
+                'type'         => 'joueuse',
+                'joueur'       => $j,
+                'dossier'      => $dossier,
+                'nom'          => (string) $j->getNom(),
+                'prenom'       => (string) $j->getPrenom(),
+                'naissance'    => $j->getDateNaissance(),
+                'categorie'    => $dossier?->getCategorie() ?? $j->getEquipe()?->getNom(),
+                'telephone'    => $j->getTelephone() ?? $dossier?->getTelephone(),
+                'site'         => $dossier?->getSite(),
+                'parents'      => $responsablesParJoueur[(int) $j->getId()] ?? [],
+            ];
+        }
+        foreach ($dossiersSansFiche as $d) {
+            $fiches[] = [
+                'type'      => 'dossier',
+                'joueur'    => null,
+                'dossier'   => $d,
+                'nom'       => (string) $d->getNomComplet(),
+                'prenom'    => '',
+                'naissance' => $d->getDateNaissance(),
+                'categorie' => $d->getCategorie(),
+                'telephone' => $d->getTelephone(),
+                'site'      => $d->getSite(),
+                'parents'   => [],
+            ];
+        }
+
+        // --- Filtre recherche (nom, prénom, parents, téléphone) ---
+        if ($qNorm !== '') {
+            $fiches = array_values(array_filter($fiches, function (array $f) use ($qNorm) {
+                $meule = $f['nom'] . ' ' . $f['prenom'] . ' ' . ($f['telephone'] ?? '');
+                foreach ($f['parents'] as $p) {
+                    $meule .= ' ' . $p->getNomComplet() . ' ' . ($p->getTelephone() ?? '') . ' ' . ($p->getEmail() ?? '');
+                }
+                return str_contains(\App\Service\Secretariat\NomOutil::normaliser($meule), $qNorm);
+            }));
+        }
+        // Filtre secteur ('À placer' inclut les fiches SANS dossier : à traiter)
+        if ($secteurFiltre !== '') {
+            $fiches = array_values(array_filter($fiches, function (array $f) use ($secteurFiltre) {
+                $site = $f['site'] ?? ($f['dossier'] === null ? 'À placer' : null);
+                return $site !== null && mb_strtoupper($site) === mb_strtoupper($secteurFiltre);
+            }));
+        }
+        usort($fiches, fn(array $a, array $b) => [mb_strtoupper($a['nom']), $a['prenom']] <=> [mb_strtoupper($b['nom']), $b['prenom']]);
+
+        // Pré-inscriptions à traiter qui matchent la recherche (rappel doux)
+        $preInscriptionsMatch = [];
+        foreach ($this->preInscriptionRepo->findByClubEtStatut($club, \App\Entity\Sport\PreInscription::STATUT_NOUVELLE) as $pre) {
+            if ($qNorm === '' || str_contains(\App\Service\Secretariat\NomOutil::normaliser($pre->getNomComplet() . ' ' . ($pre->getParentNom() ?? '')), $qNorm)) {
+                $preInscriptionsMatch[] = $pre;
+            }
+        }
+
+        return $this->render('manager/secretariat/annuaire.html.twig', [
+            'club'    => $club,
+            'saison'  => $saison,
+            'saisons' => $this->saisonService->getSaisonsDisponibles(),
+            'q'       => $q,
+            'fiches'  => $fiches,
+            'pre_inscriptions' => $preInscriptionsMatch,
+            'secteurs'       => $this->secteurRepo->findByClub($club),
+            'filtre_secteur' => $secteurFiltre,
+        ]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
     // Responsables légaux (depuis la fiche joueuse)
     // ────────────────────────────────────────────────────────────────────
 
@@ -615,6 +736,15 @@ class SecretariatController extends AbstractController
     /** Retour à la liste en conservant les filtres (transmis en champs cachés). */
     private function redirectDossiers(Request $request, DossierLicence $dossier): Response
     {
+        // [V2.4l] Les actions lancées depuis l'ANNUAIRE y retournent (avec
+        // la recherche et le filtre secteur intacts) — pas vers le classeur.
+        if ((string) $request->request->get('retour', '') === 'annuaire') {
+            return $this->redirectToRoute('manager_secretariat_annuaire', array_filter([
+                'saison'  => $dossier->getSaison(),
+                'q'       => (string) $request->request->get('retour_q', ''),
+                'secteur' => (string) $request->request->get('retour_secteur', ''),
+            ]));
+        }
         return $this->redirectToRoute('manager_secretariat_licences', array_filter([
             'saison'    => $dossier->getSaison(),
             'site'      => (string) $request->request->get('retour_site', ''),

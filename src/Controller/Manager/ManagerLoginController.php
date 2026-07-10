@@ -139,7 +139,14 @@ class ManagerLoginController extends AbstractController
                 //   - les postes à pourvoir bientôt (un bénévole peut candidater)
                 //   - mes enfants liés (fiche + bilan à un clic)
                 $mesMissions = $affectationRepository->findMissionsAVenir($userConnecte);
-                $postesVacants = $affectationRepository->findRencontresAvecRolesVacants($now);
+                // ⚠️ findRencontresAvecRolesVacants ne filtre PAS par club
+                // (méthode cross-club historique) → isolation multi-tenant
+                // appliquée ICI, sinon la card afficherait les matchs des
+                // autres clubs. Limité à 5 pour la card.
+                $postesVacants = array_slice(array_values(array_filter(
+                    $affectationRepository->findRencontresAvecRolesVacants($now),
+                    fn($r) => $r->getClub()?->getId() === $club->getId()
+                )), 0, 5);
                 $mesEnfants = $parentJoueurRepository->findEnfantsActifs($userConnecte);
             }
 
@@ -163,6 +170,25 @@ class ManagerLoginController extends AbstractController
             'postes_vacants'       => $postesVacants,
             'mes_enfants'          => $mesEnfants,
             'is_staff'             => $club && $this->isGranted(\App\Security\Voter\ClubVoter::CLUB_STAFF, $club),
+        ]);
+    }
+
+    /**
+     * [V2.4k] GUIDE « Ma première fois sur le site » — page d'accueil pédagogique.
+     * Adaptée au rôle (membre / staff / secrétariat) : chaque section explique
+     * UN geste avec le lien direct pour le faire. Accessible en permanence via
+     * le menu utilisateur (❓ Guide) + bannière première visite du dashboard.
+     */
+    #[Route('/bienvenue', name: 'manager_bienvenue', methods: ['GET'])]
+    public function bienvenue(\App\Security\Tenant\TenantResolver $tenantResolver): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_USER');
+        $club = $tenantResolver->getCurrentClub();
+
+        return $this->render('manager/bienvenue.html.twig', [
+            'club'           => $club,
+            'is_staff'       => $club && $this->isGranted(\App\Security\Voter\ClubVoter::CLUB_STAFF, $club),
+            'is_secretariat' => $club && $this->isGranted(\App\Security\Voter\ClubVoter::CLUB_SECRETARIAT, $club),
         ]);
     }
 

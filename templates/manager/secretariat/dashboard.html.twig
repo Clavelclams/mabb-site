@@ -20,6 +20,14 @@
         </form>
     </div>
 
+    {# ===== [V2.4l] LA recherche — le geste n°1 de la secrétaire ===== #}
+    <form method="get" action="{{ path('manager_secretariat_annuaire') }}" style="margin-bottom:16px; display:flex; gap:8px;">
+        <input type="hidden" name="saison" value="{{ saison }}">
+        <input type="search" name="q" style="flex:1; font-size:1.15rem; padding:14px 18px; border:2px solid var(--mabb-orange, #ea580c); border-radius:14px;"
+               placeholder="🔍  Chercher quelqu'un — un nom, un parent, un téléphone…">
+        <button type="submit" class="btn-mabb-orange" style="font-size:1rem;">Chercher</button>
+    </form>
+
     {# ===== Compteurs ===== #}
     <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
         <div class="card-mabb" style="flex:1; min-width:150px;"><div class="card-body">
@@ -42,15 +50,23 @@
         {% endfor %}
     </div>
 
-    {# ===== Actions rapides ===== #}
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
-        <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="btn-mabb-orange"><i class="bi bi-journal-bookmark"></i> Classeur licences</a>
-        {# [V2.4h] Demandes déposées par les familles sur mabb.fr/pre-inscription #}
-        <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="{{ nb_pre_inscriptions > 0 ? 'btn-mabb-orange' : 'btn-mabb-ghost' }}">
-            <i class="bi bi-inbox"></i> Pré-inscriptions{% if nb_pre_inscriptions > 0 %} ({{ nb_pre_inscriptions }}){% endif %}
+    {# ===== [V2.4l] Actions — GROS boutons, mots simples, une action = un endroit ===== #}
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:18px;">
+        <a href="{{ path('manager_secretariat_annuaire', {saison: saison}) }}" class="btn-mabb-orange" style="padding:16px; font-size:1rem; text-align:center;">
+            <i class="bi bi-journal-richtext"></i> L'annuaire<br><small style="font-weight:400; opacity:.85;">la fiche de chacun</small>
         </a>
-        <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost"><i class="bi bi-upload"></i> Importer les Excel</a>
-        <a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="btn-mabb-ghost"><i class="bi bi-calendar-week"></i> Organisation du week-end</a>
+        <a href="{{ path('manager_secretariat_licences', {saison: saison}) }}" class="btn-mabb-ghost" style="padding:16px; font-size:1rem; text-align:center;">
+            <i class="bi bi-journal-bookmark"></i> Le classeur<br><small style="font-weight:400; opacity:.75;">licences &amp; paiements</small>
+        </a>
+        <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="{{ nb_pre_inscriptions > 0 ? 'btn-mabb-orange' : 'btn-mabb-ghost' }}" style="padding:16px; font-size:1rem; text-align:center;">
+            <i class="bi bi-inbox"></i> Les demandes{% if nb_pre_inscriptions > 0 %} ({{ nb_pre_inscriptions }}){% endif %}<br><small style="font-weight:400; opacity:.75;">nouvelles licences</small>
+        </a>
+        <a href="{{ path('manager_rencontre_staff_organisation_weekend') }}" class="btn-mabb-ghost" style="padding:16px; font-size:1rem; text-align:center;">
+            <i class="bi bi-calendar-week"></i> Le week-end<br><small style="font-weight:400; opacity:.75;">qui fait quoi aux matchs</small>
+        </a>
+        <a href="{{ path('manager_secretariat_import') }}" class="btn-mabb-ghost" style="padding:16px; font-size:1rem; text-align:center;">
+            <i class="bi bi-upload"></i> Mes Excel<br><small style="font-weight:400; opacity:.75;">les faire entrer ici</small>
+        </a>
     </div>
 
     {# ===== À relancer en priorité ===== #}

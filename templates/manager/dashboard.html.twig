@@ -11,6 +11,26 @@
     </div>
 
     {# ============================================================
+       [V2.4k] BANNIÈRE PREMIÈRE VISITE — visible tant que le guide
+       n'a pas été ouvert (flag localStorage posé par /bienvenue).
+       ============================================================ #}
+    <div id="guideBanner" style="display:none; margin-bottom:16px; padding:14px 18px; border-radius:12px;
+         background:linear-gradient(135deg, #fff7ed, #ffedd5); border:1px solid #fdba74;
+         align-items:center; gap:14px; flex-wrap:wrap;">
+        <span style="font-size:1.5rem;">🧭</span>
+        <div style="flex:1; min-width:200px;">
+            <strong style="font-size:.92rem;">Première fois ici ?</strong>
+            <div style="font-size:.8rem; color:#9a3412;">Le tour du site en 2 minutes — chaque étape a son bouton.</div>
+        </div>
+        <a href="{{ path('manager_bienvenue') }}" class="btn-mabb-orange" style="font-size:.82rem;">Suivre le guide</a>
+        <button type="button" onclick="try{localStorage.setItem('mabb_guide_vu','1')}catch(e){}; this.parentElement.style.display='none';"
+                style="border:none; background:none; cursor:pointer; color:#9a3412;" title="Masquer">✕</button>
+    </div>
+    <script>
+        try { if (!localStorage.getItem('mabb_guide_vu')) { document.getElementById('guideBanner').style.display = 'flex'; } } catch (e) {}
+    </script>
+
+    {# ============================================================
        FEED "POUR TOI" — Phase 1 MVP
        Items personnalisés agrégés par App\Service\FeedAggregator :
          - Prochaine réunion à venir où je suis convoqué
@@ -62,6 +82,81 @@
                 {% endfor %}
             </div>
         </div>
+    {% endif %}
+
+    {# ============================================================
+       [V2.4k] MON ESPACE — cards MEMBRE (bénévole / parent) : mes
+       missions, les postes à pourvoir (candidater), mes enfants.
+       Affichées seulement si pertinentes — un dashboard qui parle
+       aussi à ceux qui ne sont pas staff.
+       ============================================================ #}
+    {% if (mes_missions is defined and mes_missions|length > 0)
+        or (postes_vacants is defined and postes_vacants|length > 0)
+        or (mes_enfants is defined and (mes_enfants|length > 0 or not is_staff)) %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px; margin-bottom:20px;">
+
+        {# --- Mes missions de match (chrono, buvette, e-marque…) --- #}
+        {% if mes_missions is defined and mes_missions|length > 0 %}
+            <div class="card-mabb" style="border-top:4px solid #16a34a;">
+                <div class="card-header"><i class="bi bi-person-check"></i> Mes missions</div>
+                <div class="card-body" style="font-size:.84rem;">
+                    {% for m in mes_missions|slice(0, 3) %}
+                        <div style="display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid var(--mabb-border);">
+                            <span><strong>{{ m.roleLabel }}</strong>{% if m.heureRdv %} <small style="color:var(--mabb-muted);">rdv {{ m.heureRdv }}</small>{% endif %}</span>
+                            <span style="color:var(--mabb-muted); white-space:nowrap;">{{ m.rencontre and m.rencontre.date ? m.rencontre.date|date('d/m H\\hi') : '' }}</span>
+                        </div>
+                    {% endfor %}
+                    <a href="{{ path('manager_rencontre_staff_mes_missions') }}" style="font-size:.78rem; display:inline-block; margin-top:8px;">Toutes mes missions →</a>
+                </div>
+            </div>
+        {% endif %}
+
+        {# --- Le club cherche du monde : un bénévole peut candidater --- #}
+        {% if postes_vacants is defined and postes_vacants|length > 0 %}
+            <div class="card-mabb" style="border-top:4px solid var(--mabb-orange);">
+                <div class="card-header"><i class="bi bi-megaphone"></i> Le club cherche du monde</div>
+                <div class="card-body" style="font-size:.84rem;">
+                    <p style="margin:0 0 8px; color:var(--mabb-muted);">Des postes (chrono, buvette, e-marque…) sont à pourvoir — candidate en un clic :</p>
+                    {% for r in postes_vacants|slice(0, 3) %}
+                        <div style="display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid var(--mabb-border);">
+                            <span>{{ r.equipe ? r.equipe.nom : '' }} vs {{ r.adversaire }}</span>
+                            <a href="{{ path('manager_rencontre_staff_show', {id: r.id}) }}" style="white-space:nowrap; font-size:.78rem;">
+                                {{ r.date ? r.date|date('d/m') : '' }} · Je candidate →
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {# --- Mes enfants (liens ParentJoueur validés) --- #}
+        {% if mes_enfants is defined and mes_enfants|length > 0 %}
+            <div class="card-mabb" style="border-top:4px solid var(--mabb-blue);">
+                <div class="card-header"><i class="bi bi-people-fill"></i> Mes enfants</div>
+                <div class="card-body" style="font-size:.84rem;">
+                    {% for pj in mes_enfants %}
+                        {% if pj.joueur %}
+                        <div style="display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid var(--mabb-border);">
+                            <span><strong>{{ pj.joueur.prenom }} {{ pj.joueur.nom }}</strong>{% if pj.joueur.equipe %} <small style="color:var(--mabb-muted);">{{ pj.joueur.equipe.nom }}</small>{% endif %}</span>
+                            <a href="{{ path('manager_joueur_show', {id: pj.joueur.id}) }}" style="white-space:nowrap; font-size:.78rem;">Fiche &amp; bilan →</a>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% elseif mes_enfants is defined and not is_staff %}
+            {# Pas d'enfant lié + pas staff → proposer le lien (parent probable) #}
+            <div class="card-mabb" style="border-top:4px solid var(--mabb-blue); border-style:solid;">
+                <div class="card-header"><i class="bi bi-people"></i> Parent au club ?</div>
+                <div class="card-body" style="font-size:.84rem;">
+                    <p style="margin:0 0 8px; color:var(--mabb-muted);">Fais le lien avec ton enfant pour suivre sa fiche, ses stats et son bilan depuis ton compte.</p>
+                    <a href="https://pirb.mabb.fr/mes-enfants" target="_blank" rel="noopener" class="btn-mabb-ghost" style="font-size:.78rem;">
+                        <i class="bi bi-link-45deg"></i> Être lié·e à mon enfant
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
     {% endif %}
 
     {# ========================================================

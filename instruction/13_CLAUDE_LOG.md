@@ -10,6 +10,33 @@
 
 ---
 
+### 2026-07-10 — V2.4l : l'ANNUAIRE — l'espace secrétaire pensé pour elle
+
+- Objectif (Clavel) : optimiser l'espace secrétaire pour une personne senior qui vient du PAPIER (« qu'elle ne se sente pas submergée par la technologie ») ; une page avec LA FICHE DE CHACUN (toutes les colonnes de son Excel, rien de perdu) ; filtrer/affecter les joueuses PAR SECTEUR ; le détail du règlement (« pas juste payé/pas payé »).
+- Principes UX retenus : UNE grande recherche = le geste n°1 ; TOUT lisible sans cliquer ; gros caractères ; mots simples (« L'annuaire », « Le classeur », « Les demandes », « Le week-end », « Mes Excel ») ; bouton IMPRIMER (respect du papier).
+- Actions :
+  1. **Page `/secretariat/annuaire`** (manager_secretariat_annuaire) : fusionne fiches Joueur + dossiers licences de la saison + contacts parents + pré-inscriptions à traiter. Chaque fiche affiche d'un coup d'œil : type de licence, n°, naissance, catégorie, tél joueuse, TARIF + DÉTAIL DES AIDES (Mairie / PASS / Chèques collège / Chèques / Espèces) + statut paiement, secteur, et le bloc parents (nom, téléphones, mail, adresse, note responsable secteur). Recherche insensible aux accents (NomOutil) sur noms, parents ET téléphones. Print-friendly (secteur imprimé en toutes lettres).
+  2. **Filtre + affectation SECTEUR dans l'annuaire** : dropdown de filtre (secteurs + « À placer », qui inclut les joueuses SANS dossier) et select de changement de secteur sur chaque fiche — POST vers licence_site avec retour=annuaire (redirectDossiers étendu : la recherche et le filtre restent intacts au retour).
+  3. **Classeur : les colonnes de SON Excel** — Mairie / PASS / Chq coll. / Chq / Esp. ajoutées au tableau (thead+tbody 15/15), plus de « +aides » caché en tooltip.
+  4. **Dashboard secrétariat simplifié** : grande barre « Chercher quelqu'un » en tête (→ annuaire) + 5 GROS boutons à sous-titres en français simple.
+- Vérifications : PHP parsé OK (755 lignes), 2 templates équilibrés, variables/routes/boucle retour annuaire confirmées, colonnes thead/tbody alignées.
+- Reste (idées non codées, à valider avec la secrétaire) : édition inline des montants d'aides directement dans le tableau (aujourd'hui via ✏️ la page dossier) ; export PDF de l'annuaire par secteur.
+
+---
+
+### 2026-07-10 — V2.4k : espace MEMBRE (bénévole/parent) + guide « première fois »
+
+- Objectif (Clavel) : un dashboard qui parle aux bénévoles et parents (pas que staff) — événements, réunions/PV, missions, lien enfant, bilan enfant — et un bouton « ma première fois sur le site » avec une vraie page guide intuitive.
+- Constat : le dashboard chargeait DÉJÀ beaucoup pour les membres (feed « Pour toi » : convocations réunions + PV non lus via FeedAggregator ; matchs/événements/séances 7 jours) et tout l'outillage existait (AffectationMatch::findMissionsAVenir, findRencontresAvecRolesVacants, ParentJoueur::findEnfantsActifs, PIRB /mes-enfants). Il manquait la PRÉSENTATION membre et le guide.
+- Actions :
+  1. **Section « Mon espace » du dashboard** (cards conditionnelles) : Mes missions (3 prochaines + heure de RDV → lien mes-missions) ; « Le club cherche du monde » (rencontres avec postes vacants → « Je candidate » vers la page staff — le workflow candidature bénévole existait) ; « Mes enfants » (fiche & bilan à un clic) ou, si pas staff et aucun lien, CTA « Être lié·e à mon enfant » → PIRB /mes-enfants.
+  2. **Fix sécurité au passage** : `findRencontresAvecRolesVacants` est CROSS-CLUB (pas de filtre club) → isolation multi-tenant appliquée dans le controller (filtre par club actif + limite 5). Sans ça, la card affichait les matchs des autres clubs. Dette notée : la logique « vacant » de cette méthode est approximative (une rencontre sans AUCUNE affectation n'apparaît pas).
+  3. **Guide `/bienvenue`** (manager_bienvenue) : page « une idée = une carte = une phrase = un bouton » — écosystème un-seul-compte, dashboard, événements, missions/candidatures, parents (lien enfant + fiche/bilan), sections staff et secrétariat visibles seulement aux concernés, contact aide. Marque `mabb_guide_vu` en localStorage.
+  4. **Entrées du guide** : bouton « ❓ Guide du site » permanent dans le menu utilisateur + bannière « Première fois ici ? » sur le dashboard (dismissible, disparaît après ouverture du guide — localStorage, zéro table).
+- Vérifications : PHP parsé OK, 2 templates équilibrés, 10/10 routes existantes, types des repositories confirmés (AffectationMatch[] avec jointures, Rencontre[], ParentJoueur[]). Note perf non bloquante : findEnfantsActifs sans addSelect → lazy loading léger.
+
+---
+
 ### 2026-07-10 — V2.4j : écosystème UN SEUL COMPTE (mabb.fr ↔ Manager ↔ PIRB)
 
 - Objectif (Clavel) : expérience immersive — compte mabb.fr = compte Manager du club MABB ; manager d'un AUTRE club = pas d'espace mabb.fr ; membre Manager MABB = a « son petit compte mabb.fr » sans rien faire ; tout intuitif, à portée de main, sans pavés.

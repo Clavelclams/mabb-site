@@ -1,0 +1,179 @@
+{% extends 'manager/base.html.twig' %}
+
+{# [V2.4l] L'ANNUAIRE — pensé pour une secrétaire qui vient du papier :
+   UNE grande recherche, TOUT lisible sans cliquer, gros caractères,
+   bouton Imprimer. La fiche de chacun : identité, naissance, catégorie,
+   téléphones, parents + coordonnées, adresse, secteur, paiement. #}
+
+{% block title %}Annuaire du club — {{ saison }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* Gros et lisible — public senior assumé */
+        .ann-search {
+            width:100%; font-size:1.15rem; padding:14px 18px;
+            border:2px solid var(--mabb-orange, #ea580c); border-radius:14px;
+        }
+        .ann-fiche {
+            border:1px solid var(--mabb-border); border-radius:12px;
+            padding:14px 18px; margin-bottom:10px; background:#fff;
+        }
+        .ann-nom { font-size:1.05rem; font-weight:800; }
+        .ann-ligne { font-size:.92rem; margin-top:3px; }
+        .ann-ligne .lbl { color:var(--mabb-muted); }
+        .ann-parents {
+            margin-top:8px; padding:8px 12px; background:#f8fafc;
+            border:1px solid var(--mabb-border); border-radius:8px; font-size:.9rem;
+        }
+        .ann-badge { font-size:.75rem; padding:2px 10px; border-radius:999px; font-weight:700; white-space:nowrap; }
+        @media print {
+            .navbar, nav, .ann-noprint, .btn-mabb-ghost, .btn-mabb-orange { display:none !important; }
+            .ann-fiche { break-inside:avoid; }
+            .ann-print-secteur { display:inline !important; } /* le secteur s'imprime en toutes lettres */
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-journal-richtext"></i> L'annuaire du club</h1>
+            <p class="subtitle">{{ fiches|length }} fiche{{ fiches|length > 1 ? 's' : '' }} — saison {{ saison }}. Tout est là : tape un nom, tout s'affiche.</p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-mabb-ghost" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer</button>
+            <a href="{{ path('manager_secretariat_dashboard') }}" class="btn-mabb-ghost"><i class="bi bi-arrow-left"></i> Secrétariat</a>
+        </div>
+    </div>
+
+    {# ===== LA recherche ===== #}
+    <form method="get" class="ann-noprint" style="margin-bottom:16px; display:flex; gap:8px; flex-wrap:wrap;">
+        <input type="search" name="q" value="{{ q }}" class="ann-search" style="flex:1; min-width:240px;"
+               placeholder="🔍  Un nom, un parent, un téléphone…" autofocus>
+        {# [V2.4l] Filtre SECTEUR — « tel joueur = tel secteur » #}
+        <select name="secteur" class="form-select" style="width:auto; font-size:1rem;" onchange="this.form.submit()">
+            <option value="">Tous les secteurs</option>
+            {% for s in secteurs %}<option value="{{ s.nom }}" {{ filtre_secteur == s.nom ? 'selected' : '' }}>{{ s.nom }}</option>{% endfor %}
+            <option value="À placer" {{ filtre_secteur == 'À placer' ? 'selected' : '' }}>À placer (sans secteur)</option>
+        </select>
+        <select name="saison" class="form-select" style="width:auto; font-size:1rem;" onchange="this.form.submit()">
+            {% for s in saisons %}<option value="{{ s }}" {{ s == saison ? 'selected' : '' }}>Saison {{ s }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn-mabb-orange" style="font-size:1rem;">Chercher</button>
+        {% if q or filtre_secteur %}<a href="{{ path('manager_secretariat_annuaire', {saison: saison}) }}" class="btn-mabb-ghost" style="font-size:1rem;">Tout afficher</a>{% endif %}
+    </form>
+
+    {# ===== Pré-inscriptions qui correspondent (rappel doux) ===== #}
+    {% for pre in pre_inscriptions %}
+        <div class="ann-fiche ann-noprint" style="border:2px dashed var(--mabb-orange); background:#fff7ed;">
+            <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+                <div>
+                    <span class="ann-nom">{{ pre.nomComplet }}</span>
+                    <span class="ann-badge" style="background:#ffedd5; color:#9a3412;">📥 Nouvelle demande de licence</span>
+                    <div class="ann-ligne">{{ pre.parentNom ? 'Parent : ' ~ pre.parentNom : '' }}{{ pre.parentTelephone ? ' · ' ~ pre.parentTelephone : '' }}</div>
+                </div>
+                <a href="{{ path('manager_secretariat_pre_inscriptions') }}" class="btn-mabb-orange" style="font-size:.85rem;">Traiter la demande</a>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% if fiches is empty and pre_inscriptions is empty %}
+        <div class="card-mabb"><div class="card-body" style="text-align:center; color:var(--mabb-muted); padding:40px; font-size:1rem;">
+            {% if q %}
+                Personne ne correspond à « {{ q }} ».<br>Essaie avec moins de lettres, ou <a href="{{ path('manager_secretariat_annuaire') }}">affiche tout le monde</a>.
+            {% else %}
+                L'annuaire est vide pour {{ saison }} — utilise « Préparer la saison » dans le
+                <a href="{{ path('manager_secretariat_licences') }}">classeur</a> ou importe tes Excel.
+            {% endif %}
+        </div></div>
+    {% endif %}
+
+    {# ===== Les fiches ===== #}
+    {% for f in fiches %}
+        <div class="ann-fiche">
+            <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:baseline;">
+                <div>
+                    <span class="ann-nom">{{ f.nom|upper }} {{ f.prenom }}</span>
+                    {% if f.categorie %}<span class="ann-badge" style="background:#eff6ff; color:#1d4ed8;">{{ f.categorie }}</span>{% endif %}
+                    {% if f.dossier %}
+                        <span class="ann-badge" style="background:{{ f.dossier.paiementStatut == 'PAYE' or f.dossier.paiementStatut == 'EXONERE' ? '#dcfce7' : '#fee2e2' }};
+                              color:{{ f.dossier.paiementStatut == 'PAYE' or f.dossier.paiementStatut == 'EXONERE' ? '#166534' : '#b91c1c' }};">
+                            {{ f.dossier.paiementLabel }}{{ f.dossier.tarif ? ' · ' ~ f.dossier.tarif : '' }}
+                        </span>
+                    {% else %}
+                        <span class="ann-badge ann-noprint" style="background:#fef3c7; color:#92400e;">pas de dossier {{ saison }}</span>
+                    {% endif %}
+                </div>
+                <div class="ann-noprint" style="display:flex; gap:6px; align-items:center;">
+                    {# [V2.4l] SECTEUR modifiable ICI — « tel joueur = tel secteur » #}
+                    {% if f.dossier %}
+                        <form method="post" action="{{ path('manager_secretariat_licence_site', {id: f.dossier.id}) }}" style="display:inline;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('secretariat_site_' ~ f.dossier.id) }}">
+                            <input type="hidden" name="retour" value="annuaire">
+                            <input type="hidden" name="retour_q" value="{{ q }}">
+                            <input type="hidden" name="retour_secteur" value="{{ filtre_secteur }}">
+                            <select name="site" class="form-select" style="font-size:.82rem; padding:4px 8px; width:auto;" onchange="this.form.submit()" title="Secteur de la joueuse">
+                                <option value="À placer" {{ f.site == 'À placer' or f.site is null ? 'selected' : '' }}>📍 À placer</option>
+                                {% for s in secteurs %}<option value="{{ s.nom }}" {{ f.site == s.nom ? 'selected' : '' }}>📍 {{ s.nom }}</option>{% endfor %}
+                                {% if f.site and f.site != 'À placer' and f.site not in secteurs|map(s => s.nom) %}<option value="{{ f.site }}" selected>📍 {{ f.site }}</option>{% endif %}
+                            </select>
+                        </form>
+                    {% endif %}
+                    {% if f.joueur %}
+                        <a href="{{ path('manager_joueur_show', {id: f.joueur.id}) }}" class="btn-mabb-ghost" style="font-size:.8rem;">Ouvrir la fiche</a>
+                    {% endif %}
+                    {% if f.dossier %}
+                        <a href="{{ path('manager_secretariat_licence_modifier', {id: f.dossier.id}) }}" class="btn-mabb-ghost" style="font-size:.8rem;" title="Type de licence, tarif, aides, paiement…">✏️</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Ligne identité — les colonnes de SON Excel, dans SON ordre #}
+            <div class="ann-ligne">
+                {% if f.dossier and f.dossier.typeLicence %}<span class="ann-badge" style="background:#f1f5f9; color:#475569;">{{ f.dossier.typeLicence|lower|capitalize }}</span> {% endif %}
+                {% if f.dossier and f.dossier.numeroLicence %}<span class="lbl">Licence</span> <code>{{ f.dossier.numeroLicence }}</code> · {% endif %}
+                {% if f.naissance %}<span class="lbl">née le</span> <strong>{{ f.naissance|date('d/m/Y') }}</strong>{% endif %}
+                {% if f.telephone %} · <span class="lbl">Tél :</span> <strong>{{ f.telephone }}</strong>{% endif %}
+                {# Version imprimée : le secteur en toutes lettres #}
+                {% if f.site %}<span style="display:none;" class="ann-print-secteur"> · Secteur : {{ f.site }}</span>{% endif %}
+            </div>
+
+            {# Détail règlement — « pas juste payé / pas payé » #}
+            {% if f.dossier and (f.dossier.tarif or f.dossier.aides) %}
+                <div class="ann-ligne">
+                    <span class="lbl">Règlement :</span>
+                    {% if f.dossier.tarif %}<strong>{{ f.dossier.tarif }}</strong>{% endif %}
+                    {% if f.dossier.aides %}
+                        {% set libelles = {'aide_mairie': 'Aide Mairie', 'pass': 'PASS', 'cheques_college': 'Chèques collège', 'cheques': 'Chèques', 'especes': 'Espèces'} %}
+                        {% for cle, valeur in f.dossier.aides %}
+                            · {{ libelles[cle] ?? cle }} : <strong>{{ valeur }}</strong>
+                        {% endfor %}
+                    {% endif %}
+                    — {{ f.dossier.paiementLabel }}
+                </div>
+            {% endif %}
+
+            {% if f.parents|length > 0 %}
+                <div class="ann-parents">
+                    {% for p in f.parents %}
+                        <div {{ not loop.first ? 'style="margin-top:6px; padding-top:6px; border-top:1px dashed #e2e8f0;"' : '' }}>
+                            👨‍👩‍👧 <strong>{{ p.nomComplet }}</strong>
+                            {% if p.telephone %} · 📞 <strong>{{ p.telephone }}</strong>{% endif %}
+                            {% if p.telephone2 %} / {{ p.telephone2 }}{% endif %}
+                            {% if p.email %} · ✉️ {{ p.email }}{% endif %}
+                            {% if p.adresse %}<br><span style="color:var(--mabb-muted);">🏠 {{ p.adresse }}{{ p.codePostal ? ', ' ~ p.codePostal : '' }}</span>{% endif %}
+                            {% if p.notes %}<br><span style="color:var(--mabb-muted); font-size:.8rem;">{{ p.notes }}</span>{% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% elseif f.type == 'joueuse' %}
+                <div class="ann-ligne ann-noprint" style="color:var(--mabb-muted); font-size:.8rem;">
+                    Pas de contact parent enregistré —
+                    <a href="{{ f.joueur ? path('manager_joueur_show', {id: f.joueur.id}) : '#' }}">ajouter sur la fiche</a>
+                    ou <a href="{{ path('manager_secretariat_import') }}">importer le formulaire licence</a>.
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+{% endblock %}

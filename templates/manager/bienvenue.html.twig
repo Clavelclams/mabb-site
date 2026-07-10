@@ -1,0 +1,141 @@
+{% extends 'manager/base.html.twig' %}
+
+{# [V2.4k] GUIDE « Ma première fois » — une page qui prend l'utilisateur par la
+   main. Règle d'écriture : UNE idée par carte, UNE phrase, UN bouton d'action.
+   Pas de pavés. Les sections staff/secrétariat n'apparaissent qu'aux concernés. #}
+
+{% block title %}Bienvenue — le guide{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .guide-step {
+            display:flex; gap:14px; align-items:flex-start;
+            border:1px solid var(--mabb-border); border-radius:12px;
+            padding:16px; margin-bottom:12px; background:#fff;
+        }
+        .guide-num {
+            width:34px; height:34px; border-radius:50%; flex-shrink:0;
+            background:var(--mabb-orange, #ea580c); color:#fff; font-weight:800;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .guide-step h3 { font-size:.95rem; margin:0 0 4px; font-weight:700; }
+        .guide-step p { font-size:.83rem; color:var(--mabb-muted); margin:0 0 8px; }
+        .guide-section-title {
+            font-size:.78rem; font-weight:800; text-transform:uppercase;
+            letter-spacing:.06em; color:var(--mabb-muted); margin:22px 0 10px;
+        }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1>👋 Bienvenue{{ club ? ' au ' ~ club.nom : '' }} !</h1>
+            <p class="subtitle">Le tour du propriétaire en 2 minutes — chaque étape a son bouton, clique et c'est fait.</p>
+        </div>
+        <a href="{{ path('manager_dashboard') }}" class="btn-mabb-ghost"><i class="bi bi-x-lg"></i> Fermer le guide</a>
+    </div>
+
+    <div style="max-width:780px;">
+
+        <div class="guide-section-title">L'essentiel</div>
+
+        <div class="guide-step">
+            <div class="guide-num">1</div>
+            <div>
+                <h3>Un seul compte pour tout</h3>
+                <p>Tes identifiants marchent ici (Manager), sur <strong>mabb.fr</strong> (site du club) et sur <strong>PIRB</strong> (espace joueuse). Rien d'autre à créer.</p>
+                <a href="{{ path('manager_profil') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Voir mon profil</a>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <div class="guide-num">2</div>
+            <div>
+                <h3>Ton tableau de bord te parle</h3>
+                <p>En haut : « Pour toi » (réunions où tu es convoqué·e, PV à lire) puis tout ce qui arrive dans les 7 jours — matchs, événements, séances.</p>
+                <a href="{{ path('manager_dashboard') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Aller au tableau de bord</a>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <div class="guide-num">3</div>
+            <div>
+                <h3>Les événements du club</h3>
+                <p>AG, tournois, sorties, fêtes : tout est là. Tu peux t'inscrire en un clic sur les événements publiés.</p>
+                <a href="{{ path('manager_evenement_index') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Voir les événements</a>
+            </div>
+        </div>
+
+        <div class="guide-section-title">Donner un coup de main 🤝</div>
+
+        <div class="guide-step">
+            <div class="guide-num">4</div>
+            <div>
+                <h3>Tes missions de match</h3>
+                <p>Chronomètre, e-marque, buvette… Consulte tes affectations du week-end et <strong>candidate</strong> sur les postes vacants depuis la page de chaque rencontre.</p>
+                <a href="{{ path('manager_rencontre_staff_mes_missions') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Mes missions</a>
+                <a href="{{ path('manager_rencontre_index') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Les rencontres</a>
+            </div>
+        </div>
+
+        <div class="guide-section-title">Parents 👨‍👩‍👧</div>
+
+        <div class="guide-step">
+            <div class="guide-num">5</div>
+            <div>
+                <h3>Être lié·e à ton enfant</h3>
+                <p>Une fois le lien validé par le club, tu suis sa fiche, ses stats et son bilan depuis ton compte — la demande se fait sur PIRB avec les mêmes identifiants.</p>
+                <a href="https://pirb.mabb.fr/mes-enfants" target="_blank" rel="noopener" class="btn-mabb-ghost" style="font-size:.78rem;">Demander le lien</a>
+            </div>
+        </div>
+
+        <div class="guide-step">
+            <div class="guide-num">6</div>
+            <div>
+                <h3>Voir la fiche et le bilan de ton enfant</h3>
+                <p>Depuis ton tableau de bord, carte « Mes enfants » : sa fiche, sa progression et son bilan de compétences quand le coach l'a validé.</p>
+                <a href="{{ path('manager_dashboard') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Mes enfants (dashboard)</a>
+            </div>
+        </div>
+
+        {% if is_staff %}
+            <div class="guide-section-title">Staff / coach 📋</div>
+            <div class="guide-step">
+                <div class="guide-num">7</div>
+                <div>
+                    <h3>Tes outils de coach</h3>
+                    <p>Équipes, séances, convocations, Stats Live pendant les matchs, bilans de compétences — tout part de la navbar.</p>
+                    <a href="{{ path('manager_stats_live_index') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Stats Live</a>
+                    <a href="{{ path('manager_coach_dashboard') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Espace coach</a>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if is_secretariat %}
+            <div class="guide-section-title">Secrétariat 🗂️</div>
+            <div class="guide-step">
+                <div class="guide-num">8</div>
+                <div>
+                    <h3>Le classeur licences</h3>
+                    <p>Tes fichiers Excel, en mieux : secteurs, catégories, paiements, relances, pré-inscriptions des familles et organisation des week-ends.</p>
+                    <a href="{{ path('manager_secretariat_dashboard') }}" class="btn-mabb-ghost" style="font-size:.78rem;">Ouvrir le secrétariat</a>
+                </div>
+            </div>
+        {% endif %}
+
+        <div class="guide-section-title">Besoin d'aide ?</div>
+        <div class="guide-step">
+            <div class="guide-num">?</div>
+            <div>
+                <h3>Ce guide reste à portée de main</h3>
+                <p>Tu le retrouves à tout moment dans le menu en haut à droite (❓ Guide). Un souci ? Écris au club : <a href="mailto:admin@mabb.fr">admin@mabb.fr</a>.</p>
+                <a href="{{ path('manager_dashboard') }}" class="btn-mabb-orange" style="font-size:.8rem;">C'est parti 🏀</a>
+            </div>
+        </div>
+    </div>
+
+    {# Marque le guide comme vu → la bannière du dashboard ne réapparaît plus #}
+    <script>try { localStorage.setItem('mabb_guide_vu', '1'); } catch (e) {}</script>
+{% endblock %}
