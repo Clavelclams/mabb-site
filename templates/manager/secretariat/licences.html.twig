@@ -204,7 +204,7 @@
                                 {% endif %}
                                 {% if d.typeLicence %}<small style="color:var(--mabb-muted); font-weight:400;"> · {{ d.typeLicence|lower }}</small>{% endif %}
                             </td>
-                            <td style="padding:7px;"><code>{{ d.numeroLicence ?? (d.joueur ? d.joueur.licence : null) ?? '—' }}</code></td>
+                            <td style="padding:7px;"><code>{% if d.numeroLicence %}{{ d.numeroLicence }}{% elseif d.joueur and d.joueur.licence %}{{ d.joueur.licence }}{% else %}—{% endif %}</code></td>
                             <td style="padding:7px;">{{ d.dateNaissance ? d.dateNaissance|date('d/m/Y') : '—' }}</td>
                             <td style="padding:7px;">{{ d.telephone ?? '—' }}</td>
                             <td style="padding:7px;">{{ cat_age[d.id] }}</td>
