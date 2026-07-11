@@ -56,6 +56,7 @@
   #infos { position: fixed; inset: 0; z-index: 45; background: rgba(10,14,20,0.97);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 12px; padding: 24px; overflow-y: auto; }
+  #infos[hidden] { display: none; }   /* sinon le display:flex ci-dessus écrase l'attribut hidden */
   #accueil { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 14px; }
   body.jeu-actif #burger, body.jeu-actif #accueil { display: none; }
 </style>
