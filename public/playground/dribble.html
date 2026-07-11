@@ -389,7 +389,7 @@ function boucle() {
           const dist = segFrais
             ? distanceAuSegment(c.x, c.y, pointPrec.x, pointPrec.y, balleVue.bx, balleVue.by)
             : Math.hypot(balleVue.bx - c.x, balleVue.by - c.y);
-          if (dist < c.r + balleVue.r * 0.35) {
+          if (dist < c.r + balleVue.r * 0.6) {
             toucher(c, t);
           }
         }
