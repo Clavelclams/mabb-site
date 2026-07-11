@@ -57,47 +57,38 @@
                      border-radius: 8px; min-height: 34px; padding: 4px 10px; font-size: 16px; }
   .tirRow .zoneNom { flex: 1; color: var(--text); font-weight: 700; font-size: 13.5px; }
   #finBoutons { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-  /* Plein écran quand le jeu tourne : caméra en grand (l'app verrouille le
-     paysage), HUD flottant, intro masquée. Le débrief #fin, lui, est déjà
-     en position: fixed (voir plus haut). */
-  body.jeu-actif { padding: 0; }
-  body.jeu-actif h1, body.jeu-actif .hint, body.jeu-actif #status { display: none; }
-  body.jeu-actif #stage { position: fixed; inset: 0; width: 100%; height: 100%;
-    max-width: none; aspect-ratio: auto; border-radius: 0; border: 0; z-index: 5; }
-  body.jeu-actif #hud { position: fixed; left: 10px; right: 10px; bottom: 10px;
-    z-index: 10; margin: 0; }
-  /* Pas de scroll : l'accueil (bouton) est centré, la description passe dans un
-     panneau ouvert par le hamburger (coin haut). */
+  /* LANCEMENT (portrait) : accueil centré, description visible, PAS de hamburger. */
   html { height: 100%; }
   body { overflow: hidden; justify-content: center; }
-  #burger { position: fixed; top: 10px; left: 10px; z-index: 40; width: 44px; height: 44px;
-    border-radius: 50%; background: var(--surface); border: 1px solid var(--border);
-    color: var(--text); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-  #infos { position: fixed; inset: 0; z-index: 45; background: rgba(10,14,20,0.97);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 12px; padding: 24px; overflow-y: auto; }
-  #infos[hidden] { display: none; }   /* sinon le display:flex ci-dessus écrase l'attribut hidden */
   #accueil { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 14px; }
-  body.jeu-actif #burger, body.jeu-actif #accueil { display: none; }
+  /* Hamburger : UNIQUEMENT pendant le jeu (coin haut). */
+  #burger { display: none; position: fixed; top: 10px; left: 10px; z-index: 40; width: 44px; height: 44px;
+    border-radius: 50%; background: rgba(10,14,20,0.75); border: 1px solid var(--border);
+    color: var(--text); font-size: 20px; align-items: center; justify-content: center; cursor: pointer; }
+  /* JEU : caméra plein écran, accueil masqué, hamburger visible. */
+  body.jeu-actif #accueil { display: none; }
+  body.jeu-actif #burger { display: flex; }
+  body.fin-active #burger { display: none; }   /* pas de hamburger sur le récap */
+  body.jeu-actif #stage { position: fixed; inset: 0; width: 100%; height: 100%;
+    max-width: none; aspect-ratio: auto; border-radius: 0; border: 0; z-index: 5; }
+  /* HUD (stats + contrôles) : caché, sauf quand le menu hamburger est ouvert. */
+  body:not(.menu-ouvert) #hud { display: none; }
+  body.menu-ouvert #hud { position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 45; margin: 0; }
 </style>
 </head>
 <body>
-  <button id="burger" title="Infos" aria-label="Infos">☰</button>
-  <div id="infos" hidden>
+  <div id="accueil">
     <h1>VENABALL TIR <span>tracker de shoot</span></h1>
     <p class="hint">
       Pose ton tel de PROFIL ou face au panier (caméra arrière), pour qu'on voie l'arceau ET toi.
       Au démarrage tu tapes les DEUX BOUTS de l'arceau à l'écran (gauche puis droit), ensuite tout
       est automatique : la caméra suit le ballon, dessine ta trajectoire, et compte marqué / raté.
     </p>
-    <p class="hint">🧪 Mode en phase de test : la détection s'améliore version après version. Un raté flagrant ? Dis-le nous dans Aide &amp; contact.</p>
-    <button id="fermerInfos">Fermer</button>
-  </div>
-  <div id="accueil">
     <button id="btn">Démarrer la séance</button>
-    <p class="hint" style="max-width:420px">Au lancement, tape les deux bouts de l'arceau (gauche puis droit). Détails dans ☰.</p>
     <div id="status">Le modèle (~7 Mo) se charge au premier lancement, ensuite tout est local.</div>
+    <p class="hint">🧪 Mode en phase de test : la détection s'améliore version après version. Un raté flagrant ? Dis-le nous dans Aide &amp; contact.</p>
   </div>
+  <button id="burger" title="Menu" aria-label="Menu">☰</button>
   <div id="stage" hidden>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
@@ -127,6 +118,7 @@
     <span>Série <b id="vSerie">0</b></span>
     <button id="btnRecaler" class="ghost" style="min-height:36px;padding:6px 14px;font-size:13px">🎯 Recaler</button>
     <button id="btnFinir" class="ghost" style="min-height:36px;padding:6px 14px;font-size:13px">Terminer</button>
+    <button id="btnQuitter" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;min-height:36px;padding:6px 14px;font-size:13px;cursor:pointer">Quitter</button>
   </div>
 
 <script type="module">
@@ -140,9 +132,13 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const $ = (id) => document.getElementById(id);
 
-// Hamburger : ouvre/ferme le panneau d'infos (description, calibration, beta).
-$("burger").addEventListener("click", () => { $("infos").hidden = false; });
-$("fermerInfos").addEventListener("click", () => { $("infos").hidden = true; });
+// Prévenir l'app d'un changement d'état (elle gère orientation + header).
+function envoyerEtat(v) {
+  try { window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({ type: "etat", valeur: v })); } catch {}
+}
+// Hamburger : pendant le jeu, ouvre/ferme le menu (stats + contrôles).
+$("burger").addEventListener("click", () => { document.body.classList.toggle("menu-ouvert"); });
+$("btnQuitter") && $("btnQuitter").addEventListener("click", () => envoyerEtat("quitter"));
 
 // ---------- Réglages -----------------------------------------------------------
 // L'ARCEAU EST UN SEGMENT, PAS UN CERCLE (retour terrain 09/07) : filmé de
@@ -352,6 +348,8 @@ $("btn").addEventListener("click", async () => {
     canvas.width = video.videoWidth; canvas.height = video.videoHeight;
     $("stage").hidden = false; $("hud").hidden = false; $("btn").hidden = true;
     document.body.classList.add("jeu-actif"); // caméra plein écran
+    document.body.classList.remove("fin-active", "menu-ouvert");
+    envoyerEtat("demarre");
     $("status").textContent = `Analyse locale en direct (modèle ${modeleNom}). Rien n'est enregistré, rien ne part.`;
     phase = "calibration";
     garderEcranAllume(); // le tel posé ne doit JAMAIS s'éteindre en séance
@@ -713,6 +711,10 @@ function finirSeance() {
   // « Valider » (le temps d'ajuster les zones). Rien ne part sans elle.
   construireRecap();
   $("fin").style.display = "flex";
+  // Fin : on rend la main à l'app (retour PORTRAIT + header pour le récap).
+  document.body.classList.remove("menu-ouvert");
+  document.body.classList.add("fin-active");
+  envoyerEtat("fini");
 }
 
 // ─────────────────────────────────────────────────────────────────────────

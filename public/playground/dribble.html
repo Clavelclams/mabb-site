@@ -38,44 +38,37 @@
   #fin h2 { font-size: 44px; color: var(--ball); letter-spacing: 2px; }
   #fin p { color: var(--muted); font-size: 15px; }
   #fin .gros { font-size: 26px; color: var(--text); font-weight: 800; }
-  /* Plein écran quand le jeu tourne : la caméra remplit tout l'écran (l'app
-     verrouille le paysage), le HUD flotte par-dessus, l'intro est masquée. */
-  body.jeu-actif { padding: 0; }
-  body.jeu-actif h1, body.jeu-actif .hint, body.jeu-actif #status { display: none; }
-  body.jeu-actif #stage { position: fixed; inset: 0; width: 100%; height: 100%;
-    max-width: none; aspect-ratio: auto; border-radius: 0; border: 0; z-index: 5; }
-  body.jeu-actif #hud { position: fixed; left: 10px; right: 10px; bottom: 10px;
-    z-index: 10; margin: 0; }
-  /* Pas de scroll : l'accueil (bouton) est centré, la description passe dans un
-     panneau ouvert par le hamburger (coin haut). */
+  /* LANCEMENT (portrait) : accueil centré, description visible, PAS de hamburger. */
   html { height: 100%; }
   body { overflow: hidden; justify-content: center; }
-  #burger { position: fixed; top: 10px; left: 10px; z-index: 40; width: 44px; height: 44px;
-    border-radius: 50%; background: var(--surface); border: 1px solid var(--border);
-    color: var(--text); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-  #infos { position: fixed; inset: 0; z-index: 45; background: rgba(10,14,20,0.97);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 12px; padding: 24px; overflow-y: auto; }
-  #infos[hidden] { display: none; }   /* sinon le display:flex ci-dessus écrase l'attribut hidden */
   #accueil { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 14px; }
-  body.jeu-actif #burger, body.jeu-actif #accueil { display: none; }
+  /* Hamburger : UNIQUEMENT pendant le jeu (coin haut). */
+  #burger { display: none; position: fixed; top: 10px; left: 10px; z-index: 40; width: 44px; height: 44px;
+    border-radius: 50%; background: rgba(10,14,20,0.75); border: 1px solid var(--border);
+    color: var(--text); font-size: 20px; align-items: center; justify-content: center; cursor: pointer; }
+  /* JEU : caméra plein écran, accueil masqué, hamburger visible. */
+  body.jeu-actif #accueil { display: none; }
+  body.jeu-actif #burger { display: flex; }
+  body.fin-active #burger { display: none; }   /* pas de hamburger sur l'écran de récap */
+  body.jeu-actif #stage { position: fixed; inset: 0; width: 100%; height: 100%;
+    max-width: none; aspect-ratio: auto; border-radius: 0; border: 0; z-index: 5; }
+  /* HUD (stats + Quitter) : caché, sauf quand le menu hamburger est ouvert. */
+  body:not(.menu-ouvert) #hud { display: none; }
+  body.menu-ouvert #hud { position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 45; margin: 0; }
 </style>
 </head>
 <body>
-  <button id="burger" title="Infos" aria-label="Infos">☰</button>
-  <div id="infos" hidden>
+  <div id="accueil">
     <h1>VENABALL DRIBBLE <span>score automatique</span></h1>
     <p class="hint">
       Pose ton tel ou ton PC, recule avec ton ballon. Amène-le sur les cibles : la caméra le voit,
       le point tombe tout seul. Tous les 5 hits, le niveau monte. Ça va aller de plus en plus vite.
     </p>
-    <p class="hint">🧪 Mode en phase de test : la détection s'améliore version après version. Un raté flagrant ? Dis-le nous dans Aide &amp; contact.</p>
-    <button id="fermerInfos">Fermer</button>
-  </div>
-  <div id="accueil">
     <button id="btn">Démarrer</button>
     <div id="status">Le modèle (~4 Mo) se charge au premier lancement, ensuite tout est local.</div>
+    <p class="hint">🧪 Mode en phase de test : la détection s'améliore version après version. Un raté flagrant ? Dis-le nous dans Aide &amp; contact.</p>
   </div>
+  <button id="burger" title="Menu" aria-label="Menu">☰</button>
   <div id="stage" hidden>
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
@@ -92,6 +85,7 @@
     <span>Score <b id="vScore">0</b></span>
     <span>Touchées <b id="vHits">0</b>/<span id="vApparues">0</span></span>
     <span style="color:var(--muted)">FPS <b id="vFps" style="color:var(--muted)">–</b></span>
+    <button id="btnQuitter" style="background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;min-height:34px;padding:4px 12px;font-size:13px;cursor:pointer">Quitter</button>
   </div>
 
 <script type="module">
@@ -106,9 +100,13 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const $ = (id) => document.getElementById(id);
 
-// Hamburger : ouvre/ferme le panneau d'infos (description, RGPD, beta).
-$("burger").addEventListener("click", () => { $("infos").hidden = false; });
-$("fermerInfos").addEventListener("click", () => { $("infos").hidden = true; });
+// Prévenir l'app d'un changement d'état (elle gère orientation + header).
+function envoyerEtat(v) {
+  try { window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify({ type: "etat", valeur: v })); } catch {}
+}
+// Hamburger : pendant le jeu, ouvre/ferme le menu (stats + Quitter).
+$("burger").addEventListener("click", () => { document.body.classList.toggle("menu-ouvert"); });
+$("btnQuitter") && $("btnQuitter").addEventListener("click", () => envoyerEtat("quitter"));
 
 // ---------- Réglages du jeu ---------------------------------------------------
 const DUREE_JEU_S = 90;
@@ -247,6 +245,10 @@ $("btnRejouer").addEventListener("click", () => { $("fin").style.display = "none
 function lancerPartie() {
   enJeu = true; niveau = 1; score = 0; hits = 0; apparues = 0;
   cibles = []; flottants = []; pointPrec = null;
+  // Entrée en jeu : plein écran, menu fermé, et on demande le PAYSAGE à l'app.
+  document.body.classList.add("jeu-actif");
+  document.body.classList.remove("fin-active", "menu-ouvert");
+  envoyerEtat("demarre");
   // Décompte 3-2-1 : le chrono de jeu ne démarre qu'APRÈS (le temps de
   // reculer et de prendre le ballon).
   decompteFinA = performance.now() + 3000;
@@ -469,6 +471,11 @@ function finirPartie() {
   $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%).${ligneRecord} Compté par la caméra, pas par toi.`
     + (dansApp ? " Séance enregistrée dans ton Playground ✓" : "");
   $("fin").style.display = "flex";
+  // Fin de partie : on rend la main à l'app (retour PORTRAIT + header réaffiché
+  // pour lire le récap et pouvoir revenir en arrière).
+  document.body.classList.remove("menu-ouvert");
+  document.body.classList.add("fin-active");
+  envoyerEtat("fini");
   // Pont vers l'app PIRB (WebView) : la séance rejoint l'historique
   // Playground (AsyncStorage), comme une séance manuelle. Hors app,
   // window.ReactNativeWebView n'existe pas → no-op silencieux.
