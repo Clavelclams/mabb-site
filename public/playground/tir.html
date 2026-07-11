@@ -37,9 +37,12 @@
   #vReussis { color: var(--net); } #vTentes { color: var(--text); }
   #vPct { color: var(--gold); } #vSerie { color: var(--ball); }
   #status { font-size: 13px; color: var(--muted); text-align: center; }
-  #fin { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center;
-         justify-content: flex-start; gap: 10px; background: rgba(10,14,20,0.94); text-align: center;
-         overflow-y: auto; padding: 16px; }
+  /* Débrief PLEIN ÉCRAN (fixed) : avant, il était piégé dans le petit cadre
+     caméra (absolute dans #stage), donc canvas + liste se chevauchaient. Fond
+     OPAQUE pour que le bouton ▶ de la vidéo en pause ne transperce plus. */
+  #fin { position: fixed; inset: 0; z-index: 30; display: none; flex-direction: column; align-items: center;
+         justify-content: flex-start; gap: 10px; background: #0A0E14; text-align: center;
+         overflow-y: auto; padding: 18px 16px 36px; }
   #fin h2 { font-size: 38px; color: var(--net); letter-spacing: 2px; }
   #fin p { color: var(--muted); font-size: 14px; }
   #fin .gros { font-size: 22px; color: var(--text); font-weight: 800; }
@@ -78,7 +81,7 @@
            détectée par la caméra, pas modifiable (sinon on triche). -->
       <p class="gros" id="recapTitre" hidden>Tes trajectoires</p>
       <canvas id="recapTraj" hidden></canvas>
-      <p class="gros" id="courtTitre" hidden>D'où tu as tiré (estimé — ajuste si besoin)</p>
+      <p class="gros" id="courtTitre" hidden>D'où tu as tiré (estimé, ajuste si besoin)</p>
       <canvas id="recapCourt" hidden></canvas>
       <div id="recapListe"></div>
       <p id="finDetail"></p>
