@@ -67,7 +67,7 @@
                 {% for n in noms_secteurs %}<option value="{{ n }}" {{ n == filtre_site ? 'selected' : '' }}>{{ n }}</option>{% endfor %}
                 <option value="À placer">À placer</option>
             </select>
-            <input type="text" name="categorie" class="form-control" placeholder="Catégorie" value="{{ filtre_categorie }}">
+            <input type="text" name="categorie" class="form-control" placeholder="Catégorie (ex U15, Senior)" value="">
             <input type="text" name="numero_licence" class="form-control" placeholder="N° licence">
             <input type="text" name="telephone" class="form-control" placeholder="Téléphone">
             <input type="text" name="tarif" class="form-control" placeholder="Tarif (110, Gratuit…)">
@@ -148,6 +148,10 @@
                         <a href="{{ path('manager_secretariat_licences', {saison: saison, site: filtre_site, categorie: c}) }}"
                            class="cls-subtab {{ filtre_categorie == c ? 'active' : '' }}">{{ c }}</a>
                     {% endfor %}
+                    {% if a_sans_categorie %}
+                        <a href="{{ path('manager_secretariat_licences', {saison: saison, site: filtre_site, categorie: 'SANS'}) }}"
+                           class="cls-subtab {{ filtre_categorie == 'SANS' ? 'active' : '' }}">Sans catégorie</a>
+                    {% endif %}
                 </div>
                 <form method="get">
                     <input type="hidden" name="saison" value="{{ saison }}">
@@ -203,7 +207,7 @@
                             <td style="padding:7px;"><code>{{ d.numeroLicence ?? '—' }}</code></td>
                             <td style="padding:7px;">{{ d.dateNaissance ? d.dateNaissance|date('d/m/Y') : '—' }}</td>
                             <td style="padding:7px;">{{ d.telephone ?? '—' }}</td>
-                            <td style="padding:7px;">{{ d.categorie ?? '—' }}</td>
+                            <td style="padding:7px;">{{ cat_age[d.id] }}</td>
                             <td style="padding:7px;">{{ d.tarif ?? '—' }}</td>
                             <td style="padding:7px;">{{ d.aides['aide_mairie'] ?? '' }}</td>
                             <td style="padding:7px;">{{ d.aides['pass'] ?? '' }}</td>

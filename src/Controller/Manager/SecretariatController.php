@@ -44,6 +44,7 @@ class SecretariatController extends AbstractController
         private readonly \App\Repository\Sport\PreInscriptionRepository $preInscriptionRepo,
         private readonly \App\Service\Secretariat\PreInscriptionConverter $converter,
         private readonly \App\Repository\Sport\JoueurRepository $joueurRepo,
+        private readonly \App\Service\Sport\CategorieCalculator $categorieCalculator,
     ) {}
 
     // ────────────────────────────────────────────────────────────────────
@@ -120,15 +121,32 @@ class SecretariatController extends AbstractController
         // Compteurs par secteur (onglets) — sur la saison complète
         $stats = $this->dossierRepo->statsDashboard($club, $saison);
 
-        // Lignes du secteur affiché ; catégories (sous-onglets) issues du secteur
+        // Lignes du secteur affiché.
         $dossiersSecteur = $this->dossierRepo->rechercher($club, $saison, $site ?: null);
-        $categoriesSecteur = array_values(array_unique(array_filter(array_map(
-            fn(DossierLicence $d) => $d->getCategorie(), $dossiersSecteur
-        ))));
-        sort($categoriesSecteur);
 
-        $dossiers = array_values(array_filter($dossiersSecteur, function (DossierLicence $d) use ($categorie, $statut) {
-            if ($categorie !== '' && $d->getCategorie() !== $categorie) { return false; }
+        // [V2.4n] Catégorie = catégorie D'ÂGE calculée depuis la date de naissance
+        // (et NON l'équipe de l'an dernier : on ne sait pas encore A/B/loisir).
+        // Vide si aucune date de naissance connue → onglet « Sans catégorie ».
+        $catAge = [];
+        foreach ($dossiersSecteur as $d) {
+            $naissance = $d->getDateNaissance() ?? $d->getJoueur()?->getDateNaissance();
+            $catAge[$d->getId()] = $this->categorieCalculator->categoriePourNaissance($naissance, $saison) ?? '';
+        }
+
+        // Sous-onglets = catégories d'âge présentes, ordonnées U7…U18 puis Senior.
+        $ordre = ['U7' => 1, 'U9' => 2, 'U11' => 3, 'U13' => 4, 'U15' => 5, 'U18' => 6, 'Senior' => 7];
+        $categoriesSecteur = array_values(array_unique(array_filter($catAge)));
+        usort($categoriesSecteur, fn($a, $b) => ($ordre[$a] ?? 99) <=> ($ordre[$b] ?? 99));
+        $aSansCategorie = in_array('', $catAge, true);
+
+        // Filtre. 'SANS' = les dossiers sans date de naissance.
+        $dossiers = array_values(array_filter($dossiersSecteur, function (DossierLicence $d) use ($categorie, $statut, $catAge) {
+            $cat = $catAge[$d->getId()] ?? '';
+            if ($categorie === 'SANS') {
+                if ($cat !== '') { return false; }
+            } elseif ($categorie !== '' && $cat !== $categorie) {
+                return false;
+            }
             if ($statut !== '' && $d->getPaiementStatut() !== $statut) { return false; }
             return true;
         }));
@@ -138,10 +156,12 @@ class SecretariatController extends AbstractController
             'saison'     => $saison,
             'saisons'    => $this->saisonService->getSaisonsDisponibles(),
             'dossiers'   => $dossiers,
+            'cat_age'    => $catAge,
             'secteurs'   => $secteurs,
             'noms_secteurs' => $nomsSecteurs,
             'compteurs_site' => $stats['par_site'],
             'categories' => $categoriesSecteur,
+            'a_sans_categorie' => $aSansCategorie,
             'filtre_site'      => $site,
             'filtre_categorie' => $categorie,
             'filtre_statut'    => $statut,

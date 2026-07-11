@@ -65,6 +65,26 @@ final class CategorieCalculator
     }
 
     /**
+     * Catégorie fédérale calculée directement depuis une DATE DE NAISSANCE
+     * (sans objet Joueur) — pratique pour le classeur secrétariat qui travaille
+     * sur des DossierLicence. Null si la date est inconnue.
+     */
+    public function categoriePourNaissance(?\DateTimeInterface $naissance, string $saison): ?string
+    {
+        if ($naissance === null) {
+            return null;
+        }
+        $anneeFin = (int) explode('-', $saison)[1];
+        $age = $anneeFin - (int) $naissance->format('Y');
+        foreach (self::TRANCHES as $borne) {
+            if ($age <= $borne) {
+                return 'U' . $borne;
+            }
+        }
+        return 'Senior';
+    }
+
+    /**
      * Une joueuse peut-elle jouer dans une équipe de catégorie donnée ?
      *
      * Règles pragmatiques (informatif, ne bloque jamais — le coach décide) :
