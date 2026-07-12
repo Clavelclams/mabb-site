@@ -185,7 +185,7 @@ class ManagerRencontreStaffController extends AbstractController
     // ────────────────────────────────────────────────────────────────────────
 
     #[Route('/{id}/staff/candidater', name: 'candidater', methods: ['POST'], requirements: ['id' => '\d+'])]
-    public function candidater(Request $request, Rencontre $rencontre): Response
+    public function candidater(Request $request, Rencontre $rencontre, \App\Service\Otm\OtmService $otm): Response
     {
         $club = $this->tenantResolver->getCurrentClub();
         if ($club === null) {
@@ -211,17 +211,22 @@ class ManagerRencontreStaffController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
-        // Vérifier qu'il n'y a pas déjà une candidature de ce user sur ce rôle
+        // [OTM V2] Renfort (« assisté de ») plutôt que titulaire du poste.
+        $assistant = (bool) $request->request->get('assistant', 0);
+
+        // Déjà une inscription de cette personne sur ce poste ?
         $existing = $this->affectationRepo->findCandidatureByUserAndRencontreAndRole($user, $rencontre, $role);
         if ($existing !== null) {
-            $this->addFlash('warning', 'Tu as déjà une inscription en cours pour ce rôle.');
+            $this->addFlash('warning', 'Tu as déjà une inscription en cours pour ce poste.');
             return $this->redirectToRoute('manager_rencontre_staff_show', ['id' => $rencontre->getId()]);
         }
 
-        // Vérifier que le rôle est bien vacant (pas d'actif)
-        $actif = $this->affectationRepo->findActiveByRencontreAndRole($rencontre, $role);
-        if ($actif !== null) {
-            $this->addFlash('warning', 'Ce rôle est déjà pourvu.');
+        // [OTM V2] TOUTES les règles passent par OtmService : fenêtre J-7 →
+        // mercredi, poste interdit, poste titulaire déjà pris, anti-répétition
+        // (max 2× le même poste dans la journée).
+        $refus = $otm->motifRefus($rencontre, $user, $role, $assistant, false);
+        if ($refus !== null) {
+            $this->addFlash('warning', $refus);
             return $this->redirectToRoute('manager_rencontre_staff_show', ['id' => $rencontre->getId()]);
         }
 
@@ -229,12 +234,15 @@ class ManagerRencontreStaffController extends AbstractController
         $affectation->setRencontre($rencontre);
         $affectation->setUser($user);
         $affectation->setRole($role);
+        $affectation->setEstAssistant($assistant);
         $affectation->setStatut(AffectationMatch::STATUT_CANDIDAT);
 
         $this->em->persist($affectation);
         $this->em->flush();
 
-        $this->addFlash('success', '📝 Inscription prise en compte ! L\'admin va valider ta candidature.');
+        $this->addFlash('success', $assistant
+            ? '🙌 Inscription en renfort prise en compte ! Un dirigeant va valider.'
+            : '📝 Inscription prise en compte ! Un dirigeant va valider.');
 
         return $this->redirectToRoute('manager_rencontre_staff_show', ['id' => $rencontre->getId()]);
     }

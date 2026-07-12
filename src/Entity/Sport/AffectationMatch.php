@@ -98,6 +98,19 @@ class AffectationMatch
     #[ORM\Column(length: 20)]
     private string $statut = self::STATUT_ASSIGNE;
 
+    /**
+     * [OTM V2 — 12/07/2026] Renfort sur le poste.
+     *
+     *   false = TITULAIRE. Un seul par (rencontre, poste). C'est un membre du
+     *           STAFF : il supervise, et il est auto-affecté à la clôture du
+     *           mercredi s'il ne s'est pas placé lui-même.
+     *   true  = ASSISTANT (« assisté de »). Un bénévole / parent / joueuse venu
+     *           en renfort sur ce même poste. Se place librement, n'est JAMAIS
+     *           auto-affecté, et il peut y en avoir plusieurs.
+     */
+    #[ORM\Column(options: ['default' => false])]
+    private bool $estAssistant = false;
+
     /** Note interne (ex: "Absent — examen") */
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $note = null;
@@ -119,6 +132,11 @@ class AffectationMatch
 
     public function getRencontre(): ?Rencontre { return $this->rencontre; }
     public function setRencontre(?Rencontre $r): self { $this->rencontre = $r; return $this; }
+
+    public function isEstAssistant(): bool { return $this->estAssistant; }
+    public function setEstAssistant(bool $v): self { $this->estAssistant = $v; return $this; }
+    /** Alias lisible : le titulaire du poste (staff, supervision). */
+    public function isTitulaire(): bool { return !$this->estAssistant; }
 
     public function getUser(): ?User { return $this->user; }
     public function setUser(?User $u): self { $this->user = $u; return $this; }

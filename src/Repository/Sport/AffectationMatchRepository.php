@@ -19,6 +19,42 @@ class AffectationMatchRepository extends ServiceEntityRepository
     }
 
     /**
+     * [OTM V2] Combien de fois cette personne tient-elle DÉJÀ ce poste, ce
+     * jour-là ? Sert l'anti-répétition : sur 5 rencontres dans la journée, on
+     * ne fait pas 3 fois le chrono (max 2, cf. OtmService).
+     *
+     * On ne compte que les affectations réellement couvertes (assigné/confirmé),
+     * et on exclut la rencontre en cours de traitement pour ne pas se compter
+     * soi-même lors d'une réaffectation.
+     */
+    public function compterMemePostePourJour(
+        User $user,
+        string $role,
+        \DateTimeInterface $jour,
+        ?Rencontre $exclure = null,
+    ): int {
+        $debut = \DateTimeImmutable::createFromInterface($jour)->setTime(0, 0);
+        $fin   = $debut->setTime(23, 59, 59);
+
+        $qb = $this->createQueryBuilder('a')
+            ->select('COUNT(a.id)')
+            ->join('a.rencontre', 'r')
+            ->andWhere('a.user = :user')->setParameter('user', $user)
+            ->andWhere('a.role = :role')->setParameter('role', $role)
+            ->andWhere('a.statut IN (:actifs)')
+            ->setParameter('actifs', [AffectationMatch::STATUT_ASSIGNE, AffectationMatch::STATUT_CONFIRME])
+            ->andWhere('r.date BETWEEN :debut AND :fin')
+            ->setParameter('debut', $debut)
+            ->setParameter('fin', $fin);
+
+        if ($exclure !== null && $exclure->getId() !== null) {
+            $qb->andWhere('r.id != :ex')->setParameter('ex', $exclure->getId());
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
+    /**
      * Toutes les affectations d'une rencontre (actives + candidatures).
      * Indexées par rôle pour usage facile en template.
      *
