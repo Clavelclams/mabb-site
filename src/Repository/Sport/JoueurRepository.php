@@ -131,7 +131,10 @@ class JoueurRepository extends ServiceEntityRepository
 
         return $this->createQueryBuilder('j')
             ->where('j.user IS NULL')
-            ->andWhere('j.ephemere = false OR j.ephemere IS NULL')
+            // [FIX 12/07] Le champ s'appelle isTemporaire (booléen non-nullable),
+            // pas « ephemere » : ce filtre levait une QueryException et faisait
+            // planter /staff/comptes-en-attente en 500.
+            ->andWhere('j.isTemporaire = false')
             ->andWhere('LOWER(j.email) = :email')
             ->setParameter('email', $email)
             ->setMaxResults(1)
