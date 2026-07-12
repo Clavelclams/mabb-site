@@ -1,5 +1,5 @@
 {% extends 'vitrine/base.html.twig' %}
-{% block title %}{{ article.titre }} — MABB{% endblock %}
+{% block title %}{{ article.titre }}{% endblock %}
 {% block meta_description %}{{ article.contenu|striptags|slice(0, 160) }}{% endblock %}
 
 {% block body %}
