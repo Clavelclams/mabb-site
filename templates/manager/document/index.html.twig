@@ -1,13 +1,13 @@
 {% extends 'manager/base.html.twig' %}
 
-{% block title %}ENT — Documents du club{% endblock %}
+{% block title %}Documents du club{% endblock %}
 
 {% block body %}
 
 {# ── En-tête ──────────────────────────────────────────────────────── #}
 <div class="page-header">
     <div>
-        <h1><i class="bi bi-folder2-open"></i> ENT — Documents</h1>
+        <h1><i class="bi bi-folder2-open"></i> Documents du club</h1>
         <p class="subtitle">Documents partagés par le staff du club <strong>{{ club.nom }}</strong></p>
     </div>
     {% if is_staff %}
@@ -223,7 +223,7 @@
 <div style="margin-top:36px;">
     <h2 style="font-size:1rem; font-weight:700; color:var(--mabb-dark); margin-bottom:14px; display:flex; align-items:center; gap:8px;">
         <i class="bi bi-file-earmark-pdf" style="color:#dc2626;"></i>
-        PDFs officiels FFBB — Matchs
+        Les PDF officiels FFBB, match par match
     </h2>
 
     <div class="card-mabb" style="padding:0; overflow:hidden;">
@@ -413,7 +413,7 @@
                        style="width:100%; padding:8px; border:1px solid var(--mabb-border);
                               border-radius:6px; font-size:.84rem; box-sizing:border-box;">
                 <div style="font-size:.75rem; color:var(--mabb-muted); margin-top:4px;">
-                    PDF, Word, Excel, PowerPoint, ODT, Images, TXT — max 20 Mo
+                    PDF, Word, Excel, PowerPoint, ODT, images, TXT. 20 Mo maximum.
                 </div>
             </div>
 

@@ -20,7 +20,7 @@
         <span style="font-size:1.5rem;">🧭</span>
         <div style="flex:1; min-width:200px;">
             <strong style="font-size:.92rem;">Première fois ici ?</strong>
-            <div style="font-size:.8rem; color:#9a3412;">Le tour du site en 2 minutes — chaque étape a son bouton.</div>
+            <div style="font-size:.8rem; color:#9a3412;">Le tour du site en 2 minutes. Chaque étape a son bouton.</div>
         </div>
         <a href="{{ path('manager_bienvenue') }}" class="btn-mabb-orange" style="font-size:.82rem;">Suivre le guide</a>
         <button type="button" onclick="try{localStorage.setItem('mabb_guide_vu','1')}catch(e){}; this.parentElement.style.display='none';"
@@ -116,7 +116,7 @@
             <div class="card-mabb" style="border-top:4px solid var(--mabb-orange);">
                 <div class="card-header"><i class="bi bi-megaphone"></i> Le club cherche du monde</div>
                 <div class="card-body" style="font-size:.84rem;">
-                    <p style="margin:0 0 8px; color:var(--mabb-muted);">Des postes (chrono, buvette, e-marque…) sont à pourvoir — candidate en un clic :</p>
+                    <p style="margin:0 0 8px; color:var(--mabb-muted);">Des postes sont à pourvoir ce week-end : chrono, buvette, e-marque. Inscris-toi en un clic.</p>
                     {% for r in postes_vacants|slice(0, 3) %}
                         <div style="display:flex; justify-content:space-between; gap:8px; padding:5px 0; border-bottom:1px solid var(--mabb-border);">
                             <span>{{ r.equipe ? r.equipe.nom : '' }} vs {{ r.adversaire }}</span>
@@ -171,7 +171,7 @@
     {% if nb_total_avenir > 0 %}
         <div class="card-mabb" style="margin-bottom:20px; border-top:4px solid var(--mabb-orange);">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <span><i class="bi bi-calendar-event"></i> À venir — 7 prochains jours</span>
+                <span><i class="bi bi-calendar-event"></i> Les 7 prochains jours</span>
                 <small style="color:var(--mabb-muted); font-weight:500;">
                     {{ nb_total_avenir }} élément{{ nb_total_avenir > 1 ? 's' : '' }}
                 </small>
@@ -359,7 +359,7 @@
                     <div class="card-body" style="text-align:center; padding:30px 20px;">
                         <i class="bi bi-calendar-event-fill" style="font-size:2.5rem; color:#16a34a;"></i>
                         <h3 style="margin-top:12px; color:var(--mabb-dark);">Événements</h3>
-                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">AG, tournois, sorties — participe ou crée.</p>
+                        <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">AG, tournois, sorties. Participe, ou crée le tien.</p>
                     </div>
                 </div>
             </a>
@@ -600,7 +600,7 @@
                         <div class="card-body" style="text-align:center; padding:30px 20px;">
                             <i class="bi bi-people-fill" style="font-size:2.5rem; color:#0891b2;"></i>
                             <h3 style="margin-top:12px; color:var(--mabb-dark);">Réunions</h3>
-                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">CA, AG, bureaux — convocations + PV.</p>
+                            <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">CA, AG, bureaux. Convocations et PV.</p>
                         </div>
                     </div>
                 </a>
@@ -616,7 +616,7 @@
                     <div class="card-mabb" style="cursor:pointer; border-left:3px solid #2563eb;">
                         <div class="card-body" style="text-align:center; padding:30px 20px;">
                             <i class="bi bi-folder2-open" style="font-size:2.5rem; color:#2563eb;"></i>
-                            <h3 style="margin-top:12px; color:var(--mabb-dark);">ENT — Documents</h3>
+                            <h3 style="margin-top:12px; color:var(--mabb-dark);">Documents du club</h3>
                             <p style="color:var(--mabb-muted); font-size:.9rem; margin:0;">
                                 Planning, règlement, formulaires, comptes-rendus…
                             </p>

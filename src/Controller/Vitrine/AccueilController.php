@@ -84,6 +84,16 @@ final class AccueilController extends AbstractController
         ]);
     }
 
+    /**
+     * L'histoire du projet, racontée à la première personne par Clavel.
+     * Chaque étape du calendrier de lancement pointe vers son ancre ici.
+     */
+    #[Route('/numerique/le-projet', name: 'vitrine_projet')]
+    public function projet(): Response
+    {
+        return $this->render('vitrine/accueil/projet.html.twig');
+    }
+
     #[Route('/news/{slug}', name: 'vitrine_news_article')]
     public function article(string $slug, ArticleRepository $articleRepo): Response
     {
