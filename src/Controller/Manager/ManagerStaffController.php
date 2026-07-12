@@ -66,11 +66,16 @@ class ManagerStaffController extends AbstractController
 
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
 
+        // [OTM V2 12/07] On ajoute les SECRÉTAIRES, qui étaient invisibles dans
+        // l'organigramme alors qu'ils ont des accès.
+        // NB : services civiques, stagiaires, BPJEPS, STAPS… sont tous rattachés
+        // au rôle STAFF (choix produit assumé — pas un rôle par statut).
         $rolesStaff = [
             UserClubRole::ROLE_DIRIGEANT,
             UserClubRole::ROLE_COACH,
             UserClubRole::ROLE_STAFF,
             UserClubRole::ROLE_TRESORIER,
+            UserClubRole::ROLE_SECRETAIRE,
         ];
 
         $ucrs = $this->em->getRepository(UserClubRole::class)
@@ -89,10 +94,11 @@ class ManagerStaffController extends AbstractController
             ->getResult();
 
         $groupes = [
-            UserClubRole::ROLE_DIRIGEANT => [],
-            UserClubRole::ROLE_COACH     => [],
-            UserClubRole::ROLE_STAFF     => [],
-            UserClubRole::ROLE_TRESORIER => [],
+            UserClubRole::ROLE_DIRIGEANT  => [],
+            UserClubRole::ROLE_COACH      => [],
+            UserClubRole::ROLE_STAFF      => [],
+            UserClubRole::ROLE_TRESORIER  => [],
+            UserClubRole::ROLE_SECRETAIRE => [],
         ];
         foreach ($ucrs as $ucr) {
             $role = $ucr->getRole();
@@ -102,24 +108,50 @@ class ManagerStaffController extends AbstractController
         }
 
         $libelles = [
-            UserClubRole::ROLE_DIRIGEANT => 'Dirigeants',
-            UserClubRole::ROLE_COACH     => 'Coachs',
-            UserClubRole::ROLE_STAFF     => 'Staff',
-            UserClubRole::ROLE_TRESORIER => 'Trésorerie',
+            UserClubRole::ROLE_DIRIGEANT  => 'Dirigeants',
+            UserClubRole::ROLE_COACH      => 'Coachs',
+            UserClubRole::ROLE_STAFF      => 'Staff (services civiques, stagiaires, BPJEPS…)',
+            UserClubRole::ROLE_TRESORIER  => 'Trésorerie',
+            UserClubRole::ROLE_SECRETAIRE => 'Secrétariat',
         ];
 
         $icones = [
-            UserClubRole::ROLE_DIRIGEANT => 'bi-shield-fill-check',
-            UserClubRole::ROLE_COACH     => 'bi-clipboard-pulse',
-            UserClubRole::ROLE_STAFF     => 'bi-briefcase',
-            UserClubRole::ROLE_TRESORIER => 'bi-cash-coin',
+            UserClubRole::ROLE_DIRIGEANT  => 'bi-shield-fill-check',
+            UserClubRole::ROLE_COACH      => 'bi-clipboard-pulse',
+            UserClubRole::ROLE_STAFF      => 'bi-briefcase',
+            UserClubRole::ROLE_TRESORIER  => 'bi-cash-coin',
+            UserClubRole::ROLE_SECRETAIRE => 'bi-journal-text',
         ];
 
         $couleurs = [
-            UserClubRole::ROLE_DIRIGEANT => '#dc2626',
-            UserClubRole::ROLE_COACH     => '#3b82f6',
-            UserClubRole::ROLE_STAFF     => '#0891b2',
-            UserClubRole::ROLE_TRESORIER => '#16a34a',
+            UserClubRole::ROLE_DIRIGEANT  => '#dc2626',
+            UserClubRole::ROLE_COACH      => '#3b82f6',
+            UserClubRole::ROLE_STAFF      => '#0891b2',
+            UserClubRole::ROLE_TRESORIER  => '#16a34a',
+            UserClubRole::ROLE_SECRETAIRE => '#7c3aed',
+        ];
+
+        // ── Qui a accès à quoi ? (récap lisible, calqué sur le ClubVoter) ──
+        // Secrétariat  = CLUB_SECRETARIAT   → DIRIGEANT + SECRETAIRE
+        // Voir l'OTM   = CLUB_STAFF_ELARGI  → tous ceux-ci
+        // Gérer l'OTM  = CLUB_STAFF         → DIRIGEANT + COACH + STAFF
+        $acces = [
+            'secretariat' => array_merge(
+                $groupes[UserClubRole::ROLE_DIRIGEANT],
+                $groupes[UserClubRole::ROLE_SECRETAIRE],
+            ),
+            'otm_voir' => array_merge(
+                $groupes[UserClubRole::ROLE_DIRIGEANT],
+                $groupes[UserClubRole::ROLE_COACH],
+                $groupes[UserClubRole::ROLE_STAFF],
+                $groupes[UserClubRole::ROLE_TRESORIER],
+                $groupes[UserClubRole::ROLE_SECRETAIRE],
+            ),
+            'otm_gerer' => array_merge(
+                $groupes[UserClubRole::ROLE_DIRIGEANT],
+                $groupes[UserClubRole::ROLE_COACH],
+                $groupes[UserClubRole::ROLE_STAFF],
+            ),
         ];
 
         return $this->render('manager/staff/index.html.twig', [
@@ -128,7 +160,87 @@ class ManagerStaffController extends AbstractController
             'libelles' => $libelles,
             'icones'   => $icones,
             'couleurs' => $couleurs,
+            'acces'    => $acces,
             'total'    => count($ucrs),
+        ]);
+    }
+
+    /**
+     * [OTM V2 12/07/2026] Postes interdits — « X peut tout tenir SAUF l'arbitrage ».
+     *
+     * Une interdiction bloque les TROIS chemins d'un coup : la personne ne peut
+     * plus s'y inscrire elle-même, l'auto-affectation du mercredi ne l'y placera
+     * pas, et le dirigeant ne pourra pas l'y glisser par erreur dans le kanban.
+     */
+    #[Route('/staff/otm-interdictions', name: 'manager_staff_otm_interdictions', methods: ['GET', 'POST'])]
+    public function otmInterdictions(
+        \Symfony\Component\HttpFoundation\Request $request,
+        \App\Repository\Sport\OtmInterdictionRepository $interdictionRepo,
+    ): Response {
+        $club = $this->tenantResolver->getCurrentClub();
+        if ($club === null) {
+            $this->addFlash('error', 'Aucun club actif.');
+            return $this->redirectToRoute('manager_dashboard');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        // Tout le monde susceptible de tenir un poste au bord du terrain.
+        $rolesOtm = [
+            UserClubRole::ROLE_DIRIGEANT,
+            UserClubRole::ROLE_COACH,
+            UserClubRole::ROLE_STAFF,   // services civiques, stagiaires, BPJEPS, STAPS…
+            UserClubRole::ROLE_TRESORIER,
+            UserClubRole::ROLE_SECRETAIRE,
+            UserClubRole::ROLE_BENEVOLE,
+            UserClubRole::ROLE_PARENT,
+        ];
+
+        $ucrs = $this->em->getRepository(UserClubRole::class)->createQueryBuilder('ucr')
+            ->leftJoin('ucr.user', 'u')->addSelect('u')
+            ->where('ucr.club = :club')->setParameter('club', $club)
+            ->andWhere('ucr.status = :actif')->setParameter('actif', UserClubRole::STATUS_ACTIVE)
+            ->andWhere('ucr.role IN (:roles)')->setParameter('roles', $rolesOtm)
+            ->orderBy('u.nom', 'ASC')->addOrderBy('u.prenom', 'ASC')
+            ->getQuery()->getResult();
+
+        // Une personne peut cumuler plusieurs rôles → on la dédoublonne.
+        $personnes = [];
+        foreach ($ucrs as $ucr) {
+            $u = $ucr->getUser();
+            if ($u !== null && $u->getId() !== null) {
+                $personnes[$u->getId()] = $u;
+            }
+        }
+
+        $postes = \App\Entity\Sport\AffectationMatch::ROLES;
+
+        if ($request->isMethod('POST')) {
+            if (!$this->isCsrfTokenValid('otm_interdictions', (string) $request->request->get('_token'))) {
+                $this->addFlash('error', 'Jeton de sécurité invalide.');
+                return $this->redirectToRoute('manager_staff_otm_interdictions');
+            }
+
+            /** @var array<int, list<string>> $saisie */
+            $saisie = $request->request->all('interdit');
+
+            foreach ($personnes as $uid => $personne) {
+                $roles = array_values(array_filter(
+                    (array) ($saisie[$uid] ?? []),
+                    static fn ($r): bool => is_string($r) && isset($postes[$r]),
+                ));
+                $interdictionRepo->remplacerPour($club, $personne, $roles);
+            }
+            $this->em->flush();
+
+            $this->addFlash('success', '🚫 Postes interdits enregistrés.');
+            return $this->redirectToRoute('manager_staff_otm_interdictions');
+        }
+
+        return $this->render('manager/staff/otm_interdictions.html.twig', [
+            'club'          => $club,
+            'personnes'     => $personnes,
+            'postes'        => $postes,
+            'interdictions' => $interdictionRepo->parUtilisateurPourClub($club),
         ]);
     }
 

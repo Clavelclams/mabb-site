@@ -1,0 +1,205 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Postes — {{ rencontre.adversaire }}{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .otm-board { display:flex; gap:10px; overflow-x:auto; padding-bottom:12px; align-items:flex-start; }
+        .otm-col {
+            flex:0 0 190px; background:var(--mabb-bg-card, #fff); border:1px solid var(--mabb-border, #e2e8f0);
+            border-radius:10px; padding:8px; min-height:120px; transition:background .12s, border-color .12s;
+        }
+        .otm-col.drag-over { background:#eaf4fb; border-color:#0b4fa3; }
+        .otm-col.pool { flex:0 0 220px; background:#f8fafc; }
+        .otm-col-h { font-size:.74rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+                     color:var(--mabb-muted,#64748b); padding:2px 4px 8px; display:flex; justify-content:space-between; }
+        .otm-card {
+            background:#fff; border:1px solid #e2e8f0; border-left:3px solid #0891b2; border-radius:8px;
+            padding:7px 9px; margin-bottom:6px; font-size:.82rem; font-weight:600;
+            display:flex; justify-content:space-between; align-items:center; gap:6px;
+        }
+        .otm-card[draggable="true"] { cursor:grab; }
+        .otm-card[draggable="true"]:active { cursor:grabbing; }
+        .otm-card.figee { opacity:.55; border-left-color:#cbd5e1; }
+        .otm-card.moi { border-left-color:#e07a1f; background:#fff8f1; }
+        .otm-card.dragging { opacity:.4; }
+        .otm-assist { font-size:.63rem; background:#fff4e5; color:#b45309; padding:1px 5px; border-radius:20px; font-weight:800; }
+        .otm-vide { font-size:.75rem; color:#b3261e; text-align:center; padding:8px 0; }
+        #otmToast { position:fixed; right:18px; bottom:18px; z-index:9999; padding:11px 16px; border-radius:9px;
+                    color:#fff; font-size:.85rem; font-weight:600; display:none; box-shadow:0 8px 24px rgba(0,0,0,.2); }
+    </style>
+{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-grid-3x3-gap"></i> Postes du match</h1>
+            <p class="subtitle">
+                {{ rencontre.equipe ? rencontre.equipe.nom ~ ' — ' : '' }}
+                vs <strong>{{ rencontre.adversaire }}</strong>
+                {% if rencontre.date %} · {{ rencontre.date|date('d/m/Y H:i') }}{% endif %}
+            </p>
+        </div>
+        <a href="{{ path('manager_rencontre_staff_show', {id: rencontre.id}) }}" class="btn-mabb-ghost">
+            <i class="bi bi-list-ul"></i> Vue détaillée
+        </a>
+    </div>
+
+    {# ── État de la fenêtre d'inscription ── #}
+    {% set f = fenetre %}
+    <div class="card-mabb" style="margin-bottom:14px; border-left:4px solid
+        {{ f.ouverte ? '#16a34a' : (f.fermee ? '#b3261e' : '#64748b') }};">
+        <div class="card-body" style="padding:11px 14px; font-size:.85rem;">
+            {% if f.ouverte %}
+                <strong style="color:#16a34a;"><i class="bi bi-unlock"></i> Inscriptions ouvertes</strong> —
+                elles ferment le <strong>{{ f.fermeture|date('d/m/Y à H:i') }}</strong>.
+                Glisse ta carte sur le poste que tu veux.
+            {% elseif f.pas_encore %}
+                <strong style="color:#64748b;"><i class="bi bi-hourglass"></i> Pas encore ouvert</strong> —
+                les inscriptions ouvrent le <strong>{{ f.ouverture|date('d/m/Y') }}</strong> (7 jours avant le match).
+            {% else %}
+                <strong style="color:#b3261e;"><i class="bi bi-lock"></i> Inscriptions closes</strong>
+                (fermeture le {{ f.fermeture|date('d/m à H:i') }}).
+                Les postes vides ont été attribués au hasard parmi le staff.
+                {% if est_admin %} En tant que dirigeant, tu peux encore tout réajuster.{% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="otm-board" id="otmBoard">
+        {# Vivier #}
+        <div class="otm-col pool" data-role="">
+            <div class="otm-col-h"><span>Disponibles</span><span id="cnt-pool">{{ disponibles|length }}</span></div>
+            {% for u in disponibles %}
+                {% set mien = (u.id == moi) %}
+                {% set peut = est_admin or (mien and f.ouverte) %}
+                <div class="otm-card {{ mien ? 'moi' : '' }} {{ peut ? '' : 'figee' }}"
+                     draggable="{{ peut ? 'true' : 'false' }}" data-user="{{ u.id }}">
+                    <span>{{ u.prenom }} {{ u.nom }}{% if mien %} <em style="font-weight:400;">(toi)</em>{% endif %}</span>
+                </div>
+            {% else %}
+                <div class="otm-vide" style="color:#64748b;">Tout le monde est placé.</div>
+            {% endfor %}
+        </div>
+
+        {# Un poste = une colonne #}
+        {% for code, col in colonnes %}
+            <div class="otm-col" data-role="{{ code }}">
+                <div class="otm-col-h"><span>{{ col.libelle }}</span></div>
+                {% for a in col.cartes %}
+                    {% set mien = (a.user.id == moi) %}
+                    {% set peut = est_admin or (mien and f.ouverte) %}
+                    <div class="otm-card {{ mien ? 'moi' : '' }} {{ peut ? '' : 'figee' }}"
+                         draggable="{{ peut ? 'true' : 'false' }}" data-user="{{ a.user.id }}">
+                        <span>{{ a.user.prenom }} {{ a.user.nom }}</span>
+                        {% if a.estAssistant %}<span class="otm-assist">renfort</span>{% endif %}
+                    </div>
+                {% endfor %}
+                {% if col.cartes is empty %}
+                    <div class="otm-vide">à pourvoir</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <p style="font-size:.78rem; color:var(--mabb-muted,#64748b); margin-top:10px;">
+        <i class="bi bi-info-circle"></i>
+        Le <strong>premier</strong> posé sur un poste en est le <strong>titulaire</strong> ; les suivants viennent
+        en <strong>renfort</strong> (« assisté de »). Une personne ne tient qu'un poste par match, et pas plus
+        de <strong>2 fois le même poste dans la journée</strong>.
+    </p>
+
+    <div id="otmToast"></div>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    (function () {
+        const CSRF = '{{ csrf_token('otm_postes_' ~ rencontre.id) }}';
+        const URL  = '{{ path('manager_rencontre_postes_deplacer', {id: rencontre.id}) }}';
+        const board = document.getElementById('otmBoard');
+        let carteEnCours = null;
+
+        function toast(msg, erreur) {
+            const t = document.getElementById('otmToast');
+            t.textContent = msg;
+            t.style.background = erreur ? '#b3261e' : '#16a34a';
+            t.style.display = 'block';
+            clearTimeout(t._t);
+            t._t = setTimeout(() => { t.style.display = 'none'; }, erreur ? 5000 : 2200);
+        }
+
+        function majVides() {
+            board.querySelectorAll('.otm-col').forEach(col => {
+                const pool = col.classList.contains('pool');
+                const cartes = col.querySelectorAll('.otm-card').length;
+                let vide = col.querySelector('.otm-vide');
+                if (cartes === 0 && !vide) {
+                    vide = document.createElement('div');
+                    vide.className = 'otm-vide';
+                    vide.style.color = pool ? '#64748b' : '';
+                    vide.textContent = pool ? 'Tout le monde est placé.' : 'à pourvoir';
+                    col.appendChild(vide);
+                } else if (cartes > 0 && vide) {
+                    vide.remove();
+                }
+            });
+            const cnt = document.getElementById('cnt-pool');
+            if (cnt) cnt.textContent = board.querySelector('.otm-col.pool').querySelectorAll('.otm-card').length;
+        }
+
+        board.querySelectorAll('.otm-card[draggable="true"]').forEach(carte => {
+            carte.addEventListener('dragstart', () => { carteEnCours = carte; carte.classList.add('dragging'); });
+            carte.addEventListener('dragend',   () => { carte.classList.remove('dragging'); carteEnCours = null; });
+        });
+
+        board.querySelectorAll('.otm-col').forEach(col => {
+            col.addEventListener('dragover',  e => { if (!carteEnCours) return; e.preventDefault(); col.classList.add('drag-over'); });
+            col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
+
+            col.addEventListener('drop', async e => {
+                e.preventDefault();
+                col.classList.remove('drag-over');
+                if (!carteEnCours) return;
+
+                const carte  = carteEnCours;
+                const source = carte.parentElement;
+                if (source === col) return;
+
+                const role = col.dataset.role;          // '' = retour au vivier
+                const userId = parseInt(carte.dataset.user, 10);
+
+                // Optimiste : on bouge tout de suite, on annule si le serveur refuse.
+                col.appendChild(carte);
+                const badge = carte.querySelector('.otm-assist');
+                if (badge) badge.remove();
+                majVides();
+
+                try {
+                    const res = await fetch(URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+                        body: JSON.stringify({ user_id: userId, role: role }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) { throw new Error(data.error || 'Erreur serveur'); }
+
+                    if (data.assistant) {
+                        const b = document.createElement('span');
+                        b.className = 'otm-assist';
+                        b.textContent = 'renfort';
+                        carte.appendChild(b);
+                    }
+                    toast(role === '' ? 'Retiré du poste.' : 'Placé ✔', false);
+                } catch (err) {
+                    source.appendChild(carte);   // rollback
+                    majVides();
+                    toast(err.message, true);
+                }
+            });
+        });
+    })();
+    </script>
+{% endblock %}

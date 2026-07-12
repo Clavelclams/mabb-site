@@ -53,13 +53,17 @@ class OtmService
     public const MAX_MEME_POSTE_PAR_JOUR = 2;
 
     /**
-     * Qui peut être placé D'OFFICE le mercredi. Le staff uniquement : les
-     * bénévoles, parents et joueuses se placent s'ils le veulent, mais on ne
-     * leur impose rien. (Les services civiques sont rattachés au rôle STAFF.)
+     * Qui peut être placé D'OFFICE le mercredi : le STAFF, et lui seul.
+     *
+     * Le rôle STAFF couvre TOUT l'encadrement non-dirigeant : services civiques,
+     * stagiaires, BPJEPS, STAPS, apprentis… (choix produit assumé : un seul rôle
+     * plutôt qu'un rôle par statut administratif).
+     *
+     * Les bénévoles, parents et joueuses ne sont JAMAIS placés d'office : ils
+     * s'inscrivent s'ils le veulent, avant le mercredi.
      */
     public const ROLES_POOL_AUTO = [
         UserClubRole::ROLE_STAFF,
-        UserClubRole::ROLE_EMPLOYE,
     ];
 
     public function __construct(

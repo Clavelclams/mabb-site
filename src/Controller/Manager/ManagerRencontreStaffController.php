@@ -248,6 +248,155 @@ class ManagerRencontreStaffController extends AbstractController
     }
 
     // ────────────────────────────────────────────────────────────────────────
+    // [OTM V2 12/07] KANBAN DES POSTES — on glisse une carte sur une colonne
+    // ────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Le tableau des postes d'une rencontre : colonnes = postes, cartes = gens.
+     *
+     * - un DIRIGEANT/STAFF déplace tout le monde, quand il veut ;
+     * - un membre simple ne peut glisser QUE sa propre carte, et seulement
+     *   pendant la fenêtre (J-7 → mercredi 23h59).
+     */
+    #[Route('/{id}/postes', name: 'postes', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function postes(Rencontre $rencontre, \App\Service\Otm\OtmService $otm): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        if ($club === null) {
+            return $this->redirectToRoute('manager_dashboard');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
+        if ($rencontre->getClub()?->getId() !== $club->getId()) {
+            throw $this->createAccessDeniedException();
+        }
+
+        // Colonnes : un poste = une colonne. Plus la colonne « Disponibles ».
+        $parRole = $this->affectationRepo->findByRencontre($rencontre);
+        $colonnes = [];
+        $placesIds = [];
+        foreach (AffectationMatch::ROLES as $code => $libelle) {
+            $colonnes[$code] = ['libelle' => $libelle, 'cartes' => []];
+            foreach ($parRole[$code] ?? [] as $a) {
+                /** @var AffectationMatch $a */
+                if (!$a->isCouvert() || $a->getUser() === null) {
+                    continue;
+                }
+                $colonnes[$code]['cartes'][] = $a;
+                $placesIds[] = $a->getUser()->getId();
+            }
+        }
+
+        // Le vivier : tous les membres actifs du club, moins ceux déjà placés.
+        $membres = $this->em->getRepository(\App\Entity\Core\UserClubRole::class)
+            ->createQueryBuilder('ucr')
+            ->select('DISTINCT u')->from(\App\Entity\Core\User::class, 'u')
+            ->join(\App\Entity\Core\UserClubRole::class, 'ucr2', 'WITH', 'ucr2.user = u')
+            ->where('ucr2.club = :club')->setParameter('club', $club)
+            ->andWhere('ucr2.status = :actif')->setParameter('actif', \App\Entity\Core\UserClubRole::STATUS_ACTIVE)
+            ->andWhere('u.isActive = true')
+            ->orderBy('u.nom', 'ASC')
+            ->getQuery()->getResult();
+
+        $disponibles = array_values(array_filter(
+            $membres,
+            static fn ($u) => !in_array($u->getId(), $placesIds, true)
+        ));
+
+        return $this->render('manager/rencontre/postes.html.twig', [
+            'club'        => $club,
+            'rencontre'   => $rencontre,
+            'colonnes'    => $colonnes,
+            'disponibles' => $disponibles,
+            'fenetre'     => $otm->fenetre($rencontre),
+            'est_admin'   => $this->isGranted(ClubVoter::CLUB_STAFF, $club),
+            'moi'         => $this->getUser()?->getId(),
+        ]);
+    }
+
+    /**
+     * Le drop : on pose une personne sur un poste (ou on la remet au vivier).
+     * Toutes les règles passent par OtmService — aucune exception.
+     */
+    #[Route('/{id}/postes/deplacer', name: 'postes_deplacer', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function postesDeplacer(
+        Request $request,
+        Rencontre $rencontre,
+        \App\Service\Otm\OtmService $otm,
+    ): \Symfony\Component\HttpFoundation\JsonResponse {
+        $club = $this->tenantResolver->getCurrentClub();
+        if ($club === null || $rencontre->getClub()?->getId() !== $club->getId()) {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => 'Club invalide.'], 403);
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club);
+
+        if (!$this->isCsrfTokenValid('otm_postes_' . $rencontre->getId(), (string) $request->headers->get('X-CSRF-Token', ''))) {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => 'Jeton invalide — recharge la page.'], 403);
+        }
+
+        $data   = json_decode($request->getContent(), true);
+        $userId = is_array($data) ? (int) ($data['user_id'] ?? 0) : 0;
+        $role   = is_array($data) ? trim((string) ($data['role'] ?? '')) : '';
+
+        $cible = $this->em->getRepository(\App\Entity\Core\User::class)->find($userId);
+        if ($cible === null) {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => 'Personne introuvable.'], 404);
+        }
+
+        $estAdmin = $this->isGranted(ClubVoter::CLUB_STAFF, $club);
+        $moi      = $this->getUser();
+
+        // Un membre simple ne déplace QUE sa propre carte.
+        if (!$estAdmin && $cible->getId() !== $moi?->getId()) {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(
+                ['success' => false, 'error' => 'Tu ne peux placer que toi-même.'], 403);
+        }
+
+        // Retirer les affectations actives de cette personne sur cette rencontre :
+        // une personne ne tient qu'UN poste par match.
+        foreach ($this->affectationRepo->findByRencontre($rencontre) as $liste) {
+            foreach ($liste as $a) {
+                /** @var AffectationMatch $a */
+                if ($a->isCouvert() && $a->getUser()?->getId() === $cible->getId()) {
+                    $this->em->remove($a);
+                }
+            }
+        }
+
+        // Colonne « Disponibles » → on retire, point.
+        if ($role === '') {
+            $this->em->flush();
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => true, 'role' => null]);
+        }
+
+        $this->em->flush(); // la règle « poste déjà pris » doit voir le retrait
+
+        // Titulaire si le poste est libre, sinon renfort (« assisté de »).
+        $titulaire = $this->affectationRepo->findActiveByRencontreAndRole($rencontre, $role);
+        $assistant = $titulaire !== null && $titulaire->isTitulaire();
+
+        $refus = $otm->motifRefus($rencontre, $cible, $role, $assistant, $estAdmin);
+        if ($refus !== null) {
+            return new \Symfony\Component\HttpFoundation\JsonResponse(['success' => false, 'error' => $refus], 400);
+        }
+
+        $a = (new AffectationMatch())
+            ->setRencontre($rencontre)
+            ->setUser($cible)
+            ->setRole($role)
+            ->setEstAssistant($assistant)
+            ->setStatut(AffectationMatch::STATUT_ASSIGNE);
+
+        $this->em->persist($a);
+        $this->em->flush();
+
+        return new \Symfony\Component\HttpFoundation\JsonResponse([
+            'success'   => true,
+            'role'      => $role,
+            'assistant' => $assistant,
+        ]);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
     // Admin : valider une candidature bénévole
     // ────────────────────────────────────────────────────────────────────────
 

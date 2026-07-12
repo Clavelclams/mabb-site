@@ -76,6 +76,9 @@
         </p>
     </div>
     <div style="display:flex; gap:8px;">
+        <a href="{{ path('manager_rencontre_postes', {id: rencontre.id}) }}" class="btn-mabb-orange">
+            <i class="bi bi-grid-3x3-gap"></i> Tableau des postes
+        </a>
         <a href="{{ path('manager_rencontre_show', {id: rencontre.id}) }}" class="btn-mabb-ghost">
             <i class="bi bi-arrow-left"></i> Retour au match
         </a>

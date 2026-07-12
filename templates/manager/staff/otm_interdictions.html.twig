@@ -1,0 +1,93 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Postes interdits — OTM{% endblock %}
+
+{% block body %}
+    <div class="page-header">
+        <div>
+            <h1><i class="bi bi-slash-circle"></i> Postes interdits</h1>
+            <p class="subtitle">
+                « Cette personne peut tenir n'importe quel poste <strong>sauf celui-ci</strong>. »
+            </p>
+        </div>
+        <a href="{{ path('manager_staff_index') }}" class="btn-mabb-ghost">
+            <i class="bi bi-arrow-left"></i> Retour au staff
+        </a>
+    </div>
+
+    <div class="card-mabb" style="margin-bottom:16px;">
+        <div class="card-body" style="font-size:.88rem; line-height:1.6;">
+            Coche un poste pour l'<strong>interdire</strong> à quelqu'un. Exemple typique : un membre du staff
+            très mauvais en arbitrage — tu coches <em>Arbitre 1</em> et <em>Arbitre 2</em>.
+            <div style="background:#eaf4fb; border-left:4px solid var(--mabb-blue, #0b4fa3); padding:10px 14px; border-radius:6px; margin-top:10px;">
+                <i class="bi bi-shield-check"></i>
+                Une interdiction bloque les <strong>trois</strong> chemins d'un coup : la personne ne peut plus
+                s'y inscrire elle-même, la <strong>clôture du mercredi ne l'y placera pas d'office</strong>,
+                et un dirigeant ne pourra pas l'y glisser par erreur dans le tableau des postes.
+            </div>
+        </div>
+    </div>
+
+    {% if personnes is empty %}
+        <div class="card-mabb"><div class="card-body" style="text-align:center; padding:26px;">
+            Aucun membre actif à paramétrer.
+        </div></div>
+    {% else %}
+        <form method="post">
+            <input type="hidden" name="_token" value="{{ csrf_token('otm_interdictions') }}">
+
+            <div class="card-mabb" style="padding:0; overflow:hidden;">
+                <div style="overflow-x:auto;">
+                    <table class="table-mabb" style="width:100%; border-collapse:collapse; font-size:.85rem;">
+                        <thead>
+                            <tr style="background:var(--mabb-dark, #063a55); color:#fff;">
+                                <th style="padding:10px; text-align:left; position:sticky; left:0; background:var(--mabb-dark, #063a55);">
+                                    Personne
+                                </th>
+                                {% for code, libelle in postes %}
+                                    <th style="padding:10px 8px; text-align:center; white-space:nowrap; font-size:.75rem; font-weight:600;">
+                                        {{ libelle }}
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for uid, p in personnes %}
+                                {% set interdits = interdictions[uid] ?? [] %}
+                                <tr style="border-bottom:1px solid #eef2f7;">
+                                    <td style="padding:9px 10px; font-weight:600; white-space:nowrap; position:sticky; left:0; background:#fff;">
+                                        {{ p.prenom }} {{ p.nom }}
+                                        {% if interdits|length > 0 %}
+                                            <span style="display:inline-block; margin-left:6px; font-size:.68rem; background:#fdecea; color:#b3261e; padding:1px 6px; border-radius:20px; font-weight:700;">
+                                                {{ interdits|length }} interdit{{ interdits|length > 1 ? 's' : '' }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    {% for code, libelle in postes %}
+                                        <td style="padding:9px 8px; text-align:center;">
+                                            <input type="checkbox"
+                                                   name="interdit[{{ uid }}][]"
+                                                   value="{{ code }}"
+                                                   title="Interdire « {{ libelle }} » à {{ p.prenom }}"
+                                                   {{ code in interdits ? 'checked' : '' }}
+                                                   style="width:17px; height:17px; cursor:pointer; accent-color:#b3261e;">
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="margin-top:16px; display:flex; gap:10px; align-items:center;">
+                <button type="submit" class="btn-mabb-orange">
+                    <i class="bi bi-check2"></i> Enregistrer les interdictions
+                </button>
+                <span style="font-size:.8rem; color:var(--mabb-muted, #64748b);">
+                    Une case cochée = poste <strong>interdit</strong>. Tout décoché = la personne peut tout faire.
+                </span>
+            </div>
+        </form>
+    {% endif %}
+{% endblock %}

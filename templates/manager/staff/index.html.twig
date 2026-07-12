@@ -17,11 +17,53 @@
             </div>
         </div>
         {% if is_granted('CLUB_STAFF', club) %}
-            <a href="{{ path('manager_staff_comptes_en_attente') }}" class="btn-mabb-ghost" style="position:relative;">
-                <i class="bi bi-person-exclamation"></i> Comptes sans fiche
-            </a>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <a href="{{ path('manager_staff_otm_interdictions') }}" class="btn-mabb-ghost">
+                    <i class="bi bi-slash-circle"></i> Postes interdits
+                </a>
+                <a href="{{ path('manager_staff_comptes_en_attente') }}" class="btn-mabb-ghost" style="position:relative;">
+                    <i class="bi bi-person-exclamation"></i> Comptes sans fiche
+                </a>
+            </div>
         {% endif %}
     </div>
+
+    {# [OTM V2 12/07] Qui a accès à quoi — calqué sur le ClubVoter, pas déclaratif. #}
+    {% if total > 0 %}
+        {% set blocs = [
+            {'t': 'Secrétariat', 'i': 'bi-journal-text', 'c': '#7c3aed', 'l': acces.secretariat,
+             'd': 'Accès au classeur licences, à l\'annuaire et aux imports.'},
+            {'t': 'Week-end (OTM) — accès', 'i': 'bi-calendar-week', 'c': '#0891b2', 'l': acces.otm_voir,
+             'd': 'Voit le dashboard OTM et peut s\'inscrire sur un poste.'},
+            {'t': 'Week-end (OTM) — gestion', 'i': 'bi-people-fill', 'c': '#dc2626', 'l': acces.otm_gerer,
+             'd': 'Place et déplace les gens sur les postes, valide les inscriptions.'}
+        ] %}
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-bottom:20px;">
+            {% for b in blocs %}
+                <div class="card-mabb" style="border-left:4px solid {{ b.c }};">
+                    <div class="card-body" style="padding:12px 14px;">
+                        <div style="font-weight:700; font-size:.88rem; color:{{ b.c }}; margin-bottom:2px;">
+                            <i class="bi {{ b.i }}"></i> {{ b.t }}
+                        </div>
+                        <div style="font-size:.74rem; color:var(--mabb-muted, #64748b); margin-bottom:8px;">{{ b.d }}</div>
+                        {% if b.l is empty %}
+                            <div style="font-size:.8rem; color:#b3261e;">
+                                <i class="bi bi-exclamation-triangle"></i> Personne — à attribuer dans Utilisateurs.
+                            </div>
+                        {% else %}
+                            <div style="display:flex; flex-wrap:wrap; gap:5px;">
+                                {% for ucr in b.l %}
+                                    <span style="font-size:.75rem; background:#eef2f7; padding:2px 8px; border-radius:20px; white-space:nowrap;">
+                                        {{ ucr.user.prenom }} {{ ucr.user.nom }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 
     {% if total == 0 %}
         <div class="card-mabb" style="text-align:center; padding:40px 20px;">
