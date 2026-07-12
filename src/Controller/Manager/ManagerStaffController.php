@@ -184,15 +184,16 @@ class ManagerStaffController extends AbstractController
         }
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
 
-        // Tout le monde susceptible de tenir un poste au bord du terrain.
+        // Seul l'ENCADREMENT est concerné par les interdictions : ce sont eux les
+        // titulaires de poste, et les seuls que la clôture du mercredi place
+        // d'office. Les bénévoles / parents / joueuses sont supervisés et se
+        // placent librement en renfort → rien à leur interdire, on ne les liste pas.
         $rolesOtm = [
             UserClubRole::ROLE_DIRIGEANT,
             UserClubRole::ROLE_COACH,
             UserClubRole::ROLE_STAFF,   // services civiques, stagiaires, BPJEPS, STAPS…
             UserClubRole::ROLE_TRESORIER,
             UserClubRole::ROLE_SECRETAIRE,
-            UserClubRole::ROLE_BENEVOLE,
-            UserClubRole::ROLE_PARENT,
         ];
 
         $ucrs = $this->em->getRepository(UserClubRole::class)->createQueryBuilder('ucr')

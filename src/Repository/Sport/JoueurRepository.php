@@ -145,7 +145,7 @@ class JoueurRepository extends ServiceEntityRepository
      *
      * @return array<array{user: User, suggestion: Joueur|null}> triés par nom
      */
-    public function findUsersWithoutJoueur(\App\Entity\Sport\Club $club): array
+    public function findUsersWithoutJoueur(\App\Entity\Core\Club $club): array
     {
         $users = $this->getEntityManager()->getRepository(\App\Entity\Core\User::class)
             ->createQueryBuilder('u')
