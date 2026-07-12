@@ -5,8 +5,8 @@
 {% block body %}
     <div class="page-header">
         <div style="display:flex; align-items:center; gap: 20px;">
-            {# Avatar : photo PIRB si la joueuse en a uploadé une, sinon fallback initiales.
-               La photo est gérée par la joueuse elle-même côté PIRB (RGPD : auto-détermination).
+            {# Avatar : photo Venaball si la joueuse en a uploadé une, sinon fallback initiales.
+               La photo est gérée par la joueuse elle-même côté Venaball (RGPD : auto-détermination).
                Côté Manager, lecture seule — pas d'upload, pas de suppression. #}
             {% if joueur.photoPath %}
                 <img src="{{ asset('uploads/joueurs/' ~ joueur.photoPath) }}"
@@ -51,12 +51,12 @@
             <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost">
                 <i class="bi bi-arrow-left"></i> Toutes les joueuses
             </a>
-            {# V1.2d — Lien vers le profil PIRB public de cette joueuse #}
+            {# V1.2d — Lien vers le profil Venaball public de cette joueuse #}
             <a href="{{ url('pirb_joueuse_public', {id: joueur.id}) }}"
                target="_blank" rel="noopener"
                class="btn-mabb-ghost"
-               title="Voir le profil PIRB (style réseau social)">
-                <i class="bi bi-person-vcard"></i> Profil PIRB
+               title="Voir le profil Venaball (style réseau social)">
+                <i class="bi bi-person-vcard"></i> Profil Venaball
             </a>
             {% if is_granted('CLUB_STAFF', joueur) %}
                 <a href="{{ path('manager_joueur_edit', {id: joueur.id}) }}" class="btn-mabb-primary">
@@ -80,7 +80,7 @@
        Règle : STAFF/COACH/DIRIGEANT voient tout (gestion club).
        La JOUEUSE ELLE-MÊME voit son propre profil complet.
        Les autres (BENEVOLE, PARENT, autre JOUEUR, EMPLOYE) → vue limitée
-       à l'identité publique. Préparation pour PIRB V2 où chaque joueuse
+       à l'identité publique. Préparation pour Venaball V2 où chaque joueuse
        pilotera elle-même ce qui est public sur son profil.
        ======================================================== #}
     {% set can_see_full_stats = is_granted('CLUB_STAFF', joueur)
@@ -745,14 +745,14 @@
         {% endif %}
 
         {# ========================================================
-           V1.4a — Section "Compte PIRB lié"
+           V1.4a — Section "Compte Venaball lié"
            Visible CLUB_STAFF (DIRIGEANT + COACH + STAFF).
-           Permet de lier un User PIRB existant à cette fiche Joueur.
+           Permet de lier un User Venaball existant à cette fiche Joueur.
            ======================================================== #}
         {% if is_granted('CLUB_STAFF', joueur) %}
         <div class="card-mabb" style="margin-top:16px;">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <span><i class="bi bi-person-vcard"></i> Compte PIRB</span>
+                <span><i class="bi bi-person-vcard"></i> Compte Venaball</span>
                 {% if joueur.user %}
                     <span class="pirb-badge" style="background:rgba(22,163,74,.15); color:#16a34a; padding:3px 10px; border-radius:999px; font-size:.72rem; font-weight:700;">
                         <i class="bi bi-check-circle-fill"></i> Lié
@@ -776,11 +776,11 @@
                         <a href="{{ url('pirb_joueuse_public', {id: joueur.id}) }}"
                            target="_blank" rel="noopener"
                            class="btn-mabb-ghost btn-sm">
-                            <i class="bi bi-box-arrow-up-right"></i> Voir PIRB
+                            <i class="bi bi-box-arrow-up-right"></i> Voir Venaball
                         </a>
                     </div>
                     <form method="POST" action="{{ path('manager_joueur_unlink_user', {id: joueur.id}) }}"
-                          onsubmit="return confirm('Délier le compte PIRB de cette joueuse ? Le user existant ne sera pas supprimé, juste désassocié.');"
+                          onsubmit="return confirm('Délier le compte Venaball de cette joueuse ? Le user existant ne sera pas supprimé, juste désassocié.');"
                           style="display:flex; justify-content:flex-end;">
                         <input type="hidden" name="_token" value="{{ csrf_token('unlink_user_joueur_' ~ joueur.id) }}">
                         <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:var(--mabb-red);">
@@ -791,7 +791,7 @@
                 {% else %}
                     {# === Pas lié : recherche + liste candidats === #}
                     <p style="margin:0 0 14px 0; color:var(--mabb-muted); font-size:.85rem;">
-                        Lie un compte PIRB à cette fiche pour que la joueuse retrouve ses stats, photo et profil sur <strong>pirb.mabb.fr</strong>.
+                        Lie un compte Venaball à cette fiche pour que la joueuse retrouve ses stats, photo et profil sur <strong>pirb.mabb.fr</strong>.
                     </p>
 
                     {# Recherche libre #}
@@ -860,7 +860,7 @@
            administratif — contacts SANS compte, importés du formulaire
            licence). Visible CLUB_SECRETARIAT uniquement (données de tiers
            liées à une mineure). ≠ « Parents/Tuteurs liés » ci-dessous qui
-           concerne les COMPTES ParentJoueur (accès PIRB).
+           concerne les COMPTES ParentJoueur (accès Venaball).
            ======================================================== #}
         {% if is_secretariat is defined and is_secretariat %}
         <div class="card-mabb" style="margin-top:16px;">
@@ -972,7 +972,7 @@
                         <i class="bi bi-person-plus"></i> Lier un parent à cette joueuse
                     </a>
                     <p style="margin:6px 0 0 0; color:var(--mabb-muted); font-size:.75rem;">
-                        Les parents liés peuvent voir les stats et présences de leur enfant sur PIRB.
+                        Les parents liés peuvent voir les stats et présences de leur enfant sur Venaball.
                     </p>
                 </div>
 

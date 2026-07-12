@@ -3287,7 +3287,7 @@
 
         // ─── [V2.4f] Étape position : mini-terrain DANS le modal (Débutant) ───
         // Le terrain n'apparaît QUE pour les tirs (réussis / ratés) : on tape où
-        // le tir est parti → le shot chart PIRB est alimenté même en saisie
+        // le tir est parti → le shot chart Venaball est alimenté même en saisie
         // Débutant (avant : tous les tirs Débutant tombaient au centre 0.5/0.5).
         // Un 2pts déclaré est affiné intérieur/extérieur selon la zone tapée ;
         // un 3pts déclaré RESTE un 3pts (le score compté par l'humain fait foi).
@@ -3406,7 +3406,7 @@
             modalActionBody.querySelectorAll('.action-btn').forEach(b => {
                 b.addEventListener('click', async () => {
                     // [V2.4f] Dernière étape commune : le mini-terrain (position
-                    // réelle du tir → shot chart PIRB, même en mode Débutant).
+                    // réelle du tir → shot chart Venaball, même en mode Débutant).
                     if (b.dataset.choice === 'non') {
                         await demanderPositionTir(typeTir, {}, '📍 D\'où a-t-elle marqué ?', joueurNom + ' — tape l\'endroit du panier');
                         closeModalAction();

@@ -81,10 +81,10 @@
                         <i class="bi bi-arrow-right"></i> Voir ma fiche
                     </a>
                 </div>
-                {# Lien PIRB #}
+                {# Lien Venaball #}
                 <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--mabb-border);">
                     <a href="https://pirb.mabb.fr/" target="_blank" style="font-size:.82rem; color:var(--mabb-blue); text-decoration:none;">
-                        <i class="bi bi-box-arrow-up-right"></i> Mon espace PIRB (stats, shot chart, rencontres)
+                        <i class="bi bi-box-arrow-up-right"></i> Mon espace Venaball (stats, shot chart, rencontres)
                     </a>
                 </div>
             {% else %}
@@ -151,7 +151,7 @@
 {# ============================================================
    BLOC PARENT — visible si rôle PARENT
    Les stats de l'enfant ne sont affichées que si joueur.profilPublic = true
-   (c'est la joueuse elle-même qui contrôle cette visibilité depuis son profil PIRB).
+   (c'est la joueuse elle-même qui contrôle cette visibilité depuis son profil Venaball).
    ============================================================ #}
 {% if is_parent %}
 <div class="col-md-{% if enfants|length > 1 %}12{% else %}6{% endif %}">
@@ -204,7 +204,7 @@
                             {% else %}
                                 <div style="font-size:.78rem; color:var(--mabb-muted); background:rgba(0,0,0,.04); border-radius:8px; padding:6px 10px; margin-bottom:10px;">
                                     <i class="bi bi-lock" style="margin-right:4px;"></i>
-                                    Stats non accessibles — ton enfant n'a pas activé le partage public de son profil PIRB.
+                                    Stats non accessibles — ton enfant n'a pas activé le partage public de son profil Venaball.
                                 </div>
                             {% endif %}
 

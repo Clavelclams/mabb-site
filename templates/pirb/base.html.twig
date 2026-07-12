@@ -1,6 +1,6 @@
 {#
    ╔═══════════════════════════════════════════════════════════════════╗
-   ║  base.html.twig — Layout PIRB (espace joueur MABB)                ║
+   ║  base.html.twig — Layout Venaball (espace joueur MABB)                ║
    ║  Mobile-first app : top bar fine + zone contenu + bottom nav      ║
    ║                                                                   ║
    ║  Design : dark theme #0f172a + accent orange #ea580c (MABB)       ║
@@ -14,7 +14,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
-    <title>{% block title %}Mon espace — MABB PIRB{% endblock %}</title>
+    <title>{% block title %}Mon espace — Venaball{% endblock %}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         :root {
@@ -430,7 +430,7 @@
     {% block header %}
     <header class="pirb-header">
         <a href="{{ path('pirb_dashboard') }}" class="brand">
-            🏀 MABB <span class="sub">PIRB</span>
+            🏀 MABB <span class="sub">Venaball</span>
         </a>
         {# ── Sélecteur de saison ── #}
         {% if app.user %}
@@ -464,7 +464,7 @@
 
     <main class="pirb-content">
         {# [B-102 06/07/2026] Flashes rendus GLOBALEMENT sur toutes les pages
-           PIRB (avant : seul le dashboard les affichait, et sans le type
+           Venaball (avant : seul le dashboard les affichait, et sans le type
            'warning' → "match terminé, tu ne peux plus t'inscrire" et autres
            retours d'action étaient invisibles selon la page d'atterrissage). #}
         {% for label, messages in app.flashes %}
@@ -490,7 +490,7 @@
            le contenu et le padding-bottom du content garantit qu'elle
            reste accessible au-dessus de la navbar. #}
         <footer class="pirb-dedicace">
-            <strong style="color:var(--pirb-text);">PIRB</strong> — Ton espace joueur de basket · stats, profil, performances<br>
+            <strong style="color:var(--pirb-text);">Venaball</strong> — Ton espace joueur de basket · stats, profil, performances<br>
             En hommage à <a href="https://www.instagram.com/pirb_scouting/" target="_blank" rel="noopener">@pirb_scouting</a>
         </footer>
     </main>

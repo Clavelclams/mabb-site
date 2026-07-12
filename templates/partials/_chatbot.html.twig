@@ -18,7 +18,7 @@
 #mabb-chat-btn {
     position: fixed;
     {% if chatbotContext == 'pirb' %}
-    bottom: 76px; /* au-dessus de la bottom nav PIRB */
+    bottom: 76px; /* au-dessus de la bottom nav Venaball */
     {% else %}
     bottom: 24px;
     {% endif %}
@@ -211,7 +211,7 @@
     <div class="chat-header">
         <i class="bi bi-robot" style="font-size:1.1rem;"></i>
         <span class="chat-header-title">
-            {% if chatbotContext == 'pirb' %}Assistant PIRB{% else %}Assistant Manager{% endif %}
+            {% if chatbotContext == 'pirb' %}Assistant Venaball{% else %}Assistant Manager{% endif %}
         </span>
         <button class="chat-close-btn" id="chatCloseBtn" title="Fermer">×</button>
     </div>
@@ -219,7 +219,7 @@
     <div class="chat-messages" id="chatMessages">
         <div class="chat-bubble bot">
             {% if chatbotContext == 'pirb' %}
-            👋 Salut ! Je suis l'assistant PIRB. Tape ce que tu cherches (ex&nbsp;: <em>séance</em>, <em>stats</em>, <em>licence</em>…)
+            👋 Salut ! Je suis l'assistant Venaball. Tape ce que tu cherches (ex&nbsp;: <em>séance</em>, <em>stats</em>, <em>licence</em>…)
             {% else %}
             👋 Bonjour ! Je suis l'assistant Manager. Tape un mot-clé pour trouver une réponse rapidement (ex&nbsp;: <em>licence</em>, <em>séance</em>, <em>cotisation</em>…)
             {% endif %}
@@ -302,7 +302,7 @@ const KB = [
   {
     keywords: ['seance solo','séance solo','solo','valider solo','validation solo','declaration solo','déclaration','approbation'],
     title: '🏃 Séances solo (validation)',
-    text: 'Les joueuses déclarent leurs entraînements persos depuis PIRB. Tu valides (ou refuses) leurs déclarations en masse depuis Manager.',
+    text: 'Les joueuses déclarent leurs entraînements persos depuis Venaball. Tu valides (ou refuses) leurs déclarations en masse depuis Manager.',
     steps: [
       'Va sur la page "Séances solo"',
       'Sélectionne les déclarations à valider (coche "Tout sélectionner")',
@@ -316,12 +316,12 @@ const KB = [
   {
     keywords: ['pdf','pdfs','feuille match','feuille de match','resume match','résumé match','positions','demande pdf','acces pdf','accès pdf','demandes pdf'],
     title: '📄 PDFs FFBB — Demandes d\'accès',
-    text: 'Les joueuses ne peuvent pas télécharger directement les PDFs officiels FFBB. Elles font une demande depuis PIRB → tu approuves ou refuses ici.',
+    text: 'Les joueuses ne peuvent pas télécharger directement les PDFs officiels FFBB. Elles font une demande depuis Venaball → tu approuves ou refuses ici.',
     steps: [
       'Va sur la page "PDFs FFBB" dans le menu',
       'Vois les demandes en attente (joueuse + type de document)',
       'Clique "Approuver" ou "Refuser" (avec message optionnel)',
-      'La joueuse voit directement le résultat dans PIRB'
+      'La joueuse voit directement le résultat dans Venaball'
     ],
     links: [
       { label: 'Gérer les demandes PDF', url: '{{ path('manager_demandes_pdf_index') }}' }
@@ -360,12 +360,12 @@ const KB = [
   {
     keywords: ['joueur','joueurs','joueuse','joueuses','ajouter joueur','creer joueur','créer joueur','fiche joueur','profil joueur','nouveau joueur'],
     title: '👤 Joueurs',
-    text: 'Crée et gère les fiches joueurs. Chaque joueur peut être lié à un compte utilisateur pour accéder à PIRB.',
+    text: 'Crée et gère les fiches joueurs. Chaque joueur peut être lié à un compte utilisateur pour accéder à Venaball.',
     steps: [
       'Va dans "Joueurs" → "Ajouter un joueur"',
       'Remplis les infos obligatoires (nom, prénom, date de naissance, équipe)',
       'Enregistre → la fiche est créée',
-      'Optionnel : lie la fiche à un compte utilisateur (email) pour l\'accès PIRB'
+      'Optionnel : lie la fiche à un compte utilisateur (email) pour l\'accès Venaball'
     ],
     links: [
       { label: 'Tous les joueurs', url: '{{ path('manager_joueur_index') }}' },
@@ -395,7 +395,7 @@ const KB = [
       'Va dans "Rencontres"',
       'Sélectionne un match → "Uploader les PDFs" pour les documents FFBB',
       'Saisis les évaluations des joueuses (note + stats)',
-      'Les joueuses voient leurs stats dans PIRB'
+      'Les joueuses voient leurs stats dans Venaball'
     ],
     links: [
       { label: 'Toutes les rencontres', url: '{{ path('manager_rencontre_index') }}' }
@@ -418,11 +418,11 @@ const KB = [
   {
     keywords: ['stats','statistiques','evaluation','évaluation','eval','performance','bilan','points','rebonds','passes'],
     title: '📊 Stats & Évaluations',
-    text: 'Saisis les évaluations match par match. Les stats individuelles sont visibles par les joueuses dans PIRB.',
+    text: 'Saisis les évaluations match par match. Les stats individuelles sont visibles par les joueuses dans Venaball.',
     steps: [
       'Va sur la fiche d\'une rencontre',
       'Section "Évaluations" → saisis les stats de chaque joueuse',
-      'Les joueuses voient automatiquement leurs stats dans PIRB → Stats'
+      'Les joueuses voient automatiquement leurs stats dans Venaball → Stats'
     ],
     links: [
       { label: 'Voir les équipes', url: '{{ path('manager_equipe_index') }}' }
@@ -472,7 +472,7 @@ const KB = [
   {
     keywords: ['evenement','événement','tournoi','stage','sortie','camp','competition','manifestation'],
     title: '🎉 Événements',
-    text: 'Crée et gère les événements du club (tournois, stages, sorties). Les membres peuvent s\'inscrire depuis PIRB.',
+    text: 'Crée et gère les événements du club (tournois, stages, sorties). Les membres peuvent s\'inscrire depuis Venaball.',
     links: [
       { label: 'Voir les événements', url: '{{ path('manager_evenement_index') }}' },
       { label: 'Nouvel événement', url: '{{ path('manager_evenement_new') }}' }
@@ -497,8 +497,8 @@ const KB = [
   },
   {
     keywords: ['pirb','application joueur','espace joueur','portail joueur','accès pirb','lien pirb','compte joueur'],
-    title: '📱 PIRB — Espace joueuse',
-    text: 'PIRB est l\'application mobile pour les joueuses. Pour qu\'une joueuse accède à PIRB, elle doit avoir un compte lié à sa fiche joueur.',
+    title: '📱 Venaball — Espace joueuse',
+    text: 'Venaball est l\'application mobile pour les joueuses. Pour qu\'une joueuse accède à Venaball, elle doit avoir un compte lié à sa fiche joueur.',
     steps: [
       'Crée le compte utilisateur de la joueuse (ou demande-lui de s\'inscrire)',
       'Dans la fiche joueur → "Lier à un compte utilisateur"',
@@ -511,7 +511,7 @@ const KB = [
   }
 ];
 
-{% else %} {# ─── PIRB knowledge base ─────────────────────────────────────── #}
+{% else %} {# ─── Venaball knowledge base ─────────────────────────────────────── #}
 
 const KB = [
   {

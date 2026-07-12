@@ -14,7 +14,7 @@
 
     LOGIQUE D'AFFICHAGE :
       - "Voir le bilan saison"     : visible si on a un joueur (staff + self)
-      - "Voir le profil PIRB"      : visible si on a un joueur (staff + self)
+      - "Voir le profil Venaball"      : visible si on a un joueur (staff + self)
       - "Ajouter une photo"        : visible UNIQUEMENT si is_self ET joueur existe
                                       (RGPD : auto-détermination, c'est à la joueuse de mettre sa photo)
       - "Modules à venir"          : placeholder grisé toujours visible
@@ -70,7 +70,7 @@
                     {% endif %}
                 {% endif %}
 
-                {# === ACTION 2 : Voir le profil PIRB ===
+                {# === ACTION 2 : Voir le profil Venaball ===
                    Lien direct vers le sous-domaine pirb.mabb.fr (désormais en prod).
                    target=_blank car cross-domain : on ouvre dans un nouvel onglet. #}
                 {% if joueur %}
@@ -81,14 +81,14 @@
                        onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 18px rgba(252,112,42,.3)'"
                        onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
                         <i class="bi bi-person-badge" style="font-size:1.5rem;"></i>
-                        <strong style="font-size:1rem;">Voir le profil PIRB</strong>
+                        <strong style="font-size:1rem;">Voir le profil Venaball</strong>
                         <small style="opacity:.85; font-size:.78rem;">pirb.mabb.fr <i class="bi bi-box-arrow-up-right"></i></small>
                     </a>
                 {% endif %}
 
                 {# === ACTION 3 : Ajouter une photo ===
                    UNIQUEMENT visible si is_self : la photo appartient au joueur,
-                   pas au staff. Redirige vers PIRB où l'upload est géré. #}
+                   pas au staff. Redirige vers Venaball où l'upload est géré. #}
                 {% if is_self and joueur %}
                     <a href="https://pirb.mabb.fr"
                        target="_blank" rel="noopener"
@@ -125,7 +125,7 @@
             {% if not is_self and joueur %}
                 <p style="color:var(--mabb-muted); font-size:.78rem; margin: 16px 0 0; font-style:italic;">
                     <i class="bi bi-shield-check"></i>
-                    La photo est gérée par la joueuse elle-même depuis PIRB (RGPD).
+                    La photo est gérée par la joueuse elle-même depuis Venaball (RGPD).
                 </p>
             {% endif %}
         </div>

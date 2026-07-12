@@ -72,7 +72,7 @@
         {% if bilan.statut == 'brouillon' %}
             <form method="POST" action="{{ path('manager_bilan_valider', {id: bilan.id}) }}" style="display:inline;">
                 <input type="hidden" name="_token" value="{{ csrf_token('bilan_valider_' ~ bilan.id) }}">
-                <button type="submit" class="btn-mabb-primary" onclick="return confirm('Valider ce bilan ? La joueuse pourra le voir depuis PIRB.')">
+                <button type="submit" class="btn-mabb-primary" onclick="return confirm('Valider ce bilan ? La joueuse pourra le voir depuis Venaball.')">
                     <i class="bi bi-check-circle"></i> Valider le bilan
                 </button>
             </form>

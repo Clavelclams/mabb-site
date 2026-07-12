@@ -2,7 +2,7 @@
 
 {% block title %}Espace Numérique — MABB Amiens
 {% endblock %}
-{% block meta_description %}L'espace numérique de la MABB : application de gestion du club, espace joueur PIRB et outils digitaux.
+{% block meta_description %}L'espace numérique de la MABB : application de gestion du club, espace joueur Venaball et outils digitaux.
 {% endblock %}
 
 {% block body %}
@@ -44,8 +44,8 @@
 					<strong>MABB Manager</strong>
 					pour la gestion du club (équipes, matchs, stats, événements)
 					                    et
-					<strong>PIRB</strong>
-					(Player Individual Record Book) pour l'espace personnel des joueuses.
+					<strong>Venaball</strong>
+					(l'espace joueuse du club) pour l'espace personnel des joueuses.
 				</p>
 			</div>
 			<div class="col-lg-6">
@@ -57,7 +57,7 @@
 			</div>
 		</div>
 
-		{# CTA vers MABB Manager et PIRB #}
+		{# CTA vers MABB Manager et Venaball #}
 		<div class="row g-4 mt-4">
 			<div class="col-md-6">
 				<a href="https://manager.mabb.fr" target="_blank" rel="noopener" class="text-decoration-none d-block">
@@ -82,7 +82,7 @@
 								<i class="bi bi-person-badge-fill" style="font-size:1.6rem;color:#fff"></i>
 							</div>
 							<div>
-								<h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">PIRB <span class="badge bg-success ms-1" style="font-size:.65rem">✅ En ligne</span></h5>
+								<h5 class="fw-bold mb-1" style="color:var(--mabb-dark)">Venaball <span class="badge bg-success ms-1" style="font-size:.65rem">✅ En ligne</span></h5>
 								<p class="text-muted small mb-0">L'espace perso de chaque joueuse — profil, stats, bilan.<br><strong style="color:var(--mabb-orange)">pirb.mabb.fr</strong> <i class="bi bi-box-arrow-up-right" style="font-size:.7rem"></i></p>
 							</div>
 						</div>
@@ -106,9 +106,9 @@
                 {icon: 'bi-people', title: 'Gestion des équipes', desc: 'Effectifs, catégories, composition d\'équipe par saison. Tout centralisé.', app: 'MABB Manager'},
                 {icon: 'bi-clipboard-data', title: 'Saisie de match en direct', desc: 'Interface terrain sur tablette : tirs, fautes, remplacements en quelques touches.', app: 'MABB Manager'},
                 {icon: 'bi-calendar-check', title: 'Planning et présences', desc: 'Entraînements, matchs, événements. Convocations et suivi des présences.', app: 'MABB Manager'},
-                {icon: 'bi-person-badge', title: 'Profil joueur', desc: 'Photo, poste, numéro, historique. Chaque joueuse a son espace personnel.', app: 'PIRB'},
-                {icon: 'bi-graph-up', title: 'Shot Chart', desc: 'Carte visuelle de tous les tirs sur le terrain. Pourcentages par zone.', app: 'PIRB'},
-                {icon: 'bi-chat-dots', title: 'Feedback anonyme', desc: 'Les joueuses notent les séances de façon anonyme. Le coach voit les tendances.', app: 'PIRB'},
+                {icon: 'bi-person-badge', title: 'Profil joueur', desc: 'Photo, poste, numéro, historique. Chaque joueuse a son espace personnel.', app: 'Venaball'},
+                {icon: 'bi-graph-up', title: 'Shot Chart', desc: 'Carte visuelle de tous les tirs sur le terrain. Pourcentages par zone.', app: 'Venaball'},
+                {icon: 'bi-chat-dots', title: 'Feedback anonyme', desc: 'Les joueuses notent les séances de façon anonyme. Le coach voit les tendances.', app: 'Venaball'},
             ] %}
             {% for f in features %}
             <div class="col-md-6 col-lg-4">
@@ -117,7 +117,7 @@
                         <div style="width:50px;height:50px;border-radius:12px;background:var(--mabb-blue);display:flex;align-items:center;justify-content:center">
                             <i class="bi {{ f.icon }}" style="font-size:1.3rem;color:#fff"></i>
                         </div>
-                        <span class="badge {% if f.app == 'PIRB' %}bg-warning text-dark{% else %}bg-primary{% endif %} rounded-pill">{{ f.app }}</span>
+                        <span class="badge {% if f.app == 'Venaball' %}bg-warning text-dark{% else %}bg-primary{% endif %} rounded-pill">{{ f.app }}</span>
                     </div>
                     <h5 class="fw-bold">{{ f.title }}</h5>
                     <p class="text-muted mb-0">{{ f.desc }}</p>
@@ -139,7 +139,7 @@
                 {date: 'Mars 2026', title: 'Site vitrine mabb.fr', status: 'En ligne', icon: 'bi-globe', color: '#f39c12'},
                 {date: 'Mai 2026', title: 'Gestion sportive', status: 'En cours', icon: 'bi-people', color: '#3498db'},
                 {date: 'Juin 2026', title: 'Saisie matchs & stats', status: 'En cours', icon: 'bi-clipboard-data', color: '#2980b9'},
-                {date: 'Juillet 2026', title: 'PIRB joueur', status: 'Planifié', icon: 'bi-person-badge', color: '#27ae60'},
+                {date: 'Juillet 2026', title: 'Venaball joueur', status: 'Planifié', icon: 'bi-person-badge', color: '#27ae60'},
             ] %}
             {% for p in phases %}
             <div class="col-md-6 col-lg-3">

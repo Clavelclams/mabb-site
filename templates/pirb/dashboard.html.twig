@@ -1,11 +1,11 @@
 {#
-   PIRB V1 — Dashboard "Mon profil" lecture seule
+   Venaball V1 — Dashboard "Mon profil" lecture seule
    Affiche les infos du Joueur lié à l'User connecté + statut cotisation.
    Si pas de Joueur lié → message d'aide pour contacter le staff.
 #}
 {% extends 'pirb/base.html.twig' %}
 
-{% block title %}Mon profil — MABB PIRB{% endblock %}
+{% block title %}Mon profil — Venaball{% endblock %}
 
 {% block stylesheets %}
     /* V1.2b — Affichage badges épinglés en hero */
@@ -44,7 +44,7 @@
 {% block body %}
 
     {# [B-102 06/07/2026] Flashes désormais rendus par base.html.twig pour
-       TOUTES les pages PIRB (tous types, warning inclus) — bloc local retiré
+       TOUTES les pages Venaball (tous types, warning inclus) — bloc local retiré
        pour éviter le double affichage. #}
 
     {% if joueur is null %}
@@ -52,7 +52,7 @@
         {# Cas : User connecté mais pas encore lié à une fiche Joueuse #}
         <div class="pirb-card" style="text-align:center; padding:32px 20px;">
             <div style="font-size:3rem; margin-bottom:8px;">🏀</div>
-            <h2 style="margin:0 0 8px 0; font-size:1.15rem;">Bienvenue sur le PIRB MABB</h2>
+            <h2 style="margin:0 0 8px 0; font-size:1.15rem;">Bienvenue sur le Venaball</h2>
             <p style="color:var(--pirb-text-muted); font-size:0.9rem; margin:0 0 18px 0;">
                 Ton compte est créé, mais aucune fiche joueuse n'est encore liée à ton email.
                 Contacte un membre du staff pour activer ton profil.
