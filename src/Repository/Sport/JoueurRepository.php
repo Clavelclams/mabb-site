@@ -150,13 +150,19 @@ class JoueurRepository extends ServiceEntityRepository
      */
     public function findUsersWithoutJoueur(\App\Entity\Core\Club $club): array
     {
+        // [12/07] Seuls les comptes ayant le rôle JOUEUR ont besoin d'une fiche
+        // joueuse. Avant, la requête remontait TOUT LE MONDE (dirigeants, coachs,
+        // parents, services civiques…), ce qui n'avait aucun sens : un service
+        // civique n'a pas de fiche joueuse à avoir.
         $users = $this->getEntityManager()->getRepository(\App\Entity\Core\User::class)
             ->createQueryBuilder('u')
-            ->innerJoin(\App\Entity\Core\UserClubRole::class, 'ucr', 'WITH', 'ucr.user = u AND ucr.club = :club AND ucr.status = :active')
+            ->innerJoin(\App\Entity\Core\UserClubRole::class, 'ucr', 'WITH',
+                'ucr.user = u AND ucr.club = :club AND ucr.status = :active AND ucr.role = :roleJoueur')
             ->leftJoin(\App\Entity\Sport\Joueur::class, 'jl', 'WITH', 'jl.user = u AND jl.club = :club')
             ->where('jl.id IS NULL')
             ->setParameter('club', $club)
             ->setParameter('active', \App\Entity\Core\UserClubRole::STATUS_ACTIVE)
+            ->setParameter('roleJoueur', \App\Entity\Core\UserClubRole::ROLE_JOUEUR)
             ->orderBy('u.nom', 'ASC')
             ->addOrderBy('u.prenom', 'ASC')
             ->getQuery()

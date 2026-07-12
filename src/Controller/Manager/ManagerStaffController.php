@@ -466,11 +466,56 @@ class ManagerStaffController extends AbstractController
         }
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
 
+        // [12/07] Le rattachement dépend du RÔLE. Un compte n'a pas « une fiche
+        // manquante » dans l'absolu : une joueuse a besoin d'une fiche, un parent
+        // d'un enfant, un coach d'une équipe — et un membre du staff (service
+        // civique, dirigeant, trésorier, secrétaire) n'a besoin de RIEN.
+        // Avant, la page réclamait une fiche joueuse pour tout le monde.
+
+        // 1. Joueuses (rôle JOUEUR) sans fiche joueuse.
         $entrees = $this->joueurRepository->findUsersWithoutJoueur($club);
 
+        // 2. Parents (rôle PARENT) sans enfant rattaché.
+        $parentsSansEnfant = $this->em->createQueryBuilder()
+            ->select('u')->distinct()
+            ->from(User::class, 'u')
+            ->innerJoin(UserClubRole::class, 'ucr', 'WITH',
+                'ucr.user = u AND ucr.club = :club AND ucr.status = :actif AND ucr.role = :rp')
+            ->leftJoin(\App\Entity\Sport\ParentJoueur::class, 'pj', 'WITH',
+                'pj.parentUser = u AND pj.club = :club')
+            ->where('pj.id IS NULL')
+            ->setParameter('club', $club)
+            ->setParameter('actif', UserClubRole::STATUS_ACTIVE)
+            ->setParameter('rp', UserClubRole::ROLE_PARENT)
+            ->orderBy('u.nom', 'ASC')->addOrderBy('u.prenom', 'ASC')
+            ->getQuery()->getResult();
+
+        // 3. Coachs (rôle COACH) sans aucune équipe.
+        $coachsSansEquipe = $this->em->createQueryBuilder()
+            ->select('u')->distinct()
+            ->from(User::class, 'u')
+            ->innerJoin(UserClubRole::class, 'ucr', 'WITH',
+                'ucr.user = u AND ucr.club = :club AND ucr.status = :actif AND ucr.role = :rc')
+            ->leftJoin(\App\Entity\Sport\CoachEquipe::class, 'ce', 'WITH', 'ce.user = u')
+            ->where('ce.id IS NULL')
+            ->setParameter('club', $club)
+            ->setParameter('actif', UserClubRole::STATUS_ACTIVE)
+            ->setParameter('rc', UserClubRole::ROLE_COACH)
+            ->orderBy('u.nom', 'ASC')->addOrderBy('u.prenom', 'ASC')
+            ->getQuery()->getResult();
+
+        // Les équipes, pour le menu d'affectation d'un coach.
+        $equipes = $this->equipeRepository->findBy(
+            ['club' => $club, 'isActive' => true],
+            ['categorie' => 'ASC']
+        );
+
         return $this->render('manager/staff/comptes_en_attente.html.twig', [
-            'club'    => $club,
-            'entrees' => $entrees, // array<{user: User, suggestion: Joueur|null}>
+            'club'                => $club,
+            'entrees'             => $entrees, // array<{user: User, suggestion: Joueur|null}>
+            'parents_sans_enfant' => $parentsSansEnfant,
+            'coachs_sans_equipe'  => $coachsSansEquipe,
+            'equipes'             => $equipes,
         ]);
     }
 }

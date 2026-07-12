@@ -1,14 +1,18 @@
 {% extends 'manager/base.html.twig' %}
-{% block title %}Comptes Venaball sans fiche joueuse{% endblock %}
+{% block title %}Comptes à rattacher{% endblock %}
 
 {% block body %}
 
+{% set rien_a_faire = entrees is empty and parents_sans_enfant is empty and coachs_sans_equipe is empty %}
+
 <div class="page-header">
     <div>
-        <h1><i class="bi bi-person-exclamation"></i> Comptes Venaball sans fiche</h1>
+        <h1><i class="bi bi-person-exclamation"></i> Comptes à rattacher</h1>
         <p class="subtitle">
-            Ces utilisateurs ont un compte sur manager.mabb.fr / pirb.mabb.fr
-            mais aucune fiche joueuse n'est encore liée à leur profil.
+            Un compte n'a pas « une fiche manquante » dans l'absolu : le rattachement
+            <strong>dépend du rôle</strong>. Une joueuse a besoin d'une fiche, un parent d'un enfant,
+            un coach d'une équipe. Le staff (services civiques, dirigeants, trésorier, secrétaire)
+            n'a <strong>rien</strong> à rattacher — il n'apparaît donc pas ici.
         </p>
     </div>
     <a href="{{ path('manager_staff_index') }}" class="btn-mabb-ghost">
@@ -16,79 +20,121 @@
     </a>
 </div>
 
-{% if entrees is empty %}
+{% if rien_a_faire %}
     <div class="card-mabb" style="text-align:center; padding:40px 20px;">
         <i class="bi bi-check-circle" style="font-size:2.5rem; color:#22c55e;"></i>
-        <h3 style="margin:12px 0 6px; font-size:1rem;">Tout est lié ✓</h3>
+        <h3 style="margin:12px 0 6px; font-size:1rem;">Tout est rattaché ✓</h3>
         <p style="color:var(--mabb-muted); font-size:.84rem; margin:0;">
-            Chaque membre du club a une fiche joueuse associée à son compte.
+            Chaque joueuse a sa fiche, chaque parent son enfant, chaque coach son équipe.
         </p>
     </div>
-{% else %}
-    {# Explication du flux #}
-    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:14px 18px; margin-bottom:20px; font-size:.85rem; color:#1e40af;">
-        <strong><i class="bi bi-info-circle"></i> Comment ça fonctionne</strong><br>
-        <span style="color:#3730a3;">
-            Si une fiche joueuse a le <strong>même email</strong> que le compte,
-            le lien se fait <strong>automatiquement au prochain login Venaball</strong> de la joueuse.
-            Sinon, va sur la fiche de la joueuse concernée → section "Compte Venaball" → Lier.
-        </span>
-    </div>
+{% endif %}
 
-    <div class="card-mabb">
+{# ═══ 1. JOUEUSES SANS FICHE ═══════════════════════════════════════════ #}
+{% if entrees is not empty %}
+    <h2 style="font-size:1rem; font-weight:800; margin:0 0 4px; color:var(--mabb-dark,#063a55);">
+        <i class="bi bi-person-badge"></i> Joueuses sans fiche
+        <span style="font-size:.75rem; background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:20px;">{{ entrees|length }}</span>
+    </h2>
+    <p style="font-size:.8rem; color:var(--mabb-muted); margin:0 0 10px;">
+        Si une fiche joueuse porte le <strong>même email</strong> que le compte, le lien se fait
+        <strong>automatiquement au prochain login</strong>. Sinon : fiche de la joueuse → « Compte Venaball » → Lier.
+    </p>
+
+    <div class="card-mabb" style="margin-bottom:24px;">
         <div class="card-body" style="padding:0;">
             {% for entry in entrees %}
                 {% set u = entry.user %}
                 {% set suggestion = entry.suggestion %}
                 <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:14px 18px; border-bottom:1px solid var(--mabb-border);">
                     <div>
-                        {# User info #}
-                        <div style="font-weight:700; font-size:.92rem;">
-                            {{ u.prenom }} {{ u.nom|upper }}
-                        </div>
-                        <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:2px;">
-                            {{ u.email }}
-                        </div>
+                        <div style="font-weight:700; font-size:.92rem;">{{ u.prenom }} {{ u.nom|upper }}</div>
+                        <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:2px;">{{ u.email }}</div>
 
-                        {# Suggestion auto-détectée #}
                         {% if suggestion is not null %}
                             <div style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; background:#fef3c7; border:1px solid #fcd34d; border-radius:8px; padding:4px 10px; font-size:.75rem; color:#92400e;">
                                 <i class="bi bi-lightbulb-fill"></i>
-                                Correspond à la fiche :
-                                <strong>{{ suggestion.prenom }} {{ suggestion.nom|upper }}</strong>
+                                Correspond à la fiche <strong>{{ suggestion.prenom }} {{ suggestion.nom|upper }}</strong>
                                 {% if suggestion.equipe %} · {{ suggestion.equipe.nom }}{% endif %}
                                 — <em>même email, lien auto au prochain login</em>
                             </div>
                         {% else %}
                             <div style="margin-top:6px; font-size:.75rem; color:var(--mabb-muted);">
-                                <i class="bi bi-search"></i> Aucune fiche détectée par email — lier manuellement depuis la fiche joueuse
+                                <i class="bi bi-search"></i> Aucune fiche détectée par email — à lier manuellement.
                             </div>
                         {% endif %}
                     </div>
-
-                    {# Actions #}
                     <div style="display:flex; gap:8px; flex-direction:column; align-items:flex-end;">
                         {% if suggestion is not null %}
-                            {# Lien direct vers la fiche avec la suggestion #}
-                            <a href="{{ path('manager_joueur_show', {id: suggestion.id}) }}"
-                               class="btn-mabb-ghost btn-sm"
-                               style="white-space:nowrap;">
+                            <a href="{{ path('manager_joueur_show', {id: suggestion.id}) }}" class="btn-mabb-ghost btn-sm" style="white-space:nowrap;">
                                 <i class="bi bi-link-45deg"></i> Voir la fiche
                             </a>
                         {% endif %}
-                        <a href="{{ path('manager_joueur_index') }}"
-                           class="btn-mabb-ghost btn-sm"
-                           style="white-space:nowrap; font-size:.72rem; opacity:.7;">
-                            <i class="bi bi-search"></i> Chercher manuellement
+                        <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost btn-sm" style="white-space:nowrap; font-size:.72rem; opacity:.7;">
+                            <i class="bi bi-search"></i> Chercher la fiche
                         </a>
                     </div>
                 </div>
             {% endfor %}
         </div>
     </div>
+{% endif %}
 
-    <div style="margin-top:14px; font-size:.78rem; color:var(--mabb-muted); text-align:center;">
-        {{ entrees|length }} compte{{ entrees|length > 1 ? 's' : '' }} sans fiche liée
+{# ═══ 2. PARENTS SANS ENFANT ═══════════════════════════════════════════ #}
+{% if parents_sans_enfant is not empty %}
+    <h2 style="font-size:1rem; font-weight:800; margin:0 0 4px; color:var(--mabb-dark,#063a55);">
+        <i class="bi bi-people"></i> Parents sans enfant rattaché
+        <span style="font-size:.75rem; background:#ede9fe; color:#5b21b6; padding:2px 8px; border-radius:20px;">{{ parents_sans_enfant|length }}</span>
+    </h2>
+    <p style="font-size:.8rem; color:var(--mabb-muted); margin:0 0 10px;">
+        Un parent doit être rattaché à <strong>sa fille</strong>, pas à une fiche joueuse à son nom.
+        Le lien se fait depuis la fiche de la joueuse → section « Parents ».
+    </p>
+
+    <div class="card-mabb" style="margin-bottom:24px;">
+        <div class="card-body" style="padding:0;">
+            {% for u in parents_sans_enfant %}
+                <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:14px 18px; border-bottom:1px solid var(--mabb-border);">
+                    <div>
+                        <div style="font-weight:700; font-size:.92rem;">{{ u.prenom }} {{ u.nom|upper }}</div>
+                        <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:2px;">{{ u.email }}</div>
+                    </div>
+                    <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost btn-sm" style="white-space:nowrap;">
+                        <i class="bi bi-person-heart"></i> Rattacher à sa fille
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}
+
+{# ═══ 3. COACHS SANS ÉQUIPE ════════════════════════════════════════════ #}
+{% if coachs_sans_equipe is not empty %}
+    <h2 style="font-size:1rem; font-weight:800; margin:0 0 4px; color:var(--mabb-dark,#063a55);">
+        <i class="bi bi-clipboard-pulse"></i> Coachs sans équipe
+        <span style="font-size:.75rem; background:#dbeafe; color:#1e40af; padding:2px 8px; border-radius:20px;">{{ coachs_sans_equipe|length }}</span>
+    </h2>
+    <p style="font-size:.8rem; color:var(--mabb-muted); margin:0 0 10px;">
+        Un coach se rattache à <strong>une ou plusieurs équipes</strong>, jamais à une fiche joueuse.
+        {% if equipes is empty %}
+            <strong style="color:#b3261e;">Aucune équipe active — crée d'abord une équipe.</strong>
+        {% endif %}
+    </p>
+
+    <div class="card-mabb" style="margin-bottom:24px;">
+        <div class="card-body" style="padding:0;">
+            {% for u in coachs_sans_equipe %}
+                <div style="display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:14px 18px; border-bottom:1px solid var(--mabb-border);">
+                    <div>
+                        <div style="font-weight:700; font-size:.92rem;">{{ u.prenom }} {{ u.nom|upper }}</div>
+                        <div style="font-size:.78rem; color:var(--mabb-muted); margin-top:2px;">{{ u.email }}</div>
+                    </div>
+                    <a href="{{ path('manager_staff_show', {userId: u.id}) }}" class="btn-mabb-ghost btn-sm" style="white-space:nowrap;">
+                        <i class="bi bi-people-fill"></i> Affecter une équipe
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
     </div>
 {% endif %}
 
