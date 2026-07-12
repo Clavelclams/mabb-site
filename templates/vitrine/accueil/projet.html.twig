@@ -1,130 +1,138 @@
 {% extends 'vitrine/base.html.twig' %}
 
-{% block title %}Le projet, raconté par Clavel{% endblock %}
-{% block meta_description %}Pourquoi le site d'abord, le Manager ensuite, et l'application joueuse en dernier. L'histoire du projet numérique de la MABB, racontée par celui qui l'a codé.{% endblock %}
+{% block title %}Le projet numérique du club{% endblock %}
+{% block meta_description %}Ce que fait chaque outil numérique de la MABB (site, gestion du club, statistiques, applications) et pourquoi ils ont été mis en place dans cet ordre.{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .etape { padding: 26px 0; border-bottom: 1px solid #e8ecef; }
+        .etape:last-of-type { border-bottom: none; }
+        .etape-date {
+            display: inline-block; font-size: .74rem; font-weight: 700; letter-spacing: .04em;
+            text-transform: uppercase; color: #8a94a0; margin-bottom: 6px;
+        }
+        .etape h2 {
+            font-size: 1.3rem; font-weight: 800; color: var(--mabb-dark);
+            margin: 0 0 12px; line-height: 1.3;
+        }
+        .etape p { line-height: 1.75; margin-bottom: 12px; }
+        .etape p:last-child { margin-bottom: 0; }
+    </style>
+{% endblock %}
 
 {% block body %}
 <section class="section" style="padding-top:130px;">
     <div class="container" style="max-width:760px;">
 
         <div class="mb-5">
-            <h1 class="section-title text-white">Pourquoi j'ai fait ça <span>dans cet ordre</span></h1>
-            <p class="section-subtitle text-white" style="margin-bottom:1.5rem;">
-                Je m'appelle Clavel. Je code, et je suis au club. Voici l'histoire, sans enjoliver.
+            <h1 class="section-title text-white">Le projet <span>numérique</span> du club</h1>
+            <p class="section-subtitle text-white" style="margin-bottom:0;">
+                Entre mars et septembre 2026, le club s'est équipé de plusieurs outils.
+                Cette page explique à quoi sert chacun d'eux, et pourquoi ils sont arrivés dans cet ordre.
             </p>
         </div>
 
         <div class="card border-0 shadow-sm p-4 p-md-5" style="border-radius:16px;">
 
-            <p style="font-size:1.05rem; line-height:1.75;">
-                Au départ, je voulais faire un truc pour les joueuses. Une appli où chacune verrait
-                ses stats, sa progression, ses paniers. Où une gamine de 14 ans pourrait dire
-                « regarde, j'ai mis 6 tirs sur 10 samedi ». C'était ça, l'idée. Rien d'autre.
-            </p>
-            <p style="font-size:1.05rem; line-height:1.75;">
-                Et puis j'ai regardé comment tournait vraiment le club. Et j'ai tout fait à l'envers.
-            </p>
+            <div class="etape" id="site" style="scroll-margin-top:100px;">
+                <span class="etape-date">Mars 2026</span>
+                <h2>Le site du club</h2>
+                <p>
+                    C'est la porte d'entrée. Avant, les horaires, les résultats et les contacts du club
+                    étaient éparpillés entre une page Facebook et le bouche-à-oreille. Un parent qui
+                    cherchait à inscrire son enfant ne trouvait pas d'information fiable.
+                </p>
+                <p>
+                    Le site rassemble tout au même endroit : les équipes, le calendrier, les actualités,
+                    les contacts et, depuis peu, un formulaire de pré-inscription en ligne.
+                </p>
+            </div>
 
-            <hr style="margin:2.2rem 0; opacity:.15;">
+            <div class="etape" id="manager" style="scroll-margin-top:100px;">
+                <span class="etape-date">Mai 2026</span>
+                <h2>La gestion du club</h2>
+                <p>
+                    Un club de 400 licenciées représente une charge administrative considérable, portée
+                    par des bénévoles : les dossiers de licence, les paiements, les aides des familles,
+                    les convocations, les documents officiels de la fédération.
+                </p>
+                <p>
+                    Tout cela se faisait jusque-là sur des fichiers Excel, des formulaires en ligne et
+                    des relances par téléphone, le soir. L'outil de gestion regroupe ce travail au même
+                    endroit : la secrétaire suit les licences, le trésorier les paiements, les dirigeants
+                    l'organisation des week-ends.
+                </p>
+                <p>
+                    C'est la partie la moins visible du projet, et c'est celle qui a demandé le plus de
+                    travail. Elle passe pourtant avant tout le reste, pour une raison simple : quand les
+                    bénévoles s'épuisent, c'est le club entier qui s'arrête.
+                </p>
+            </div>
 
-            {# ─────────────────────────────────────────────── #}
-            <h2 id="site" style="scroll-margin-top:100px; font-size:1.35rem; font-weight:800; color:var(--mabb-dark);">
-                Mars. Le site.
-            </h2>
-            <p style="line-height:1.75;">
-                Un club sans site, ça n'existe pas. Les parents cherchent les horaires sur Google
-                et tombent sur une page Facebook de 2019. Les partenaires ne trouvent rien.
-                Les joueuses ne voient jamais leurs propres victoires écrites quelque part.
-            </p>
-            <p style="line-height:1.75;">
-                Alors j'ai commencé par là. Ce n'est pas le plus excitant à coder, mais c'est la porte
-                d'entrée. Tant qu'elle n'existe pas, tout le reste parle dans le vide.
-            </p>
+            <div class="etape" id="stats" style="scroll-margin-top:100px;">
+                <span class="etape-date">Juin 2026</span>
+                <h2>La saisie des matchs et des statistiques</h2>
+                <p>
+                    Pour qu'une joueuse puisse consulter ses statistiques, il faut bien que quelqu'un les
+                    enregistre pendant le match. Ce quelqu'un est un bénévole, assis à la table de marque,
+                    dans le bruit d'un gymnase, avec une rencontre qui va vite.
+                </p>
+                <p>
+                    L'outil de saisie a donc été pensé pour aller vite : un tir s'enregistre d'un clic sur
+                    le plan du terrain, un rebond ou une faute d'un seul bouton. Une saisie trop lente,
+                    c'est une saisie qui n'est pas faite.
+                </p>
+            </div>
 
-            {# ─────────────────────────────────────────────── #}
-            <h2 id="manager" style="scroll-margin-top:100px; font-size:1.35rem; font-weight:800; color:var(--mabb-dark); margin-top:2.2rem;">
-                Mai. Le Manager. Et là, j'ai changé d'avis.
-            </h2>
-            <p style="line-height:1.75;">
-                Je suis allé voir comment la secrétaire gérait 400 licenciées. Réponse : un classeur
-                Excel, un formulaire Google, un cahier, et des relances au téléphone le soir.
-                Le trésorier, pareil. Le dirigeant qui organise le week-end, pareil.
-                Des heures et des heures de bénévolat perdues dans de la paperasse.
-            </p>
-            <p style="line-height:1.75;">
-                J'ai compris un truc simple. Si les bénévoles craquent, il n'y a plus de club.
-                Et s'il n'y a plus de club, mon appli pour les joueuses ne sert à rien.
-            </p>
-            <p style="line-height:1.75;">
-                <strong>Donc j'ai rangé mon idée de départ dans un tiroir, et j'ai codé le truc le moins
-                sexy du monde : la gestion.</strong> Les licences, les effectifs, les convocations,
-                les paiements, les documents. Ce que personne ne voit, mais sans quoi tout s'écroule.
-            </p>
+            <div class="etape" id="venaball" style="scroll-margin-top:100px;">
+                <span class="etape-date">Juillet 2026</span>
+                <h2>Venaball, l'application des joueuses</h2>
+                <p>
+                    Venaball est l'application destinée aux joueuses. Chacune y retrouve son profil, ses
+                    statistiques, sa progression au fil de la saison et ses badges. Elle propose aussi un
+                    espace d'entraînement individuel : la caméra du téléphone compte les dribbles et
+                    reconnaît les tirs, pour travailler seule entre deux séances.
+                </p>
+                <p>
+                    Elle arrive après les autres outils, et c'est volontaire. Sans matchs saisis, sans
+                    statistiques réelles, une application de ce type n'aurait rien eu à afficher.
+                </p>
+            </div>
 
-            {# ─────────────────────────────────────────────── #}
-            <h2 id="stats" style="scroll-margin-top:100px; font-size:1.35rem; font-weight:800; color:var(--mabb-dark); margin-top:2.2rem;">
-                Juin. Les stats, saisies en direct.
-            </h2>
-            <p style="line-height:1.75;">
-                Pour donner ses stats à une joueuse, il faut bien que quelqu'un les saisisse.
-                Et ce quelqu'un, c'est un bénévole assis au bord du terrain, un samedi matin,
-                avec du bruit, des parents qui crient et un match qui va vite.
-            </p>
-            <p style="line-height:1.75;">
-                Donc la saisie devait être rapide. Un tir, un clic sur le terrain. Un rebond, un bouton.
-                Si ça prend trois secondes de plus, personne ne le fait. J'ai passé plus de temps sur
-                cet écran que sur n'importe quel autre.
-            </p>
+            <div class="etape" id="club" style="scroll-margin-top:100px;">
+                <span class="etape-date">Septembre 2026</span>
+                <h2>Venaball Club, l'application de l'encadrement</h2>
+                <p>
+                    L'outil de gestion s'utilise sur un ordinateur, à un bureau. Cela convient très bien à
+                    la secrétaire ou au trésorier. Beaucoup moins à un coach dans un gymnase le samedi
+                    matin, ou à un bénévole qui cherche à quelle table il est affecté.
+                </p>
+                <p>
+                    Venaball Club reprend ces fonctions sur téléphone : le coach envoie ses convocations et
+                    voit qui a répondu, le parent consulte le planning de son enfant, le bénévole retrouve
+                    sa mission du week-end.
+                </p>
+                <p>
+                    Il s'agit bien de deux applications distinctes, et non d'une seule. Les besoins d'une
+                    joueuse de 14 ans et ceux d'un dirigeant de club n'ont rien en commun : les réunir dans
+                    le même écran aurait mal servi les deux.
+                </p>
+            </div>
 
-            {# ─────────────────────────────────────────────── #}
-            <h2 id="venaball" style="scroll-margin-top:100px; font-size:1.35rem; font-weight:800; color:var(--mabb-orange); margin-top:2.2rem;">
-                Juillet. Venaball. Enfin.
-            </h2>
-            <p style="line-height:1.75;">
-                Là, je ressors l'idée du tiroir. Venaball, c'est l'appli des joueuses.
-                Leurs stats, leur profil, leur progression, leurs badges. Et un playground où elles
-                s'entraînent seules, avec la caméra du téléphone qui compte leurs dribbles et leurs tirs.
-            </p>
-            <p style="line-height:1.75;">
-                Ce n'est pas un gadget. Une gamine qui voit sa courbe monter, c'est une gamine qui revient
-                à l'entraînement. Dans un club de quartier, ça vaut de l'or.
-            </p>
-            <p style="line-height:1.75;">
-                Elle arrive maintenant, parce que maintenant, il y a des vraies données à lui montrer.
-                Si je l'avais sortie en premier, elle aurait été vide.
-            </p>
+            <hr style="margin:2rem 0 1.6rem; opacity:.15;">
 
-            {# ─────────────────────────────────────────────── #}
-            <h2 id="club" style="scroll-margin-top:100px; font-size:1.35rem; font-weight:800; color:#8e44ad; margin-top:2.2rem;">
-                Septembre. Venaball Club.
-            </h2>
-            <p style="line-height:1.75;">
-                Le Manager tourne sur un ordinateur, à un bureau. Très bien pour la secrétaire.
-                Inutile pour un coach à 9h du matin dans un gymnase, ou pour un bénévole qui cherche
-                à quelle table il est affecté.
-            </p>
-            <p style="line-height:1.75;">
-                Venaball Club, c'est la même chose, mais dans la poche. Le coach convoque son équipe
-                et voit qui a répondu. Le parent lit le planning de sa fille. Le bénévole ouvre son
-                téléphone et sait qu'il tient le chrono à 14h, salle Coubertin.
-            </p>
-            <p style="line-height:1.75;">
-                Deux applications, pas une. Parce qu'une gamine de 12 ans et un président de club
-                ne cherchent pas la même chose, et je refuse de leur servir le même écran.
-            </p>
-
-            <hr style="margin:2.4rem 0; opacity:.15;">
-
-            <p style="font-size:1.05rem; line-height:1.75;">
-                Voilà. J'ai commencé par la paperasse pour pouvoir finir par le basket.
-                Ce n'était pas le plan, mais c'était le bon ordre.
+            <p style="line-height:1.75; color:#5b6770;">
+                L'ordre peut surprendre. L'idée de départ était justement l'application des joueuses,
+                et c'est elle qui arrive en dernier. En observant le fonctionnement réel du club, il est
+                apparu plus urgent d'alléger d'abord le travail des bénévoles : c'est ce qui permet
+                aujourd'hui de donner aux joueuses des statistiques qui existent vraiment.
             </p>
 
             <div style="background:#fff8f1; border-left:4px solid var(--mabb-orange); padding:14px 18px; border-radius:8px; margin-top:1.6rem;">
-                <strong>Un club, une question, une envie de tester ?</strong><br>
-                <span style="font-size:.94rem;">Écris-moi, je réponds toujours.</span><br>
+                <strong>Une question sur le club ou sur ces outils ?</strong><br>
                 <a href="{{ path('vitrine_contact') }}" style="font-weight:700; color:var(--mabb-orange); text-decoration:none;">
-                    Me contacter
+                    Nous écrire
                 </a>
             </div>
 
