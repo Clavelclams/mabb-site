@@ -58,11 +58,24 @@
                     Archivées
                 </label>
 
+                {# [12/07] Les éphémères (créées en Stats Live) sont masquées par défaut :
+                   elles ne font pas partie de l'effectif tant qu'on ne les a pas recrutées. #}
+                {% if nb_ephemeres > 0 or show_ephemeres %}
+                    <label style="font-weight:500; margin:0; display:flex; align-items:center; gap:6px;
+                                  {{ show_ephemeres ? 'color:#ea580c;' : '' }}">
+                        <input type="checkbox" name="ephemeres" value="1" {{ show_ephemeres ? 'checked' : '' }} onchange="this.form.submit()">
+                        ⚡ Éphémères
+                        <span style="font-size:.72rem; background:#fff4e5; color:#b45309; padding:1px 7px; border-radius:20px; font-weight:800;">
+                            {{ nb_ephemeres }}
+                        </span>
+                    </label>
+                {% endif %}
+
                 <button type="submit" class="btn-mabb-primary btn-sm">
                     <i class="bi bi-search"></i> Filtrer
                 </button>
 
-                {% if search_query or equipe_filtre or show_archived %}
+                {% if search_query or equipe_filtre or show_archived or show_ephemeres %}
                     <a href="{{ path('manager_joueur_index') }}" class="btn-mabb-ghost btn-sm">
                         <i class="bi bi-x-lg"></i> Réinitialiser
                     </a>

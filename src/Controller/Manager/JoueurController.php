@@ -89,9 +89,18 @@ class JoueurController extends AbstractController
         // QueryBuilder permet d'éviter du SQL en dur et d'ajouter
         // automatiquement les paramètres bindés (protection injection SQL).
         // ====================================================================
+        // [12/07/2026] Les joueuses ÉPHÉMÈRES (créées à la volée en Stats Live :
+        // essais, adverses d'un match d'entraînement) polluaient l'effectif.
+        // L'entité prévoyait déjà la règle — « les listes normales filtrent
+        // isTemporaire = false » — mais elle n'était pas appliquée ici.
+        // Par défaut on les masque ; ?ephemeres=1 affiche UNIQUEMENT celles-là.
+        $showEphemeres = $request->query->getBoolean('ephemeres', false);
+
         $qb = $this->joueurRepository->createQueryBuilder('j')
             ->where('j.club = :club')
-            ->setParameter('club', $club);
+            ->setParameter('club', $club)
+            ->andWhere('j.isTemporaire = :temp')
+            ->setParameter('temp', $showEphemeres);
 
         if ($equipeFiltre) {
             $qb->andWhere('j.equipe = :equipe')
@@ -116,12 +125,21 @@ class JoueurController extends AbstractController
             ['categorie' => 'ASC']
         );
 
+        // Combien d'éphémères en attente de tri (badge du filtre).
+        $nbEphemeres = (int) $this->joueurRepository->createQueryBuilder('j')
+            ->select('COUNT(j.id)')
+            ->where('j.club = :club')->setParameter('club', $club)
+            ->andWhere('j.isTemporaire = true')
+            ->getQuery()->getSingleScalarResult();
+
         return $this->render('manager/joueur/index.html.twig', [
             'joueurs'        => $joueurs,
             'equipes'        => $equipes,
             'equipe_filtre'  => $equipeFiltre,
             'club'           => $club,
             'show_archived'  => $showArchived,
+            'show_ephemeres' => $showEphemeres,
+            'nb_ephemeres'   => $nbEphemeres,
             'search_query'   => $searchQuery,
         ]);
     }
