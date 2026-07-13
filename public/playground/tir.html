@@ -84,9 +84,10 @@
   <div id="accueil">
     <h1>VENABALL TIR <span>tracker de shoot</span></h1>
     <p class="hint">
-      Pose ton tel de PROFIL ou face au panier (caméra arrière), pour qu'on voie l'arceau ET toi.
-      Au démarrage tu tapes les DEUX BOUTS de l'arceau à l'écran (gauche puis droit), ensuite tout
-      est automatique : la caméra suit le ballon, dessine ta trajectoire, et compte marqué / raté.
+      Pose ton tel de PROFIL par rapport au panier (caméra arrière), pour qu'on voie l'arceau ET toi.
+      L'arceau est repéré tout seul en une seconde ; si on se trompe, tape ses deux bords pour corriger.
+      Ensuite la caméra suit le ballon, trace ta courbe, compte marqué / raté et mesure ton
+      <b>angle d'entrée</b> — le chiffre qui explique pourquoi ça rentre ou pas.
     </p>
     <button id="btn">Démarrer la séance</button>
     <div id="status">Le modèle (~7 Mo) se charge au premier lancement, ensuite tout est local.</div>
@@ -130,6 +131,11 @@ import { ObjectDetector, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@m
 // Le suiveur de mouvement maison (retour terrain 09/07) : il comble les
 // trous entre deux détections du modèle → trajectoire CONTINUE.
 import { creerSuiveur } from "./tracker.js";
+// [v5, 13/07] La vision : arceau trouvé tout seul (orange + immobile),
+// vérification couleur du ballon, et la PARABOLE (voir vision.js).
+import { creerDetecteurArceau, scoreOrange, ajusterParabole, erreurParabole } from "./vision.js";
+// [v5] La joueuse : poignets, épaules, échelle du corps (voir pose.js).
+import { creerPose } from "./pose.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -174,7 +180,33 @@ let debutSeance = 0;
 let fantome = null; // { points: [{x,y}], couleur: 'r,g,b', jusqua: t }
 // [Recap v4, 10/07] Chaque tir décidé est ARCHIVÉ pour le debrief de fin :
 // trajectoire complète + réussite (verrouillée) + zone ESTIMÉE (ajustable).
-let tirsSeance = []; // { reussi, volS, arc: [{x,y}], zone }
+let tirsSeance = []; // { reussi, volS, arc: [{x,y}], zone, angleEntree, apexPx }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// [v5, 13/07] LES TROIS NOUVEAUTÉS DE VISION
+// ═══════════════════════════════════════════════════════════════════════════
+// 1. L'arceau se trouve TOUT SEUL (orange + immobile). Les deux taps ne
+//    disparaissent pas : ils deviennent une CORRECTION, plus une obligation.
+const detArceau = creerDetecteurArceau();
+let arceauAuto = false;        // l'arceau courant vient-il de la détection auto ?
+
+// 2. La pose : on sait enfin où est la joueuse, et QUAND elle lâche la balle.
+const pose = creerPose();
+
+// 3. Canvas de travail (demi-résolution) pour vérifier la COULEUR du ballon.
+//    Sans lui, le modèle nous refile des têtes et des genoux.
+const cvVerif = document.createElement("canvas");
+const cxVerif = cvVerif.getContext("2d", { willReadFrequently: true });
+const ECHELLE_VERIF = 0.5;
+const SEUIL_ORANGE = 0.14; // 14 % de pixels orange dans la boîte : c'est peu, et c'est voulu
+                           // (gymnase mal éclairé = couleurs écrasées). On veut jeter les
+                           // faux évidents, pas être puriste.
+
+// La trajectoire du TIR EN COURS, gardée à part de la traînée d'affichage :
+// c'est elle qu'on ajuste avec une parabole.
+let arcVol = [];               // [{x, y, t}]
+let paraboleVol = null;        // le dernier ajustement réussi
+let derniereMetrique = null;   // { angleEntree, angleSortie, apexHauteurM }
 
 // Les 8 zones du serveur (même taxonomie que l'app / ShotChartCalculator).
 const ZONES_ORDRE = ["raquette", "courte_distance", "mi_distance", "3pts_coin_g", "3pts_aile_g", "3pts_haut", "3pts_aile_d", "3pts_coin_d"];
@@ -204,7 +236,17 @@ function estimerZone(arc) {
   const dep = arc[0]; // le départ du tir = premier point de l'arc
   const cx = (arceau.a.x + arceau.b.x) / 2, cy = (arceau.a.y + arceau.b.y) / 2;
   const distPx = Math.hypot(dep.x - cx, dep.y - cy);
-  const metres = (distPx * 0.45) / arceau.len;
+
+  // [v5] DEUX RÈGLES, ET ON PREND LA MEILLEURE.
+  // L'ancienne : l'arceau fait 45 cm, donc distance-px × 0,45 / arceau-px ≈ mètres.
+  // Elle a un défaut de naissance : l'arceau est FIXE dans l'image, donc la
+  // règle ne change pas quand la joueuse s'éloigne — alors que la perspective,
+  // elle, écrase tout. La nouvelle règle vient du CORPS : la largeur d'épaules
+  // (~38 cm) est mesurée LÀ OÙ LA JOUEUSE SE TROUVE, donc elle suit la
+  // perspective. C'est structurellement plus juste.
+  const parLeCorps = pose.disponible ? pose.distanceMetres({ x: cx, y: cy }) : null;
+  const metres = parLeCorps ?? (distPx * 0.45) / arceau.len;
+
   const lateral = (dep.x - cx) / Math.max(1, distPx); // -1 = gauche … 1 = droite
   if (metres < 1.8) return "raquette";
   if (metres < 3.5) return "courte_distance";
@@ -335,6 +377,12 @@ async function chargerModele() {
     detector = await ObjectDetector.createFromOptions(vision, options("efficientdet_lite0"));
     modeleNom = "lite0";
   }
+
+  // [v5] La pose, EN PARALLÈLE et sans bloquer : si elle échoue (vieux tel,
+  // réseau), le jeu tourne quand même, en mode dégradé. Un confort qui casse le
+  // produit n'est pas un confort.
+  $("status").textContent = "Chargement de la détection du corps…";
+  await pose.charger();
 }
 
 // ---------- Démarrage ------------------------------------------------------------------
@@ -388,7 +436,15 @@ $("stage").addEventListener("click", (e) => {
 });
 
 $("btnRecaler").addEventListener("click", () => {
-  if (phase === "jeu") { phase = "calibration"; tapCalibration = null; }
+  if (phase === "jeu") {
+    phase = "calibration";
+    tapCalibration = null;
+    // [v5] On relance AUSSI la recherche automatique : le tel a peut-être
+    // bougé, l'ancien arceau n'est plus au bon endroit.
+    detArceau.reinitialiser();
+    arceauAuto = false;
+    arceau = null;
+  }
 });
 
 $("btnFinir").addEventListener("click", () => { if (phase === "jeu") finirSeance(); });
@@ -408,6 +464,8 @@ $("btnRejouer").addEventListener("click", () => {
   tirsSeance = []; // le récap de la partie d'avant ne pollue pas la suivante
   trainee = []; tir = { etat: "repos", depuis: 0 };
   suiveur = creerSuiveur();
+  arcVol = []; paraboleVol = null; derniereMetrique = null; // [v5]
+  detArceau.reinitialiser(); arceau = null; arceauAuto = false; // [v5] on recherche l'arceau
   debutSeance = performance.now();
   phase = "calibration"; tapCalibration = null; // le tel a pu bouger
   garderEcranAllume(); // le verrou a pu sauter pendant l'écran de fin
@@ -429,7 +487,17 @@ function panier(t, xCross, yCross) {
   sonPanier();
   const arc = arcRecent(t);
   figerFantome(arc, t, "62,207,142");
-  tirsSeance.push({ reussi: true, volS, arc, zone: estimerZone(arc) }); // [Recap v4]
+  // [v5] L'angle d'entrée s'affiche À CHAUD : c'est le moment où il sert.
+  // Un chiffre au débrief est une information ; un chiffre juste après le tir
+  // est une correction.
+  if (derniereMetrique) {
+    flottants.push({
+      x: xCross, y: yCross + 26, t0: t,
+      texte: `entrée ${derniereMetrique.angleEntree}°`,
+      couleur: derniereMetrique.angleEntree >= 38 ? "62,207,142" : "245,197,66",
+    });
+  }
+  tirsSeance.push({ reussi: true, volS, arc, zone: estimerZone(arc), metrique: derniereMetrique }); // [Recap v5]
   finDeTir(t);
 }
 
@@ -440,7 +508,18 @@ function rate(t, xCross, yCross) {
   sonRate();
   const arc = arcRecent(t);
   figerFantome(arc, t, "229,72,77");
-  tirsSeance.push({ reussi: false, volS: (t - tir.depuis) / 1000, arc, zone: estimerZone(arc) }); // [Recap v4]
+  // [v5] Sur un raté, l'angle d'entrée EXPLIQUE souvent le raté. On le dit.
+  if (derniereMetrique && derniereMetrique.angleEntree < 35) {
+    flottants.push({
+      x: xCross, y: yCross + 26, t0: t,
+      texte: `trop tendu (${derniereMetrique.angleEntree}°) — monte l'arc`,
+      couleur: "245,197,66",
+    });
+  }
+  tirsSeance.push({
+    reussi: false, volS: (t - tir.depuis) / 1000, arc,
+    zone: estimerZone(arc), metrique: derniereMetrique,
+  }); // [Recap v5]
   finDeTir(t);
 }
 
@@ -475,10 +554,35 @@ function boucle() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (phase === "calibration") {
+      // [v5] L'arceau se cherche TOUT SEUL pendant que la joueuse regarde
+      // l'écran : orange + immobile, accumulé sur ~1,5 s (voir vision.js).
+      detArceau.alimenter(video);
+      const propo = detArceau.proposer(canvas.width, canvas.height);
+      if (propo && propo.confiance > 0.45) {
+        arceau = { a: propo.a, b: propo.b, len: propo.len };
+        arceauAuto = true;
+        if (debutSeance === 0) debutSeance = performance.now();
+        phase = "jeu";
+        flottants.push({
+          x: (propo.a.x + propo.b.x) / 2, y: (propo.a.y + propo.b.y) / 2 - 40,
+          t0: t, texte: "Arceau trouvé 🎯 (tape pour corriger)", couleur: "62,207,142",
+        });
+      }
       dessinerCalibration(t);
     } else if (phase === "jeu") {
       // 0. Le suiveur mémorise la frame (pour la différence d'images).
       suiveur.nouvelleFrame(video);
+
+      // [v5] La frame en demi-résolution, pour vérifier la couleur des boîtes
+      // que le modèle propose. Un seul drawImage par frame : c'est peu cher.
+      if (cvVerif.width === 0) {
+        cvVerif.width = Math.round(video.videoWidth * ECHELLE_VERIF);
+        cvVerif.height = Math.round(video.videoHeight * ECHELLE_VERIF);
+      }
+      cxVerif.drawImage(video, 0, 0, cvVerif.width, cvVerif.height);
+
+      // [v5] La joueuse (cadence réduite, se coupe toute seule si trop lente).
+      pose.analyser(video, t);
 
       // 1. Détection MODÈLE (elle fait foi quand elle voit le ballon) —
       //    adaptative : 1 frame sur detIntervalle, forcée si ballon perdu.
@@ -489,9 +593,27 @@ function boucle() {
         const res = detector.detectForVideo(video, t);
         detDureeMoy = 0.8 * detDureeMoy + 0.2 * (performance.now() - tDet);
         detIntervalle = detDureeMoy > 55 ? 3 : detDureeMoy > 30 ? 2 : 1;
+
+        let meilleurScore = 0;
         for (const d of res.detections) {
           if (d.categories[0].categoryName !== "sports ball") continue;
-          if (!meilleure || d.categories[0].score > meilleure.categories[0].score) meilleure = d;
+          const b = d.boundingBox;
+
+          // [v5] VÉRIFICATION COULEUR. Le modèle est généraliste : il appelle
+          // « sports ball » à peu près tout ce qui est rond et clair — une tête,
+          // un genou, un plot. Si la boîte ne contient pas d'orange, ce n'est
+          // pas un ballon de basket. On jette.
+          const orange = scoreOrange(
+            cxVerif,
+            b.originX * ECHELLE_VERIF, b.originY * ECHELLE_VERIF,
+            b.width * ECHELLE_VERIF, b.height * ECHELLE_VERIF,
+          );
+          if (orange < SEUIL_ORANGE) continue;
+
+          // Le score final combine la confiance du modèle et la couleur : une
+          // boîte franchement orange l'emporte sur une boîte pâle mieux notée.
+          const score = d.categories[0].score * (0.6 + 0.4 * Math.min(1, orange * 3));
+          if (score > meilleurScore) { meilleurScore = score; meilleure = d; }
         }
       }
       if (meilleure) {
@@ -516,7 +638,9 @@ function boucle() {
 
       // 4. Dessin.
       dessinerArceau(t);
+      pose.dessiner(ctx, false, canvas.width); // pas de miroir ici : caméra arrière
       dessinerFantome(t);
+      dessinerParabole(t);                     // [v5] la courbe LISSE, par-dessus les points
       dessinerTrainee(t);
       dessinerBallon(t);
       dessinerFlottants(t);
@@ -548,11 +672,38 @@ function avancerTir(t) {
   const segmentValide = cur.t - prev.t < SEGMENT_VALIDE_MS;
 
   if (tir.etat === "repos") {
-    // Au-dessus de la ligne d'arceau d'au moins ~un demi-ballon → en vol.
-    if (segmentValide && distanceSignee(cur) < -14) {
+    // [v5] LE LÂCHER. Avant : « le ballon a franchi une ligne », grossier et
+    // tardif — on ratait le début de l'arc, donc la parabole était fausse.
+    // Maintenant : dès que la pose voit un poignet AU-DESSUS de l'épaule avec
+    // le ballon en main, on sait qu'un tir part. La détection du corps donne
+    // l'instant zéro du vol.
+    const gestDeTir = pose.disponible && balleVue && pose.estEnPositionDeTir({
+      x: balleVue.bx, y: balleVue.by, r: balleVue.r,
+    });
+    // Sans la pose (vieux tel, modèle coupé), on retombe sur l'ancienne règle :
+    // le jeu doit marcher pour tout le monde, juste un peu moins finement.
+    const franchitLigne = segmentValide && distanceSignee(cur) < -14;
+
+    if (gestDeTir || franchitLigne) {
       tir = { etat: "en_vol", depuis: t };
+      arcVol = [];       // on repart d'un arc vierge : c'est LUI qu'on ajustera
+      paraboleVol = null;
     }
     return;
+  }
+
+  // ---- en_vol : on nourrit l'arc du tir en cours ----
+  arcVol.push({ x: cur.x, y: cur.y, t: cur.t });
+  if (arcVol.length > 90) arcVol.shift(); // 3 s à 30 fps : largement assez
+  // On réajuste la parabole en continu (c'est trois boucles sur 20 points :
+  // le coût est négligeable, et ça permet d'afficher la courbe EN DIRECT).
+  if (arcVol.length >= 5) {
+    const p = ajusterParabole(arcVol);
+    // Garde-fou : si la courbe colle mal aux points, ce n'était pas un vol
+    // libre (dribble, ballon tenu, bruit). On ne prétend rien.
+    if (p && erreurParabole(arcVol, p) < Math.max(18, (balleVue?.r ?? 20) * 1.2)) {
+      paraboleVol = p;
+    }
   }
 
   // ---- en_vol ----
@@ -578,6 +729,10 @@ function avancerTir(t) {
     const c = croisementArceau(prev, cur);
     if (!c) { tir = { etat: "repos", depuis: t }; return; }
 
+    // [v5] LES MÉTRIQUES DE COACH, calculées sur la parabole (pas sur deux
+    // points bruités). C'est ce qui sépare un compteur d'un outil d'entraînement.
+    derniereMetrique = calculerMetriques(t);
+
     if (c.u >= -0.06 && c.u <= 1.06) {
       panier(t, c.x, c.y);          // dans l'arceau (marge 6 % : le filet pardonne)
     } else if (c.u >= -MARGE_RATE && c.u <= 1 + MARGE_RATE) {
@@ -588,11 +743,66 @@ function avancerTir(t) {
   }
 }
 
+/**
+ * [v5] Ce que la parabole nous apprend sur le tir qui vient de finir.
+ *
+ *  - ANGLE D'ENTRÉE : l'angle sous lequel le ballon arrive dans l'arceau.
+ *    C'est LA métrique des coachs : autour de 45°, le ballon « tombe » dans le
+ *    cercle et le filet pardonne. En dessous de ~35°, le tir est tendu : la
+ *    cible apparente devient une fente, et il faut être parfait pour rentrer.
+ *  - ANGLE DE SORTIE : la pente au moment du lâcher.
+ *  - APEX : la hauteur du sommet, exprimée en HAUTEURS D'ARCEAU (une mesure
+ *    qui parle, contrairement à des pixels).
+ *
+ * Retourne null si la parabole n'était pas fiable. On préfère ne rien dire que
+ * dire faux : une joueuse à qui on annonce « 52° » alors qu'on n'en sait rien
+ * arrête de nous croire, et elle a raison.
+ */
+function calculerMetriques(t) {
+  if (!paraboleVol || arcVol.length < 6 || !arceau) return null;
+
+  const angleEntree = Math.abs(paraboleVol.angleEn(t));           // à l'arceau
+  const angleSortie = paraboleVol.angleEn(arcVol[0].t);           // à la main
+  const sommet = paraboleVol.apex();
+  const cyArceau = (arceau.a.y + arceau.b.y) / 2;
+  // La hauteur de l'apex AU-DESSUS de l'arceau, mesurée en longueurs d'arceau
+  // (l'arceau fait 45 cm : c'est notre règle la plus fiable dans l'image).
+  const apexEnArceaux = (cyArceau - sommet.y) / Math.max(1, arceau.len);
+
+  // Contrôles de vraisemblance. Un angle d'entrée de 3° ou de 88°, ça n'existe
+  // pas : c'est un ajustement raté. On jette plutôt que de publier une bêtise.
+  if (!(angleEntree > 12 && angleEntree < 80)) return null;
+
+  return {
+    angleEntree: Math.round(angleEntree),
+    angleSortie: Math.round(angleSortie),
+    apexEnArceaux: Math.round(apexEnArceaux * 10) / 10,
+  };
+}
+
 // ---------- Dessins ---------------------------------------------------------------------
 function dessinerCalibration(t) {
   ctx.fillStyle = "rgba(10,14,20,0.45)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "#fff"; ctx.font = "800 22px system-ui"; ctx.textAlign = "center";
+
+  // [v5] Tant que la recherche automatique tourne, on le DIT et on montre une
+  // jauge : une attente expliquée n'est pas une attente subie. Et on rappelle
+  // que les deux taps restent possibles, tout de suite, sans attendre.
+  const p = detArceau.progression();
+  if (p < 1 && !tapCalibration) {
+    ctx.fillText("Je cherche l'arceau…", canvas.width / 2, canvas.height * 0.12);
+    const w = canvas.width * 0.4, x = (canvas.width - w) / 2, y = canvas.height * 0.12 + 18;
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillRect(x, y, w, 8);
+    ctx.fillStyle = "#3ECF8E";
+    ctx.fillRect(x, y, w * p, 8);
+    ctx.font = "600 15px system-ui"; ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.fillText("Vise le panier. Ou tape ses deux bords, si tu préfères.", canvas.width / 2, y + 30);
+    ctx.textAlign = "left";
+    return;
+  }
+
   if (!tapCalibration) {
     ctx.fillText("Tape sur le BORD GAUCHE de l'arceau 🎯", canvas.width / 2, canvas.height * 0.12);
   } else {
@@ -636,6 +846,47 @@ function dessinerFantome(t) {
   ctx.lineWidth = 3.5; ctx.lineCap = "round"; ctx.setLineDash([2, 7]);
   ctx.beginPath();
   fantome.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/**
+ * [v5] La PARABOLE du tir en cours : une courbe lisse, tracée par la physique,
+ * là où on n'avait qu'une suite de points qui tremblent.
+ *
+ * On la prolonge un peu au-delà du dernier point connu (en pointillés) : c'est
+ * la trajectoire PRÉDITE. Elle rend visible ce que le ballon va faire — et elle
+ * comble les occlusions (ballon passé derrière le panneau ou une joueuse).
+ */
+function dessinerParabole(t) {
+  if (tir.etat !== "en_vol" || !paraboleVol || arcVol.length < 6) return;
+
+  const t0 = arcVol[0].t;
+  const tFin = arcVol[arcVol.length - 1].t;
+
+  // La partie OBSERVÉE : trait plein.
+  ctx.strokeStyle = "rgba(245,197,66,0.9)";
+  ctx.lineWidth = 4; ctx.lineCap = "round";
+  ctx.beginPath();
+  for (let tt = t0; tt <= tFin; tt += 16) {
+    const p = paraboleVol.evaluer(tt);
+    tt === t0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
+  }
+  ctx.stroke();
+
+  // La partie PRÉDITE (400 ms devant) : pointillés. La physique sait où le
+  // ballon va, même si la caméra ne le voit plus.
+  ctx.setLineDash([4, 8]);
+  ctx.strokeStyle = "rgba(245,197,66,0.45)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  const p0 = paraboleVol.evaluer(tFin);
+  ctx.moveTo(p0.x, p0.y);
+  for (let tt = tFin; tt <= tFin + 400; tt += 20) {
+    const p = paraboleVol.evaluer(tt);
+    if (p.y > canvas.height + 60) break;
+    ctx.lineTo(p.x, p.y);
+  }
   ctx.stroke();
   ctx.setLineDash([]);
 }
@@ -707,9 +958,29 @@ function finirSeance() {
   ecrireRecords(records);
 
   const volMoyen = reussis > 0 ? ` Vol moyen : ${(volSommeS / reussis).toFixed(1)}s.` : "";
+
+  // [v5] LE CONSEIL DE COACH. C'est la vraie valeur ajoutée : un pourcentage
+  // dit CE QUE tu as fait, l'angle d'entrée dit POURQUOI.
+  const angles = tirsSeance.map((x) => x.metrique?.angleEntree).filter((a) => typeof a === "number");
+  let conseil = "";
+  if (angles.length >= 3) {
+    const moy = Math.round(angles.reduce((s, a) => s + a, 0) / angles.length);
+    // Autour de 45°, le ballon TOMBE dans le cercle : le filet pardonne. En
+    // dessous de 35°, le tir est tendu, l'arceau devient une fente vue de
+    // profil, et il faut être parfaite pour rentrer.
+    if (moy < 35) {
+      conseil = ` Angle d'entrée moyen : ${moy}° — c'est TENDU. Monte l'arc : vise plus haut, finis le poignet vers le bas.`;
+    } else if (moy > 55) {
+      conseil = ` Angle d'entrée moyen : ${moy}° — très haut. Beau parachute, mais tu perds en régularité : cherche 45°.`;
+    } else {
+      conseil = ` Angle d'entrée moyen : ${moy}° — c'est la bonne zone, garde ça.`;
+    }
+    conseil += " (mesure à l'écran : filme de profil pour qu'elle soit juste)";
+  }
+
   $("finDetail").textContent = tentes > 0
-    ? `Meilleure série : ${meilleureSerie}.${volMoyen}${ligneRecord} Réussi/raté : compté par la caméra, pas modifiable.`
-    : "Vérifie que l'arceau calibré et tes tirs sont bien dans le cadre.";
+    ? `Meilleure série : ${meilleureSerie}.${volMoyen}${conseil}${ligneRecord} Réussi/raté : compté par la caméra, pas modifiable.`
+    : "Vérifie que l'arceau est bien calé et que tes tirs sont dans le cadre.";
 
   // [Recap v4] Le debrief AVANT l'envoi : la séance ne part qu'au tap sur
   // « Valider » (le temps d'ajuster les zones). Rien ne part sans elle.
@@ -742,9 +1013,16 @@ function construireRecap() {
   tirsSeance.forEach((tirS, i) => {
     const row = document.createElement("div");
     row.className = "tirRow";
+    // [v5] L'angle d'entrée par tir : vert s'il est dans la bonne zone (38-55°),
+    // jaune s'il est trop tendu ou trop haut. C'est le chiffre qu'on regarde.
+    const ang = tirS.metrique?.angleEntree;
+    const angHtml = typeof ang === "number"
+      ? `<span style="color:${ang >= 38 && ang <= 55 ? "#3ECF8E" : "#F5C542"};font-weight:800;font-size:13px">${ang}°</span>`
+      : `<span style="color:var(--muted);font-size:12px">–</span>`;
     row.innerHTML =
       `<span style="color:var(--muted)">Tir ${i + 1}</span>` +
       `<span class="res" style="color:${tirS.reussi ? "#3ECF8E" : "#E5484D"}">${tirS.reussi ? "✅" : "❌"}</span>` +
+      angHtml +
       `<span class="zoneNom" id="zn${i}">${ZONE_NOMS[tirS.zone]}</span>` +
       `<button class="zoneBtn" data-i="${i}" data-d="-1">◀</button>` +
       `<button class="zoneBtn" data-i="${i}" data-d="1">▶</button>`;
