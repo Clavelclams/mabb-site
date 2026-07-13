@@ -16,7 +16,8 @@
         <h2 class="h5 fw-bold mt-2">Qui est responsable du traitement ?</h2>
         <p>
             L'association <strong>{{ cms('legal.editeur.nom', 'MABB — Amiens Métropole Basket Ball') }}</strong>
-            est responsable du traitement des données collectées sur mabb.fr, manager.mabb.fr et pirb.mabb.fr.<br>
+            est responsable du traitement des données collectées sur mabb.fr, manager.mabb.fr,
+            pirb.mabb.fr et dans l'application mobile <strong>Venaball</strong>.<br>
             Contact pour toute question relative aux données :
             {{ cms('legal.rgpd.contact', 'contact@mabb.fr') }}
         </p>
@@ -46,6 +47,55 @@
         <p>
             <strong>Formulaire de contact</strong> : les informations envoyées servent uniquement
             à répondre à ta demande.
+        </p>
+
+        {# ───────────────────────────────────────────────────────────────────
+           [13/07/2026] Section AJOUTÉE pour la publication de l'app Venaball sur
+           l'App Store et Google Play. Les deux stores exigent une politique qui
+           couvre explicitement l'application mobile et CHAQUE permission demandée.
+           La caméra est la permission la plus scrutée : ne pas l'expliquer ici
+           est un motif de rejet quasi automatique.
+           Tout ce qui est écrit ci-dessous est vérifiable dans le code.
+           ─────────────────────────────────────────────────────────────────── #}
+        <h2 class="h5 fw-bold mt-4">L'application mobile Venaball</h2>
+        <p>
+            L'application Venaball (iOS et Android) donne à la joueuse accès à son espace
+            personnel : ses statistiques, ses convocations, ses bilans, ses badges et le
+            Playground. Elle utilise <strong>le même compte et les mêmes données</strong> que
+            pirb.mabb.fr : l'app n'ouvre aucun traitement nouveau, elle offre un autre accès.
+        </p>
+        <p>
+            <strong>La caméra.</strong> Le Playground (jeux de dribble et de tir) affiche la caméra
+            pour compter automatiquement les répétitions et les paniers. Il faut le dire sans
+            détour :
+            <strong>aucune image n'est enregistrée, aucune image n'est transmise, aucune image
+            n'est stockée</strong>, ni sur le téléphone, ni sur nos serveurs, ni chez un tiers.
+            L'analyse se fait <strong>en direct et localement</strong>, image par image, sur
+            l'appareil de la joueuse, et chaque image est immédiatement jetée. Les seules données
+            qui quittent le téléphone sont les <strong>résultats chiffrés</strong> de la séance
+            (nombre de réussites, score, durée). La caméra n'est jamais activée en dehors du jeu,
+            et l'autorisation est demandée explicitement, avec cette explication, avant le premier
+            lancement.
+        </p>
+        <p>
+            <strong>Données enregistrées localement sur le téléphone.</strong> Les scores du jeu
+            hors-ligne et les préférences d'affichage restent sur l'appareil et ne sont pas
+            transmis.
+        </p>
+        <p>
+            <strong>Ce que l'application ne fait pas.</strong> Aucune publicité, aucun traceur
+            publicitaire, aucun outil d'analyse tiers, aucune géolocalisation, aucun accès aux
+            contacts, aux photos ou au microphone. Aucune donnée n'est vendue ni partagée à des
+            fins commerciales.
+        </p>
+        <p>
+            <strong>Suppression du compte depuis l'application.</strong> Dans
+            <em>Réglages → Supprimer mon compte</em>, la joueuse peut demander l'effacement de son
+            compte. La demande est enregistrée et traitée par un administrateur
+            <strong>sous 30 jours</strong> (délai légal). Elle n'est pas exécutée immédiatement :
+            le club doit être informé, et certaines pièces (licence, feuilles de match) doivent être
+            conservées au titre des obligations fédérales. Ce qui est effacé : compte, statistiques
+            personnelles, badges, historique de Playground, bilans.
         </p>
 
         <h2 class="h5 fw-bold mt-4">Cookies</h2>
