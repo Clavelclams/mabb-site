@@ -52,6 +52,89 @@
         </div>
     {% endif %}
 
+    {# Sa semaine d'entraînement. Réservée à ceux qui coachent une équipe : personne
+       d'autre n'a de raison de la voir. On affiche les séances elles-mêmes, avec le
+       bouton d'appel : un coach qui arrive au gymnase le samedi matin doit pouvoir
+       pointer en deux taps, pas naviguer. #}
+    {% if est_coach is defined and est_coach %}
+        <div class="card-mabb" style="margin-bottom:18px;">
+            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <span><i class="bi bi-calendar-check"></i> Ma semaine d'entraînement</span>
+                <a href="{{ path('manager_planning_semaine') }}" style="font-size:.82rem; font-weight:700; color:var(--mabb-orange); text-decoration:none;">
+                    Voir les autres semaines <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+            <div class="card-body">
+
+                {% if ma_semaine is empty %}
+                    <p style="color:#8a94a0; font-size:.9rem; margin:0; line-height:1.6;">
+                        Aucun entraînement pour tes équipes cette semaine.
+                    </p>
+                {% else %}
+                    {% set jours = {1:'Lundi', 2:'Mardi', 3:'Mercredi', 4:'Jeudi', 5:'Vendredi', 6:'Samedi', 7:'Dimanche'} %}
+                    {% set maintenant = date() %}
+
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        {% for s in ma_semaine %}
+                            {% set appelFait = s.presences|length > 0 %}
+                            {% set estPassee = s.date < maintenant %}
+                            {% set estAujourdhui = s.date|date('Y-m-d') == 'now'|date('Y-m-d') %}
+
+                            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+                                        padding:12px 14px; min-height:60px; border-radius:10px;
+                                        background:{{ estAujourdhui ? '#fff8f1' : '#f9fafb' }};
+                                        border-left:4px solid {{ appelFait ? '#16a34a' : (estPassee ? 'var(--mabb-orange)' : '#d5dbe1') }};">
+
+                                <div style="min-width:92px;">
+                                    <div style="font-weight:800; font-size:.9rem; color:var(--mabb-dark);">
+                                        {{ jours[s.date|date('N')] }}
+                                    </div>
+                                    <div style="font-size:.8rem; color:#8a94a0;">
+                                        {{ s.date|date('d/m') }} · {{ s.date|date('H:i') }}
+                                    </div>
+                                </div>
+
+                                <div style="flex:1; min-width:150px;">
+                                    <div style="font-weight:700; font-size:.92rem;">
+                                        {{ s.equipe.nom }}
+                                        <span style="font-weight:600; color:#8a94a0; font-size:.8rem;">{{ s.equipe.categorie }}</span>
+                                    </div>
+                                    <div style="font-size:.78rem; color:#8a94a0;">
+                                        {% if s.lieu %}{{ s.lieu }}{% else %}Lieu non précisé{% endif %}
+                                        {% if appelFait %}
+                                            · <span style="color:#16a34a; font-weight:600;">
+                                                {{ s.presences|filter(p => p.present)|length }} présentes sur {{ s.presences|length }}
+                                              </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                {% if appelFait %}
+                                    <a href="{{ path('manager_presence_seance', {id: s.id}) }}"
+                                       style="display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 16px;
+                                              border-radius:9px; background:#fff; border:1px solid #cfe8d8; color:#16a34a;
+                                              font-weight:700; font-size:.85rem; text-decoration:none; white-space:nowrap;">
+                                        <i class="bi bi-check-circle-fill"></i> Appel fait
+                                    </a>
+                                {% elseif estPassee %}
+                                    <a href="{{ path('manager_presence_seance', {id: s.id}) }}"
+                                       style="display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 18px;
+                                              border-radius:9px; background:var(--mabb-orange); color:#fff;
+                                              font-weight:700; font-size:.85rem; text-decoration:none; white-space:nowrap;">
+                                        <i class="bi bi-people-fill"></i> Faire l'appel
+                                    </a>
+                                {% else %}
+                                    <span style="font-size:.82rem; color:#8a94a0; white-space:nowrap;">À venir</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+    {% endif %}
+
     {# ============================================================
        [V2.4k] BANNIÈRE PREMIÈRE VISITE — visible tant que le guide
        n'a pas été ouvert (flag localStorage posé par /bienvenue).

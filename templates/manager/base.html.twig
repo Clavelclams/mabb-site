@@ -970,11 +970,10 @@
         <li><a href="{{ path('manager_staff_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_staff' ? 'active' : '' }}">
             <i class="bi bi-shield-fill-check"></i> Staff
         </a></li>
-        {# L'entrée que le coach ouvre le plus souvent : sa semaine, avec l'appel dessus.
-           Elle passe donc avant la liste brute des séances. #}
-        <li><a href="{{ path('manager_planning_semaine') }}" class="{{ app.request.attributes.get('_route') == 'manager_planning_semaine' ? 'active' : '' }}">
-            <i class="bi bi-calendar-check"></i> Ma semaine
-        </a></li>
+        {# « Ma semaine » n'est PAS ici, volontairement. Cette barre est partagée par
+           tous les rôles : un trésorier, un parent, une secrétaire n'ont rien à faire
+           avec la semaine d'entraînement d'un coach. Elle vit sur le dashboard, où
+           elle ne s'affiche que pour ceux qui coachent une équipe. #}
         <li><a href="{{ path('manager_seance_index') }}" class="{{ app.request.attributes.get('_route') starts with 'manager_seance' ? 'active' : '' }}">
             <i class="bi bi-calendar-week"></i> Séances
         </a></li>

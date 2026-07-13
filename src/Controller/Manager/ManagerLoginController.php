@@ -48,6 +48,7 @@ class ManagerLoginController extends AbstractController
     public function dashboard(
         \App\Security\Tenant\TenantResolver $tenantResolver,
         \App\Repository\Sport\SeanceRepository $seanceRepository,
+        \App\Repository\Sport\EquipeRepository $equipeRepository,
         \App\Repository\Sport\RencontreRepository $rencontreRepository,
         \App\Repository\Sport\ReunionConvocationRepository $convocationRepository,
         \App\Repository\Sport\EvenementRepository $evenementRepository,
@@ -173,6 +174,28 @@ class ManagerLoginController extends AbstractController
             );
         }
 
+        // Sa semaine d'entraînement, directement sur le dashboard.
+        //
+        // Elle n'est PAS dans la barre de navigation : celle-ci est partagée par tous
+        // les rôles, et un trésorier n'a rien à faire avec les créneaux d'un coach.
+        // Ici, le bloc n'existe que pour ceux qui coachent au moins une équipe.
+        //
+        // On affiche les séances, pas un lien vers les séances : un coach qui arrive
+        // le samedi matin doit voir son entraînement et le bouton d'appel tout de
+        // suite, pas cliquer deux fois pour y arriver.
+        $maSemaine   = [];
+        $estCoach    = false;
+        $lundiCourant = new \DateTimeImmutable('monday this week');
+
+        if ($club && $equipeRepository->countPourCoach($this->getUser(), $club) > 0) {
+            $estCoach  = true;
+            $maSemaine = $seanceRepository->findSemaine(
+                $club,
+                $lundiCourant,
+                $this->getUser(),
+            );
+        }
+
         return $this->render('manager/dashboard.html.twig', [
             'club'                 => $club,
             'prochain_seances'     => $prochainSeances,
@@ -183,6 +206,9 @@ class ManagerLoginController extends AbstractController
             'feed_items'           => $feedItems,
             'nb_notes_a_valider'   => $nbNotesAValider,
             'seances_sans_appel'   => $seancesSansAppel,
+            'ma_semaine'           => $maSemaine,
+            'est_coach'            => $estCoach,
+            'lundi_courant'        => $lundiCourant,
             // [V2.4k] espace membre (bénévole / parent)
             'mes_missions'         => $mesMissions,
             'postes_vacants'       => $postesVacants,
