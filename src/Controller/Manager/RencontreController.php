@@ -53,6 +53,8 @@ class RencontreController extends AbstractController
         private readonly BadgeChecker $badgeChecker,
         private readonly RencontreRoleRepository $rencontreRoleRepository,
         private readonly CsrfTokenManagerInterface $csrfTokenManager,
+        private readonly \App\Repository\Sport\ConvocationRepository $convocationRepository,
+        private readonly \App\Service\SaisonService $saisonService,
     ) {}
 
     /**
@@ -152,9 +154,31 @@ class RencontreController extends AbstractController
             );
         }
 
+        // [13/07/2026] CONVOCATIONS — le module manquait complètement : la table
+        // `convocation` n'était écrite nulle part, donc l'espace joueuse (web ET
+        // app) lisait une table vide. On fournit ici l'effectif de l'équipe pour
+        // la saison de la rencontre, et les convocations déjà posées (avec leur
+        // réponse), pour que le coach coche et voie qui a répondu quoi.
+        $effectif = [];
+        $convocations = [];
+        $equipe = $rencontre->getEquipe();
+        if ($equipe !== null) {
+            $saison = $rencontre->getSaison() ?? $this->saisonService->getSaisonCourante();
+            $effectif = $this->joueurRepository->findByEquipeAffectation($equipe, $saison);
+
+            foreach ($this->convocationRepository->findBy(['rencontre' => $rencontre]) as $c) {
+                $idJoueur = $c->getJoueur()?->getId();
+                if ($idJoueur !== null) {
+                    $convocations[$idJoueur] = $c; // indexé par joueur : le template lit direct
+                }
+            }
+        }
+
         return $this->render('manager/rencontre/show.html.twig', [
             'rencontre'          => $rencontre,
             'joueuses_ephemeres' => $joueusesEphemeres,
+            'effectif'           => $effectif,
+            'convocations'       => $convocations,
         ]);
     }
 

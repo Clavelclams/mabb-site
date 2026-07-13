@@ -417,13 +417,81 @@
                 </div>
             </div>
 
-            <div class="card-mabb" style="margin-top:16px; opacity:.55;">
-                <div class="card-header"><i class="bi bi-people-fill"></i> Convocations joueuses (à venir)</div>
-                <div class="empty-state" style="padding:30px 20px;">
-                    <i class="bi bi-clock-history"></i>
-                    <p style="margin:0; font-size:.9rem;">Module convocations dans une prochaine itération.</p>
+            {# ========================================================
+               CONVOCATIONS JOUEUSES — [13/07/2026] le chaînon manquant.
+               Avant : « Module convocations dans une prochaine itération ».
+               Résultat : la table `convocation` n'était JAMAIS écrite, donc
+               l'espace joueuse et l'app mobile lisaient une table vide.
+               Le coach coche → les lignes existent → la joueuse est notifiée
+               et répond depuis son app. La boucle hebdomadaire est fermée.
+               ======================================================== #}
+            {% if is_granted('CLUB_STAFF', rencontre) %}
+                <div class="card-mabb" style="margin-top:16px;">
+                    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span><i class="bi bi-people-fill"></i> Convocations joueuses</span>
+                        <small style="color:var(--mabb-muted); font-weight:500;">
+                            {{ convocations|length }} convoquée{{ convocations|length > 1 ? 's' : '' }}
+                        </small>
+                    </div>
+
+                    {% if effectif is empty %}
+                        <div class="empty-state" style="padding:30px 20px;">
+                            <i class="bi bi-person-x"></i>
+                            <p style="margin:0; font-size:.9rem;">
+                                Aucune joueuse affectée à cette équipe pour la saison de la rencontre.
+                                Affecte l'effectif dans la fiche équipe, puis reviens ici.
+                            </p>
+                        </div>
+                    {% else %}
+                        <form method="post" action="{{ path('manager_rencontre_convocations', {id: rencontre.id}) }}" style="padding:14px 16px;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('convocations_' ~ rencontre.id) }}">
+
+                            <p style="font-size:.85rem; color:var(--mabb-muted); margin:0 0 12px;">
+                                Coche les joueuses convoquées. Chaque nouvelle convoquée reçoit une notification
+                                et peut répondre présente, absente ou incertaine depuis son espace.
+                                Décocher retire la convocation, et efface la réponse éventuelle.
+                            </p>
+
+                            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:8px;">
+                                {% for joueur in effectif %}
+                                    {% set convoc = convocations[joueur.id] ?? null %}
+                                    <label style="display:flex; align-items:center; gap:10px; padding:8px 10px; border:1px solid var(--mabb-border, #e5e7eb); border-radius:8px; cursor:pointer;">
+                                        <input type="checkbox" name="joueurs[]" value="{{ joueur.id }}"
+                                               {{ convoc ? 'checked' : '' }}
+                                               style="width:18px; height:18px; flex:none;">
+                                        <span style="flex:1; min-width:0;">
+                                            <span style="display:block; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                                {% if joueur.numeroMaillot %}<span style="color:var(--mabb-muted);">#{{ joueur.numeroMaillot }}</span> {% endif %}
+                                                {{ joueur.prenom }} {{ joueur.nom }}
+                                            </span>
+                                            {# La réponse de la joueuse : c'est l'info que le coach vient chercher #}
+                                            {% if convoc %}
+                                                {% if convoc.reponse == 'present' %}
+                                                    <small style="color:#16a34a; font-weight:700;">✅ Présente</small>
+                                                {% elseif convoc.reponse == 'absent' %}
+                                                    <small style="color:#dc2626; font-weight:700;">❌ Absente{% if convoc.motif %} — {{ convoc.motif }}{% endif %}</small>
+                                                {% elseif convoc.reponse == 'incertain' %}
+                                                    <small style="color:#d97706; font-weight:700;">🤔 Incertaine{% if convoc.motif %} — {{ convoc.motif }}{% endif %}</small>
+                                                {% else %}
+                                                    <small style="color:var(--mabb-muted);">En attente de réponse</small>
+                                                {% endif %}
+                                            {% else %}
+                                                <small style="color:var(--mabb-muted);">Non convoquée</small>
+                                            {% endif %}
+                                        </span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+
+                            <div style="margin-top:14px;">
+                                <button type="submit" class="btn-mabb-orange">
+                                    <i class="bi bi-send-check"></i> Enregistrer les convocations
+                                </button>
+                            </div>
+                        </form>
+                    {% endif %}
                 </div>
-            </div>
+            {% endif %}
 
             {# ========================================================
                Documents officiels FFBB — résumé, feuille de match, positions tirs

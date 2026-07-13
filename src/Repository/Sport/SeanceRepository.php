@@ -4,6 +4,7 @@ namespace App\Repository\Sport;
 
 use App\Entity\Core\Club;
 use App\Entity\Core\User;
+use App\Entity\Sport\CoachEquipe;
 use App\Entity\Sport\Equipe;
 use App\Entity\Sport\Seance;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
@@ -122,9 +123,11 @@ class SeanceRepository extends ServiceEntityRepository
             ->orderBy('s.date', 'ASC');
 
         if ($coach !== null) {
-            // On passe par la table de liaison : "les équipes que CE coach entraîne".
-            $qb->join('e.coachs', 'c')
-               ->andWhere('c = :coach')
+            // Les équipes que CE coach entraîne, via CoachEquipe (l'entité qui porte
+            // l'affectation, sa saison et son rôle). Pas de filtre sur la saison de
+            // l'affectation : c'est l'équipe qui porte la sienne, et une séance
+            // appartient toujours à une équipe.
+            $qb->join(CoachEquipe::class, 'ce', 'WITH', 'ce.equipe = e AND ce.user = :coach')
                ->setParameter('coach', $coach);
         }
 
@@ -152,10 +155,9 @@ class SeanceRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('s')
             ->join('s.equipe', 'e')->addSelect('e')
-            ->join('e.coachs', 'c')
+            ->join(CoachEquipe::class, 'ce', 'WITH', 'ce.equipe = e AND ce.user = :coach')
             ->leftJoin('s.presences', 'p')
             ->where('s.club = :club')
-            ->andWhere('c = :coach')
             ->andWhere('s.date < :maintenant')
             ->andWhere('s.date >= :limite')
             ->groupBy('s.id')

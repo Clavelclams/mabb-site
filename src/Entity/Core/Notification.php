@@ -35,6 +35,10 @@ class Notification
     // ── Types ───────────────────────────────────────────────────────────────
     public const TYPE_SHOT_CHART_VALIDEE = 'SHOT_CHART_VALIDEE';
     public const TYPE_SHOT_CHART_REJETEE = 'SHOT_CHART_REJETEE';
+    // [13/07/2026] Le coach convoque une joueuse pour une rencontre. C'est LA
+    // notification hebdomadaire : celle qui fait rouvrir l'app le vendredi soir,
+    // et celle sur laquelle le push (à venir) se déclenchera.
+    public const TYPE_CONVOCATION        = 'CONVOCATION';
 
     // ── Champs ─────────────────────────────────────────────────────────────
     #[ORM\Id]
@@ -144,6 +148,7 @@ class Notification
         return match ($this->type) {
             self::TYPE_SHOT_CHART_VALIDEE => '✅ Séance validée',
             self::TYPE_SHOT_CHART_REJETEE => '❌ Séance rejetée',
+            self::TYPE_CONVOCATION        => '🏀 Tu es convoquée',
             default => ucfirst(strtolower(str_replace('_', ' ', $this->type))),
         };
     }
@@ -156,6 +161,7 @@ class Notification
         return match ($this->type) {
             self::TYPE_SHOT_CHART_VALIDEE => 'success',
             self::TYPE_SHOT_CHART_REJETEE => 'danger',
+            self::TYPE_CONVOCATION        => 'neutral',
             default => 'neutral',
         };
     }

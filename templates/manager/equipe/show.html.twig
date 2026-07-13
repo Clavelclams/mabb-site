@@ -165,65 +165,38 @@
         {% endif %}
     </div>
 
-    {# Qui entraîne cette équipe. Sans ce lien, aucune séance n'appartient à personne,
-       et il devient impossible de savoir qui n'a pas fait l'appel. #}
+    {# Les coachs de l'équipe, en lecture seule. L'affectation se fait depuis la fiche
+       du coach, où l'on choisit aussi son rôle et la saison. #}
     <div class="card-mabb" style="margin-top: 20px;">
         <div class="card-header"><i class="bi bi-person-badge"></i> Les coachs de l'équipe</div>
         <div class="card-body">
 
-            {% if equipe.coachs is empty %}
-                <p style="color:#8a94a0; font-size:.9rem; margin:0 0 12px 0; line-height:1.6;">
-                    Personne n'est encore désigné coach de cette équipe. Tant que c'est le cas,
-                    ses entraînements n'apparaissent dans la semaine de personne, et aucun oubli
-                    d'appel ne peut être signalé.
+            {% if coach_equipes is empty %}
+                <p style="color:#8a94a0; font-size:.9rem; margin:0; line-height:1.6;">
+                    Personne n'est désigné coach de cette équipe pour la saison {{ equipe.saison }}.
+                    Tant que c'est le cas, ses entraînements n'apparaissent dans la semaine de
+                    personne, et aucun oubli d'appel ne peut être signalé.
+                    <br>
+                    L'affectation se fait depuis la fiche du coach, dans
+                    <a href="{{ path('manager_staff_index') }}" style="font-weight:700; color:var(--mabb-orange); text-decoration:none;">la page Staff</a>.
                 </p>
             {% else %}
-                <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
-                    {% for c in equipe.coachs %}
-                        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; background:#f9fafb; border-radius:8px;">
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    {% for ce in coach_equipes %}
+                        <a href="{{ path('manager_staff_show', {userId: ce.user.id}) }}"
+                           style="display:flex; align-items:center; justify-content:space-between; gap:10px;
+                                  padding:10px 12px; background:#f9fafb; border-radius:8px;
+                                  text-decoration:none; color:inherit;">
                             <span style="font-weight:600;">
                                 <i class="bi bi-person-fill" style="color:var(--mabb-blue);"></i>
-                                {{ c.prenom }} {{ c.nom }}
+                                {{ ce.user.prenom }} {{ ce.user.nom }}
                             </span>
-                            {% if is_granted('CLUB_ADMIN', equipe) %}
-                                <form method="post" action="{{ path('manager_equipe_coach_remove', {id: equipe.id, userId: c.id}) }}"
-                                      onsubmit="return confirm('Retirer {{ c.prenom }} du coaching de cette équipe ?');" style="margin:0;">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('equipe_coachs_' ~ equipe.id) }}">
-                                    <button type="submit" class="btn-mabb-ghost btn-sm" style="color:var(--mabb-red); border-color:#f3d3d3;">
-                                        Retirer
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </div>
+                            <span style="font-size:.78rem; color:#8a94a0; text-transform:lowercase;">
+                                {{ ce.roleCoach == 'PRINCIPAL' ? 'coach principal' : 'assistant' }}
+                            </span>
+                        </a>
                     {% endfor %}
                 </div>
-            {% endif %}
-
-            {% if is_granted('CLUB_ADMIN', equipe) %}
-                {% if coachs_disponibles is empty %}
-                    <p style="font-size:.84rem; color:#8a94a0; margin:0; line-height:1.6;">
-                        {% if equipe.coachs is empty %}
-                            Aucun membre du club n'a le rôle coach. Il faut d'abord le lui attribuer
-                            depuis la page du staff.
-                        {% else %}
-                            Tous les coachs du club sont déjà sur cette équipe.
-                        {% endif %}
-                    </p>
-                {% else %}
-                    <form method="post" action="{{ path('manager_equipe_coach_add', {id: equipe.id}) }}"
-                          style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                        <input type="hidden" name="_token" value="{{ csrf_token('equipe_coachs_' ~ equipe.id) }}">
-                        <select name="user_id" class="form-select" style="max-width:240px;" required>
-                            <option value="">Ajouter un coach…</option>
-                            {% for u in coachs_disponibles %}
-                                <option value="{{ u.id }}">{{ u.prenom }} {{ u.nom }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn-mabb-ghost btn-sm">
-                            <i class="bi bi-plus-lg"></i> Ajouter
-                        </button>
-                    </form>
-                {% endif %}
             {% endif %}
 
         </div>

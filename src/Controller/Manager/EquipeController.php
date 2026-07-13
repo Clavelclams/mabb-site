@@ -131,6 +131,7 @@ class EquipeController extends AbstractController
         Equipe $equipe,
         \App\Repository\Sport\PlanningSeanceRepository $planningRepo,
         \App\Repository\Sport\CotisationJoueurRepository $cotisationRepository,
+        \App\Repository\Sport\CoachEquipeRepository $coachEquipeRepository,
     ): Response {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $equipe);
 
@@ -166,40 +167,19 @@ class EquipeController extends AbstractController
             }
         }
 
-        // Les coachs du club qui ne sont pas encore sur cette équipe : c'est ce qu'on
-        // proposera dans la liste déroulante. Inutile de proposer quelqu'un qui y est
-        // déjà, et hors de question de proposer quelqu'un qui n'est pas coach ici.
-        $coachsDisponibles = [];
-        if ($this->isGranted(ClubVoter::CLUB_ADMIN, $equipe)) {
-            $dejaCoachs = $equipe->getCoachs()->toArray();
-
-            $qb = $this->em->createQueryBuilder()
-                ->select('u')
-                ->from(\App\Entity\Core\User::class, 'u')
-                ->join(\App\Entity\Core\UserClubRole::class, 'ucr', 'WITH', 'ucr.user = u')
-                ->where('ucr.club = :club')
-                ->andWhere('ucr.role = :role')
-                ->andWhere('ucr.status = :actif')
-                ->setParameter('club', $equipe->getClub())
-                ->setParameter('role', \App\Entity\Core\UserClubRole::ROLE_COACH)
-                ->setParameter('actif', \App\Entity\Core\UserClubRole::STATUS_ACTIVE)
-                ->orderBy('u.nom', 'ASC');
-
-            if ($dejaCoachs !== []) {
-                $qb->andWhere('u NOT IN (:deja)')->setParameter('deja', $dejaCoachs);
-            }
-
-            $coachsDisponibles = $qb->getQuery()->getResult();
-        }
+        // Les coachs de l'équipe, en lecture seule. L'affectation elle-même se fait
+        // depuis la fiche du coach (/staff/{userId}), où elle vivait déjà : c'est là
+        // qu'on choisit s'il est principal ou assistant, et pour quelle saison.
+        $coachEquipes = $coachEquipeRepository->findByEquipe($equipe, $equipe->getSaison());
 
         return $this->render('manager/equipe/show.html.twig', [
-            'equipe'             => $equipe,
-            'joueurs'            => $joueurs,
-            'effectif'           => $effectif,
-            'effectif_actif'     => $effectifActif,
-            'plannings'          => $plannings,
-            'cotisations_map'    => $cotisationsMap,
-            'coachs_disponibles' => $coachsDisponibles,
+            'equipe'           => $equipe,
+            'joueurs'          => $joueurs,
+            'effectif'         => $effectif,
+            'effectif_actif'   => $effectifActif,
+            'plannings'        => $plannings,
+            'cotisations_map'  => $cotisationsMap,
+            'coach_equipes'    => $coachEquipes,
         ]);
     }
 
