@@ -107,6 +107,82 @@
                 </div>
             </div>
 
+            {# Les retours des joueuses. Encadrement uniquement (retours est null sinon). #}
+            {% if retours %}
+                <div class="card-mabb" style="margin-top:16px;">
+                    <div class="card-header">
+                        <i class="bi bi-chat-quote"></i> Ce que les joueuses en ont pensé
+                    </div>
+                    <div class="card-body">
+
+                        {% if retours.sous_le_seuil %}
+                            <div style="text-align:center; padding:18px 12px; color:#6b7280;">
+                                <div style="font-size:1.6rem; margin-bottom:6px;">
+                                    <i class="bi bi-hourglass-split"></i>
+                                </div>
+                                <p style="margin:0 0 6px 0; font-weight:600; color:#374151;">
+                                    {{ retours.nb_reponses }} réponse{{ retours.nb_reponses > 1 ? 's' : '' }} pour l'instant.
+                                    Il en faut {{ retours.seuil }}.
+                                </p>
+                                <p style="margin:0; font-size:.85rem; line-height:1.6;">
+                                    En dessous de {{ retours.seuil }} réponses, rien n'est affiché. Avec une ou
+                                    deux réponses seulement, vous sauriez de qui elles viennent, et la promesse
+                                    d'anonymat faite aux joueuses ne vaudrait plus rien.
+                                </p>
+                            </div>
+
+                        {% else %}
+                            <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:16px;">
+                                <div>
+                                    <div style="font-size:2rem; font-weight:800; line-height:1; color:var(--mabb-dark);">
+                                        {{ retours.moyenne }}<span style="font-size:1rem; color:#9ca3af;">/5</span>
+                                    </div>
+                                    <div style="font-size:.78rem; color:#6b7280; margin-top:2px;">
+                                        sur {{ retours.nb_reponses }} réponses
+                                    </div>
+                                </div>
+
+                                <div style="flex:1; min-width:200px;">
+                                    {% for note in 5..1 %}
+                                        {% set n = retours.distribution[note] %}
+                                        {% set pct = retours.nb_reponses > 0 ? (n / retours.nb_reponses * 100)|round : 0 %}
+                                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:3px;">
+                                            <span style="width:14px; font-size:.78rem; color:#6b7280;">{{ note }}</span>
+                                            <div style="flex:1; height:8px; background:#eef1f4; border-radius:4px; overflow:hidden;">
+                                                <div style="width:{{ pct }}%; height:100%; background:var(--mabb-orange);"></div>
+                                            </div>
+                                            <span style="width:22px; font-size:.75rem; color:#9ca3af; text-align:right;">{{ n }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            {% if retours.commentaires is not empty %}
+                                <div style="border-top:1px solid #eef1f4; padding-top:12px;">
+                                    {% for c in retours.commentaires %}
+                                        <div style="padding:10px 12px; background:#f9fafb; border-radius:8px; margin-bottom:8px;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">
+                                                <span style="font-size:.78rem; font-weight:700; color:{{ c.signe_par ? 'var(--mabb-blue)' : '#9ca3af' }};">
+                                                    {{ c.signe_par ?? 'Anonyme' }}
+                                                </span>
+                                                <span style="font-size:.78rem; color:#6b7280;">{{ c.note }}/5</span>
+                                            </div>
+                                            <p style="margin:0; font-size:.88rem; line-height:1.6; color:#374151;">{{ c.commentaire }}</p>
+                                        </div>
+                                    {% endfor %}
+                                    <p style="margin:10px 0 0 0; font-size:.76rem; color:#9ca3af; line-height:1.5;">
+                                        Les commentaires anonymes le sont vraiment : le nom de la joueuse n'est pas
+                                        stocké, il n'y a rien à retrouver. L'ordre d'affichage est brassé, il ne dit
+                                        pas qui a répondu en premier.
+                                    </p>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+
+                    </div>
+                </div>
+            {% endif %}
+
             {% if is_granted('CLUB_ADMIN', seance) %}
                 <div class="card-mabb" style="margin-top:16px; border-left:4px solid var(--mabb-red);">
                     <div class="card-header"><i class="bi bi-exclamation-triangle"></i> Zone dangereuse</div>

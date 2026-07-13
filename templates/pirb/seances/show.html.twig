@@ -90,50 +90,27 @@
     {% endif %}
 </div>
 
-{# ─── Notation (séances passées uniquement) ───────────────────────────── #}
-{% if peutNoter %}
+{# Ton avis. Un seul chemin : le formulaire de retour. #}
+{% if peutRepondre %}
     <div class="pirb-card" style="padding:18px 16px;">
-        <h2 style="font-size:.95rem; font-weight:700; margin:0 0 4px 0;">
-            {% if maNote %}✏️ Modifier ta note{% else %}⭐ Noter cette séance{% endif %}
-        </h2>
+        <h2 style="font-size:.95rem; font-weight:700; margin:0 0 4px 0;">Ton avis sur cette séance</h2>
         <p style="font-size:.8rem; color:var(--pirb-text-muted); margin:0 0 14px 0;">
-            Ta note est <strong>anonyme</strong> — le coach voit la moyenne globale, pas les noms.
+            Une note, et un mot si tu veux. Tu choisis de signer ou pas.
         </p>
-
-        <form method="POST" action="{{ path('pirb_seances_noter', {id: seance.id}) }}" id="noteForm">
-            <input type="hidden" name="_token" value="{{ csrf_token('noter_seance_' ~ seance.id) }}">
-            <input type="hidden" name="note" id="noteValue" value="{{ maNote ? maNote.note : 3 }}">
-
-            {# Étoiles cliquables #}
-            <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
-                {% for i in 1..5 %}
-                    <button type="button" class="star-btn {% if maNote and maNote.note >= i %}selected{% elseif not maNote and i == 3 %}selected{% endif %}"
-                            data-val="{{ i }}" title="{{ ['😞 Moyen', '😕 Pas top', '😐 Ok', '😊 Bien', '🔥 Super !'][i-1] }}"
-                            onclick="selectNote({{ i }})">
-                        {{ ['😞','😕','😐','😊','🔥'][i-1] }}
-                    </button>
-                {% endfor %}
-            </div>
-
-            <div id="noteLabel" style="font-size:.82rem; color:var(--pirb-text-muted); margin-bottom:12px;">
-                {# JS remplira ici #}
-            </div>
-
-            {# Commentaire libre #}
-            <textarea name="commentaire" rows="3"
-                      placeholder="Ton ressenti (optionnel) — anonyme pour le coach…"
-                      style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--pirb-border); background:var(--pirb-bg-card); color:var(--pirb-text); font-size:.88rem; resize:vertical; box-sizing:border-box;">{{ maNote ? maNote.commentaire : '' }}</textarea>
-
-            <button type="submit" style="margin-top:12px; width:100%; padding:12px; background:var(--pirb-accent); color:#fff; border:none; border-radius:10px; font-size:.95rem; font-weight:700; cursor:pointer; transition:opacity .15s;"
-                    onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">
-                {% if maNote %}Mettre à jour{% else %}Envoyer ma note{% endif %}
-            </button>
-        </form>
+        <a href="{{ path('pirb_feedback_form', {id: seance.id}) }}"
+           style="display:block; text-align:center; padding:12px; background:var(--pirb-accent); color:#fff; border-radius:10px; font-size:.95rem; font-weight:700; text-decoration:none;">
+            Donner mon avis
+        </a>
+    </div>
+{% elseif dejaRepondu %}
+    <div class="pirb-card" style="text-align:center; padding:20px; color:var(--pirb-text-muted); font-size:.88rem;">
+        <i class="bi bi-check-circle" style="font-size:1.5rem; display:block; margin-bottom:6px;"></i>
+        Tu as déjà donné ton avis sur cette séance. Merci.
     </div>
 {% elseif not estPassee %}
     <div class="pirb-card" style="text-align:center; padding:20px; color:var(--pirb-text-muted); font-size:.88rem;">
         <i class="bi bi-clock" style="font-size:1.5rem; display:block; margin-bottom:6px;"></i>
-        Tu pourras noter cette séance une fois qu'elle sera passée.
+        Tu pourras donner ton avis une fois la séance passée.
     </div>
 {% endif %}
 

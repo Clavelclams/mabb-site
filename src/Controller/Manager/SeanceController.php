@@ -5,6 +5,7 @@ namespace App\Controller\Manager;
 use App\Entity\Sport\Seance;
 use App\Form\Manager\SeanceType;
 use App\Repository\Sport\EquipeRepository;
+use App\Repository\Sport\FeedbackSeanceRepository;
 use App\Repository\Sport\SeanceRepository;
 use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
@@ -116,14 +117,24 @@ class SeanceController extends AbstractController
 
     /**
      * Vue détail d'une séance.
+     *
+     * Les retours des joueuses ne sont montrés qu'à l'encadrement, jamais aux
+     * simples membres. Et jamais en dessous du seuil de réponses : sur une séance
+     * où une seule joueuse s'est exprimée, afficher sa note reviendrait à la
+     * désigner du doigt.
      */
     #[Route('/seances/{id}', name: 'manager_seance_show', methods: ['GET'], requirements: ['id' => '\d+'])]
-    public function show(Seance $seance): Response
+    public function show(Seance $seance, FeedbackSeanceRepository $feedbackRepo): Response
     {
         $this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $seance);
 
+        $retours = $this->isGranted(ClubVoter::CLUB_STAFF, $seance)
+            ? $feedbackRepo->synthesePourSeance($seance)
+            : null;
+
         return $this->render('manager/seance/show.html.twig', [
-            'seance' => $seance,
+            'seance'  => $seance,
+            'retours' => $retours,
         ]);
     }
 

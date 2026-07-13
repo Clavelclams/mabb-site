@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Pirb;
 
 use App\Entity\Core\User;
-use App\Entity\Sport\NoteSeance;
 use App\Entity\Sport\Seance;
 use App\Entity\Sport\SeanceSolo;
+use App\Repository\Sport\FeedbackParticipationRepository;
 use App\Repository\Sport\JoueurRepository;
-use App\Repository\Sport\NoteSeanceRepository;
 use App\Repository\Sport\SeanceRepository;
 use App\Repository\Sport\SeanceSoloRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,20 +18,18 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * PIRB — Séances d'entraînement vues par la joueuse.
+ * Les séances d'entraînement, vues par la joueuse.
  *
- * Ce que peut faire la joueuse :
- *   - Voir les séances à venir (titre + lieu, contenu masqué si contenuPrive=true)
- *   - Voir les séances passées
- *   - Noter une séance passée (note 1-5 + commentaire libre)
- *   - Déclarer une séance solo (entraînement perso)
+ * Elle peut voir les séances à venir et passées, donner son avis sur une séance
+ * passée, et déclarer un entraînement fait toute seule.
  *
- * Routes :
- *   GET  /seances                  → liste à venir + passées récentes
- *   GET  /seances/{id}             → détail d'une séance (noter)
- *   POST /seances/{id}/noter       → soumettre / modifier sa note
- *   GET  /seances/solo/declarer    → formulaire déclaration solo
- *   POST /seances/solo/declarer    → soumettre la déclaration
+ * Sur l'avis : il n'y a plus qu'un seul chemin, PirbFeedbackController. Il y en
+ * avait deux (une entité NoteSeance et une entité FeedbackSeance faisaient la même
+ * chose), et celui-ci promettait l'anonymat à l'écran tout en enregistrant
+ * l'identité de la joueuse. Il a été supprimé.
+ *
+ * Ici, on sait seulement SI une joueuse a déjà répondu, via feedback_participation.
+ * On ne sait pas ce qu'elle a écrit, et c'est très bien ainsi.
  */
 #[Route('/seances', name: 'pirb_seances_')]
 class PirbSeancesController extends AbstractController
@@ -40,7 +37,7 @@ class PirbSeancesController extends AbstractController
     public function __construct(
         private readonly JoueurRepository $joueurRepo,
         private readonly SeanceRepository $seanceRepo,
-        private readonly NoteSeanceRepository $noteRepo,
+        private readonly FeedbackParticipationRepository $participationRepo,
         private readonly SeanceSoloRepository $soloRepo,
         private readonly EntityManagerInterface $em,
     ) {}
@@ -67,19 +64,20 @@ class PirbSeancesController extends AbstractController
         $prochaines = $this->seanceRepo->findProchaines($equipe, 8);
         $passees    = $this->seanceRepo->findPassees($equipe, 20);
 
-        // Map des notes de la joueuse [seance_id => NoteSeance]
-        $mesNotes = $this->noteRepo->findMesNotesMap($joueur, $passees);
+        // Les séances sur lesquelles elle s'est déjà exprimée. On sait qu'elle l'a
+        // fait, pas ce qu'elle a dit : le contenu vit dans une autre table, sans lien.
+        $dejaRepondu = $this->participationRepo->seancesDejaNoteesParJoueur($joueur);
 
         // Séances solo déclarées récemment
         $solos = $this->soloRepo->findParJoueur($joueur, 10);
 
         return $this->render('pirb/seances/index.html.twig', [
-            'joueur'     => $joueur,
-            'equipe'     => $equipe,
-            'prochaines' => $prochaines,
-            'passees'    => $passees,
-            'mesNotes'   => $mesNotes,
-            'solos'      => $solos,
+            'joueur'      => $joueur,
+            'equipe'      => $equipe,
+            'prochaines'  => $prochaines,
+            'passees'     => $passees,
+            'dejaRepondu' => $dejaRepondu,
+            'solos'       => $solos,
         ]);
     }
 
@@ -103,73 +101,17 @@ class PirbSeancesController extends AbstractController
             throw $this->createAccessDeniedException('Cette séance ne concerne pas ton équipe.');
         }
 
-        $maNote         = $this->noteRepo->findMaNote($joueur, $seance);
-        $estPassee      = $seance->getDate() < new \DateTimeImmutable('today');
-        $peutNoter      = $estPassee; // On ne note que les séances passées
+        $estPassee   = $seance->getDate() < new \DateTimeImmutable('today');
+        $dejaRepondu = $this->participationRepo->aDejaRepondu($joueur, $seance);
 
         return $this->render('pirb/seances/show.html.twig', [
-            'joueur'    => $joueur,
-            'seance'    => $seance,
-            'maNote'    => $maNote,
-            'estPassee' => $estPassee,
-            'peutNoter' => $peutNoter,
+            'joueur'      => $joueur,
+            'seance'      => $seance,
+            'estPassee'   => $estPassee,
+            'dejaRepondu' => $dejaRepondu,
+            // On ne donne son avis que sur une séance passée, et une seule fois.
+            'peutRepondre' => $estPassee && !$dejaRepondu,
         ]);
-    }
-
-    /**
-     * Soumettre ou modifier sa note pour une séance.
-     *
-     * POST /seances/{id}/noter
-     * Body: note (1-5), commentaire (optionnel)
-     */
-    #[Route('/{id}/noter', name: 'noter', methods: ['POST'], requirements: ['id' => '\d+'])]
-    public function noter(Request $request, Seance $seance): Response
-    {
-        $joueur = $this->getJoueur();
-        if (!$joueur) {
-            return $this->redirectToRoute('pirb_dashboard');
-        }
-
-        // Vérifications
-        if ($joueur->getEquipe()?->getId() !== $seance->getEquipe()?->getId()) {
-            throw $this->createAccessDeniedException();
-        }
-
-        if ($seance->getDate() >= new \DateTimeImmutable('today')) {
-            $this->addFlash('warning', 'Tu ne peux noter qu\'une séance passée.');
-            return $this->redirectToRoute('pirb_seances_show', ['id' => $seance->getId()]);
-        }
-
-        $token = (string) $request->request->get('_token', '');
-        if (!$this->isCsrfTokenValid('noter_seance_' . $seance->getId(), $token)) {
-            $this->addFlash('error', 'Jeton de sécurité invalide.');
-            return $this->redirectToRoute('pirb_seances_show', ['id' => $seance->getId()]);
-        }
-
-        $noteVal   = (int) $request->request->get('note', 3);
-        $noteVal   = max(1, min(5, $noteVal)); // clamp 1-5
-        $commentaire = trim((string) $request->request->get('commentaire', ''));
-
-        // Upsert : créer ou modifier la note existante
-        $note = $this->noteRepo->findMaNote($joueur, $seance);
-        if (!$note) {
-            $note = new NoteSeance();
-            $note->setJoueur($joueur);
-            $note->setSeance($seance);
-            $this->em->persist($note);
-        }
-
-        $note->setNote($noteVal);
-        $note->setCommentaire($commentaire ?: null);
-        $this->em->flush();
-
-        $this->addFlash('success', sprintf(
-            'Note %s enregistrée ! %s',
-            str_repeat('⭐', $noteVal),
-            $commentaire ? 'Ton commentaire a été transmis anonymement au coach.' : ''
-        ));
-
-        return $this->redirectToRoute('pirb_seances_index');
     }
 
     /**

@@ -9,19 +9,25 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * B9 — Feedback PIRB sur une Séance (note 0-5 + commentaire + anonyme).
+ * Le retour d'une joueuse sur une séance : une note de 0 à 5, un commentaire.
  *
- * RÈGLE D'ANONYMAT :
- *   - Si est_anonyme = true → on STOCKE quand même joueur_id pour le
- *     compteur anti-doublon, mais l'UI Manager **NE le révèle jamais**.
- *     Le coach voit "Note 3/5 anonyme" sans savoir qui.
- *   - Si est_anonyme = false → joueur_id visible côté coach (vote signé).
+ * ANONYMAT
+ * --------
+ * Quand la joueuse coche "anonyme", joueur_id vaut NULL. Pas masqué à l'affichage :
+ * absent de la base. Personne ne peut remonter à elle, ni le coach, ni le staff,
+ * ni une requête SQL.
  *
- * Anti-doublon :
- *   - Mode signé : 1 vote par joueuse par séance (vérifié côté controller)
- *   - Mode anonyme : 1 vote autorisé aussi (pas de spam) — vérifié pareil
+ * L'ancienne version stockait joueur_id "pour l'anti-doublon technique" en
+ * promettant l'anonymat à l'écran. C'était faux. Le besoin d'anti-doublon est réel,
+ * mais il est désormais servi par une table séparée, feedback_participation, qui
+ * sait QUI a répondu sans savoir QUOI.
  *
- * Gamification : un joueur qui poste 10 feedbacks gagne le badge A_RETEX_REGULIER.
+ * L'horodatage est volontairement grossier (jour, pas seconde) : sinon on relierait
+ * un commentaire anonyme à une participation en comparant les heures.
+ *
+ * Ce que ça ne protège pas, et qu'il faut savoir : si une seule joueuse répond à une
+ * séance, le simple fait qu'elle ait répondu révèle ce qu'elle a écrit. Aucun schéma
+ * n'y peut rien. C'est pourquoi la vue coach n'affiche rien sous 3 réponses.
  */
 #[ORM\Entity(repositoryClass: FeedbackSeanceRepository::class)]
 #[ORM\Table(name: 'feedback_seance')]
@@ -40,8 +46,9 @@ class FeedbackSeance
     private ?Seance $seance = null;
 
     /**
-     * NULL côté Manager UI quand est_anonyme = true (le coach ne sait pas qui).
-     * En BDD c'est toujours renseigné pour anti-doublon technique.
+     * NULL dès que est_anonyme vaut true. En base, pas seulement à l'écran.
+     * Ne jamais réintroduire d'écriture de joueur_id sur un retour anonyme :
+     * c'est toute la promesse faite à des mineures qui tomberait.
      */
     #[ORM\ManyToOne(targetEntity: Joueur::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -63,7 +70,10 @@ class FeedbackSeance
 
     public function __construct()
     {
-        $this->createdAt = new \DateTimeImmutable();
+        // Jour, pas seconde. Un horodatage précis permettrait de rapprocher un
+        // retour anonyme d'une ligne de feedback_participation par comparaison
+        // des heures. Le coach n'a aucun besoin de la minute.
+        $this->createdAt = new \DateTimeImmutable('today');
     }
 
     public function getId(): ?int { return $this->id; }

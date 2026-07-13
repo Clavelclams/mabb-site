@@ -1,5 +1,5 @@
 {% extends 'pirb/base.html.twig' %}
-{% block title %}Noter cette séance{% endblock %}
+{% block title %}Ton avis sur la séance{% endblock %}
 
 {% block body %}
 
@@ -12,19 +12,19 @@
     {% endfor %}
 
     <div class="pirb-card" style="text-align:center; padding:22px;">
-        <div style="font-size:2.4rem; margin-bottom:6px;">⭐</div>
-        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Note ta séance</h1>
+        <h1 style="margin:0; font-size:1.2rem; font-weight:800;">Ton avis sur la séance</h1>
         <p style="color:var(--pirb-text-muted); font-size:0.85rem; margin-top:6px;">
             {{ seance.date|date('D d/m à H:i') }}
             {% if seance.equipe %} · {{ seance.equipe.nom }}{% endif %}
         </p>
     </div>
 
-    {% if deja %}
+    {% if deja_repondu %}
         <div class="pirb-card" style="text-align:center;">
-            <p style="color:var(--pirb-text-muted);">
-                Tu as déjà noté cette séance ({{ deja.note }}/5).<br>
-                <small>Note enregistrée le {{ deja.createdAt|date('d/m/Y') }}</small>
+            <p style="color:var(--pirb-text-muted); font-size:.88rem; line-height:1.6;">
+                Tu as déjà donné ton avis sur cette séance.<br>
+                Il est parti sans ton nom, donc on ne peut plus te le remontrer.
+                C'est la contrepartie de l'anonymat, et c'est normal.
             </p>
             <a href="{{ path('pirb_dashboard') }}" class="pirb-btn pirb-btn-primary" style="margin-top:10px;">
                 <i class="bi bi-arrow-left"></i> Retour
@@ -34,10 +34,9 @@
         <form method="POST" action="{{ path('pirb_feedback_form', {id: seance.id}) }}" class="pirb-card">
             <input type="hidden" name="_token" value="{{ csrf_token('pirb_feedback_' ~ seance.id) }}">
 
-            {# === Étoiles 0-5 === #}
             <div style="text-align:center; margin-bottom:14px;">
                 <div style="color:var(--pirb-text-muted); font-size:0.85rem; margin-bottom:8px;">
-                    Ta note globale
+                    Comment tu l'as trouvée ?
                 </div>
                 <div style="display:flex; justify-content:center; gap:4px; font-size:1.8rem;">
                     {% for n in 1..5 %}
@@ -49,16 +48,15 @@
                     {% endfor %}
                 </div>
                 <div style="color:var(--pirb-text-muted); font-size:0.75rem; margin-top:4px;">
-                    1 = bof · 5 = top
+                    1, pas terrible · 5, excellente
                 </div>
             </div>
 
-            {# === Commentaire === #}
             <label style="display:block; color:var(--pirb-text-muted); font-size:0.85rem; margin-bottom:6px;">
-                Commentaire (optionnel)
+                Tu veux ajouter un mot ? (facultatif)
             </label>
             <textarea name="commentaire" rows="3" maxlength="1000"
-                      placeholder="Ce qui t'a plu / déplu, ce qu'on pourrait améliorer..."
+                      placeholder="Ce qui t'a plu, ce qui t'a moins plu, ce qu'on pourrait changer."
                       style="width:100%; padding:10px;
                              background:rgba(255,255,255,0.05);
                              border:1px solid var(--pirb-border);
@@ -66,22 +64,32 @@
                              font-family:inherit; font-size:0.88rem;
                              box-sizing:border-box; margin-bottom:14px;"></textarea>
 
-            {# === Mode anonyme === #}
-            <label style="display:flex; align-items:center; gap:10px; padding:10px;
-                          background:rgba(234,88,12,0.08); border-radius:8px;
-                          cursor:pointer; font-size:0.88rem; margin-bottom:14px;">
-                <input type="checkbox" name="est_anonyme" value="1"
-                       style="width:18px; height:18px; cursor:pointer;">
-                <span style="flex:1;">
-                    <strong>Note anonyme</strong>
-                    <div style="color:var(--pirb-text-muted); font-size:0.78rem; margin-top:2px;">
-                        Le coach verra ta note + commentaire, mais pas qui c'est.
-                    </div>
-                </span>
-            </label>
+            {# L'anonymat est le défaut. Cocher, c'est renoncer à l'anonymat, pas l'obtenir. #}
+            <div style="padding:12px; background:rgba(255,255,255,0.04); border:1px solid var(--pirb-border); border-radius:8px; margin-bottom:14px;">
+                <div style="font-size:0.82rem; color:var(--pirb-text-muted); line-height:1.6; margin-bottom:10px;">
+                    Par défaut, <strong style="color:var(--pirb-text);">ton avis part sans ton nom</strong>.
+                    Ton nom n'est enregistré nulle part : ni le coach, ni le staff, ni personne
+                    ne peut savoir que c'est toi qui l'as écrit.
+                </div>
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.88rem;">
+                    <input type="checkbox" name="signer" value="1"
+                           style="width:18px; height:18px; cursor:pointer; flex-shrink:0;">
+                    <span>
+                        Je préfère signer avec mon prénom
+                        <div style="color:var(--pirb-text-muted); font-size:0.78rem; margin-top:2px;">
+                            Le coach saura que ça vient de toi.
+                        </div>
+                    </span>
+                </label>
+            </div>
+
+            <div style="font-size:0.76rem; color:var(--pirb-text-muted); margin-bottom:14px; line-height:1.5;">
+                Le coach ne voit les avis d'une séance qu'à partir de {{ seuil }} réponses.
+                En dessous, il saurait de qui ils viennent.
+            </div>
 
             <button type="submit" class="pirb-btn pirb-btn-primary" style="width:100%;">
-                <i class="bi bi-send"></i> Envoyer ma note
+                <i class="bi bi-send"></i> Envoyer
             </button>
 
             <a href="{{ path('pirb_dashboard') }}" style="display:block; text-align:center;
@@ -91,7 +99,7 @@
         </form>
 
         <script>
-            // Étoiles interactives — visuel uniquement, vraie valeur dans <input type=radio>
+            // Les étoiles ne sont qu'un habillage : la vraie valeur est dans le radio.
             const stars = document.querySelectorAll('.pirb-star');
             const updateStars = (selectedN) => stars.forEach(s => {
                 s.style.opacity = parseInt(s.dataset.n, 10) <= selectedN ? '1' : '0.3';
@@ -103,7 +111,7 @@
                     updateStars(n);
                 });
             });
-            updateStars(3); // default note=3
+            updateStars(3);
         </script>
     {% endif %}
 
