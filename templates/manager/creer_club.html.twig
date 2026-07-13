@@ -84,7 +84,7 @@
             <div class="mb-3">
                 <label class="form-label" for="nom">Nom du club <span class="text-danger">*</span></label>
                 <input type="text" id="nom" name="nom" class="form-control" required
-                       value="{{ valeurs.nom }}" placeholder="Ex : Métropole Amiénoise Basketball">
+                       value="{{ valeurs.nom }}" placeholder="Le nom complet de ton club">
             </div>
 
             <div class="mb-3">
@@ -101,24 +101,29 @@
                 <div class="col-8">
                     <label class="form-label" for="ville">Ville</label>
                     <input type="text" id="ville" name="ville" class="form-control"
-                           value="{{ valeurs.ville }}" placeholder="Amiens">
+                           value="{{ valeurs.ville }}" placeholder="Ta ville">
                 </div>
                 <div class="col-4">
                     <label class="form-label" for="code_postal">Code postal</label>
                     <input type="text" id="code_postal" name="code_postal" class="form-control"
-                           value="{{ valeurs.code_postal }}" placeholder="80000" maxlength="5">
+                           value="{{ valeurs.code_postal }}" placeholder="00000" maxlength="5">
                 </div>
             </div>
 
             <div class="mb-1 mt-3">
                 <label class="form-label" for="numero_ffbb">Numéro FFBB <span class="aide">(facultatif)</span></label>
+                {# Jamais de vrai numéro en exemple ici : ce champ sert justement à prouver
+                   qu'on est bien le club qu'on prétend être. Afficher un numéro valide
+                   reviendrait à le tendre à quiconque voudrait usurper ce club. On donne
+                   la forme, pas un cas réel. #}
                 <input type="text" id="numero_ffbb" name="numero_ffbb" class="form-control"
-                       value="{{ valeurs.numero_ffbb }}" placeholder="Ex : HDF0080036"
+                       value="{{ valeurs.numero_ffbb }}" placeholder="3 lettres puis 7 chiffres"
                        style="text-transform:uppercase;">
                 <div class="aide mt-1">
                     <i class="bi bi-info-circle"></i>
-                    Si ton club est affilié FFBB, renseigne son n° de groupement : il sera reconnu
-                    <strong>officiel</strong>. Sinon, laisse vide — ton club fonctionne exactement pareil.
+                    Si ton club est affilié à la FFBB, renseigne son numéro de groupement : il sera
+                    reconnu <strong>officiel</strong>. Tu le trouves sur ta licence ou auprès de ton
+                    comité départemental. Sinon, laisse vide : ton club fonctionnera exactement pareil.
                 </div>
             </div>
 

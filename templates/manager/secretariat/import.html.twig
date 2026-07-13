@@ -71,7 +71,7 @@
                         <select name="saison" class="form-select">
                             {% for s in saisons %}<option value="{{ s }}" {{ s == saison_active ? 'selected' : '' }}>Saison {{ s }}</option>{% endfor %}
                         </select>
-                        <input type="text" name="site" class="form-control" placeholder="Site (ex: AMIENS NORD)" required>
+                        <input type="text" name="site" class="form-control" placeholder="Nom du site ou du gymnase" required>
                     </div>
                     <label style="font-size:.8rem; display:flex; gap:6px; align-items:center;">
                         <input type="checkbox" name="dry_run" value="1" checked> Simulation d'abord (rien n'est enregistré)
