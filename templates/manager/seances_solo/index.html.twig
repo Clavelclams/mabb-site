@@ -72,7 +72,9 @@
                                 {# Description #}
                                 {% if solo.description %}
                                     <div style="flex:2; min-width:180px; font-size:.82rem; color:var(--mabb-muted); font-style:italic;">
-                                        "{{ solo.description|u.truncate(80, '…') }}"
+                                        {# Twig natif plutôt que le filtre u.truncate, qui exige
+                                           twig/string-extra (paquet absent, d'où le plantage au rendu). #}
+                                        "{{ solo.description|length > 80 ? solo.description|slice(0, 80) ~ '…' : solo.description }}"
                                     </div>
                                 {% endif %}
 
@@ -152,7 +154,11 @@
                                 {% endif %}
                             </td>
                             <td style="font-size:.78rem; color:var(--mabb-muted);">
-                                {{ solo.messageCoach ? ('"' ~ solo.messageCoach|u.truncate(50, '…') ~ '"') : '—' }}
+                                {% if solo.messageCoach %}
+                                    "{{ solo.messageCoach|length > 50 ? solo.messageCoach|slice(0, 50) ~ '…' : solo.messageCoach }}"
+                                {% else %}
+                                    ·
+                                {% endif %}
                             </td>
                         </tr>
                     {% endfor %}
