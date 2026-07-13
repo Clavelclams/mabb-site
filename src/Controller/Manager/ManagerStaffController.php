@@ -481,8 +481,9 @@ class ManagerStaffController extends AbstractController
             ->from(User::class, 'u')
             ->innerJoin(UserClubRole::class, 'ucr', 'WITH',
                 'ucr.user = u AND ucr.club = :club AND ucr.status = :actif AND ucr.role = :rp')
-            ->leftJoin(\App\Entity\Sport\ParentJoueur::class, 'pj', 'WITH',
-                'pj.parentUser = u AND pj.club = :club')
+            // NB : ParentJoueur n'a PAS de colonne club (son getClub() est dérivé
+            // de la joueuse) → on ne filtre que sur le lien parent↔enfant.
+            ->leftJoin(\App\Entity\Sport\ParentJoueur::class, 'pj', 'WITH', 'pj.parentUser = u')
             ->where('pj.id IS NULL')
             ->setParameter('club', $club)
             ->setParameter('actif', UserClubRole::STATUS_ACTIVE)
