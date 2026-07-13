@@ -4,17 +4,30 @@
 
 {% block stylesheets %}
 <style>
+    /* Cet écran est utilisé sur un iPad, debout, dans un gymnase, souvent d'une
+       seule main. D'où : des cibles larges, et surtout la LIGNE ENTIÈRE cliquable.
+       Viser une case à cocher de 16 px avec un pouce, en marchant, ça rate une fois
+       sur trois, et un appel qui rate est un appel qui ne se fait pas. */
     .presence-row {
         display: grid;
         grid-template-columns: 1fr auto 1fr;
         gap: 14px;
         align-items: center;
         padding: 12px 16px;
+        min-height: 62px;
         border: 1.5px solid var(--mabb-border);
         border-radius: 10px;
         margin-bottom: 8px;
         background: #fff;
         transition: background .15s, border-color .15s;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .presence-row:active { transform: scale(.995); }
+
+    @media (max-width: 820px) {
+        /* Sur tablette en portrait, trois colonnes serrent trop : on empile. */
+        .presence-row { grid-template-columns: 1fr; gap: 10px; }
     }
     .presence-row.absent {
         background: #fef2f2;
@@ -31,17 +44,24 @@
     .presence-checkbox-wrapper {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 14px;
-        border-radius: 20px;
+        justify-content: center;
+        gap: 10px;
+        padding: 0 20px;
+        min-height: 48px;   /* seuil tactile fiable */
+        min-width: 132px;
+        border-radius: 24px;
         background: #f0fdf4;
         border: 1.5px solid #86efac;
         cursor: pointer;
-        font-weight: 600;
-        font-size: .85rem;
+        font-weight: 700;
+        font-size: .92rem;
         color: #166534;
         transition: background .15s;
         white-space: nowrap;
+    }
+    .presence-checkbox-wrapper input[type="checkbox"] {
+        width: 20px; height: 20px;   /* le natif fait 13px, invisible au pouce */
+        accent-color: #16a34a;
     }
     .presence-row.absent .presence-checkbox-wrapper {
         background: #fef2f2;
@@ -50,8 +70,9 @@
     }
     .presence-checkbox-wrapper input { margin: 0; }
     .motif-input {
-        font-size: .82rem !important;
-        padding: 6px 10px !important;
+        font-size: .9rem !important;
+        padding: 12px 12px !important;
+        min-height: 46px;
     }
     .motif-input:disabled {
         background: #f8fafc !important;
@@ -198,10 +219,29 @@
                     row.classList.add('absent');
                     motifInput.disabled = false;
                     labelTexte.textContent = 'Absente';
-                    motifInput.focus();
+                    // Pas de focus() automatique sur tablette : ça fait surgir le clavier
+                    // par-dessus la liste à chaque absence, et le coach perd sa place.
+                    if (!window.matchMedia('(pointer: coarse)').matches) {
+                        motifInput.focus();
+                    }
                 }
                 updateStats();
             }
+
+            // La ligne entière bascule au tap. C'est le vrai gain sur iPad : le coach
+            // vise un nom, pas une case. On ignore les clics sur le motif (il doit
+            // pouvoir écrire) et sur le badge lui-même (le label bascule déjà tout
+            // seul, on basculerait deux fois et rien ne changerait).
+            document.querySelectorAll('.presence-row').forEach(row => {
+                row.addEventListener('click', (e) => {
+                    if (e.target.closest('.presence-checkbox-wrapper')) return;
+                    if (e.target.closest('.motif-input')) return;
+
+                    const cb = row.querySelector('input[type="checkbox"]');
+                    cb.checked = !cb.checked;
+                    toggleAbsent(cb);
+                });
+            });
 
             function toggleTous(etat) {
                 document.querySelectorAll('input[name^="present"]').forEach(cb => {

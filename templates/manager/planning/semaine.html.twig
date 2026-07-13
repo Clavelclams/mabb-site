@@ -1,0 +1,183 @@
+{% extends 'manager/base.html.twig' %}
+
+{% block title %}Ma semaine{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        /* Pensé pour un iPad tenu en main, au bord du terrain, avec les doigts
+           froids. Rien en dessous de 44px de haut : c'est la taille minimale d'une
+           cible tactile fiable. */
+        .jour { margin-bottom: 18px; }
+        .jour-titre {
+            font-size: .78rem; font-weight: 800; letter-spacing: .05em;
+            text-transform: uppercase; color: #8a94a0;
+            padding-bottom: 6px; margin-bottom: 10px;
+            border-bottom: 1px solid #eef1f4;
+        }
+        .jour-titre.aujourdhui { color: var(--mabb-orange); }
+
+        .seance-ligne {
+            display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+            padding: 14px 16px; border-radius: 12px; background: #fff;
+            border: 1px solid #eef1f4; margin-bottom: 8px;
+        }
+        .seance-ligne.a-faire { border-left: 4px solid var(--mabb-orange); }
+        .seance-ligne.fait    { border-left: 4px solid #16a34a; }
+        .seance-ligne.futur   { border-left: 4px solid #d5dbe1; }
+
+        .heure { font-size: 1.05rem; font-weight: 800; min-width: 58px; color: var(--mabb-dark); }
+        .infos { flex: 1; min-width: 160px; }
+        .equipe-nom { font-weight: 700; font-size: .95rem; color: var(--mabb-dark); }
+        .lieu { font-size: .8rem; color: #8a94a0; margin-top: 2px; }
+
+        .btn-appel {
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            min-height: 46px; padding: 0 20px; border-radius: 10px;
+            font-weight: 700; font-size: .9rem; text-decoration: none;
+            background: var(--mabb-orange); color: #fff; border: none;
+        }
+        .btn-appel.refaire { background: #fff; color: #16a34a; border: 1px solid #cfe8d8; }
+        .btn-appel.futur   { background: #f4f6f8; color: #8a94a0; }
+
+        .nav-semaine { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .nav-semaine a, .nav-semaine span.courant {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 44px; padding: 0 16px; border-radius: 10px;
+            background: #fff; border: 1px solid #e3e8ec; color: var(--mabb-dark);
+            text-decoration: none; font-weight: 600; font-size: .9rem;
+        }
+        .nav-semaine span.courant { background: var(--mabb-dark); color: #fff; border-color: var(--mabb-dark); }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="container" style="max-width:880px; padding-top:22px; padding-bottom:60px;">
+
+    <div style="margin-bottom:18px;">
+        <h1 style="font-size:1.5rem; font-weight:800; margin:0 0 4px 0;">
+            {% if filtre_sur_coach %}Mes entraînements{% else %}Les entraînements du club{% endif %}
+        </h1>
+        <p style="color:#8a94a0; margin:0; font-size:.9rem;">
+            Semaine du {{ lundi|date('d/m') }} au {{ lundi|date_modify('+6 days')|date('d/m/Y') }},
+            {{ nb_seances }} séance{{ nb_seances > 1 ? 's' : '' }}.
+        </p>
+    </div>
+
+    {# Un coach sans équipe assignée verrait tout le club sans comprendre pourquoi.
+       Autant le lui dire, et dire à qui s'adresser. #}
+    {% if not a_des_equipes and not peut_voir_tout %}
+        <div style="padding:12px 16px; background:#fff8f1; border-left:4px solid var(--mabb-orange); border-radius:8px; margin-bottom:16px; font-size:.88rem; line-height:1.6;">
+            Aucune équipe ne t'est encore attribuée, donc tu vois tout le club.
+            Demande à un dirigeant de t'ajouter comme coach sur tes équipes, depuis leur fiche.
+        </div>
+    {% endif %}
+
+    {# Navigation. Les liens gardent les filtres en cours, sinon on les reperd à
+       chaque changement de semaine, et c'est rageant. #}
+    {% set params = {categorie: categorie_filtre, tout: voir_tout ? 1 : null} %}
+    <div class="nav-semaine" style="margin-bottom:18px;">
+        <a href="{{ path('manager_planning_semaine', params|merge({debut: lundi|date_modify('-7 days')|date('Y-m-d')})) }}">
+            <i class="bi bi-chevron-left"></i> Semaine précédente
+        </a>
+        <a href="{{ path('manager_planning_semaine', params) }}">Cette semaine</a>
+        <a href="{{ path('manager_planning_semaine', params|merge({debut: lundi|date_modify('+7 days')|date('Y-m-d')})) }}">
+            Semaine suivante <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+
+    {# Filtres #}
+    <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:22px;">
+        <input type="hidden" name="debut" value="{{ lundi|date('Y-m-d') }}">
+        {% if voir_tout %}<input type="hidden" name="tout" value="1">{% endif %}
+
+        <select name="categorie" class="form-select" style="max-width:190px; min-height:44px;" onchange="this.form.submit()">
+            <option value="">Toutes les catégories</option>
+            {% for c in categories %}
+                <option value="{{ c }}" {{ categorie_filtre == c ? 'selected' : '' }}>{{ c }}</option>
+            {% endfor %}
+        </select>
+
+        {% if peut_voir_tout %}
+            {% if voir_tout %}
+                <a href="{{ path('manager_planning_semaine', {debut: lundi|date('Y-m-d'), categorie: categorie_filtre}) }}"
+                   class="btn-mabb-ghost" style="min-height:44px; display:inline-flex; align-items:center;">
+                    Voir seulement mes équipes
+                </a>
+            {% else %}
+                <a href="{{ path('manager_planning_semaine', {debut: lundi|date('Y-m-d'), categorie: categorie_filtre, tout: 1}) }}"
+                   class="btn-mabb-ghost" style="min-height:44px; display:inline-flex; align-items:center;">
+                    Voir tout le club
+                </a>
+            {% endif %}
+        {% endif %}
+    </form>
+
+    {% if nb_seances == 0 %}
+        <div style="text-align:center; padding:40px 20px; color:#8a94a0;">
+            <i class="bi bi-calendar3" style="font-size:2rem; display:block; margin-bottom:10px;"></i>
+            Aucun entraînement cette semaine.
+        </div>
+    {% endif %}
+
+    {% set jours = {1:'Lundi', 2:'Mardi', 3:'Mercredi', 4:'Jeudi', 5:'Vendredi', 6:'Samedi', 7:'Dimanche'} %}
+    {% set maintenant = date() %}
+
+    {% for numJour, seances in seances_par_jour %}
+        {% if seances is not empty %}
+            {% set dateJour = lundi|date_modify('+' ~ (numJour - 1) ~ ' days') %}
+            <div class="jour">
+                <div class="jour-titre {{ dateJour|date('Y-m-d') == 'now'|date('Y-m-d') ? 'aujourdhui' : '' }}">
+                    {{ jours[numJour] }} {{ dateJour|date('d/m') }}
+                    {% if dateJour|date('Y-m-d') == 'now'|date('Y-m-d') %} · aujourd'hui{% endif %}
+                </div>
+
+                {% for s in seances %}
+                    {% set appelFait = s.presences|length > 0 %}
+                    {% set estPassee = s.date < maintenant %}
+                    {% set etat = appelFait ? 'fait' : (estPassee ? 'a-faire' : 'futur') %}
+
+                    <div class="seance-ligne {{ etat }}">
+                        <div class="heure">{{ s.date|date('H:i') }}</div>
+
+                        <div class="infos">
+                            <div class="equipe-nom">
+                                {{ s.equipe.nom }}
+                                <span style="font-weight:600; color:#8a94a0; font-size:.82rem;">{{ s.equipe.categorie }}</span>
+                            </div>
+                            <div class="lieu">
+                                {% if s.lieu %}{{ s.lieu }}{% else %}Lieu non précisé{% endif %}
+                                {% if appelFait %}
+                                    · <span style="color:#16a34a; font-weight:600;">
+                                        {{ s.presences|filter(p => p.present)|length }} présentes sur {{ s.presences|length }}
+                                      </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if appelFait %}
+                            <a href="{{ path('manager_presence_seance', {id: s.id}) }}" class="btn-appel refaire">
+                                <i class="bi bi-check-circle-fill"></i> Appel fait
+                            </a>
+                        {% elseif estPassee %}
+                            <a href="{{ path('manager_presence_seance', {id: s.id}) }}" class="btn-appel">
+                                <i class="bi bi-people-fill"></i> Faire l'appel
+                            </a>
+                        {% else %}
+                            <a href="{{ path('manager_seance_show', {id: s.id}) }}" class="btn-appel futur">
+                                Voir la séance
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endfor %}
+
+    <p style="margin-top:26px; font-size:.82rem; color:#8a94a0; line-height:1.6;">
+        Le bouton d'appel n'apparaît qu'une fois la séance commencée. Un appel fait
+        reste modifiable : une joueuse arrivée en retard, ça se corrige.
+    </p>
+
+</div>
+{% endblock %}

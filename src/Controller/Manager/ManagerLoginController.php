@@ -156,6 +156,23 @@ class ManagerLoginController extends AbstractController
             $nbNotesAValider = $noteFraisRepository->countEnAttente($club);
         }
 
+        // Les séances passées de ce coach dont l'appel n'a jamais été fait.
+        //
+        // C'est le seul endroit où l'oubli devient visible. Sans ce bandeau, un appel
+        // non fait ne se remarque jamais : la séance est passée, personne ne revient
+        // dessus, et la présence de la joueuse est perdue pour de bon (or elle
+        // alimente ses badges et son XP).
+        //
+        // Non bloquant, volontairement. Ce sont des bénévoles : on rappelle, on
+        // n'enferme pas.
+        $seancesSansAppel = [];
+        if ($club) {
+            $seancesSansAppel = $seanceRepository->findSansAppelPourCoach(
+                $this->getUser(),
+                $club,
+            );
+        }
+
         return $this->render('manager/dashboard.html.twig', [
             'club'                 => $club,
             'prochain_seances'     => $prochainSeances,
@@ -165,6 +182,7 @@ class ManagerLoginController extends AbstractController
             'mes_pv_non_lus'       => $mesPvNonLus,
             'feed_items'           => $feedItems,
             'nb_notes_a_valider'   => $nbNotesAValider,
+            'seances_sans_appel'   => $seancesSansAppel,
             // [V2.4k] espace membre (bénévole / parent)
             'mes_missions'         => $mesMissions,
             'postes_vacants'       => $postesVacants,

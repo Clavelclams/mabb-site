@@ -10,6 +10,48 @@
         </div>
     </div>
 
+    {# Les appels oubliés. En premier, avant tout le reste : c'est la seule chose sur
+       cette page qui se perd définitivement si on ne la fait pas. Une séance passée
+       sans appel, c'est la présence de chaque joueuse effacée, et avec elle son XP et
+       ses badges. #}
+    {% if seances_sans_appel is defined and seances_sans_appel|length > 0 %}
+        <div style="margin-bottom:18px; padding:16px 18px; border-radius:12px;
+                    background:#fff8f1; border:1px solid #fdba74; border-left:4px solid var(--mabb-orange);">
+            <div style="font-weight:800; margin-bottom:4px;">
+                {{ seances_sans_appel|length }} appel{{ seances_sans_appel|length > 1 ? 's' : '' }}
+                pas encore fait{{ seances_sans_appel|length > 1 ? 's' : '' }}
+            </div>
+            <p style="margin:0 0 12px 0; font-size:.86rem; color:#7c5a35; line-height:1.6;">
+                Sans l'appel, la présence de tes joueuses n'existe pas : ni dans leur suivi,
+                ni dans leurs badges. Ça se rattrape en trente secondes.
+            </p>
+
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                {% for s in seances_sans_appel|slice(0, 5) %}
+                    <a href="{{ path('manager_presence_seance', {id: s.id}) }}"
+                       style="display:flex; align-items:center; justify-content:space-between; gap:10px;
+                              padding:10px 12px; background:#fff; border:1px solid #f3ddc4; border-radius:8px;
+                              text-decoration:none; color:inherit; min-height:44px;">
+                        <span style="font-size:.88rem;">
+                            <strong>{{ s.equipe.nom }}</strong>
+                            <span style="color:#8a94a0;"> · {{ s.date|date('D d/m') }} à {{ s.date|date('H:i') }}</span>
+                        </span>
+                        <span style="font-weight:700; color:var(--mabb-orange); font-size:.85rem; white-space:nowrap;">
+                            Faire l'appel <i class="bi bi-chevron-right"></i>
+                        </span>
+                    </a>
+                {% endfor %}
+            </div>
+
+            {% if seances_sans_appel|length > 5 %}
+                <a href="{{ path('manager_planning_semaine') }}"
+                   style="display:inline-block; margin-top:10px; font-size:.85rem; font-weight:700; color:var(--mabb-orange); text-decoration:none;">
+                    Voir les {{ seances_sans_appel|length - 5 }} autres dans ma semaine
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+
     {# ============================================================
        [V2.4k] BANNIÈRE PREMIÈRE VISITE — visible tant que le guide
        n'a pas été ouvert (flag localStorage posé par /bienvenue).

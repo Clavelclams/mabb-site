@@ -128,6 +128,92 @@ class PlanningController extends AbstractController
     }
 
     /**
+     * La semaine du coach : ses entraînements réels, jour par jour, avec l'appel.
+     *
+     *   GET /manager/planning/semaine
+     *   GET /manager/planning/semaine?debut=2026-07-20     → une autre semaine
+     *   GET /manager/planning/semaine?categorie=U13
+     *   GET /manager/planning/semaine?tout=1               → tout le club
+     *
+     * Différence avec /planning, qui montre la semaine TYPE, abstraite : « le mardi,
+     * il y a les U13 à 18h ». Ici on montre la semaine RÉELLE : « mardi 14 juillet,
+     * U13, appel pas encore fait ». C'est la seule sur laquelle on peut agir.
+     *
+     * Par défaut, un coach ne voit que ses équipes. Il peut demander tout le club,
+     * mais ce n'est pas le défaut : sur un club de vingt équipes, la liste devient
+     * illisible et il ne trouve plus les siennes.
+     */
+    #[Route('/planning/semaine', name: 'manager_planning_semaine', methods: ['GET'])]
+    public function semaine(Request $request): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        if (!$club) {
+            $this->addFlash('warning', 'Aucun club actif.');
+
+            return $this->redirectToRoute('manager_dashboard');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        // On se cale toujours sur le lundi : une semaine qui commencerait un jeudi
+        // ne veut rien dire pour personne.
+        $debut = $request->query->get('debut');
+        try {
+            $lundi = $debut
+                ? new \DateTimeImmutable($debut)
+                : new \DateTimeImmutable('today');
+        } catch (\Exception) {
+            $lundi = new \DateTimeImmutable('today');
+        }
+        $lundi = $lundi->modify('monday this week')->setTime(0, 0);
+
+        $categorie = trim((string) $request->query->get('categorie', '')) ?: null;
+
+        // « Tout le club » : réservé à ceux qui pilotent le club, pas à un coach
+        // qui cherche ses créneaux. Un coach sans équipe assignée voit tout aussi,
+        // sinon il aurait un écran vide sans comprendre pourquoi.
+        $user            = $this->getUser();
+        $peutVoirTout    = $this->isGranted(ClubVoter::CLUB_SECRETARIAT, $club);
+        $aDesEquipes     = $this->equipeRepository->countPourCoach($user, $club) > 0;
+        $voirTout        = $request->query->getBoolean('tout', false) && $peutVoirTout;
+        $filtrerSurCoach = !$voirTout && $aDesEquipes;
+
+        $seances = $this->seanceRepository->findSemaine(
+            $club,
+            $lundi,
+            $filtrerSurCoach ? $user : null,
+            $categorie,
+        );
+
+        // Groupage par jour ISO (lundi = 1). Les jours vides restent présents :
+        // voir « mercredi, rien » est une information, pas un trou dans la page.
+        $parJour = array_fill_keys(range(1, 7), []);
+        foreach ($seances as $s) {
+            $parJour[(int) $s->getDate()->format('N')][] = $s;
+        }
+
+        $categories = $this->equipeRepository->createQueryBuilder('e')
+            ->select('DISTINCT e.categorie')
+            ->where('e.club = :club')
+            ->andWhere('e.isActive = true')
+            ->setParameter('club', $club)
+            ->orderBy('e.categorie', 'ASC')
+            ->getQuery()->getSingleColumnResult();
+
+        return $this->render('manager/planning/semaine.html.twig', [
+            'club'              => $club,
+            'lundi'             => $lundi,
+            'seances_par_jour'  => $parJour,
+            'nb_seances'        => \count($seances),
+            'categories'        => $categories,
+            'categorie_filtre'  => $categorie,
+            'voir_tout'         => $voirTout,
+            'peut_voir_tout'    => $peutVoirTout,
+            'filtre_sur_coach'  => $filtrerSurCoach,
+            'a_des_equipes'     => $aDesEquipes,
+        ]);
+    }
+
+    /**
      * Ajout d'un créneau récurrent depuis la vue Planning globale.
      *
      * Différence avec PlanningSeanceController::new : ici l'équipe N'EST PAS
