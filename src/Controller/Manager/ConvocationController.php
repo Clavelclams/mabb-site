@@ -11,6 +11,7 @@ use App\Entity\Sport\Rencontre;
 use App\Repository\Sport\ConvocationRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Security\Voter\ClubVoter;
+use App\Service\ExpoPushService;
 use App\Service\NotificationService;
 use App\Service\SaisonService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -57,6 +58,7 @@ class ConvocationController extends AbstractController
         private readonly JoueurRepository $joueurRepo,
         private readonly NotificationService $notifService,
         private readonly SaisonService $saisonService,
+        private readonly ExpoPushService $pushService,
         private readonly LoggerInterface $logger,
     ) {}
 
@@ -112,6 +114,9 @@ class ConvocationController extends AbstractController
 
         $ajoutees = 0;
         $retirees = 0;
+        /** @var \App\Entity\Core\User[] $aPrevenir Les NOUVELLES convoquées, à pousser après le flush. */
+        $aPrevenir = [];
+        $texteNotif = '';
 
         // ── AJOUTS ──────────────────────────────────────────────────────────
         foreach ($coches as $idJoueur) {
@@ -135,14 +140,19 @@ class ConvocationController extends AbstractController
                 $quand = $rencontre->getDate()?->format('d/m à H\hi') ?? 'date à confirmer';
                 $contre = $rencontre->getAdversaire() ?? 'adversaire à confirmer';
                 $ou = $rencontre->isDomicile() ? 'à domicile' : 'à l\'extérieur';
+                $texteNotif = sprintf('Tu es convoquée %s, %s, %s. Réponds vite.', $quand, $contre, $ou);
 
                 $this->notifService->creer(
                     $user,
                     $club,
                     Notification::TYPE_CONVOCATION,
-                    message: sprintf('Tu es convoquée %s, %s, %s. Réponds vite.', $quand, $contre, $ou),
+                    message: $texteNotif,
                     lienRoute: 'pirb_convocations',
                 );
+
+                // Le push part APRÈS le flush (voir plus bas) : on ne prévient
+                // jamais quelqu'un d'une convocation qui n'a pas été enregistrée.
+                $aPrevenir[] = $user;
             }
         }
 
@@ -170,6 +180,20 @@ class ConvocationController extends AbstractController
         // Un seul flush : convocations + notifications dans la même transaction
         // (c'est la convention de NotificationService, qui persiste sans flusher).
         $this->em->flush();
+
+        // ── PUSH ────────────────────────────────────────────────────────────
+        // APRÈS le flush, et seulement pour les NOUVELLES convoquées. L'ordre
+        // n'est pas cosmétique : on ne notifie jamais quelqu'un d'une convocation
+        // qui n'existe pas encore en base. Et si Expo est en panne, le service
+        // logge et n'échoue pas : la convocation reste enregistrée.
+        if ($aPrevenir !== []) {
+            $this->pushService->envoyerAUsers(
+                $aPrevenir,
+                '🏀 Tu es convoquée',
+                $texteNotif,
+                ['type' => 'convocation'], // lu par l'app au tap pour ouvrir le bon écran
+            );
+        }
 
         $this->logger->info('Convocations mises à jour', [
             'rencontre_id' => $rencontre->getId(),
