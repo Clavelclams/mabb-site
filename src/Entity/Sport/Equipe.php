@@ -4,6 +4,7 @@ namespace App\Entity\Sport;
 
 use App\Entity\Core\Club;
 use App\Entity\Core\ClubAwareInterface;
+use App\Entity\Core\User;
 use App\Repository\Sport\EquipeRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -87,12 +88,32 @@ class Equipe implements ClubAwareInterface
     #[ORM\OneToMany(targetEntity: JoueurEquipe::class, mappedBy: 'equipe', cascade: ['remove'])]
     private Collection $affectations;
 
+    /**
+     * Les coachs de cette équipe.
+     *
+     * Sans ce lien, le rôle COACH ne veut rien dire de précis : un coach voit tout
+     * le club, et personne n'est responsable d'une séance en particulier. C'est ce
+     * qui empêchait de dire "voici TES entraînements" et "voici qui n'a pas fait
+     * l'appel".
+     *
+     * Plusieurs coachs par équipe (principal et adjoint), et un coach peut suivre
+     * plusieurs équipes. D'où le ManyToMany.
+     *
+     * @var Collection<int, User>
+     */
+    #[ORM\ManyToMany(targetEntity: User::class)]
+    #[ORM\JoinTable(name: 'equipe_coach')]
+    #[ORM\JoinColumn(name: 'equipe_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $coachs;
+
     public function __construct()
     {
         $this->joueurs = new ArrayCollection();
         $this->seances = new ArrayCollection();
         $this->rencontres = new ArrayCollection();
         $this->affectations = new ArrayCollection();
+        $this->coachs = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -121,6 +142,50 @@ class Equipe implements ClubAwareInterface
 
     /** @return Collection<int, JoueurEquipe> */
     public function getAffectations(): Collection { return $this->affectations; }
+
+    /** @return Collection<int, User> */
+    public function getCoachs(): Collection { return $this->coachs; }
+
+    public function addCoach(User $user): static
+    {
+        if (!$this->coachs->contains($user)) {
+            $this->coachs->add($user);
+        }
+
+        return $this;
+    }
+
+    public function removeCoach(User $user): static
+    {
+        $this->coachs->removeElement($user);
+
+        return $this;
+    }
+
+    /**
+     * Cet utilisateur coache-t-il cette équipe ?
+     *
+     * Volontairement sur l'entité et non dans un service : c'est une question sur
+     * l'équipe, elle sait y répondre seule. Le Voter et les contrôleurs s'en servent
+     * pour décider ce qu'un coach voit et ce dont il répond.
+     */
+    public function estCoache(?User $user): bool
+    {
+        return $user !== null && $this->coachs->contains($user);
+    }
+
+    /** Pour l'affichage : « Karim et Sofia » plutôt qu'une liste vide. */
+    public function getNomsCoachs(): string
+    {
+        if ($this->coachs->isEmpty()) {
+            return '';
+        }
+
+        return implode(', ', array_map(
+            static fn (User $u): string => trim($u->getPrenom() . ' ' . $u->getNom()),
+            $this->coachs->toArray()
+        ));
+    }
 
     /**
      * Helper métier : roster complet (Joueur[]) de l'équipe sur la saison de
