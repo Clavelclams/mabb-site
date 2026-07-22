@@ -130,3 +130,20 @@ Centraliser les obligations de securite + RGPD (tracabilite, conservation, droit
 - Acces : CLUB_SECRETARIAT uniquement apres depot ; rien n'est jamais reaffiche cote public. CSRF sur le depot et sur toutes les actions de traitement.
 - Cycle de vie : NOUVELLE → CONVERTIE (donnees recopiees vers DossierLicence/ResponsableLegal/Joueur, cf. RGPD-0011) ou REFUSEE. A PLANIFIER : purge des pre-inscriptions traitees en fin de saison (meme cron que RGPD-0010).
 - Statut : fait (09/07/2026) — purge fin de saison a ajouter au cron annuel
+
+---
+
+### RGPD-00xx — Anonymat du feedback de séance : réel mais faible par design
+- Date : 2026-07-13
+- Traitement : `FeedbackSeance` (note + commentaire d'une joueuse, souvent MINEURE, sur une séance et son coach). Quand la joueuse ne signe pas, `joueur_id` passe réellement à NULL en base (pas seulement masqué à l'écran).
+- Limite assumée : la table `FeedbackParticipation` (joueur + séance + `createdAt`) existe pour l'anti-doublon. Elle permet en théorie de ré-identifier un feedback anonyme par corrélation temporelle avec un accès direct à la base. Atténuations en place : anonymat par défaut (il faut cocher pour signer), seuil de 3 réponses avant tout affichage au coach, horodatage au jour (pas à la seconde), ordre des commentaires brassé.
+- Règle : NE JAMAIS écrire « anonymat garanti » dans l'UI. Formulation exacte : « ton nom n'est pas montré au coach ». Contre le staff, l'anonymat est total ; contre un accès base, il est faible.
+- Statut : en place (session 13/07). Suppression totale du risque = renoncer à l'anti-doublon, non retenu.
+
+### RGPD-00xx — Uploads sensibles servis en clair (renvoi RT-0011)
+- Date : 2026-07-13
+- Traitement : justificatifs de trésorerie (données financières nominatives) et photos de joueuses mineures écrits dans `public/uploads/`, accessibles par URL. Voir RT-0011 pour le détail technique et la correction.
+- Statut : OUVERT — à corriger avant toute commercialisation (un club client aura des mineures).
+
+### RGPD — Cron de purge : à VÉRIFIER en prod
+- La commande `app:sorties:purger-rgpd` anonymise les données de mineures des saisons terminées. Elle n'est PAS déclarée dans le dépôt (pas de Scheduler). Si le cron OVH n'a jamais été configuré, la purge n'a jamais tourné. **Vérifier côté serveur.**

@@ -1763,3 +1763,65 @@ Gated : match normal = 1 seul terrain, comportement inchangé. Repère 0-1 panie
 t.html.twig`
   - `instruction/04_ROADMAP_V2.md`
 - Décisions : architecture V2 retenue = blocs JSON dans PageContenu (évite une nouvelle entité en V2 early), migration vers SectionPage en V2 mature
+
+## 2026-07-13 — Grosse journée : feedback anonyme, coach-équipe, semaine du coach, passage de saison, push, ménage
+
+Voir `31_ETAT_REEL_2026-07-13.md` pour l'audit complet du projet écrit ce jour (lecture
+intégrale du code). Ci-dessous les changements de la session.
+
+**Feedback de séance, anonymat réel.**
+- Découvert un doublon : deux entités faisaient la notation de séance, `NoteSeance` et
+  `FeedbackSeance`. `NoteSeance` promettait l'anonymat à l'écran tout en stockant
+  `joueur_id`. Supprimée (entité + repo + route `/seances/{id}/noter`).
+- Nouvelle entité `FeedbackParticipation` (qui a répondu, sans le contenu). Séparée de
+  `FeedbackSeance` (le contenu, `joueur_id` NULL si anonyme). Aucune jointure possible.
+- Anonymat par défaut (il faut cocher pour signer), seuil de 3 réponses avant affichage
+  au coach, horodatage au jour, ordre des commentaires brassé. Limite assumée et
+  documentée : corrélation temporelle via FeedbackParticipation encore théoriquement
+  possible pour qui a l'accès base.
+- Vue coach ajoutée sur `seance/show` (encadrement seul, rien sous le seuil). Vitrine
+  `/numerique` corrigée (la phrase promettait « le coach voit les tendances », c'était
+  faux). Migration `Version20260713100000` (réimporte les anciennes notes en anonyme).
+
+**Lien coach ↔ équipe.**
+- Créé par erreur une table `equipe_coach` en doublon (`Version20260713160000`), alors
+  que l'entité `CoachEquipe` (avec saison + rôle principal/assistant) existait déjà.
+  Corrigé : `Version20260713190000` supprime `equipe_coach`, tout rebranché sur
+  `CoachEquipe`. Leçon : chercher une entité dédiée AVANT de coder une liaison.
+- Fiche équipe : bloc coachs en lecture seule, renvoie vers `/staff/{id}` où
+  l'affectation se fait vraiment.
+
+**Semaine du coach + appel.**
+- `PlanningController::semaine` (`/planning/semaine`) : séances réelles semaine par
+  semaine, filtrées sur les équipes du coach, statut de l'appel, bouton de pointage.
+- Bloc « Ma semaine » déplacé de la navbar (partagée par tous les rôles) vers le
+  dashboard, affiché seulement pour ceux qui coachent une équipe.
+- Bandeau des appels oubliés en tête du dashboard (séances passées sans présence saisie).
+- Pointage `presence/pointage` adapté iPad : ligne entière cliquable, cibles 48px, plus
+  de focus auto sur le motif (faisait surgir le clavier). `SeanceRepository::findSemaine`
+  et `findSansAppelPourCoach`.
+
+**Passage de saison.** `PassageSaisonCommand` réécrite. L'ancienne recatégorisait tout
+le monde par l'âge et prenait la première équipe de la catégorie → écrasait la
+distinction A/B (89 affectations à refaire à la main sur le club MABB). Nouvelle règle :
+une joueuse qui ne change pas de catégorie reste dans son équipe (copie de la saison
+cible) ; on ne réarbitre que les montées, en conservant le niveau ; les surclassements
+sont reportés ; le nom d'équipe est nettoyé du millésime. NON appliqué en prod (pas de
+sauvegarde base disponible ce jour — à faire avant tout --apply).
+
+**Push (bloc K app).** Table `push_token`, `ExpoPushService`, endpoints, envoi à la
+convocation. Codé, s'activera au premier dev build (bloqué iOS par le compte Apple).
+
+**Multi-club, fuite de données MABB.** Les placeholders des formulaires étaient les
+vraies données du club (numéro FFBB HDF0080036 sur le champ qui sert à prouver son
+identité, nom d'un dirigeant, ville, email). Nettoyés partout : creer_club, login,
+secretariat, subventions.
+
+**Divers.** Fix 500 `/staff/comptes-en-attente` (jointure `pj.club` inexistante).
+Fix 500 séances solo (`u.truncate` de twig/string-extra absent → Twig natif).
+`public/.htaccess` versionné (n'existait que sur OVH). Ménage serveur : suppression de
+dumps SQL, archives et données FFBB de mineures qui traînaient hors `public/`.
+
+- Migrations créées : Version20260713100000 (feedback), 20260713160000 (equipe_coach,
+  annulée), 20260713190000 (drop equipe_coach), + push_token.
+- ⚠️ Toujours pas de sauvegarde de la base de prod. Priorité absolue.

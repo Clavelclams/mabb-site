@@ -1,6 +1,14 @@
-# Gouvernance documentaire — MABB / PIRB
+# Gouvernance documentaire — MABB / Venaball
 
-> Dernière mise à jour : 2026-02-12
+> Dernière mise à jour : 2026-07-13.
+>
+> ⚠️ **Le point d'entrée pour l'état réel du projet est `31_ETAT_REEL_2026-07-13.md`**
+> (audit complet après lecture intégrale du code). Le suivi CDC vit dans
+> `24_ETAT_AVANCEMENT_VS_CDC` (maintenu au 13/07). Ce fichier-ci ne fait que la carte
+> des documents.
+>
+> Renommage produit acté : PIRB → **Venaball**, MABB Manager → **Venaball Club** (UI
+> seulement, le code garde les noms `Pirb` / `pirb.mabb.fr`).
 
 ## Objectif
 Assurer une documentation non redondante, maintenable et traçable.
@@ -23,8 +31,13 @@ Le dossier `/instruction/` est la **source de vérité** du projet.
 | 10 | 10_DEFINITION_OF_DONE.md | Critères de validation d'une tâche |
 | 11 | 11_CHECKLIST_RELEASE.md | Vérifications avant mise en production |
 | 12 | 12_TEMPLATE_PROMPTS_IA.md | Templates de prompts pour assistants IA |
-| 13 | 13_CLAUDE_LOG.md | Journal d'exécution (log de chaque session) |
-| 14 | 14_SUIVI_CDC_MARS.md | Suivi CDC — état d'avancement fait / en cours / à faire |
+| 13 | 13_CLAUDE_LOG.md | Journal d'exécution (log de chaque session) — **tenu à jour** |
+| 14 | 14_SUIVI_CDC_MARS.md | Suivi CDC de mars (historique — voir 24 pour l'à-jour) |
+| **24** | 24_ETAT_AVANCEMENT_VS_CDC | **Suivi CDC vivant, maintenu au 13/07** |
+| **31** | 31_ETAT_REEL_2026-07-13.md | **Audit maître, état réel du code — fait foi** |
+| 15-30 | (audits & sessions datés) | Instantanés historiques, ne pas réécrire |
+| 29 | 29_STRATEGIE_COMMERCIALE_ET_MARQUE | Marque Venaball, pricing, blocages légaux |
+| 30 | 30_TON_ET_STYLE_REDACTIONNEL | Règles de ton anti « ressenti IA » |
 | — | arborescence.md | Structure complète du projet |
 | — | CDC/CDC_MABB_PIRB_V1_Definitif.pdf | Cahier des charges Manager & PIRB (référence initiale) |
 | — | CDC/Cahier des charges – Site web MABB.fr.pdf | Cahier des charges vitrine (référence initiale, stack supersédé par ADR-0001/0004) |

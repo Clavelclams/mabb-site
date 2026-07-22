@@ -1,8 +1,30 @@
-# Backlog — MABB Manager + PIRB
+# Backlog — Venaball Club + Venaball
 
-> Dernière mise à jour : 2026-06-26
+> Dernière mise à jour : 2026-07-13.
 > Le projet est en production sur OVH (manager.mabb.fr + pirb.mabb.fr).
 > Ce backlog reflète l'état RÉEL du code, pas les intentions initiales.
+
+## MAJ 13/07 — ce qui est sorti du backlog
+
+Fait depuis le 26/06 (détail et % dans `24_ETAT_AVANCEMENT_VS_CDC`, état code dans
+`31_ETAT_REEL_2026-07-13`) :
+
+- ✅ **Multi-club** : création publique de club + officialisation FFBB + super-admin.
+- ✅ **Convocations** bout en bout : PDF + mail + push + écran natif app.
+- ✅ **Push mobile** (table push_token, service Expo) — s'active au 1er dev build.
+- ✅ **Coach ↔ équipe**, **semaine du coach** + appel iPad, bandeau appels oubliés.
+- ✅ **Feedback de séance** à anonymat réel (RGPD) + vue coach.
+- ✅ **Passage de saison** réécrit (garde chaque joueuse dans son équipe).
+- ✅ **App** : convocations, notifs, bilans natifs, vision playground v5.
+
+Nouveaux items entrés au backlog (dette découverte à l'audit du 13/07) :
+
+- 🔴 **Sortir les uploads sensibles de `public/`** (justificatifs, photos mineures) — RT-0011.
+- 🔴 **Sauvegarde de la base de prod** — inexistante à ce jour.
+- 🔴 **Vérifier le cron RGPD** de purge sur OVH — non déclaré dans le dépôt.
+- 🟠 **Messagerie interne** (§4.14/5.10) — seul vrai trou métier CDC restant.
+- 🟠 **Fiabiliser stats live** : minutes/titulaires faux, promotion manuelle, doublon d'agrégateurs — RT-0012/0013.
+- 🟡 **Export iCal**, recherche globale, relance convocation J-3.
 
 ---
 

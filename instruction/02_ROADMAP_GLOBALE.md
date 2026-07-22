@@ -1,6 +1,14 @@
-# Roadmap globale — MABB / PIRB
+# Roadmap globale — MABB / Venaball
 
-> Dernière mise à jour : 2026-07-06 (remise à niveau complète depuis 19_AUDIT_FEATURES_2026-06-29 + 09_BACKLOG — la dérive signalée les 04-05/07 est résolue)
+> Dernière mise à jour : 2026-07-13.
+>
+> ⚠️ **L'état réel du projet est désormais dans `31_ETAT_REEL_2026-07-13.md`**, écrit
+> après lecture intégrale du code. Ce fichier-ci garde la vision macro et les modules ;
+> pour le détail à jour (dette, doublons, trous), lire le 31.
+>
+> Renommage acté : PIRB → **Venaball** (app joueuse), MABB Manager → **Venaball Club**
+> (outil de gestion). Le code n'est pas renommé, seule l'UI. Stratégie et marque :
+> `29_STRATEGIE_COMMERCIALE_ET_MARQUE_2026-07-12.md`.
 
 ## Stack technique
 Symfony 7.4 (cf. ADR-0005), PHP 8.2+, Doctrine ORM, MySQL 8, Twig + Symfony UX (Stimulus/Turbo), API Platform (à installer Phase 3), JWT via LexikJWTAuthenticationBundle (à installer Phase 1).

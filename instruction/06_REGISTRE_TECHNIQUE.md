@@ -103,3 +103,23 @@ Lister les sujets qui peuvent casser le projet si mal geres (DB, perfs, infra, d
 - Décision : (1) `JoueurStatsAggregator::statsSaison()` filtre par `rencontre.typeRencontre` (défaut : OFFICIEL uniquement, cf. ADR-0008). Toute NOUVELLE requête d'agrégation multi-rencontres DOIT décider explicitement quels types elle inclut. (2) Double barrière : whitelist serveur à l'enregistrement de la composition (`findEffectifClubPourComposition` = joueuses actives non temporaires du club courant) + re-filtrage au chargement de l'écran live (un ID étranger dans le JSON serait ignoré). Anti-IDOR sur `createAction`/`entrerSurTerrain` : joueuse ∈ composition A∪B en mode interne.
 - Impact : code (`JoueurStatsAggregator`, `StatsLiveController`, `JoueurRepository`) + DB (colonne `rencontre.composition_interne` JSON, migration Version20260705100000)
 - Statut : fait (V2.3, 05/07/2026). Point ouvert : `ShotChartCalculator::positionsTirs()` agrège encore tous types confondus (choix à acter — un shot chart d'entraînement a une valeur pédagogique).
+
+---
+
+### RT-0011 — Fichiers uploadés servis en clair dans `public/`
+- Date : 2026-07-13 (constaté à l'audit, cf. 31_ETAT_REEL)
+- Risque : 7 des 8 uploaders écrivent sous `public/uploads/` (trésorerie, photos joueuses, documents ENT, PDF de rencontres, docs de réunion, contenus de séance). Ces fichiers sont servis en accès direct par Apache, protégés uniquement à l'upload par le Voter, jamais à la lecture. Une URL devinée expose des justificatifs financiers nominatifs et des photos de mineures. Seul `DechargeSortieUploader` fait bien : stockage dans `var/decharges/`, lecture via `BinaryFileResponse` derrière `CLUB_STAFF`.
+- Décision : à corriger. Déplacer les uploads sensibles hors `public/` et les servir via un contrôleur qui vérifie le Voter, sur le modèle des décharges.
+- Statut : OUVERT, non corrigé.
+
+### RT-0012 — Calcul des minutes jouées et des titulaires faux (Stats Live)
+- Date : 2026-07-13
+- Risque : `ActionMatchAggregator::calculerMinutesJouees()` compte les quart-temps où la joueuse a une action × 10 min, alors que les entrées/sorties sont stockées (`PresenceTerrain`, actions ENTREE/SORTIE). Résultat : minutes fausses, donc tous les ratios par minute faux. `detecterTitulaire()` = « présente au QT1 », faux dès qu'une remplaçante agit en QT1.
+- Décision : recalculer depuis les paires ENTREE/SORTIE (la donnée existe). Titulaire = entrée à 0:00 QT1.
+- Statut : OUVERT.
+
+### RT-0013 — Promotion des stats manuelle + doublon d'agrégateurs + cron non déclaré
+- Date : 2026-07-13
+- Risque : (1) une `EvaluationMatch` n'est créée qu'à la promotion d'une `SessionStatsLive` en officielle → un match saisi mais non promu ne remonte pas chez la joueuse. (2) `EvaluationCalculator` et `JoueurStatsAggregator` calculent la même chose (moyennes/totaux saison). (3) Aucune config Symfony Scheduler dans le dépôt : `app:otm:cloturer` et `app:sorties:purger-rgpd` dépendent d'un cron OVH non versionné — **à vérifier que la purge RGPD tourne vraiment**.
+- Décision : (1) bandeau dashboard ou promotion auto au « marquer complète ». (2) consolider en un seul agrégateur. (3) documenter et vérifier le cron OVH.
+- Statut : OUVERT.
