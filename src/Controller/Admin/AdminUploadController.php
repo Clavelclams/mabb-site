@@ -19,7 +19,11 @@ class AdminUploadController extends AbstractController
     #[Route('/admin/upload-image', name: 'admin_upload_image', methods: ['POST'])]
     public function uploadImage(Request $request, SluggerInterface $slugger): JsonResponse
     {
-        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        // [SÉCU 26/07] Était 'ROLE_ADMIN' : ce rôle n'existe NULLE PART dans le
+        // projet (hiérarchie = SUPER_ADMIN > DIRIGEANT > COACH > USER). Le
+        // contrôle échouait donc toujours — un contrôle fantôme. La vraie
+        // barrière est l'access_control ^/admin, on l'aligne explicitement.
+        $this->denyAccessUnlessGranted('ROLE_SUPER_ADMIN');
 
         $file = $request->files->get('file');
 
@@ -27,15 +31,24 @@ class AdminUploadController extends AbstractController
             return $this->json(['error' => 'Aucun fichier reçu.'], 400);
         }
 
-        // Vérification du type MIME — images uniquement
-        $allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-        if (!in_array($file->getMimeType(), $allowedMimes, true)) {
+        // [SÉCU 26/07] SVG RETIRÉ de la liste : un SVG est un document XML qui
+        // peut embarquer du <script>. Servi depuis /uploads/, il s'exécute sur
+        // l'origine mabb.fr (vol de session admin). L'extension est désormais
+        // imposée par le serveur d'après le MIME, plus déduite du fichier.
+        $extensionsParMime = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/gif'  => 'gif',
+            'image/webp' => 'webp',
+        ];
+        $mime = $file->getMimeType() ?? '';
+        if (!isset($extensionsParMime[$mime])) {
             return $this->json(['error' => 'Type de fichier non autorisé.'], 415);
         }
 
         $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeName     = $slugger->slug($originalName);
-        $newFilename  = $safeName . '-' . uniqid() . '.' . $file->guessExtension();
+        $newFilename  = $safeName . '-' . bin2hex(random_bytes(8)) . '.' . $extensionsParMime[$mime];
 
         try {
             $file->move(

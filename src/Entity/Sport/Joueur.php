@@ -124,6 +124,14 @@ class Joueur implements ClubAwareInterface
     private bool $profilPublic = false;
 
     /**
+     * [Dé-mock 13/07] Réglages de confidentialité fins de l'app Venaball
+     * (6 booléens du contrat ConfidentialiteSettings). Null = jamais réglé
+     * = tout privé. Migration : Version20260713150000.
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $confidentialite = null;
+
+    /**
      * Liens vers les réseaux sociaux de la joueuse — V1.2a.
      * Structure : {instagram, tiktok, youtube, twitter, linkedin}
      * URL complète. Champ libre, null = pas de réseau.
@@ -312,6 +320,15 @@ class Joueur implements ClubAwareInterface
 
     public function getBio(): ?string { return $this->bio; }
     public function setBio(?string $bio): static { $this->bio = $bio !== null ? trim($bio) : null; return $this; }
+
+    /**
+     * [Dé-mock 13/07] Réglages de confidentialité de l'app (contrat
+     * ConfidentialiteSettings : 6 booléens statsPubliques, shotChartPublic…).
+     * Null = jamais réglé = TOUT PRIVÉ (règle d'or, appliquée au contrôleur).
+     * @return array<string, bool>|null
+     */
+    public function getConfidentialite(): ?array { return $this->confidentialite; }
+    public function setConfidentialite(?array $confidentialite): static { $this->confidentialite = $confidentialite; return $this; }
 
     public function isProfilPublic(): bool { return $this->profilPublic; }
     public function setProfilPublic(bool $v): static { $this->profilPublic = $v; return $this; }

@@ -34,6 +34,41 @@ class PirbMesEnfantsController extends AbstractController
     ) {}
 
     /**
+     * [SÉCU 26/07] Le(s) club(s) auxquels l'utilisateur a légitimement accès :
+     * celui de sa propre fiche joueuse, et ceux de ses enfants déjà liés
+     * (lien ACTIF uniquement — un lien en attente ne donne aucun droit).
+     *
+     * Sert à borner la recherche d'enfants : sans ça, n'importe quel compte
+     * pouvait énumérer le fichier nominatif des mineures de TOUS les clubs.
+     *
+     * @return int[] IDs de clubs
+     */
+    private function clubsAutorises(User $user): array
+    {
+        $ids = [];
+
+        $maFiche = $this->joueurRepo->findOneBy(['user' => $user]);
+        if ($maFiche?->getClub()?->getId() !== null) {
+            $ids[] = (int) $maFiche->getClub()->getId();
+        }
+
+        foreach ($user->getUserClubRoles() as $ucr) {
+            if ($ucr->isActive() && $ucr->isStatusActive() && $ucr->getClub()?->getId() !== null) {
+                $ids[] = (int) $ucr->getClub()->getId();
+            }
+        }
+
+        foreach ($this->parentRepo->findBy(['parentUser' => $user, 'statut' => ParentJoueur::STATUT_ACTIVE]) as $pj) {
+            $clubEnfant = $pj->getJoueur()?->getClub()?->getId();
+            if ($clubEnfant !== null) {
+                $ids[] = (int) $clubEnfant;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
      * Liste des enfants liés + demandes en cours du parent connecté.
      * GET pirb.mabb.fr/mes-enfants
      */
@@ -78,6 +113,10 @@ class PirbMesEnfantsController extends AbstractController
         /** @var User $user */
         $user = $this->getUser();
 
+        // [SÉCU 26/07] Périmètre de l'utilisateur : hors de ces clubs, il ne
+        // voit rien et ne peut demander aucun rattachement.
+        $clubsAutorises = $this->clubsAutorises($user);
+
         if ($request->isMethod('POST')) {
             if (!$this->isCsrfTokenValid('pirb_mes_enfants_ajouter', (string) $request->request->get('_token'))) {
                 $this->addFlash('error', 'Jeton de sécurité invalide.');
@@ -86,7 +125,17 @@ class PirbMesEnfantsController extends AbstractController
 
             $joueurId = (int) $request->request->get('joueur_id', 0);
             $joueur = $this->joueurRepo->find($joueurId);
-            if ($joueur === null) {
+            // [SÉCU 26/07] Le contrôle d'appartenance manquait : on pouvait
+            // poster l'id d'une mineure de n'importe quel club et créer une
+            // demande de rattachement parental. Même réponse dans les deux cas
+            // (introuvable / hors périmètre) pour ne pas confirmer l'existence.
+            if ($joueur === null
+                || $joueur->getClub()?->getId() === null
+                || !in_array((int) $joueur->getClub()->getId(), $clubsAutorises, true)) {
+                $this->logger->warning('Demande de lien parent refusée (hors périmètre)', [
+                    'user_id'   => $user->getId(),
+                    'joueur_id' => $joueurId,
+                ]);
                 $this->addFlash('error', 'Joueur introuvable.');
                 return $this->redirectToRoute('pirb_mes_enfants_ajouter');
             }
@@ -129,16 +178,24 @@ class PirbMesEnfantsController extends AbstractController
         }
 
         // GET — recherche
+        // [SÉCU 26/07] AVANT : la requête n'avait AUCUN filtre club. Avec
+        // quelques lettres (« ?q=a », « ?q=e »…), n'importe quel compte
+        // reconstituait le fichier nominatif des mineures de tous les clubs
+        // de la plateforme (nom, prénom, équipe donc tranche d'âge).
+        // MAINTENANT : recherche bornée aux clubs de l'utilisateur, et
+        // minimum 2 caractères pour éviter le balayage alphabétique.
         $recherche = trim((string) $request->query->get('q', ''));
         $joueurs = [];
 
-        if ($recherche !== '') {
+        if (mb_strlen($recherche) >= 2 && $clubsAutorises !== []) {
             $r = '%' . strtolower($recherche) . '%';
             $joueurs = $this->joueurRepo->createQueryBuilder('j')
                 ->where('LOWER(j.nom) LIKE :r OR LOWER(j.prenom) LIKE :r')
                 ->andWhere('j.isActive = :a')
+                ->andWhere('j.club IN (:clubs)')
                 ->setParameter('r', $r)
                 ->setParameter('a', true)
+                ->setParameter('clubs', $clubsAutorises)
                 ->setMaxResults(20)
                 ->orderBy('j.nom', 'ASC')
                 ->getQuery()

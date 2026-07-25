@@ -146,32 +146,13 @@
     {% endif %}
 
     {# ====================================================================
-       SECTION 2 — STATS SHOOT ENTRAÎNEMENT (PLACEHOLDER, B34)
+       [13/07/2026] Section « Stats shoot entraînement » (placeholder B34)
+       RETIRÉE : cette page est servie en WebView DANS l'app → un « à venir »
+       visible est un motif de rejet Apple (Guideline 2.1, app incomplète).
+       La fonctionnalité existe désormais ailleurs (créateur de séance sur
+       /shot-chart + Playground auto) ; si une section dédiée revient ici,
+       elle devra afficher de VRAIES données (SeanceTir), pas une promesse.
        ==================================================================== #}
-    <div class="pirb-section-header" style="margin:24px 4px 8px; display:flex; align-items:center; gap:8px;">
-        <span style="font-size:1.1rem;">🎯</span>
-        <h2 style="margin:0; font-size:0.95rem; font-weight:800; letter-spacing:.5px; text-transform:uppercase; color:var(--pirb-text-muted);">Stats shoot entraînement</h2>
-    </div>
-    <div class="pirb-card" style="border-left:4px solid var(--pirb-accent); opacity:.92;">
-        <div style="display:flex; gap:14px; align-items:start;">
-            <div style="font-size:2rem; flex-shrink:0;">🎯</div>
-            <div style="flex:1;">
-                <div style="font-weight:800; font-size:1rem; margin-bottom:4px;">À venir — Séances de shoot perso</div>
-                <p style="margin:0 0 10px; font-size:0.85rem; color:var(--pirb-text-muted); line-height:1.5;">
-                    Saisis tes séances de shoot d'entraînement directement sur un terrain interactif.
-                    Tu pointes où tu tires, ça compte tes réussites par zone. Tu travailles tes points faibles
-                    et tu visualises tes progrès.
-                </p>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.74rem; margin-top:8px;">
-                    <span style="padding:3px 8px; background:rgba(16,185,129,.15); color:#10b981; border-radius:5px; font-weight:600;">✓ Vérifié par coach</span>
-                    <span style="padding:3px 8px; background:rgba(245,158,11,.15); color:#f59e0b; border-radius:5px; font-weight:600;">⏳ En attente validation</span>
-                </div>
-                <p style="margin:10px 0 0; font-size:0.74rem; color:var(--pirb-text-muted); font-style:italic;">
-                    Inspiré de Ball.ia — version IA vidéo en V4/V5.
-                </p>
-            </div>
-        </div>
-    </div>
 
     {# ====================================================================
        SECTION 3 — STATS PAR MATCH (liste + drawer interactif)

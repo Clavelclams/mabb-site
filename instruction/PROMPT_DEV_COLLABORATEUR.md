@@ -1,231 +1,188 @@
-# Prompt — Contexte développeur collaborateur MABB Manager + PIRB
+# Prompt — Reprise du projet Venaball Club (ex MABB Manager) + Venaball (ex PIRB)
 
 > À lire intégralement avant de toucher quoi que ce soit.
-> Mis à jour : 2026-07-07
+> Mis à jour : 2026-07-13.
+>
+> Ce document sert à reprendre le projet après une pause, ou à onboarder un dev (humain
+> ou assistant IA). Beaucoup a changé depuis la dernière fois : lis d'abord la section
+> « Ce qui a changé récemment », puis le doc maître `31_ETAT_REEL_2026-07-13.md`.
 
 ---
 
-## Qui je suis et ce qu'on construit
+## Par où commencer, dans l'ordre
 
-Je m'appelle Clavel. Je suis en alternance CDA (Concepteur Développeur d'Applications, Titre Pro Niveau 6, AFPA Amiens — jury avril 2027). Je développe seul depuis plusieurs mois un outil de gestion de club de basket-ball en production réelle.
+1. **`instruction/31_ETAT_REEL_2026-07-13.md`** — l'état réel du code, écrit après lecture
+   intégrale. **Il fait foi.** Si un autre doc le contredit, c'est lui qui a raison.
+2. **`instruction/24_ETAT_AVANCEMENT_VS_CDC`** — où on en est face au cahier des charges.
+3. **`instruction/08_ADR.md`** — les décisions d'architecture, à respecter.
+4. **`instruction/06_REGISTRE_TECHNIQUE.md`** + **`07_REGISTRE_SECURITE_RGPD.md`** — la dette
+   et les obligations, y compris les trois points ouverts critiques (voir plus bas).
+5. **`instruction/13_CLAUDE_LOG.md`** — le journal chronologique de ce qui a été fait.
+6. **`instruction/30_TON_ET_STYLE_REDACTIONNEL.md`** — les règles de ton pour tout texte
+   visible par un utilisateur (le projet a longtemps « senti l'IA », on corrige ça).
 
-Le projet sert le club MABB (Amiens). Il est live sur :
+Les instantanés datés (vieux audits, sessions) sont rangés dans `instruction/archive/`,
+ils ne pilotent plus rien.
+
+---
+
+## Ce que c'est
+
+Un outil de gestion de club de basket, **en production réelle**, utilisé par de vraies
+personnes. Ce n'est pas un projet d'école. Chaque bug en prod a un impact.
+
+Trois espaces web + une app mobile :
 - `mabb.fr` — site vitrine public
-- `manager.mabb.fr` — application métier pour le staff
-- `pirb.mabb.fr` — espace joueur/parent (PIRB = nom interne de l'app joueur)
+- `manager.mabb.fr` — l'appli du club, rebaptisée **Venaball Club** (le code garde `Manager`)
+- `pirb.mabb.fr` — l'espace joueuse, rebaptisé **Venaball** (le code garde `Pirb`)
+- une app mobile Expo / React Native (dépôt séparé `Pirb store`)
 
-Ce n'est pas un projet de formation. C'est un vrai outil utilisé par de vraies personnes. Chaque bug en prod a un impact.
+**Renommage produit** : PIRB → Venaball, MABB Manager → Venaball Club. Seule l'interface
+change, pas le code ni le domaine `pirb.mabb.fr`. Le nom PIRB Scouting existe encore, à part.
 
 ---
 
-## Stack technique
+## Stack
 
-| Couche | Technologie |
-|--------|-------------|
+| Couche | Techno |
+|---|---|
 | Backend | Symfony 7.4 / PHP 8.3 |
-| Base de données | MySQL 8.4 via Doctrine ORM |
-| Frontend | Twig + Symfony UX (Stimulus + Turbo) |
-| API | API Platform (installé, usage partiel) + JWT (LexikJWT) |
-| Hébergement | OVH mutualisé (contraintes : pas de Node, PHP-CLI limité) |
-| Déploiement | git push → SSH OVH → git pull + cache:clear |
-| Tests | PHPUnit 12 (tests unitaires + fonctionnels) |
-| Emails | Brevo (MAILER_DSN, à configurer en prod) |
+| Base | MySQL 8.4 via Doctrine ORM |
+| Front | Twig + Symfony UX (Stimulus/Turbo) |
+| API mobile | token Bearer maison (`ApiToken`), pas de JWT Lexik |
+| Hébergement | OVH mutualisé — **pas de Node, pas de Redis, pas de worker Messenger, pas de cron déclaré dans le dépôt** |
+| App mobile | Expo SDK 54 / React Native / TypeScript (dépôt `Pirb store`) |
 
 ---
 
-## Architecture — Décisions structurantes à respecter
+## Architecture — les règles à ne pas violer
 
-### Monolithe modulaire (ADR-0001)
-Un seul projet Symfony servant les 3 espaces. Le découpage se fait par dossier :
-- `src/Controller/{Vitrine,Manager,Pirb,Api}/`
-- `src/Entity/{Core,Sport,Vitrine,Pirb}/`
-- `templates/{vitrine,manager,pirb}/`
+**Monolithe modulaire** : un seul projet Symfony pour les 3 espaces web. Découpage par
+dossier (`src/Controller/{Vitrine,Manager,Pirb,Api}/`, idem entités et templates).
 
-### Séparation par host + firewalls (ADR-0002)
-Chaque espace a son fichier de routes (`config/routes/{vitrine,manager,pirb}.yaml`) et son firewall dans `security.yaml`. En dev local, il faut configurer `/etc/hosts` :
-```
-127.0.0.1  manager.localhost  pirb.localhost
-```
+**Séparation par host + firewalls** : 7 firewalls dans `security.yaml`, un par host. En
+dev, configurer `/etc/hosts` (`127.0.0.1 manager.localhost pirb.localhost`).
 
-### Multi-tenant par club_id (ADR-0003) — CRITIQUE
-Une seule base de données, isolation logique par `club_id`. **Chaque requête métier doit être filtrée par club côté serveur.** Jamais uniquement côté front. Implémentation :
-- `TenantResolver` → résout le club actif depuis la session
-- `ClubVoter` (6 attributs) → vérifie les accès côté Manager
-- Côté PIRB : isolation par `Joueur.user` + vérifications club/équipe par route
+**Multi-tenant par `club_id` — LA règle la plus importante.** Une seule base, isolation
+logique par club. Toute requête métier est filtrée par club **côté serveur**, jamais
+seulement côté front. Passer par `TenantResolver::getCurrentClub()` et le `ClubVoter`
+(`$this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $entite)`). Violer ça = fuite de
+données entre clubs.
+⚠️ Attention : l'isolation n'est PAS homogène (certaines entités ont `club_id` sans passer
+par le Voter, d'autres n'ont ni l'un ni l'autre). C'est une dette connue, voir doc 31 §1.
 
-Violer cette règle = fuite de données inter-club. C'est la règle la plus importante du projet.
-
-### Rôles par club (ADR-0006)
-Les rôles sont attribués par club (un utilisateur peut être Coach dans le club A et Parent dans le club B). Table `Role` (catalogue) + pivot `ClubUserRole` (audit natif).
+**Rôles par club** via `UserClubRole` : un user peut être coach au club A et parent au
+club B. Rôles actuels : DIRIGEANT, COACH, STAFF, JOUEUR, PARENT, BENEVOLE, EMPLOYE,
+TRESORIER, SECRETAIRE. (Un rôle TECHNICIEN est prévu, voir cadrage `32`.)
 
 ---
 
-## État du projet — Ce qui est en prod (juillet 2026)
+## Ce qui a changé récemment (depuis le 07/07)
 
-| Module | Statut |
-|--------|--------|
-| Auth multi-host, TenantResolver, firewalls | ✅ prod |
-| Gestion équipes / joueurs / staff | ✅ prod |
-| Séances, présences, missions | ✅ prod |
-| Rencontres + imports FFBB (PDFs tirs, résumé, feuille) | ✅ prod |
-| Stats Live match (actions temps réel + match interne A/B) | ✅ prod |
-| Shot chart (terrain interactif + tirs FFBB parsés) | ✅ prod |
-| ENT (documents club — upload manager, lecture PIRB) | ✅ prod |
-| Gamification (XP, niveaux, badges) par saison | ✅ prod |
-| Classement XP | ✅ prod |
-| Espace PIRB (dashboard, stats, équipe, bilans, documents) | ✅ prod |
-| Vitrine + CMS blocs + mentions légales | ✅ prod |
-| Gestion des saisons (bascule automatique au 1er juillet) | ✅ prod |
-| Tests unitaires entités + services | ✅ partiellement en place |
-| API PIRB (Bearer JWT, stats, niveau, shot chart) | ✅ en place |
+- **Multi-club** : création publique de club (`/creer-un-club`), super-admin cross-club,
+  officialisation FFBB via le référentiel `OrganismeFfbb`.
+- **Convocations** bout en bout : le coach convoque, PDF + mail + push, la joueuse répond.
+- **Push mobile** : `push_token` + `ExpoPushService` (s'active au 1er dev build de l'app).
+- **Lien coach ↔ équipe** (`CoachEquipe`, avec saison + rôle principal/assistant), semaine
+  du coach (`/planning/semaine`), pointage iPad, bandeau des appels oubliés sur le dashboard.
+- **Feedback de séance à anonymat réel** : `FeedbackSeance` (contenu, `joueur_id` NULL si
+  anonyme) + `FeedbackParticipation` (qui a répondu, sans le contenu). Ne jamais relier les
+  deux. Ne jamais promettre « anonymat garanti » dans l'UI.
+- **Passage de saison** (`app:passage-saison`) réécrit : garde chaque joueuse dans son
+  équipe, ne réarbitre que les montées de catégorie.
+- Doublons supprimés : `NoteSeance` (→ `FeedbackSeance`), `equipe_coach` (→ `CoachEquipe`).
 
----
-
-## Ce qui reste à faire (priorités)
-
-### P1 — Urgent
-
-| ID | Feature |
-|----|---------|
-| B-102 | Feedback inscription bénévole rencontre (flash PIRB + badge) |
-| B-304 | MAILER_DSN Brevo configuré en prod sur OVH |
-
-### P2 — Prochaine session
-
-| ID | Feature |
-|----|---------|
-| B-201 | Workflow validation officielle stats live par le coach |
-| B-204 | Pastille rouge notifications non lues côté PIRB |
-| B-206 | Fix 404 `manager.mabb.fr/signup` depuis lien PIRB |
-
-### P3 — Backlog
-
-| ID | Feature |
-|----|---------|
-| B-302 | Shot chart — terrain cliquable PIRB (saisie tirs à finaliser) |
-| B-305 | Parse PDF FFBB automatique à l'upload |
-| B-306 | Toggle FFBB/Live sur la shot map PIRB |
-| B-301 | Refonte ENT style Kalisport (filtres, vignettes, prévisualisation) |
+En cadrage, pas encore codé : l'app **Venaball Club mobile** (vues à la GTA parent/bénévole/
+coach, renfort en cascade, centre « mes tâches »). Voir `32_CADRAGE_VENABALL_CLUB_MOBILE`.
 
 ---
 
-## Conventions de code
+## Les 3 points critiques ouverts (à traiter en priorité)
 
-### Nommage
-- Controllers : `NomController.php` dans le bon namespace (`Manager/`, `Pirb/`, etc.)
-- Routes : préfixe `manager_`, `pirb_`, `vitrine_`, `api_`
-- Templates : `templates/{espace}/module/action.html.twig`
-- Services : un service = une responsabilité, dans `src/Service/` ou sous-dossier thématique
+1. **Aucune sauvegarde de la base de prod n'existe.** À mettre en place avant tout.
+2. **Fichiers sensibles servis en clair dans `public/`** : justificatifs financiers,
+   photos de mineures accessibles par URL. Seules les décharges sont bien protégées
+   (dans `var/decharges/`, servies derrière un contrôleur). À généraliser. Voir RT-0011.
+3. **Cron RGPD non déclaré** : la purge des données de mineures (`app:sorties:purger-rgpd`)
+   dépend d'un cron OVH non versionné. Vérifier qu'il tourne vraiment.
 
-### Symfony
-- `autoconfigure: true` dans `services.yaml` → les services et extensions Twig s'auto-wirent
-- Routes déclarées via attribut PHP `#[Route(...)]` — pas en YAML sauf cas exceptionnels documentés (exemple : `saison_changer` déclaré explicitement dans `config/routes.yaml` pour éviter un bug de chargement avec un fichier unique)
-- CSRF sur tous les formulaires POST
-
-### Migrations
-Une migration par changement logique. Jamais d'édition manuelle de la DB. Toujours `doctrine:migrations:diff` puis vérifier avant de committer. Convention de nommage : `VersionYYYYMMDDHHMMSS.php`.
-
-### Templates Twig
-- `saison_active()` et `saisons_disponibles()` sont des fonctions Twig globales (`SaisonExtension`)
-- `|u.truncate()` **non disponible sur OVH** → utiliser `|slice(0, N) ~ '…'`
-- Pas d'apostrophes dans les strings `COMMENT` SQL (cassent le parsing MySQL)
+Autres dettes : minutes jouées mal calculées (Stats Live), promotion des stats manuelle,
+doublon d'agrégateurs. Détail dans doc 31 §5 et RT-0012/0013.
 
 ---
 
-## Points critiques à ne pas rater
+## Conventions
 
-### Sur OVH mutualisé
-- Pas de Node.js, pas de Redis, pas de worker Messenger
-- `APP_ENV=prod` sur OVH → toujours vider le cache après un déploiement
-- Les fichiers uploadés sont dans `public/uploads/` (pas de `var/uploads/` côté OVH mutualisé)
+**Migrations — LIRE ATTENTIVEMENT.** La base de dev locale a **dérivé** de la prod. Donc :
+**ne jamais faire confiance à `doctrine:migrations:diff`**, il génère du bruit ou du faux.
+Les migrations se **écrivent à la main**, une par changement logique, nom
+`VersionYYYYMMDDHHMMSS.php`. Jamais d'édition manuelle de la base.
 
-### Sur le multi-tenant
-- **Toujours** injecter `TenantResolver` et récupérer `getCurrentClub()` avant toute requête métier
-- **Toujours** utiliser `$this->denyAccessUnlessGranted(ClubVoter::CLUB_MEMBER, $club)` dans les controllers Manager
-- Côté PIRB : vérifier que `$joueur->getUser() === $this->getUser()` et que le club de la ressource correspond au club du joueur
+**Twig** :
+- `saison_active()` et `saisons_disponibles()` sont des fonctions Twig globales.
+- `|u.truncate()` **n'existe pas** (twig/string-extra absent sur OVH) → utiliser
+  `|slice(0, N) ~ '…'`. Ça a déjà cassé la prod une fois.
+- Le test `defined` ne marche que sur des variables simples, pas sur `a.b ?? c`.
 
-### Sur la gamification
-- `XpCalculator::xpSaison($joueur, $saison)` retourne 0 automatiquement si aucun événement dans la saison — pas besoin de vérification spéciale
-- Le reset saison est automatique : on ne supprime rien, on filtre par saison
+**Avant de committer** : `php bin/console lint:twig templates/` et `lint:container`
+**doivent être verts**. Un template Twig cassé passe `php -l` mais tombe en 500 en prod.
 
-### Sur les saisons
-- `SaisonService::getSaisonCourante()` : bascule au **1er juillet** (convention administrative FFBB)
-- `SaisonService::getSaisonActive()` : retourne le choix manuel en session si valide, sinon la courante
-- Ne jamais hardcoder une saison (`'2026-2027'`) → toujours passer par `SaisonService`
+**Ton** : tout texte visible par un utilisateur suit `30_TON_ET_STYLE`. Pas de tiret
+cadratin, pas de jargon, on parle au dirigeant de club, pas au dev.
 
 ---
 
-## Structure des fichiers de référence
+## Git & déploiement
 
-Tout le contexte technique est dans le dossier `instruction/` à la racine du projet :
+**Git — non négociable :** le propriétaire (Clavel) committe et push **lui-même**. On lui
+donne les commandes PowerShell à copier-coller, on ne les exécute pas. Jamais de
+`git push --force` sur `main`.
 
-| Fichier | Contenu |
-|---------|---------|
-| `01_LIRE_AVANT_TOUT.md` | Règles fondamentales, périmètre, structure |
-| `02_ROADMAP_GLOBALE.md` | Vision, état d'avancement par module, évolutions |
-| `06_REGISTRE_TECHNIQUE.md` | Points critiques (DB, sécurité, perfs, dette) |
-| `07_REGISTRE_SECURITE_RGPD.md` | Obligations sécurité et conformité RGPD |
-| `08_ADR.md` | Toutes les décisions d'architecture documentées |
-| `09_BACKLOG.md` | Backlog actif + bugs connus |
-| `13_CLAUDE_LOG.md` | Journal de toutes les sessions de dev (quoi, pourquoi, impact) |
-| `shemas/dictionnaire_db.md` | Dictionnaire complet de la base de données |
+**Ne jamais faire confiance à un `git status` qui ne vient pas de la machine de Clavel.**
+Un environnement distant (CI, sandbox) peut afficher des fichiers fantômes modifiés ou des
+erreurs qui n'existent pas. Le `git status` local de Clavel est la seule vérité.
 
----
-
-## Règles de collaboration
-
-### Git — NON NÉGOCIABLE
-- **Je committe moi-même.** Ne jamais lancer `git commit` à ma place, même si je ne le demande pas explicitement.
-- Me donner les commandes PowerShell à copier-coller, pas les exécuter.
-- Ne jamais `git push --force` sur `main`.
-
-### Déploiement
-Le déploiement = `git push origin main` depuis PowerShell local, puis SSH OVH :
+**Déploiement sur OVH** (SSH) :
 ```bash
-ssh clavelclams12@mabb.fr
-cd ~/www
-git pull origin main
+ssh mabbzzyo@ssh.cluster102.hosting.ovh.net
+cd ~/mabb-site
+git fetch origin && git reset --hard origin/main   # PAS git pull : reference.php modifié en local le bloque
+php bin/console doctrine:migrations:migrate --no-interaction
+rm -rf var/cache/prod                                # avant le clear : évite l'erreur "directory not empty" du mutualisé
 php bin/console cache:clear --env=prod
-php bin/console cache:warmup --env=prod
-# Si nouvelles migrations :
-php bin/console doctrine:migrations:migrate --no-interaction --env=prod
 ```
+Note : `.env.local`, `var/`, `public/uploads/` sont ignorés/non versionnés → le reset --hard
+est sûr, il n'y touche pas.
 
-### Communication
-- Je veux comprendre **pourquoi** tu fais un choix, pas juste le code
-- Si une idée est mauvaise, dis-le clairement avec les raisons — pas de oui-ouisme
-- Tâche par tâche : finir ce qui est commencé avant d'ouvrir un nouveau chantier
-- Chaque décision structurante → entrée dans `08_ADR.md`
-- Après chaque session → log dans `13_CLAUDE_LOG.md`
-
-### Sécurité
-- Jamais de credentials dans le code ou dans le chat
-- `.env.local` sur OVH n'est pas versionné — les variables sensibles y sont
+**Secrets** : jamais de credentials dans le code ni dans le chat. `APP_SECRET`,
+`DATABASE_URL`, la clé Brevo, `MAILER_DSN` vivent uniquement dans `.env.local` sur OVH.
 
 ---
 
-## Pour démarrer
+## Ce qu'on attend d'un dev ici
 
-1. Clone du repo : `git clone https://github.com/Clavelclams/mabb-site.git`
-2. `composer install`
-3. Copier `.env` en `.env.local`, configurer `DATABASE_URL` et `APP_SECRET`
-4. `php bin/console doctrine:migrations:migrate`
-5. Lire `instruction/01_LIRE_AVANT_TOUT.md` puis `instruction/02_ROADMAP_GLOBALE.md`
-6. Regarder le backlog dans `instruction/09_BACKLOG.md`
+Pas un exécutant qui pond du code. Quelqu'un qui :
+- **lit le code existant avant d'écrire** — le projet est grand (67 entités, 88 contrôleurs),
+  et beaucoup de choses existent déjà. Deux doublons ont été créés cette semaine faute
+  d'avoir cherché avant. Réflexe : `grep`/`ls` l'entité ou le service avant de le recréer.
+- mesure l'impact d'un changement sur le multi-tenant et les autres espaces ;
+- dit franchement quand une approche est bancale, même si elle vient de Clavel (pas de
+  oui-ouisme) ;
+- documente : une décision structurante → `08_ADR.md` ; une session → `13_CLAUDE_LOG.md` ;
+- finit une tâche avant d'en ouvrir une autre.
 
-Pour tester les espaces Manager et PIRB en local, ajouter dans `/etc/hosts` (ou `C:\Windows\System32\drivers\etc\hosts` sur Windows) :
+---
+
+## Démarrage local
+
+```bash
+git clone https://github.com/Clavelclams/mabb-site.git
+composer install
+cp .env .env.local          # puis renseigner DATABASE_URL et APP_SECRET
+php bin/console doctrine:migrations:migrate
+```
+Ajouter dans `/etc/hosts` (ou `C:\Windows\System32\drivers\etc\hosts`) :
 ```
 127.0.0.1  manager.localhost  pirb.localhost
 ```
-Puis accéder à `http://manager.localhost:8000` et `http://pirb.localhost:8000`.
-
----
-
-## Ce que j'attends du collaborateur
-
-Pas un exécutant qui pond du code sans expliquer. Un vrai dev capable de :
-- Lire le code existant avant d'écrire
-- Identifier les impacts d'un changement sur le reste du projet
-- Signaler quand une approche est bancale, même si elle vient de moi
-- Documenter ce qui est fait (ADR si structurant, log si important)
-- Respecter les conventions existantes au lieu d'imposer les siennes
+Puis `http://manager.localhost:8000` et `http://pirb.localhost:8000`.

@@ -284,16 +284,40 @@ final class CompteController extends AbstractController
 
         $photoFile = $request->files->get('photo');
         if ($photoFile) {
-            $safeFilename = $slugger->slug(pathinfo($photoFile->getClientOriginalName(), PATHINFO_FILENAME));
-            $newFilename = $safeFilename . '-' . uniqid() . '.' . $photoFile->guessExtension();
-            try {
-                $photoFile->move(
-                    $this->getParameter('kernel.project_dir') . '/public/uploads/avatars',
-                    $newFilename
-                );
-                $user->setPhotoPath($newFilename);
-            } catch (\Exception $e) {
-                $this->addFlash('error', 'Erreur upload photo.');
+            // [SÉCU 26/07] AVANT : aucune validation. Le nom du fichier venait du
+            // client et l'extension de guessExtension(), qui traduit le MIME sniffé
+            // en extension — un fichier HTML ou SVG piégé passait et atterrissait
+            // dans public/uploads/avatars/ : JavaScript exécuté sur l'origine
+            // mabb.fr (vol de session, y compris admin). N'importe quel compte
+            // auto-inscrit pouvait le faire.
+            // MAINTENANT : liste blanche MIME → extension imposée par le serveur,
+            // nom généré, taille limitée. Même règle que JoueurPhotoUploader.
+            $mimesAutorises = [
+                'image/jpeg' => 'jpg',
+                'image/png'  => 'png',
+                'image/webp' => 'webp',
+                'image/heic' => 'heic',
+                'image/heif' => 'heif',
+            ];
+            $mime = $photoFile->getMimeType() ?? '';
+
+            if (!isset($mimesAutorises[$mime])) {
+                $this->addFlash('error', 'Photo refusée : envoie une image JPG, PNG ou WEBP.');
+            } elseif ($photoFile->getSize() > 2 * 1024 * 1024) {
+                $this->addFlash('error', 'Photo trop lourde : 2 Mo maximum.');
+            } else {
+                // Nom 100 % généré (aléa cryptographique) : ni le nom d'origine ni
+                // l'extension du client ne touchent le disque.
+                $newFilename = bin2hex(random_bytes(16)) . '.' . $mimesAutorises[$mime];
+                try {
+                    $photoFile->move(
+                        $this->getParameter('kernel.project_dir') . '/public/uploads/avatars',
+                        $newFilename
+                    );
+                    $user->setPhotoPath($newFilename);
+                } catch (\Exception $e) {
+                    $this->addFlash('error', 'Erreur upload photo.');
+                }
             }
         }
 

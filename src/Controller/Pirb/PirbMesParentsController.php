@@ -96,7 +96,11 @@ class PirbMesParentsController extends AbstractController
 
             $userParentId = (int) $request->request->get('user_parent_id', 0);
             $parentUser = $this->userRepo->find($userParentId);
-            if ($parentUser === null) {
+            // [SÉCU 26/07] Le parent déclaré doit être membre du club de la
+            // joueuse. Avant, n'importe quel user_id de la plateforme passait :
+            // une joueuse pouvait déclarer un inconnu (ou un dirigeant d'un
+            // autre club) comme son parent, et le staff validait de bonne foi.
+            if ($parentUser === null || !$this->estMembreDuClub($parentUser, $joueur)) {
                 $this->addFlash('error', 'Parent introuvable.');
                 return $this->redirectToRoute('pirb_mes_parents');
             }
@@ -135,14 +139,28 @@ class PirbMesParentsController extends AbstractController
         }
 
         // GET — recherche
+        // [SÉCU 26/07] AVANT : requête sans jointure club (le docblock disait
+        // pourtant « dans le club »). Une joueuse tapait « ?q=@ » et récupérait
+        // les e-mails de toute la plateforme : base de phishing prête à l'emploi.
+        // MAINTENANT : membres ACTIFS du club de la joueuse uniquement, 2
+        // caractères minimum, et la recherche par e-mail est retirée (on ne
+        // cherche pas quelqu'un dont on ne connaît pas déjà le nom).
         $recherche = trim((string) $request->query->get('q', ''));
         $candidats = [];
-        if ($recherche !== '') {
+        $clubId = $joueur->getClub()?->getId();
+
+        if (mb_strlen($recherche) >= 2 && $clubId !== null) {
             $r = '%' . strtolower($recherche) . '%';
             $candidats = $this->userRepo->createQueryBuilder('u')
-                ->where('LOWER(u.email) LIKE :r OR LOWER(u.nom) LIKE :r OR LOWER(u.prenom) LIKE :r')
+                ->join('u.userClubRoles', 'ucr')
+                ->where('LOWER(u.nom) LIKE :r OR LOWER(u.prenom) LIKE :r')
                 ->andWhere('u.isActive = true')
+                ->andWhere('ucr.club = :club')
+                ->andWhere('ucr.status = :actif')
+                ->andWhere('ucr.isActive = true')  // même exigence qu'estMembreDuClub()
                 ->setParameter('r', $r)
+                ->setParameter('club', $clubId)
+                ->setParameter('actif', \App\Entity\Core\UserClubRole::STATUS_ACTIVE)
                 ->setMaxResults(20)
                 ->orderBy('u.nom', 'ASC')
                 ->getQuery()
@@ -153,6 +171,25 @@ class PirbMesParentsController extends AbstractController
             'recherche' => $recherche,
             'candidats' => $candidats,
         ]);
+    }
+
+    /**
+     * [SÉCU 26/07] Vrai si $candidat est membre ACTIF du club de la joueuse.
+     * Garde-fou du rattachement parental : on ne déclare pas « parent »
+     * quelqu'un d'extérieur au club.
+     */
+    private function estMembreDuClub(User $candidat, \App\Entity\Sport\Joueur $joueur): bool
+    {
+        $clubId = $joueur->getClub()?->getId();
+        if ($clubId === null) {
+            return false;
+        }
+        foreach ($candidat->getUserClubRoles() as $ucr) {
+            if ($ucr->getClub()?->getId() === $clubId && $ucr->isActive() && $ucr->isStatusActive()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -78,6 +78,15 @@ security:
                 default_target_path: admin_articles_list
                 always_use_default_target_path: false
                 enable_csrf: true  # Protège contre les attaques CSRF sur le formulaire login
+            # [SÉCU 26/07] Anti-force brute — À ACTIVER APRÈS INSTALLATION DU
+            # COMPOSANT. Décommenter UNIQUEMENT après avoir fait, dans l'ordre :
+            #   1. en local :  composer require symfony/rate-limiter
+            #   2. commit de composer.json + composer.lock
+            #   3. sur OVH :   php composer.phar install --no-dev --optimize-autoloader
+            # Sans le composant, le conteneur ne compile plus = site en 500.
+            # login_throttling:
+            #     max_attempts: 3
+            #     interval: '5 minutes'
             logout:
                 path: admin_logout
                 target: admin_login
@@ -98,6 +107,12 @@ security:
                 password_parameter: _password
                 default_target_path: vitrine_accueil
                 always_use_default_target_path: false
+                enable_csrf: true  # [SÉCU 26/07] manquait ici (les 3 autres l'avaient)
+            # [SÉCU 26/07] Anti-force brute — à décommenter après
+            # « composer require symfony/rate-limiter » (voir firewall admin).
+            # login_throttling:
+            #     max_attempts: 5
+            #     interval: '1 minute'
             logout:
                 path: vitrine_logout
                 target: vitrine_accueil
@@ -122,6 +137,11 @@ security:
                 default_target_path: manager_dashboard
                 always_use_default_target_path: false
                 enable_csrf: true  # Protège contre les attaques CSRF sur le formulaire login
+            # [SÉCU 26/07] anti-force brute — à décommenter après
+            # « composer require symfony/rate-limiter » (voir firewall admin).
+            # login_throttling:
+            #     max_attempts: 5
+            #     interval: '1 minute'
             logout:
                 path: manager_logout
                 target: manager_login
@@ -143,6 +163,11 @@ security:
                 default_target_path: pirb_dashboard
                 always_use_default_target_path: false
                 enable_csrf: true  # Protège contre les attaques CSRF sur le formulaire login
+            # [SÉCU 26/07] anti-force brute — à décommenter après
+            # « composer require symfony/rate-limiter » (voir firewall admin).
+            # login_throttling:
+            #     max_attempts: 5
+            #     interval: '1 minute'
             logout:
                 path: pirb_logout
                 target: pirb_login

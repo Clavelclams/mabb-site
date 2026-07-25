@@ -1,0 +1,38 @@
+# [SÉCU 26/07] Verrou sur les fichiers déposés dans le site.
+#
+# LE PROBLÈME : les justificatifs de trésorerie, les documents de réunion, les
+# feuilles de match et les photos de joueuses sont écrits ici, dans le dossier
+# servi par Apache. Les contrôleurs vérifient bien les droits AVANT d'afficher
+# un fichier, mais rien n'empêchait d'aller le chercher directement par son
+# URL, sans être connecté. Les noms de fichiers contiennent un identifiant
+# court, devinable — et deux PDF de réunion se sont même retrouvés dans git.
+#
+# CE QUE FAIT CE FICHIER :
+#   - interdit le listing du contenu des dossiers ;
+#   - bloque l'accès direct à TOUT sauf aux images d'affichage public
+#     (avatars, photos de joueuses, médias du site), qui sont chargées
+#     directement par les pages ;
+#   - neutralise l'exécution de code au cas où un fichier piégé passerait.
+#
+# Les documents (PDF, Excel, Word) restent accessibles par l'application :
+# elle les envoie elle-même après avoir vérifié les droits.
+
+Options -Indexes
+
+# Tout est fermé par défaut...
+Require all denied
+
+# ...sauf les images d'illustration, chargées directement par les pages du site.
+# (heic/heif inclus : les avatars acceptent les photos d'iPhone.)
+<FilesMatch "\.(jpe?g|png|gif|webp|avif|ico|heic|heif)$">
+    Require all granted
+</FilesMatch>
+
+# Pas d'exécution de script, quoi qu'il arrive. Ce bloc vient EN DERNIER :
+# à égalité, Apache applique la dernière règle qui correspond, donc un fichier
+# déguisé en « photo.php.jpg » reste bloqué.
+# (Pas de « php_flag engine off » : cette directive n'existe pas quand PHP
+# tourne en FPM/CGI comme chez OVH, et ferait tomber tout le site en 500.)
+<FilesMatch "\.(php|phar|phtml|php[0-9]|pl|py|cgi|sh|htaccess)$">
+    Require all denied
+</FilesMatch>
