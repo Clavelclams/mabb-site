@@ -35,7 +35,7 @@ Le dossier `/instruction/` est la **source de vérité** du projet.
 | 14 | 14_SUIVI_CDC_MARS.md | Suivi CDC de mars (historique — voir 24 pour l'à-jour) |
 | **24** | 24_ETAT_AVANCEMENT_VS_CDC | **Suivi CDC vivant, maintenu au 13/07** |
 | **31** | 31_ETAT_REEL_2026-07-13.md | **Audit maître, état réel du code — fait foi** |
-| 15-30 | (audits & sessions datés) | Instantanés historiques, ne pas réécrire |
+| — | **archive/** | **Instantanés datés (audits, sessions, états des lieux figés) — rangés là depuis le 13/07, ne pilotent plus rien** |
 | 29 | 29_STRATEGIE_COMMERCIALE_ET_MARQUE | Marque Venaball, pricing, blocages légaux |
 | 30 | 30_TON_ET_STYLE_REDACTIONNEL | Règles de ton anti « ressenti IA » |
 | — | arborescence.md | Structure complète du projet |
