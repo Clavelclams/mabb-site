@@ -7,6 +7,7 @@ namespace App\Repository\Sport;
 use App\Entity\Sport\Joueur;
 use App\Entity\Sport\PresenceTerrain;
 use App\Entity\Sport\Rencontre;
+use App\Entity\Sport\SessionStatsLive;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -93,6 +94,80 @@ class PresenceTerrainRepository extends ServiceEntityRepository
             }
         }
         return $total;
+    }
+
+    /**
+     * [V2.4o] Présences d'une joueuse sur une rencontre, filtrées par session
+     * de saisie — MÊME stratégie source-de-vérité que
+     * ActionMatchRepository::comptageActionsParType :
+     *   - session fournie  → uniquement les présences de CETTE session
+     *   - session null     → uniquement les présences SANS session (pré-V2.1d)
+     * Garantit que le temps de jeu ne mélange jamais les saisies de deux
+     * bénévoles parallèles (sinon les minutes doubleraient).
+     *
+     * @return PresenceTerrain[]
+     */
+    public function findPourAgregation(Joueur $joueur, Rencontre $rencontre, ?SessionStatsLive $session): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.rencontre = :rencontre')
+            ->andWhere('p.joueur = :joueur')
+            ->setParameter('rencontre', $rencontre)
+            ->setParameter('joueur', $joueur)
+            ->orderBy('p.secondesEntree', 'ASC');
+
+        if ($session !== null) {
+            $qb->andWhere('p.session = :session')->setParameter('session', $session);
+        } else {
+            $qb->andWhere('p.session IS NULL');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * [V2.4o] Présences OUVERTES (secondesSortie NULL) d'une session sur une
+     * rencontre. Utilisé à la promotion en session officielle pour clôturer
+     * les présences du cinq resté sur le terrain au buzzer.
+     *
+     * @return PresenceTerrain[]
+     */
+    public function findOuvertes(Rencontre $rencontre, ?SessionStatsLive $session): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.rencontre = :rencontre')
+            ->andWhere('p.secondesSortie IS NULL')
+            ->setParameter('rencontre', $rencontre);
+
+        if ($session !== null) {
+            $qb->andWhere('p.session = :session')->setParameter('session', $session);
+        } else {
+            $qb->andWhere('p.session IS NULL');
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * [V2.4o] Plus grande secondesSortie observée sur la rencontre (même
+     * filtre session que findPourAgregation). Sert à ESTIMER la fin du match
+     * pour clôturer les présences jamais fermées (joueuse restée sur le
+     * terrain au buzzer, personne n'a cliqué « sortir »).
+     */
+    public function maxSecondesSortie(Rencontre $rencontre, ?SessionStatsLive $session): int
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->select('MAX(p.secondesSortie)')
+            ->where('p.rencontre = :rencontre')
+            ->setParameter('rencontre', $rencontre);
+
+        if ($session !== null) {
+            $qb->andWhere('p.session = :session')->setParameter('session', $session);
+        } else {
+            $qb->andWhere('p.session IS NULL');
+        }
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     /**

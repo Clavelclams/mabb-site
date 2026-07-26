@@ -34,6 +34,7 @@ final class SessionStatsLivePromoteur
         private readonly SessionStatsLiveRepository $sessionRepository,
         private readonly LoggerInterface $logger,
         private readonly ActionMatchAggregator $aggregator,
+        private readonly \App\Repository\Sport\PresenceTerrainRepository $presenceTerrainRepository,
     ) {}
 
     /**
@@ -120,6 +121,42 @@ final class SessionStatsLivePromoteur
                 'promoteur'   => $promoteur->getEmail(),
                 'rencontre_id' => $rencontre->getId(),
             ]);
+
+            // === [V2.4o] Clôture des présences terrain restées ouvertes ===
+            //
+            // Le cinq qui finit le match n'est jamais « sorti » : personne ne
+            // clique Sortir au buzzer. Sans clôture, ces minutes étaient
+            // PERDUES (le résumé ignore les présences ouvertes) ou estimées
+            // différemment selon l'écran. On fige ici, une fois pour toutes,
+            // la sortie à la fin estimée du match : max(durée réglementaire,
+            // plus grande sortie déjà observée). La promotion est LE moment
+            // où le match est déclaré terminé — c'est le bon endroit.
+            try {
+                $ouvertes = $this->presenceTerrainRepository->findOuvertes($rencontre, $session);
+                if ($ouvertes !== []) {
+                    $finEstimee = max(
+                        $rencontre->getDureeTotaleSecondes(),
+                        $this->presenceTerrainRepository->maxSecondesSortie($rencontre, $session)
+                    );
+                    foreach ($ouvertes as $p) {
+                        // Garde-fou entité : sortie >= entrée (une entrée saisie
+                        // APRÈS la fin estimée est clôturée sur place, durée 0)
+                        $p->setSecondesSortie(max($finEstimee, $p->getSecondesEntree()));
+                    }
+                    $this->em->flush();
+                    $this->logger->info('Présences terrain auto-clôturées à la promotion', [
+                        'rencontre_id' => $rencontre->getId(),
+                        'session_id'   => $session->getId(),
+                        'nb_cloturees' => count($ouvertes),
+                        'fin_estimee'  => $finEstimee,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                $this->logger->warning('Échec auto-clôture des présences (promotion OK quand même)', [
+                    'rencontre_id' => $rencontre->getId(),
+                    'error'        => $e->getMessage(),
+                ]);
+            }
 
             // === V2.1d.1 — Auto-génération EvaluationMatch ===
             //

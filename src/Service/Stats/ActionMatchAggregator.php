@@ -8,8 +8,11 @@ use App\Entity\Sport\ActionMatch;
 use App\Entity\Sport\EvaluationMatch;
 use App\Entity\Sport\Joueur;
 use App\Entity\Sport\Rencontre;
+use App\Entity\Sport\PresenceTerrain;
+use App\Entity\Sport\SessionStatsLive;
 use App\Repository\Sport\ActionMatchRepository;
 use App\Repository\Sport\EvaluationMatchRepository;
+use App\Repository\Sport\PresenceTerrainRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -42,6 +45,7 @@ final class ActionMatchAggregator
     public function __construct(
         private readonly ActionMatchRepository $actionMatchRepository,
         private readonly EvaluationMatchRepository $evaluationMatchRepository,
+        private readonly PresenceTerrainRepository $presenceTerrainRepository,
         private readonly EntityManagerInterface $em,
     ) {}
 
@@ -84,14 +88,15 @@ final class ActionMatchAggregator
         $lancersReussis = $comptages[ActionMatch::TYPE_LANCER_REUSSI] ?? 0;
         $lancersTentes  = $lancersReussis + ($comptages[ActionMatch::TYPE_LANCER_RATE] ?? 0);
 
-        // Minutes jouées : durée entre les ENTREE et SORTIE. Calcul plus précis
-        // que comptage simple. À implémenter en Phase 2 (saisie live).
-        // V1 : on prend le total des ENTREE (proxy temporaire).
-        $minutesJouees = $this->calculerMinutesJouees($joueur, $rencontre);
+        // [V2.4o] Minutes jouées et titulaire : lus depuis PresenceTerrain
+        // (les vraies entrées/sorties en secondes, filtrées par la session
+        // officielle — même source que le résumé de match). Les présences
+        // sont chargées UNE fois et partagées entre les deux calculs.
+        $session   = $this->sessionOfficielle($rencontre);
+        $presences = $this->presenceTerrainRepository->findPourAgregation($joueur, $rencontre, $session);
 
-        // Titulaire : la joueuse est titulaire si sa première ENTREE est à 0:00 QT1
-        // En V1, on regarde simplement s'il y a une ENTREE dans le 1er quart.
-        $isStarter = $this->detecterTitulaire($joueur, $rencontre);
+        $minutesJouees = $this->calculerMinutesJouees($joueur, $rencontre, $presences, $session);
+        $isStarter     = $this->detecterTitulaire($joueur, $rencontre, $presences);
 
         return [
             'tirs2ptsReussis'   => $tirs2ptsReussis,
@@ -199,56 +204,115 @@ final class ActionMatchAggregator
     // ====================================================================
 
     /**
-     * Calcule les minutes jouées en parcourant les paires ENTREE/SORTIE.
-     *
-     * V1 PRAGMATIQUE :
-     *   - Parcourt les actions chronologiquement
-     *   - À chaque ENTREE : démarre un chrono
-     *   - À chaque SORTIE : ajoute la durée au total
-     *   - Si SORTIE sans ENTREE préalable → on ignore (donnée corrompue)
-     *   - Si match termine sans SORTIE → on considère que la joueuse a fini sur le terrain
-     *     (durée = fin du match - dernière ENTREE)
-     *
-     * V2 (futur) :
-     *   - Gérer les exclusions (5 fautes = sortie forcée)
-     *   - Gérer les time-outs (ils ne décomptent pas du temps de jeu)
-     *
-     * Pour la V1 ON SIMPLIFIE : on prend le nombre de quart-temps distincts
-     * où la joueuse a des actions × 10min. Approximation acceptable au début.
+     * [V2.4o] Session OFFICIELLE de la rencontre, ou null.
+     * Même résolution que ActionMatchRepository::comptageActionsParType —
+     * les minutes et les compteurs FIBA lisent la MÊME session, sinon on
+     * afficherait « 12 pts en 0 min ».
      */
-    private function calculerMinutesJouees(Joueur $joueur, Rencontre $rencontre): int
+    private function sessionOfficielle(Rencontre $rencontre): ?SessionStatsLive
     {
+        return $this->em->getRepository(SessionStatsLive::class)->findOneBy([
+            'rencontre' => $rencontre,
+            'statut'    => SessionStatsLive::STATUT_OFFICIELLE,
+        ]);
+    }
+
+    /**
+     * [V2.4o] Minutes jouées RÉELLES, depuis PresenceTerrain.
+     *
+     * AVANT : « nombre de quart-temps où la joueuse a une action × 10 min ».
+     * Une joueuse qui faisait UN rebond par quart était créditée de 40 min ;
+     * une remplaçante entrée 2 min en QT4 recevait 10 min. Perf Éval était
+     * calculée sur ces valeurs — d'où des moyennes/min absurdes.
+     *
+     * MAINTENANT : SUM(sortie − entrée) sur les présences de la session
+     * officielle (temps ABSOLUS en secondes depuis Q1 0:00, saisis par les
+     * boutons Entrer/Sortir de Stats Live).
+     *
+     * Cas limites gérés :
+     *   - Présence jamais clôturée (restée sur le terrain au buzzer, personne
+     *     n'a cliqué « sortir ») → on la clôture à la FIN ESTIMÉE du match :
+     *     max(durée réglementaire de la rencontre, plus grande sortie
+     *     observée). On ne perd pas les minutes de celles qui finissent
+     *     le match sur le terrain — le cas le plus fréquent (le 5 majeur).
+     *   - Aucune présence saisie (le bénévole n'a pas utilisé Entrer/Sortir)
+     *     → fallback sur l'ancienne approximation par quarts actifs, mais
+     *     avec la VRAIE durée de période de la rencontre (4×8 min en jeunes,
+     *     pas toujours 10) au lieu du 10 codé en dur.
+     *   - Borne physique : jamais plus que durée réglementaire + 2 prolongations.
+     *
+     * @param PresenceTerrain[] $presences présences déjà filtrées par session
+     */
+    private function calculerMinutesJouees(
+        Joueur $joueur,
+        Rencontre $rencontre,
+        array $presences,
+        ?SessionStatsLive $session,
+    ): int {
+        if ($presences !== []) {
+            $finEstimee = max(
+                $rencontre->getDureeTotaleSecondes(),
+                $this->presenceTerrainRepository->maxSecondesSortie($rencontre, $session)
+            );
+
+            $totalSecondes = 0;
+            foreach ($presences as $p) {
+                $sortie = $p->getSecondesSortie() ?? max($finEstimee, $p->getSecondesEntree());
+                $totalSecondes += max(0, $sortie - $p->getSecondesEntree());
+            }
+
+            // Borne physique : durée réglementaire + 2 prolongations de 5 min
+            $totalSecondes = min($totalSecondes, $rencontre->getDureeTotaleSecondes() + 2 * 300);
+
+            // intdiv (pas round) : même arrondi que le résumé de match, pour
+            // que la fiche joueuse et le résumé affichent le MÊME chiffre.
+            return intdiv($totalSecondes, 60);
+        }
+
+        // --- Fallback : aucune présence saisie → approximation par quarts ---
         $actions = $this->actionMatchRepository->actionsJoueurSurRencontre($joueur, $rencontre);
         if (empty($actions)) {
             return 0;
         }
 
-        // V1 simple : compte les quart-temps DISTINCTS où la joueuse a des actions
-        // × 10 min/QT. Plus précis qu'un compte raw, moins compliqué que ENTREE/SORTIE
         $quartsActifs = [];
         foreach ($actions as $a) {
             $quartsActifs[$a->getQuartTemps()] = true;
         }
 
-        // Quart régulier = 10 min, prolongation = 5 min
+        $dureePeriode = $rencontre->getDureePeriodeMinutes();
         $total = 0;
         foreach (array_keys($quartsActifs) as $qt) {
-            $total += in_array($qt, [ActionMatch::EXT_1, ActionMatch::EXT_2], true) ? 5 : 10;
+            $total += in_array($qt, [ActionMatch::EXT_1, ActionMatch::EXT_2], true) ? 5 : $dureePeriode;
         }
 
-        // Max 40 min régulier + prolongations — sanity check
-        return min($total, 50);
+        // Sanity check : durée réglementaire + 2 prolongations
+        return min($total, intdiv($rencontre->getDureeTotaleSecondes(), 60) + 10);
     }
 
     /**
-     * Détecte si une joueuse est titulaire (présente dans le QT1).
+     * Détecte si une joueuse est titulaire.
      *
-     * Approche simple : si la joueuse a au moins une action dans le QT1, on
-     * considère qu'elle est titulaire. À affiner en Phase 2 avec la gestion
-     * explicite des ENTREE à 0:00.
+     * [V2.4o] Source primaire : PresenceTerrain — titulaire = une présence
+     * qui démarre à 0 s (sur le terrain à l'entre-deux). Une remplaçante
+     * entrée à la 5e minute du QT1 n'est PLUS comptée titulaire (l'ancienne
+     * heuristique « une action dans le QT1 » la comptait).
+     *
+     * Fallback sans présences : l'heuristique historique (action dans le QT1).
+     *
+     * @param PresenceTerrain[] $presences présences déjà filtrées par session
      */
-    private function detecterTitulaire(Joueur $joueur, Rencontre $rencontre): bool
+    private function detecterTitulaire(Joueur $joueur, Rencontre $rencontre, array $presences): bool
     {
+        if ($presences !== []) {
+            foreach ($presences as $p) {
+                if ($p->getSecondesEntree() === 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         return $this->em->createQueryBuilder()
             ->select('COUNT(a.id)')
             ->from(ActionMatch::class, 'a')
