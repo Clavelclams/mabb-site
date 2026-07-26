@@ -255,9 +255,19 @@ class JoueurController extends AbstractController
         // 1 repository pour la liste des derniers matchs (data access pur).
         // Séparation Service/Repository assumée : moy = logique métier, list = data.
         //
-        // Agrégat global (toutes équipes confondues) — toujours calculé.
-        $performancesSaison    = $evaluationCalculator->moyennesSaison($joueur, $saison);
-        $evaluationsRecentes   = $evaluationMatchRepository->evaluationsRecentes($joueur, 5);
+        // [V2.4p] TOGGLE Stats Live / FFBB — deux agrégats séparés :
+        //   - vue « Stats Live » : évals live + saisie coach (données riches)
+        //   - vue « FFBB »       : évals importées du PDF officiel (points,
+        //     minutes, LF, fautes — le reste n'existe pas côté FFBB)
+        // On ne mélange PLUS les deux dans une même moyenne : une éval FFBB
+        // incomplète tirait l'éval FIBA vers le bas et faussait tout.
+        $sourcesClub = \App\Entity\Sport\EvaluationMatch::SOURCES_CLUB;
+        $sourcesFfbb = [\App\Entity\Sport\EvaluationMatch::SOURCE_FFBB];
+
+        $performancesSaison    = $evaluationCalculator->moyennesSaison($joueur, $saison, null, $sourcesClub);
+        $evaluationsRecentes   = $evaluationMatchRepository->evaluationsRecentes($joueur, 5, null, $sourcesClub);
+        $performancesFfbb      = $evaluationCalculator->moyennesSaison($joueur, $saison, null, $sourcesFfbb);
+        $evaluationsFfbb       = $evaluationMatchRepository->evaluationsRecentes($joueur, 5, null, $sourcesFfbb);
 
         // ====================================================================
         // Perfs multi-équipes : si la joueuse joue dans 2+ équipes, on calcule
@@ -288,8 +298,10 @@ class JoueurController extends AbstractController
         $performancesParEquipe = [];
         if (count($toutesEquipesJoueur) > 1) {
             foreach ($toutesEquipesJoueur as $equipeItem) {
-                $perfEquipe  = $evaluationCalculator->moyennesSaison($joueur, $saison, $equipeItem);
-                $evalsEquipe = $evaluationMatchRepository->evaluationsRecentes($joueur, 5, $equipeItem);
+                // [V2.4p] Le dropdown par équipe vit dans la vue « Stats Live » :
+                // mêmes sources club, sinon les chiffres ne colleraient pas.
+                $perfEquipe  = $evaluationCalculator->moyennesSaison($joueur, $saison, $equipeItem, $sourcesClub);
+                $evalsEquipe = $evaluationMatchRepository->evaluationsRecentes($joueur, 5, $equipeItem, $sourcesClub);
                 $performancesParEquipe[] = [
                     'equipe'                => $equipeItem,
                     'performances'          => $perfEquipe,
@@ -346,6 +358,9 @@ class JoueurController extends AbstractController
             ],
             'performances_saison'      => $performancesSaison,
             'evaluations_recentes'     => $evaluationsRecentes,
+            // [V2.4p] Vue FFBB du toggle
+            'performances_ffbb'        => $performancesFfbb,
+            'evaluations_ffbb'         => $evaluationsFfbb,
             'performances_par_equipe'  => $performancesParEquipe,
             // D.3.2 — Section "Ma cotisation" sur la fiche
             'cotisation_courante' => $cotisationCourante,

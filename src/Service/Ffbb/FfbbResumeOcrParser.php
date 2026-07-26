@@ -187,6 +187,13 @@ class FfbbResumeOcrParser
                 $eval->setRencontre($rencontre);
             }
 
+            // [V2.4p] Provenance : officielle FFBB — sauf si l'éval vient de
+            // Stats Live (données plus riches : on ne rétrograde pas la source,
+            // l'OCR ne fait alors que compléter des champs).
+            if ($isNew || !$eval->isSourceLive()) {
+                $eval->setSource(EvaluationMatch::SOURCE_FFBB);
+            }
+
             // Application des stats parsées (uniquement celles que la FFBB donne)
             $eval->setIsStarter($ligne['starter'] ?? false);
             $eval->setMinutesJouees($ligne['minutes'] ?? 0);

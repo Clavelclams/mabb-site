@@ -368,9 +368,26 @@
                         </select>
                     </span>
 
-                    {% if performances_saison.nb_matchs > 0 %}
-                        {% if performances_par_equipe|length > 1 %}
-                            {# Dropdown équipe — affiche les équipes ayant au moins 1 eval #}
+                    {# [V2.4p] Toggle source : Stats Live (données club, riches)
+                       vs FFBB (feuille officielle, points/minutes seulement).
+                       Deux moyennes séparées — on ne mélange plus. #}
+                    {% set a_live = performances_saison.nb_matchs > 0 %}
+                    {% set a_ffbb = performances_ffbb.nb_matchs > 0 %}
+                    <span style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        {% if a_live or a_ffbb %}
+                            <div style="display:flex; border:1px solid #cbd5e1; border-radius:20px; overflow:hidden;">
+                                <button type="button" id="btn-perf-src-live" onclick="switchPerfSource('live')"
+                                        style="border:0; padding:5px 14px; font-size:.78rem; font-weight:700; cursor:pointer;">
+                                    ⚡ Stats Live ({{ performances_saison.nb_matchs }})
+                                </button>
+                                <button type="button" id="btn-perf-src-ffbb" onclick="switchPerfSource('ffbb')"
+                                        style="border:0; padding:5px 14px; font-size:.78rem; font-weight:700; cursor:pointer;">
+                                    📋 FFBB ({{ performances_ffbb.nb_matchs }})
+                                </button>
+                            </div>
+                        {% endif %}
+                        {% if a_live and performances_par_equipe|length > 1 %}
+                            {# Dropdown équipe — ne concerne que la vue Stats Live #}
                             <select id="perf-equipe-select"
                                     onchange="switchPerfEquipe(this.value)"
                                     style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:20px;
@@ -383,17 +400,13 @@
                                     {% endif %}
                                 {% endfor %}
                             </select>
-                        {% else %}
-                            <small style="color:var(--mabb-muted); font-weight:500;">
-                                {{ performances_saison.nb_matchs }} match{{ performances_saison.nb_matchs > 1 ? 's' : '' }} évalué{{ performances_saison.nb_matchs > 1 ? 's' : '' }}
-                            </small>
                         {% endif %}
-                    {% endif %}
+                    </span>
                 </div>
 
                 <div class="card-body">
-                    {% if performances_saison.nb_matchs == 0 %}
-                        {# === État vide — aucune éval saisie cette saison === #}
+                    {% if not a_live and not a_ffbb %}
+                        {# === État vide — aucune éval d'aucune source cette saison === #}
                         <div style="text-align:center; padding:28px 16px; color:var(--mabb-muted);">
                             <i class="bi bi-clipboard2-x" style="font-size:2.4rem; opacity:.35; display:block; margin-bottom:12px;"></i>
                             <p style="margin:0; font-size:.88rem;">Aucune évaluation saisie pour cette joueuse cette saison.</p>
@@ -405,42 +418,115 @@
                             {% endif %}
                         </div>
                     {% else %}
-                        {# [V2.4n] Honnêteté sur la donnée (demande Clavel) : les évals
-                           issues des PDF FFBB n'ont QUE les points/minutes — rebonds,
-                           passes et % tirs à zéro faussent l'éval FIBA vers le bas. #}
-                        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px;
-                                    padding:8px 12px; margin-bottom:12px; font-size:.76rem; color:#92400e;">
-                            <i class="bi bi-info-circle"></i>
-                            <strong>Première version :</strong> ces évals sont calculées à partir des feuilles
-                            FFBB, qui ne donnent que les points et les minutes — rebonds, passes et % tirs
-                            n'y sont pas, donc l'éval est sous-estimée. Les matchs saisis avec
-                            <strong>Stats Live</strong> auront bientôt toutes les données.
-                        </div>
-                        {# === Vue "Toutes équipes" (toujours visible par défaut) === #}
-                        <div id="perf-view-all">
-                            {{ _self.perfTuiles(performances_saison) }}
-                            {{ _self.perfTableau(evaluations_recentes) }}
-                        </div>
-
-                        {# === Vues par équipe (cachées, activées par le dropdown) === #}
-                        {% if performances_par_equipe|length > 1 %}
-                            {% for idx, item in performances_par_equipe %}
-                                {% if item.performances.nb_matchs > 0 %}
-                                <div id="perf-view-{{ idx }}" style="display:none;">
-                                    <div style="margin-bottom:12px; padding:6px 12px; background:rgba(0,98,168,.07);
-                                                border-left:3px solid var(--mabb-blue); border-radius:0 6px 6px 0;
-                                                font-size:.8rem; font-weight:600; color:var(--mabb-blue);">
-                                        <i class="bi bi-shield-fill"></i> {{ item.equipe.nom }}
-                                        — {{ item.performances.nb_matchs }} match{{ item.performances.nb_matchs > 1 ? 's' : '' }}
-                                    </div>
-                                    {{ _self.perfTuiles(item.performances) }}
-                                    {{ _self.perfTableau(item.evaluations_recentes) }}
+                        {# ================= VUE STATS LIVE (données club) ================= #}
+                        <div id="perf-source-live">
+                            {% if a_live %}
+                                {# === Vue "Toutes équipes" (visible par défaut) === #}
+                                <div id="perf-view-all">
+                                    {{ _self.perfTuiles(performances_saison) }}
+                                    {{ _self.perfTableau(evaluations_recentes) }}
                                 </div>
-                                {% endif %}
-                            {% endfor %}
-                        {% endif %}
 
-                        {# === Message pédagogique (visible seulement quand il y a des données) === #}
+                                {# === Vues par équipe (cachées, activées par le dropdown) === #}
+                                {% if performances_par_equipe|length > 1 %}
+                                    {% for idx, item in performances_par_equipe %}
+                                        {% if item.performances.nb_matchs > 0 %}
+                                        <div id="perf-view-{{ idx }}" style="display:none;">
+                                            <div style="margin-bottom:12px; padding:6px 12px; background:rgba(0,98,168,.07);
+                                                        border-left:3px solid var(--mabb-blue); border-radius:0 6px 6px 0;
+                                                        font-size:.8rem; font-weight:600; color:var(--mabb-blue);">
+                                                <i class="bi bi-shield-fill"></i> {{ item.equipe.nom }}
+                                                — {{ item.performances.nb_matchs }} match{{ item.performances.nb_matchs > 1 ? 's' : '' }}
+                                            </div>
+                                            {{ _self.perfTuiles(item.performances) }}
+                                            {{ _self.perfTableau(item.evaluations_recentes) }}
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                            {% else %}
+                                <div style="text-align:center; padding:24px 16px; color:var(--mabb-muted);">
+                                    <i class="bi bi-lightning-charge" style="font-size:2rem; opacity:.35; display:block; margin-bottom:10px;"></i>
+                                    <p style="margin:0; font-size:.85rem;">
+                                        Aucun match saisi en Stats Live cette saison.<br>
+                                        <small>Les stats officielles sont dans l'onglet <strong>📋 FFBB</strong> ci-dessus.</small>
+                                    </p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# ================= VUE FFBB (feuille officielle) ================= #}
+                        <div id="perf-source-ffbb" style="display:none;">
+                            <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:8px;
+                                        padding:8px 12px; margin-bottom:14px; font-size:.76rem; color:#92400e;">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Source officielle FFBB</strong> — la feuille de match ne donne que les
+                                points, minutes, lancers francs et fautes. Rebonds, passes et % de tirs
+                                n'existent que dans Stats Live.
+                            </div>
+                            {% if a_ffbb %}
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;">
+                                    <div style="background:#fff7ed; padding:14px; border-radius:10px; text-align:center;">
+                                        <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-orange);">{{ performances_ffbb.points_moyenne ?? '—' }}</div>
+                                        <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Pts / match</div>
+                                    </div>
+                                    <div style="background:#eff6ff; padding:14px; border-radius:10px; text-align:center;">
+                                        <div style="font-size:1.8rem; font-weight:800; color:#0369a1;">{{ performances_ffbb.minutes_moyenne ?? '—' }}</div>
+                                        <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Min / match</div>
+                                    </div>
+                                    <div style="background:#f8fafc; padding:14px; border-radius:10px; text-align:center;">
+                                        <div style="font-size:1.8rem; font-weight:800; color:var(--mabb-dark);">{{ performances_ffbb.nb_matchs }}</div>
+                                        <div style="font-size:.72rem; color:var(--mabb-muted); margin-top:2px;">Matchs officiels</div>
+                                    </div>
+                                </div>
+                                <h4 style="margin:20px 0 10px; color:var(--mabb-dark); font-size:1rem;">
+                                    <i class="bi bi-clock-history"></i> Derniers matchs officiels
+                                </h4>
+                                <div style="overflow-x:auto;">
+                                    <table class="table-mabb" style="width:100%; font-size:.85rem;">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th><th>Adversaire</th>
+                                                <th style="text-align:center;">Min</th>
+                                                <th style="text-align:center; background:rgba(252,112,42,.1);">Pts</th>
+                                                <th style="text-align:center;">LF</th>
+                                                <th style="text-align:center;">Fautes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ev in evaluations_ffbb %}
+                                                {% set r = ev.rencontre %}
+                                                <tr>
+                                                    <td style="font-size:.78rem; white-space:nowrap;">
+                                                        <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none;">
+                                                            {{ r.date|date('d/m/Y') }}
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ path('manager_rencontre_show', {id: r.id}) }}" style="color:var(--mabb-dark); text-decoration:none; font-weight:600;">
+                                                            {{ r.adversaire }}
+                                                            {% if not r.domicile %}<small style="color:var(--mabb-muted);">(ext.)</small>{% endif %}
+                                                        </a>
+                                                        {% if ev.isStarter %}<span title="Titulaire" style="color:var(--mabb-orange);">⭐</span>{% endif %}
+                                                    </td>
+                                                    <td style="text-align:center;">{{ ev.minutesJouees }}</td>
+                                                    <td style="text-align:center; font-weight:800; background:rgba(252,112,42,.06);">{{ ev.points }}</td>
+                                                    <td style="text-align:center;">{{ ev.lancersReussis }}</td>
+                                                    <td style="text-align:center;">{{ ev.fautesCommises }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div style="text-align:center; padding:24px 16px; color:var(--mabb-muted);">
+                                    <i class="bi bi-file-earmark-x" style="font-size:2rem; opacity:.35; display:block; margin-bottom:10px;"></i>
+                                    <p style="margin:0; font-size:.85rem;">Aucune feuille FFBB importée pour cette joueuse cette saison.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        {# === Message pédagogique (commun aux deux vues) === #}
                         <p style="margin:16px 0 0; padding:12px 14px; background:#fef9e7; border-left:3px solid #f59e0b; font-size:.78rem; color:#78350f; border-radius:0 6px 6px 0;">
                             <i class="bi bi-lightbulb"></i>
                             <strong>L'éval ne fait pas tout.</strong> Une joueuse peut avoir une éval faible
@@ -452,8 +538,29 @@
             </div>
         </div>
 
-        {% if performances_par_equipe|length > 1 and performances_saison.nb_matchs > 0 %}
+        {% if a_live or a_ffbb %}
         <script>
+        // [V2.4p] Toggle source Stats Live / FFBB — un clic, zéro rechargement.
+        function switchPerfSource(src) {
+            var live = document.getElementById('perf-source-live');
+            var ffbb = document.getElementById('perf-source-ffbb');
+            if (live) live.style.display = (src === 'live') ? '' : 'none';
+            if (ffbb) ffbb.style.display = (src === 'ffbb') ? '' : 'none';
+
+            // Le dropdown équipe n'a de sens qu'en vue Stats Live
+            var eq = document.getElementById('perf-equipe-select');
+            if (eq) eq.style.display = (src === 'live') ? '' : 'none';
+
+            // Style des boutons : l'actif en orange, l'autre neutre
+            var actif   = 'background:var(--mabb-orange,#fc702a); color:#fff;';
+            var inactif = 'background:#f1f5f9; color:var(--mabb-dark);';
+            var base    = 'border:0; padding:5px 14px; font-size:.78rem; font-weight:700; cursor:pointer;';
+            var bLive = document.getElementById('btn-perf-src-live');
+            var bFfbb = document.getElementById('btn-perf-src-ffbb');
+            if (bLive) bLive.style.cssText = base + (src === 'live' ? actif : inactif);
+            if (bFfbb) bFfbb.style.cssText = base + (src === 'ffbb' ? actif : inactif);
+        }
+
         function switchPerfEquipe(val) {
             document.querySelectorAll('[id^="perf-view-"]').forEach(function(el) {
                 el.style.display = 'none';
@@ -461,6 +568,9 @@
             var target = document.getElementById('perf-view-' + val);
             if (target) target.style.display = '';
         }
+
+        // Vue par défaut : Stats Live si elle a des données, sinon FFBB.
+        switchPerfSource({{ (a_live or not a_ffbb) ? "'live'" : "'ffbb'" }});
         </script>
         {% endif %}
         {% endif %}

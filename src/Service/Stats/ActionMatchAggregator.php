@@ -144,6 +144,11 @@ final class ActionMatchAggregator
 
         $agg = $this->agreger($joueur, $rencontre);
 
+        // [V2.4p] Cette éval est désormais générée depuis Stats Live — même
+        // si elle avait été créée par un import FFBB avant, ses valeurs
+        // viennent maintenant de la source la plus riche.
+        $eval->setSource(EvaluationMatch::SOURCE_LIVE);
+
         $eval->setIsStarter($agg['isStarter']);
         $eval->setMinutesJouees($agg['minutesJouees']);
         $eval->setTirs2ptsReussis($agg['tirs2ptsReussis']);

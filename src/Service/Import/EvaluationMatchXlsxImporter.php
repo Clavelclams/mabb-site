@@ -155,6 +155,12 @@ class EvaluationMatchXlsxImporter
                 $eval->setRencontre($rencontre);
             }
 
+            // [V2.4p] Provenance : le classeur Excel est une saisie du COACH
+            // (données riches). Ne pas rétrograder une éval déjà live.
+            if ($isNew || !$eval->isSourceLive()) {
+                $eval->setSource(EvaluationMatch::SOURCE_MANUEL);
+            }
+
             $eval->setIsStarter($values['starter']);
             $eval->setMinutesJouees($values['minutes']);
             $eval->setTirs2ptsReussis($values['t2r']);

@@ -35,6 +35,27 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\HasLifecycleCallbacks]
 class EvaluationMatch implements ClubAwareInterface
 {
+    // ====================================================================
+    // [V2.4p] SOURCE DE LA DONNÉE — d'où vient cette éval ?
+    //   - live   : agrégée depuis Stats Live (ActionMatch + PresenceTerrain)
+    //   - ffbb   : importée du PDF officiel FFBB (OCR) — QUE points/minutes/
+    //              LF/fautes réussis, PAS de rebonds/passes/tirs tentés
+    //   - manuel : saisie du coach (formulaire /evals ou import Excel)
+    // Sert au toggle « Stats Live / FFBB » de la fiche joueuse : on ne
+    // mélange plus une éval FFBB incomplète (sous-estimée) avec une éval
+    // live complète dans la même moyenne.
+    // ====================================================================
+    public const SOURCE_LIVE   = 'live';
+    public const SOURCE_FFBB   = 'ffbb';
+    public const SOURCE_MANUEL = 'manuel';
+    public const SOURCES = [self::SOURCE_LIVE, self::SOURCE_FFBB, self::SOURCE_MANUEL];
+
+    /**
+     * Groupe « vision club » du toggle : le live ET la saisie coach sont
+     * des données riches produites par le club — la FFBB est à part.
+     */
+    public const SOURCES_CLUB = [self::SOURCE_LIVE, self::SOURCE_MANUEL];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -55,6 +76,16 @@ class EvaluationMatch implements ClubAwareInterface
     // ====================================================================
     // MÉTADONNÉES DU MATCH POUR CETTE JOUEUSE
     // ====================================================================
+
+    /**
+     * [V2.4p] Provenance de la donnée (voir constantes SOURCE_*).
+     * Défaut 'manuel' : c'est le cas historique le plus sûr (une éval dont
+     * on ignore l'origine est traitée comme une saisie coach, jamais comme
+     * une officielle FFBB).
+     */
+    #[ORM\Column(length: 10, options: ['default' => self::SOURCE_MANUEL])]
+    #[Assert\Choice(choices: self::SOURCES)]
+    private string $source = self::SOURCE_MANUEL;
 
     /** Titulaire (5 majeur) ou remplaçante ? */
     #[ORM\Column]
@@ -287,6 +318,18 @@ class EvaluationMatch implements ClubAwareInterface
 
     public function isStarter(): bool { return $this->isStarter; }
     public function setIsStarter(bool $isStarter): static { $this->isStarter = $isStarter; return $this; }
+
+    public function getSource(): string { return $this->source; }
+    public function setSource(string $source): static
+    {
+        if (!in_array($source, self::SOURCES, true)) {
+            throw new \InvalidArgumentException("Source d'évaluation invalide : $source");
+        }
+        $this->source = $source;
+        return $this;
+    }
+    public function isSourceFfbb(): bool { return $this->source === self::SOURCE_FFBB; }
+    public function isSourceLive(): bool { return $this->source === self::SOURCE_LIVE; }
 
     public function getMinutesJouees(): int { return $this->minutesJouees; }
     public function setMinutesJouees(int $minutes): static { $this->minutesJouees = $minutes; return $this; }

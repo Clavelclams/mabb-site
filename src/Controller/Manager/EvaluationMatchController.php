@@ -117,6 +117,13 @@ class EvaluationMatchController extends AbstractController
                     $eval->setRencontre($rencontre);
                 }
 
+                // [V2.4p] Provenance : formulaire du coach = saisie manuelle.
+                // Une éval déjà live n'est pas rétrogradée (le coach corrige
+                // des valeurs, la donnée reste d'origine Stats Live).
+                if ($estNouvelle || !$eval->isSourceLive()) {
+                    $eval->setSource(EvaluationMatch::SOURCE_MANUEL);
+                }
+
                 // Application des données avec validation min/max (cast int + clamp à 0+)
                 $eval->setIsStarter(isset($donneesJoueur['is_starter']));
                 $eval->setMinutesJouees($this->clampInt($donneesJoueur['minutes_jouees'] ?? 0, 0, 60));

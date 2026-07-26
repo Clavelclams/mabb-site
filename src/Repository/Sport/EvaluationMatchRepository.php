@@ -53,11 +53,14 @@ class EvaluationMatchRepository extends ServiceEntityRepository
     /**
      * Toutes les évals d'une saison pour un joueur, ordonnées par date décroissante.
      *
-     * @param Equipe|null $equipe  Si fourni, filtre sur les rencontres de cette équipe
-     *                             uniquement. Utile pour les joueuses multi-équipes.
+     * @param Equipe|null $equipe   Si fourni, filtre sur les rencontres de cette équipe
+     *                              uniquement. Utile pour les joueuses multi-équipes.
+     * @param string[]|null $sources [V2.4p] Si fourni, ne garde que ces sources
+     *                              (ex : ['ffbb'] ou EvaluationMatch::SOURCES_CLUB).
+     *                              Null = toutes (comportement historique).
      * @return EvaluationMatch[]
      */
-    public function evaluationsSaison(Joueur $joueur, string $saison, ?Equipe $equipe = null): array
+    public function evaluationsSaison(Joueur $joueur, string $saison, ?Equipe $equipe = null, ?array $sources = null): array
     {
         [$dateDebut, $dateFin] = self::saisonBounds($saison);
 
@@ -75,6 +78,11 @@ class EvaluationMatchRepository extends ServiceEntityRepository
                ->setParameter('equipe', $equipe);
         }
 
+        if ($sources !== null) {
+            $qb->andWhere('e.source IN (:sources)')
+               ->setParameter('sources', $sources);
+        }
+
         return $qb->getQuery()->getResult();
     }
 
@@ -86,7 +94,7 @@ class EvaluationMatchRepository extends ServiceEntityRepository
      * @param Equipe|null $equipe  Si fourni, filtre sur les rencontres de cette équipe.
      * @return EvaluationMatch[]
      */
-    public function evaluationsRecentes(Joueur $joueur, int $limit = 5, ?Equipe $equipe = null): array
+    public function evaluationsRecentes(Joueur $joueur, int $limit = 5, ?Equipe $equipe = null, ?array $sources = null): array
     {
         $qb = $this->createQueryBuilder('e')
             ->join('e.rencontre', 'r')
@@ -98,6 +106,12 @@ class EvaluationMatchRepository extends ServiceEntityRepository
         if ($equipe !== null) {
             $qb->andWhere('r.equipe = :equipe')
                ->setParameter('equipe', $equipe);
+        }
+
+        // [V2.4p] Filtre par provenance (toggle Live/FFBB de la fiche joueuse)
+        if ($sources !== null) {
+            $qb->andWhere('e.source IN (:sources)')
+               ->setParameter('sources', $sources);
         }
 
         return $qb->getQuery()->getResult();

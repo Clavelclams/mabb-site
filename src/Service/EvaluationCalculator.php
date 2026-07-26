@@ -57,9 +57,11 @@ final class EvaluationCalculator
      *     meilleure_eval: int|null,
      * }
      */
-    public function moyennesSaison(Joueur $joueur, string $saison, ?Equipe $equipe = null): array
+    public function moyennesSaison(Joueur $joueur, string $saison, ?Equipe $equipe = null, ?array $sources = null): array
     {
-        $evals = $this->evaluationMatchRepository->evaluationsSaison($joueur, $saison, $equipe);
+        // [V2.4p] $sources : restreint l'agrégat à une provenance (toggle
+        // Live/FFBB de la fiche joueuse). Null = tout, comme avant.
+        $evals = $this->evaluationMatchRepository->evaluationsSaison($joueur, $saison, $equipe, $sources);
         return $this->agreger($evals);
     }
 
