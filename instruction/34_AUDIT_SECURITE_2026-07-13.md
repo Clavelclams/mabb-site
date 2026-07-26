@@ -89,3 +89,93 @@ gère que la navigation, pas les sous-ressources).
   → commit `sec(app): originWhitelist restreinte au domaine` (tsc ✓).
 - Test rapide : 5 logins ratés sur le même email → le 6e doit renvoyer 429 ;
   vérifier les lignes contexte=api dans l'admin des connexions.
+
+---
+---
+
+# Seconde passe — 26 juillet 2026 (surface WEB)
+
+> L'audit du 13/07 portait surtout sur l'API et l'app mobile. Cette passe
+> couvre les trois espaces web. Elle CONTREDIT trois lignes du tableau
+> « ce qui est solide » ci-dessus : elles étaient vraies pour le périmètre
+> examiné alors, fausses en dehors. Corrigées ci-dessous.
+
+## Corrections à apporter au tableau du 13/07
+
+| Ligne du 13/07 | Réalité constatée le 26/07 |
+|---|---|
+| « Isolation / IDOR : systématique » | FAUX côté web PIRB : `PirbMesEnfantsController::ajouter` et `PirbMesParentsController::declarer` faisaient des recherches **sans aucun filtre club**. |
+| « Uploads : liste blanche MIME partout » | FAUX : `CompteController::updateProfil` (avatar vitrine) n'avait **aucune validation**, ni MIME, ni taille, ni extension. |
+| « Secrets : `.env` commité, APP_SECRET vide ✓ » | Vrai pour `.env`, mais **`.env.dev` était versionné avec un vrai secret** (`7dca23…`), sur un dépôt **public**. |
+
+## Ce qui a été trouvé et corrigé le 26/07
+
+### Fuite du fichier nominatif des mineures (critique)
+`PirbMesEnfantsController::ajouter` (GET) interrogeait `joueur` sans filtre
+club. N'importe quel compte connecté, en bouclant `?q=a`, `?q=b`…,
+reconstituait nom, prénom et équipe (donc tranche d'âge) de **toutes les
+joueuses de tous les clubs**. Le POST acceptait en plus n'importe quel
+`joueur_id` : on créait une demande de rattachement parental sur une mineure
+d'un autre club, que le staff validait de bonne foi.
+**Corrigé** : recherche bornée aux clubs de l'utilisateur (sa fiche, ses
+UserClubRole actifs, ses enfants déjà liés), 2 caractères minimum, contrôle
+d'appartenance au POST, refus journalisé, message identique dans tous les cas.
+
+### Fuite des e-mails de la plateforme (critique)
+`PirbMesParentsController::declarer` cherchait dans `user` par e-mail, nom ou
+prénom, **sans jointure club** malgré le docblock qui annonçait le contraire.
+`?q=@` renvoyait les adresses de toute la base : matière première d'une
+campagne d'hameçonnage sur des familles.
+**Corrigé** : membres actifs du club de la joueuse uniquement, recherche par
+e-mail retirée, contrôle d'appartenance au POST (`estMembreDuClub`).
+
+### Upload d'avatar sans contrôle (critique)
+`CompteController::updateProfil` : nom de fichier issu du client, extension
+issue de `guessExtension()` (donc du contenu sniffé). Un fichier HTML ou SVG
+contenant du script passait et atterrissait dans `public/uploads/avatars/`,
+servi sur l'origine `mabb.fr` — donc exécuté avec les sessions vitrine ET
+admin. Exploitable par n'importe quel compte auto-inscrit (inscription
+publique, pas de vérification d'e-mail).
+**Corrigé** : liste blanche MIME → extension imposée, nom entièrement généré
+(`random_bytes`), 2 Mo max.
+
+### Fichiers sensibles dans le dépôt public (critique, hors code)
+`.env.dev` (secret réel), deux PDF de réunion dont un compte rendu
+d'entretien nominatif, et trois dumps SQL contenant des noms de joueuses.
+**Traité** : secret tourné en prod, fichiers retirés du dépôt (commit
+`16b658d`). ⚠️ **RESTE À FAIRE : l'historique git les contient toujours.**
+Passer le dépôt en privé, ou réécrire l'historique.
+
+### Autres correctifs du 26/07
+- `public/uploads/.htaccess` : accès direct fermé par défaut, seules les
+  images d'illustration passent. Bouche l'accès aux justificatifs de
+  trésorerie, PV et feuilles de match, jusqu'ici lisibles par URL devinée
+  (`uniqid()` n'est pas un aléa cryptographique : préfixe temporel déductible).
+- `AdminUploadController` : SVG retiré de la liste blanche (XSS stockée), et
+  `denyAccessUnlessGranted('ROLE_ADMIN')` corrigé en `ROLE_SUPER_ADMIN` — ce
+  rôle n'existe nulle part dans le projet, c'était un contrôle fantôme.
+- `SaisonController` : redirection sur `Referer` brut remplacée par le seul
+  chemin (open redirect utilisable en hameçonnage).
+- `.env` : `APP_ENV=prod` comme défaut sûr (le fichier est public).
+- `security.yaml` : `enable_csrf` ajouté au firewall vitrine (les 3 autres
+  l'avaient), blocs `login_throttling` **préparés mais commentés**.
+
+## Point de vigilance : login_throttling
+Les 4 blocs sont écrits et commentés dans `security.yaml`. Ne PAS les
+décommenter avant : `composer require symfony/rate-limiter`, commit du
+`composer.lock`, puis `composer install --no-dev` **sur le serveur**. Sans le
+composant, le conteneur ne compile plus et tout le site tombe en 500.
+Rappel : `vendor/` n'est pas versionné et le déploiement manuel
+(`fetch + reset --hard`) ne lance PAS composer.
+
+## Reste ouvert après le 26/07
+1. Historique git à purger (ou dépôt privé). **Priorité 1.**
+2. `login_throttling` (voir ci-dessus) : le web reste sans limite de tentatives.
+3. Déplacer les fichiers sensibles hors de `public/` (7 uploaders sur 8), comme
+   `DechargeSortieUploader` le fait déjà. Le `.htaccess` est un pansement.
+4. Contenu CMS rendu en `|raw` sans nettoyage (6 templates) : ajouter
+   `symfony/html-sanitizer`.
+5. En-têtes de sécurité (déjà recommandé le 13/07, toujours absent).
+6. `UserChecker` : un compte désactivé (`isActive=false`) peut toujours se
+   connecter, et ses jetons API survivent à un effacement RGPD.
+7. `uniqid()` → `bin2hex(random_bytes(16))` dans les uploaders restants.
