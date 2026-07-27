@@ -206,7 +206,16 @@ const SEUIL_ORANGE = 0.14; // 14 % de pixels orange dans la boîte : c'est peu, 
 // c'est elle qu'on ajuste avec une parabole.
 let arcVol = [];               // [{x, y, t}]
 let paraboleVol = null;        // le dernier ajustement réussi
-let derniereMetrique = null;   // { angleEntree, angleSortie, apexHauteurM }
+let derniereMetrique = null;   // { angleEntree, angleSortie, apexEnArceaux, coudeLacher, genouxFlexion }
+
+// [v6, 26/07] LE GESTE DU CORPS (le trou du CDC P1 : on mesurait le ballon,
+// pas la joueuse). Deux captures :
+//  - la FLEXION DES GENOUX : le minimum de l'angle des genoux pendant la
+//    PRÉPARATION (l'armé). 180° = jambes raides = pas de puissance ;
+//  - le COUDE AU LÂCHER : photographié pile au passage repos → en_vol.
+//    ~180° = extension complète ; < 150° = bras plié, tir « poussé ».
+let genouxMinPrep = null;      // min de l'angle genoux depuis le dernier tir
+let corpsLacher = null;        // { coude, genoux } capturé au lâcher
 
 // Les 8 zones du serveur (même taxonomie que l'app / ShotChartCalculator).
 const ZONES_ORDRE = ["raquette", "courte_distance", "mi_distance", "3pts_coin_g", "3pts_aile_g", "3pts_haut", "3pts_aile_d", "3pts_coin_d"];
@@ -259,6 +268,29 @@ function estimerZone(arc) {
 // Callouts variés sur panier (la répétition tue le plaisir).
 const CALLOUTS = ["SPLASH !", "Encore !", "Trop propre 😮‍💨", "Money 💰", "Elle est douce."];
 let calloutIdx = 0;
+
+// [Défis, 26/07] LE DÉFI DU JOUR — le CDC en parle depuis le début (« 10
+// tirs d'affilée ») : un objectif NOMMÉ, un par jour (rotation par la date,
+// même défi pour tout le club → on en parle au vestiaire), détecté
+// automatiquement, célébré à l'écran. Aucun serveur : le jeu sait déjà tout.
+const DEFIS_TIR = [
+  { id: "serie3",  texte: "Défi du jour : 3 paniers D'AFFILÉE",        test: () => serie >= 3 },
+  { id: "vol7",    texte: "Défi du jour : 7 paniers dans la séance",   test: () => reussis >= 7 },
+  { id: "arc45",   texte: "Défi du jour : 3 paniers entre 40 et 55°",  test: () => tirsSeance.filter((x) => x.reussi && x.metrique && x.metrique.angleEntree >= 40 && x.metrique.angleEntree <= 55).length >= 3 },
+  { id: "serie5",  texte: "Défi du jour : 5 paniers D'AFFILÉE",        test: () => serie >= 5 },
+  { id: "adresse", texte: "Défi du jour : 50 % d'adresse (10 tirs min)", test: () => tentes >= 10 && reussis / tentes >= 0.5 },
+];
+// Le jour choisit le défi : stable toute la journée, différent demain.
+const defiDuJour = DEFIS_TIR[Math.floor(Date.now() / 86400000) % DEFIS_TIR.length];
+let defiReleve = false;
+
+/** À appeler après chaque décision : le défi se valide tout seul, UNE fois. */
+function verifierDefi(t) {
+  if (defiReleve || !defiDuJour.test()) return;
+  defiReleve = true;
+  flottants.push({ x: canvas.width / 2, y: canvas.height * 0.4, t0: t, texte: "🏅 DÉFI RELEVÉ !", couleur: "245,197,66" });
+  jouer(659, 1046, 0.3); jouer(880, 1318, 0.35, "sine", 0.15); // petite fanfare
+}
 // Temps de vol cumulé (moyenne affichée en fin de séance).
 let volSommeS = 0;
 // Tirs annulés d'affilée (ballon perdu) → on souffle une aide à la joueuse.
@@ -433,7 +465,13 @@ $("stage").addEventListener("click", (e) => {
   if (debutSeance === 0) debutSeance = performance.now();
   phase = "jeu";
   flottants.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 40, t0: performance.now(), texte: "Arceau calé 🎯", couleur: "62,207,142" });
+  annoncerDefi(performance.now()); // [Défis] l'objectif du jour, dès l'entrée en jeu
 });
+
+/** [Défis] L'annonce du défi du jour — au démarrage du jeu, bien visible. */
+function annoncerDefi(t) {
+  flottants.push({ x: canvas.width / 2, y: canvas.height * 0.34, t0: t, texte: defiDuJour.texte, couleur: "245,197,66" });
+}
 
 $("btnRecaler").addEventListener("click", () => {
   if (phase === "jeu") {
@@ -461,6 +499,7 @@ $("btnRejouer").addEventListener("click", () => {
   $("fin").style.display = "none";
   reussis = 0; tentes = 0; serie = 0; meilleureSerie = 0;
   volSommeS = 0; annulesConsecutifs = 0; fantome = null;
+  defiReleve = false; // [Défis] on peut le re-relever à la partie suivante
   tirsSeance = []; // le récap de la partie d'avant ne pollue pas la suivante
   trainee = []; tir = { etat: "repos", depuis: 0 };
   suiveur = creerSuiveur();
@@ -509,10 +548,20 @@ function rate(t, xCross, yCross) {
   const arc = arcRecent(t);
   figerFantome(arc, t, "229,72,77");
   // [v5] Sur un raté, l'angle d'entrée EXPLIQUE souvent le raté. On le dit.
+  // [v6] Et si l'arc était bon mais le CORPS fautif, c'est le corps qu'on
+  // corrige. UN SEUL conseil par tir (le plus probable) : deux conseils à la
+  // fois, c'est zéro conseil retenu.
   if (derniereMetrique && derniereMetrique.angleEntree < 35) {
     flottants.push({
       x: xCross, y: yCross + 26, t0: t,
       texte: `trop tendu (${derniereMetrique.angleEntree}°) — monte l'arc`,
+      couleur: "245,197,66",
+    });
+  } else if (derniereMetrique?.coudeLacher !== null && derniereMetrique?.coudeLacher !== undefined
+    && derniereMetrique.coudeLacher < 150) {
+    flottants.push({
+      x: xCross, y: yCross + 26, t0: t,
+      texte: `bras plié au lâcher (${derniereMetrique.coudeLacher}°) — finis ton extension`,
       couleur: "245,197,66",
     });
   }
@@ -543,6 +592,7 @@ function finDeTir(t) {
       texte: `${tentes} tirs : ${reussis}/${tentes}`, couleur: "245,197,66",
     });
   }
+  verifierDefi(t); // [Défis] chaque tir peut être celui qui relève le défi
   majHud();
 }
 
@@ -567,6 +617,7 @@ function boucle() {
           x: (propo.a.x + propo.b.x) / 2, y: (propo.a.y + propo.b.y) / 2 - 40,
           t0: t, texte: "Arceau trouvé 🎯 (tape pour corriger)", couleur: "62,207,142",
         });
+        annoncerDefi(t); // [Défis] l'objectif du jour, dès l'entrée en jeu
       }
       dessinerCalibration(t);
     } else if (phase === "jeu") {
@@ -672,6 +723,14 @@ function avancerTir(t) {
   const segmentValide = cur.t - prev.t < SEGMENT_VALIDE_MS;
 
   if (tir.etat === "repos") {
+    // [v6] Pendant la PRÉPARATION, on suit la flexion des genoux : le minimum
+    // atteint avant le lâcher = la vraie flexion de l'armé. (Cadence pose :
+    // ~8 Hz, largement assez pour attraper le point bas d'une flexion.)
+    if (pose.disponible) {
+      const g = pose.angleGenoux();
+      if (g !== null) genouxMinPrep = genouxMinPrep === null ? g : Math.min(genouxMinPrep, g);
+    }
+
     // [v5] LE LÂCHER. Avant : « le ballon a franchi une ligne », grossier et
     // tardif — on ratait le début de l'arc, donc la parabole était fausse.
     // Maintenant : dès que la pose voit un poignet AU-DESSUS de l'épaule avec
@@ -688,6 +747,13 @@ function avancerTir(t) {
       tir = { etat: "en_vol", depuis: t };
       arcVol = [];       // on repart d'un arc vierge : c'est LUI qu'on ajustera
       paraboleVol = null;
+      // [v6] Photo du CORPS à l'instant du lâcher : le coude maintenant,
+      // les genoux = le minimum accumulé pendant la préparation.
+      corpsLacher = {
+        coude: pose.disponible ? (pose.angleCoudeTir()?.angle ?? null) : null,
+        genoux: genouxMinPrep,
+      };
+      genouxMinPrep = null; // la préparation du PROCHAIN tir repart à neuf
     }
     return;
   }
@@ -773,10 +839,19 @@ function calculerMetriques(t) {
   // pas : c'est un ajustement raté. On jette plutôt que de publier une bêtise.
   if (!(angleEntree > 12 && angleEntree < 80)) return null;
 
+  // [v6] Le corps au lâcher, borné au plausible (un coude « à 40° » au lâcher
+  // est une erreur de pose, pas un bras : on jette plutôt que d'inquiéter).
+  const coude = corpsLacher && corpsLacher.coude !== null
+    && corpsLacher.coude >= 90 && corpsLacher.coude <= 185 ? corpsLacher.coude : null;
+  const genoux = corpsLacher && corpsLacher.genoux !== null
+    && corpsLacher.genoux >= 70 && corpsLacher.genoux <= 180 ? corpsLacher.genoux : null;
+
   return {
     angleEntree: Math.round(angleEntree),
     angleSortie: Math.round(angleSortie),
     apexEnArceaux: Math.round(apexEnArceaux * 10) / 10,
+    coudeLacher: coude,     // [v6] 180 = extension complète
+    genouxFlexion: genoux,  // [v6] plus petit = plus fléchi
   };
 }
 
@@ -978,8 +1053,33 @@ function finirSeance() {
     conseil += " (mesure à l'écran : filme de profil pour qu'elle soit juste)";
   }
 
+  // [v6] LE GESTE DU CORPS au débrief — le trou du CDC P1 comblé : on ne
+  // parle plus seulement du ballon, on parle de la joueuse. Un conseil par
+  // axe, seulement si on a assez de mesures pour ne pas dire de bêtise.
+  const coudes = tirsSeance.map((x) => x.metrique?.coudeLacher).filter((a) => typeof a === "number");
+  if (coudes.length >= 3) {
+    const moyCoude = Math.round(coudes.reduce((s, a) => s + a, 0) / coudes.length);
+    conseil += moyCoude < 155
+      ? ` Coude au lâcher : ${moyCoude}° en moyenne — extension incomplète. Finis ton bras, casse le poignet vers le panier.`
+      : ` Coude au lâcher : ${moyCoude}° — belle extension, garde-la.`;
+  }
+  const genoux = tirsSeance.map((x) => x.metrique?.genouxFlexion).filter((a) => typeof a === "number");
+  if (genoux.length >= 3) {
+    const moyGenoux = Math.round(genoux.reduce((s, a) => s + a, 0) / genoux.length);
+    if (moyGenoux > 150) {
+      conseil += ` Genoux : ${moyGenoux}° — jambes raides. La puissance vient d'en bas : fléchis, monte avec les jambes.`;
+    }
+  }
+
+  // [Défis] Le sort du défi du jour, dit clairement dans les deux cas.
+  const ligneDefi = tentes > 0
+    ? (defiReleve
+        ? " 🏅 Défi du jour RELEVÉ !"
+        : ` Défi du jour manqué (${defiDuJour.texte.replace("Défi du jour : ", "")}) — retente tout de suite.`)
+    : "";
+
   $("finDetail").textContent = tentes > 0
-    ? `Meilleure série : ${meilleureSerie}.${volMoyen}${conseil}${ligneRecord} Réussi/raté : compté par la caméra, pas modifiable.`
+    ? `Meilleure série : ${meilleureSerie}.${volMoyen}${conseil}${ligneDefi}${ligneRecord} Réussi/raté : compté par la caméra, pas modifiable.`
     : "Vérifie que l'arceau est bien calé et que tes tirs sont dans le cadre.";
 
   // [Recap v4] Le debrief AVANT l'envoi : la séance ne part qu'au tap sur
@@ -1019,10 +1119,16 @@ function construireRecap() {
     const angHtml = typeof ang === "number"
       ? `<span style="color:${ang >= 38 && ang <= 55 ? "#3ECF8E" : "#F5C542"};font-weight:800;font-size:13px">${ang}°</span>`
       : `<span style="color:var(--muted);font-size:12px">–</span>`;
+    // [v6] Le coude au lâcher, discret à côté de l'angle d'entrée : « c172° ».
+    // Vert = extension complète (≥155°), jaune = bras plié.
+    const coude = tirS.metrique?.coudeLacher;
+    const coudeHtml = typeof coude === "number"
+      ? `<span style="color:${coude >= 155 ? "#3ECF8E" : "#F5C542"};font-size:11.5px">c${coude}°</span>`
+      : "";
     row.innerHTML =
       `<span style="color:var(--muted)">Tir ${i + 1}</span>` +
       `<span class="res" style="color:${tirS.reussi ? "#3ECF8E" : "#E5484D"}">${tirS.reussi ? "✅" : "❌"}</span>` +
-      angHtml +
+      angHtml + coudeHtml +
       `<span class="zoneNom" id="zn${i}">${ZONE_NOMS[tirS.zone]}</span>` +
       `<button class="zoneBtn" data-i="${i}" data-d="-1">◀</button>` +
       `<button class="zoneBtn" data-i="${i}" data-d="1">▶</button>`;

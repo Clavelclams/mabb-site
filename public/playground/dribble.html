@@ -280,12 +280,45 @@ $("btn").addEventListener("click", async () => {
 
 $("btnRejouer").addEventListener("click", () => { $("fin").style.display = "none"; lancerPartie(); });
 
+// [v6, 26/07] LE CORPS AU SERVICE DU JEU — deux nouveautés :
+//  1. Main gauche / main droite : au rebond, la main la plus proche du ballon
+//     est celle qui dribble. En fin de partie : « 72 % main droite — bosse ta
+//     gauche ». LE conseil de coach du dribble.
+//  2. Dribbles HAUTS : le SOMMET du rebond (pas le point bas, qui est
+//     toujours au sol) comparé à la hanche. Au-dessus de la hanche = ballon
+//     offert au vol. On compte, on conseille.
+let rebondsG = 0, rebondsD = 0, rebondsHauts = 0;
+let sommetDepuisRebond = null; // y le plus HAUT (min) du ballon depuis le dernier rebond
+
+// [Défis, 26/07] LE DÉFI DU JOUR — même mécanique que le tir : un objectif
+// nommé, choisi par la date (même défi pour tout le club aujourd'hui),
+// détecté tout seul, célébré. Le défi « main faible » n'existe QUE grâce à
+// la v6 (comptage des mains) : le jeu devient un exercice déguisé.
+const DEFIS_DRIBBLE = [
+  { id: "niveau4", texte: "Défi du jour : atteins le NIVEAU 4",                 test: () => niveau >= 4 },
+  { id: "mains",   texte: "Défi du jour : 40 % de ta main faible (10 rebonds min)", test: () => { const tot = rebondsG + rebondsD; return tot >= 10 && Math.min(rebondsG, rebondsD) / tot >= 0.4; } },
+  { id: "volume",  texte: "Défi du jour : 80 dribbles dans la partie",          test: () => dribbles >= 80 },
+  { id: "hits",    texte: "Défi du jour : 20 cibles touchées",                  test: () => hits >= 20 },
+  { id: "bas",     texte: "Défi du jour : dribble BAS (moins de 10 % au-dessus de la hanche, 20 rebonds min)", test: () => { const tot = rebondsG + rebondsD; return tot >= 20 && rebondsHauts / tot < 0.1; } },
+];
+const defiDuJour = DEFIS_DRIBBLE[Math.floor(Date.now() / 86400000) % DEFIS_DRIBBLE.length];
+let defiReleve = false, defiAnnonce = false;
+
+function verifierDefi(t) {
+  if (defiReleve || !defiDuJour.test()) return;
+  defiReleve = true;
+  flottants.push({ x: canvas.width / 2, y: canvas.height * 0.4, t0: t, texte: "🏅 DÉFI RELEVÉ !" });
+  jouer(659, 1046, 0.3); jouer(880, 1318, 0.35, "sine", 0.15); // petite fanfare
+}
+
 function lancerPartie() {
   enJeu = true; niveau = 1; score = 0; hits = 0; apparues = 0;
   cibles = []; flottants = []; pointPrec = null;
   // [v5] Le compteur de dribbles repart à zéro (sinon la cadence de la partie
   // précédente polluerait celle-ci).
   dribbles = 0; dernierRebondA = 0; yPrec = null; descendait = false;
+  rebondsG = 0; rebondsD = 0; rebondsHauts = 0; sommetDepuisRebond = null; // [v6]
+  defiReleve = false; defiAnnonce = false; // [Défis] re-tentable à chaque partie
   // Entrée en jeu : plein écran, menu fermé, et on demande le PAYSAGE à l'app.
   document.body.classList.add("jeu-actif");
   document.body.classList.remove("fin-active", "menu-ouvert");
@@ -300,6 +333,42 @@ function lancerPartie() {
 // ---------- Cibles ---------------------------------------------------------------
 function faireApparaitre(t) {
   const R = 0.085 * Math.min(canvas.width, canvas.height);
+
+  // [v6] LES CIBLES APPARAISSENT AUTOUR DE LA JOUEUSE, plus au hasard dans
+  // le cadre. Avant : spawn aléatoire → des cibles dans le décor, derrière
+  // elle, ou hors de portée — frustrant et injouable selon le cadrage.
+  // Maintenant : si la pose voit le corps, la cible se pose à distance de
+  // DRIBBLE (0,45 m à 1,05 m du buste, l'échelle vient des épaules), sous
+  // le niveau des épaules (un dribble se travaille en bas), dans le cadre.
+  // La pose donne des coordonnées BRUTES → miroir pour l'affichage.
+  const corps = pose.corps;
+  if (corps?.centre) {
+    const cxAff = canvas.width - corps.centre.x; // miroir
+    const cyAff = corps.centre.y;
+    const epauleY = Math.min(corps.epauleG?.y ?? Infinity, corps.epauleD?.y ?? Infinity);
+    const ppm = corps.pxParMetre; // px par mètre, mesuré SUR la joueuse
+    const dMin = ppm ? ppm * 0.45 : canvas.width * 0.14;
+    const dMax = ppm ? ppm * 1.05 : canvas.width * 0.3;
+
+    // Jusqu'à 10 tirages : le premier candidat visible, atteignable et
+    // sous les épaules gagne. Sinon on retombe sur l'ancien spawn (mieux
+    // vaut une cible imparfaite que pas de cible).
+    for (let essai = 0; essai < 10; essai++) {
+      const ang = Math.random() * Math.PI * 2;
+      const dist = dMin + Math.random() * (dMax - dMin);
+      const x = cxAff + Math.cos(ang) * dist;
+      const y = cyAff + Math.sin(ang) * dist;
+      const dansCadre = x > R && x < canvas.width - R && y > R && y < canvas.height - R;
+      const sousEpaules = !isFinite(epauleY) || y > epauleY;
+      if (dansCadre && sousEpaules) {
+        cibles.push({ x, y, r: R, neeA: t, dureeMs: configNiveau(niveau).dureeMs, etat: "live", hitA: 0 });
+        apparues++;
+        return;
+      }
+    }
+  }
+
+  // Repli (pas de corps détecté, ou aucun candidat valable) : l'ancien spawn.
   cibles.push({
     x: (0.14 + Math.random() * 0.72) * canvas.width,
     y: (0.2 + Math.random() * 0.62) * canvas.height,
@@ -321,6 +390,7 @@ function toucher(cible, t) {
     flottants.push({ x: canvas.width / 2, y: canvas.height / 2, t0: t, texte: `NIVEAU ${niveau} !` });
     sonNiveau();
   }
+  verifierDefi(t); // [Défis] chaque cible touchée peut relever le défi
   majHud();
 }
 
@@ -347,6 +417,13 @@ function boucle() {
         ctx.textAlign = "left";
         requestAnimationFrame(boucle);
         return;
+      }
+
+      // [Défis] L'annonce, juste après le décompte (pas pendant : l'écran
+      // du décompte doit rester vide de tout parasite).
+      if (!defiAnnonce) {
+        defiAnnonce = true;
+        flottants.push({ x: canvas.width / 2, y: canvas.height * 0.3, t0: t, texte: defiDuJour.texte });
       }
 
       const reste = Math.max(0, Math.ceil((finAu - t) / 1000));
@@ -446,6 +523,11 @@ function boucle() {
       // d'au moins REBOND_MIN_MS du précédent.
       if (balleActive) {
         const y = balleVue.by;
+        // [v6] Le SOMMET du rebond en cours : le point le plus HAUT atteint
+        // par le ballon depuis le dernier rebond (y minimum à l'écran).
+        // C'est LUI qui dit si le dribble est haut, pas le point bas
+        // (le point bas est toujours au sol).
+        sommetDepuisRebond = sommetDepuisRebond === null ? y : Math.min(sommetDepuisRebond, y);
         if (yPrec !== null) {
           const descendMaintenant = y > yPrec + 1.5;
           const remonteMaintenant = y < yPrec - 1.5;
@@ -455,6 +537,21 @@ function boucle() {
             if (enBas && t - dernierRebondA > REBOND_MIN_MS) {
               dribbles++;
               dernierRebondA = t;
+
+              // [v6] QUELLE MAIN ? La main la plus proche du ballon au
+              // moment du rebond est celle qui dribble. La pose travaille
+              // en coordonnées BRUTES → on dé-miroir la position du ballon.
+              const main = pose.mainProche(canvas.width - balleVue.bx, y);
+              if (main) (main.cote === "G" ? rebondsG++ : rebondsD++);
+
+              // [v6] DRIBBLE HAUT ? Sommet du rebond précédent au-dessus de
+              // la hanche = ballon exposé (au défenseur de le prendre).
+              const hy = pose.hancheY();
+              if (hy !== null && sommetDepuisRebond !== null && sommetDepuisRebond < hy) {
+                rebondsHauts++;
+              }
+              sommetDepuisRebond = null; // le prochain rebond repart à neuf
+              verifierDefi(t); // [Défis] les défis mains/volume/bas se jouent au rebond
             }
             descendait = false;
           }
@@ -507,6 +604,11 @@ function boucle() {
       ctx.fillStyle = "rgba(255,255,255,0.75)";
       ctx.font = "600 14px system-ui";
       ctx.fillText(`${dribbles} dribbles · ${cadence.toFixed(1)}/s`, 42, 56);
+      // [v6] La répartition des mains, en direct : la joueuse VOIT qu'elle
+      // n'utilise que sa main forte — c'est déjà la moitié de la correction.
+      if (rebondsG + rebondsD >= 4) {
+        ctx.fillText(`G ${rebondsG} · D ${rebondsD}`, 42, 76);
+      }
 
       // Le squelette : MIROIR ici (caméra frontale, image inversée) — la pose
       // travaille sur la vidéo brute, l'affichage est retourné.
@@ -575,10 +677,35 @@ function finirPartie() {
     $("finNiveau").textContent = `Niveau ${niveau} atteint`;
   }
 
+  // [v6] LE CONSEIL DE COACH du dribble : la main faible et la hauteur.
+  // Seulement avec assez de rebonds mesurés (≥ 10) — jamais de leçon sur
+  // trois dribbles.
+  let conseil = "";
+  const totalMains = rebondsG + rebondsD;
+  if (totalMains >= 10) {
+    const pctD = Math.round((rebondsD / totalMains) * 100);
+    const pctFort = Math.max(pctD, 100 - pctD);
+    if (pctFort >= 70) {
+      const forte = pctD >= 50 ? "droite" : "gauche";
+      const faible = pctD >= 50 ? "gauche" : "droite";
+      conseil += ` ${pctFort}% main ${forte} — ta main ${faible} attend sa chance, fais-la bosser.`;
+    } else {
+      conseil += ` Belle répartition des deux mains (${100 - pctD}% G / ${pctD}% D).`;
+    }
+    if (rebondsHauts / totalMains >= 0.3) {
+      conseil += " Et dribble plus BAS : sous la hanche, le ballon est à toi ; au-dessus, il est à tout le monde.";
+    }
+  }
+
+  // [Défis] Le sort du défi du jour, dit clairement.
+  const ligneDefi = defiReleve
+    ? " 🏅 Défi du jour RELEVÉ !"
+    : ` Défi du jour manqué (${defiDuJour.texte.replace("Défi du jour : ", "")}) — retente tout de suite.`;
+
   // Dans l'app : on annonce l'enregistrement (récompense visible = boucle
   // d'engagement qui se referme). Hors app : pas de promesse.
   const dansApp = typeof window.ReactNativeWebView !== "undefined";
-  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%).${ligneRecord} Compté par la caméra, pas par toi.`
+  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%).${ligneRecord}${conseil}${ligneDefi} Compté par la caméra, pas par toi.`
     + (dansApp ? " Séance enregistrée dans ton Playground ✓" : "");
   $("fin").style.display = "flex";
   // Fin de partie : on rend la main à l'app (retour PORTRAIT + header réaffiché

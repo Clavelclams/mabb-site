@@ -48,7 +48,26 @@ const EPAULE_G = 11, EPAULE_D = 12;
 const COUDE_G = 13, COUDE_D = 14;
 const POIGNET_G = 15, POIGNET_D = 16;
 const HANCHE_G = 23, HANCHE_D = 24;
+const GENOU_G = 25, GENOU_D = 26;   // [v6] pour la flexion des genoux au tir
 const CHEVILLE_G = 27, CHEVILLE_D = 28;
+
+/**
+ * [v6, 26/07] L'angle ARTICULAIRE au point b, formé par les segments b→a et
+ * b→c, en degrés (0-180). C'est LA brique des angles du corps :
+ *   angle3(épaule, coude, poignet)  = l'angle du coude (180° = bras tendu)
+ *   angle3(hanche, genou, cheville) = l'angle du genou (180° = jambe tendue)
+ * Rappel honnête (même limite que la parabole) : ce sont des angles À
+ * L'ÉCRAN. Filmé de profil ils sont proches du réel ; de biais, ils dérivent.
+ */
+export function angle3(a, b, c) {
+  if (!a || !b || !c) return null;
+  const v1x = a.x - b.x, v1y = a.y - b.y;
+  const v2x = c.x - b.x, v2y = c.y - b.y;
+  const n1 = Math.hypot(v1x, v1y), n2 = Math.hypot(v2x, v2y);
+  if (n1 < 6 || n2 < 6) return null; // segments trop courts : angle non fiable
+  const cos = Math.max(-1, Math.min(1, (v1x * v2x + v1y * v2y) / (n1 * n2)));
+  return (Math.acos(cos) * 180) / Math.PI;
+}
 
 const VISIBILITE_MIN = 0.5;     // en dessous, le point est deviné : on ne s'y fie pas
 const CADENCE_MS = 120;         // ~8 analyses par seconde : le corps ne va pas plus vite
@@ -159,6 +178,7 @@ export function creerPose() {
       coudeG: px(COUDE_G), coudeD: px(COUDE_D),
       poignetG: px(POIGNET_G), poignetD: px(POIGNET_D),
       hancheG: haG, hancheD: haD,
+      genouG: px(GENOU_G), genouD: px(GENOU_D), // [v6] flexion des genoux
       chevilleG: px(CHEVILLE_G), chevilleD: px(CHEVILLE_D),
       pxParMetre,
       // Le centre du buste : le point le plus stable du corps, celui qui
@@ -224,6 +244,66 @@ export function creerPose() {
     return false;
   }
 
+  /**
+   * [v6] L'angle du COUDE du bras qui tire — le bras « qui tire » = celui
+   * dont le poignet est le plus HAUT (au lâcher, c'est sans ambiguïté).
+   * 180° = bras tendu (belle extension), < 150° = bras plié (tir poussé,
+   * souvent court). Retourne { cote: 'G'|'D', angle } ou null.
+   */
+  function angleCoudeTir() {
+    if (!corps) return null;
+    const bras = [
+      { cote: "G", e: corps.epauleG, c: corps.coudeG, p: corps.poignetG },
+      { cote: "D", e: corps.epauleD, c: corps.coudeD, p: corps.poignetD },
+    ].filter((b) => b.e && b.c && b.p);
+    if (bras.length === 0) return null;
+    // y augmente vers le bas : le poignet le plus haut = y le plus petit.
+    bras.sort((a, b) => a.p.y - b.p.y);
+    const a = angle3(bras[0].e, bras[0].c, bras[0].p);
+    return a === null ? null : { cote: bras[0].cote, angle: Math.round(a) };
+  }
+
+  /**
+   * [v6] La flexion des GENOUX : moyenne des angles hanche-genou-cheville
+   * des jambes visibles. 180° = jambes tendues (raides), ~120-140° = vraie
+   * flexion de tir. Retourne un angle en degrés, ou null.
+   */
+  function angleGenoux() {
+    if (!corps) return null;
+    const angles = [
+      angle3(corps.hancheG, corps.genouG, corps.chevilleG),
+      angle3(corps.hancheD, corps.genouD, corps.chevilleD),
+    ].filter((a) => a !== null);
+    if (angles.length === 0) return null;
+    return Math.round(angles.reduce((s, a) => s + a, 0) / angles.length);
+  }
+
+  /**
+   * [v6] Quelle MAIN est la plus proche d'un point (repère vidéo brute) ?
+   * Sert au dribble : au moment du rebond, la main la plus proche du ballon
+   * est celle qui dribble → on compte main gauche vs main droite. G/D sont
+   * les côtés RÉELS de la joueuse (le modèle les connaît), indépendamment
+   * du miroir d'affichage. Retourne { cote: 'G'|'D', dist } ou null.
+   */
+  function mainProche(x, y) {
+    if (!corps) return null;
+    let res = null;
+    for (const [cote, p] of [["G", corps.poignetG], ["D", corps.poignetD]]) {
+      if (!p) continue;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (!res || d < res.dist) res = { cote, dist: d };
+    }
+    return res;
+  }
+
+  /** [v6] La hauteur de hanche (y moyen des hanches visibles), ou null. */
+  function hancheY() {
+    if (!corps) return null;
+    const hs = [corps.hancheG, corps.hancheD].filter(Boolean);
+    if (hs.length === 0) return null;
+    return hs.reduce((s, h) => s + h.y, 0) / hs.length;
+  }
+
   /** Distance joueuse → point, en MÈTRES (via l'échelle du corps). null si inconnue. */
   function distanceMetres(point) {
     if (!corps?.centre || !corps.pxParMetre || !point) return null;
@@ -268,6 +348,10 @@ export function creerPose() {
     balleAElle,
     estEnPositionDeTir,
     distanceMetres,
+    angleCoudeTir,   // [v6]
+    angleGenoux,     // [v6]
+    mainProche,      // [v6]
+    hancheY,         // [v6]
     dessiner,
     get corps() { return corps; },
     get disponible() { return actif && !coupe; },
