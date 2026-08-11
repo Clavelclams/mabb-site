@@ -11,3 +11,18 @@ dossier `instruction/` qui font foi, en particulier :
 - `02_ROADMAP_GLOBALE`, `06_REGISTRE_TECHNIQUE`, `07_REGISTRE_SECURITE_RGPD`, `09_BACKLOG`
 
 Rien n'est supprimé ici : on range, on ne jette pas.
+
+## Ajouts du 04/08/2026
+
+| Fichier | Pourquoi il est ici |
+|---|---|
+| `PHASE1_README.md` | Guide d'implémentation de mars (« fichiers à copier ») — la phase 1 est livrée depuis longtemps |
+| `12_TEMPLATE_PROMPTS_IA.md` | Templates de février, remplacés par `PROMPT_DEV_COLLABORATEUR.md` |
+| `16_INSPIRATION_VEA_MANAGER.md` | Notes d'inspiration de mai, absorbées dans le produit |
+
+Supprimés (et non archivés) le même jour, car sans valeur historique :
+- `13_CLAUDE_LOG.md.tmp_marker` — fichier temporaire oublié
+- `37_INVENTAIRE_FONCTIONNALITES_2026-07-26.md` — doublon strict du `36_INVENTAIRE`
+  (deux sessions parallèles ont produit le même inventaire ; celui de la 36 est plus
+  complet, avec les marqueurs d'état). Le numéro 37 a été réattribué au doc du toggle
+  Stats Live / FFBB, qui portait par erreur un second « 36 ».
