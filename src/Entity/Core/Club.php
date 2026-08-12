@@ -57,6 +57,18 @@ class Club
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $siteWeb = null;
 
+    /**
+     * [VC-8 13/08/2026] Identité visuelle du club, appliquée par l'app
+     * Venaball Club (et à terme les espaces web). Format « #RRGGBB ».
+     * Null = les couleurs MABB par défaut (orange #FC702A, bleu #0062A8).
+     * Modifiables par le DIRIGEANT du club — chaque club a son maillot.
+     */
+    #[ORM\Column(length: 7, nullable: true)]
+    private ?string $couleurPrimaire = null;
+
+    #[ORM\Column(length: 7, nullable: true)]
+    private ?string $couleurSecondaire = null;
+
     // ── Multi-club : création & officialisation ──────────────────────────
     public const DISCIPLINE_FEMININ  = 'feminin';
     public const DISCIPLINE_MASCULIN = 'masculin';
@@ -227,6 +239,35 @@ class Club
     public function getLogoPath(): ?string
     {
         return $this->logoPath;
+    }
+
+    /** Format attendu « #RRGGBB » — validé au setter, jamais de CSS libre. */
+    public function getCouleurPrimaire(): ?string { return $this->couleurPrimaire; }
+    public function setCouleurPrimaire(?string $c): static
+    {
+        $this->couleurPrimaire = $this->normaliserCouleur($c);
+        return $this;
+    }
+
+    public function getCouleurSecondaire(): ?string { return $this->couleurSecondaire; }
+    public function setCouleurSecondaire(?string $c): static
+    {
+        $this->couleurSecondaire = $this->normaliserCouleur($c);
+        return $this;
+    }
+
+    /**
+     * [VC-8] Une couleur de club est un hex strict ou rien. On refuse tout
+     * le reste : ces valeurs finissent dans des feuilles de style et des
+     * écrans mobiles — pas question d'y laisser passer du contenu libre.
+     */
+    private function normaliserCouleur(?string $c): ?string
+    {
+        if ($c === null || trim($c) === '') {
+            return null;
+        }
+        $c = strtoupper(trim($c));
+        return preg_match('/^#[0-9A-F]{6}$/', $c) === 1 ? $c : null;
     }
 
     public function setLogoPath(?string $logoPath): static

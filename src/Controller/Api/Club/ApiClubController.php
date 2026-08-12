@@ -60,6 +60,47 @@ abstract class ApiClubController extends AbstractController
         $this->clubRepository = $clubRepository;
     }
 
+    protected \App\Repository\Sport\EquipeRepository $equipeRepositorySocle;
+
+    #[Required]
+    public function setEquipeRepositorySocle(\App\Repository\Sport\EquipeRepository $r): void
+    {
+        $this->equipeRepositorySocle = $r;
+    }
+
+    /**
+     * [VC-8 bugfix] La saison à utiliser pour les ÉQUIPES de ce club.
+     *
+     * Le bug trouvé par Clavel : la saison active est 2026-2027 (bascule au
+     * 1er juillet), mais le passage de saison n'a pas encore été appliqué —
+     * les équipes du club sont toujours en 2025-2026. L'API cherchait des
+     * équipes 2026-2027, en trouvait zéro, et concluait « pas de vue coach ».
+     *
+     * Règle : la saison active si elle a des équipes, sinon la plus récente
+     * qui en a. L'app montre TOUJOURS quelque chose de vrai, et le jour où
+     * le passage de saison est appliqué, elle bascule toute seule.
+     */
+    protected function saisonAvecEquipes(Club $club, string $saisonActive): string
+    {
+        $nb = $this->equipeRepositorySocle->count([
+            'club' => $club, 'saison' => $saisonActive, 'isActive' => true,
+        ]);
+        if ($nb > 0) {
+            return $saisonActive;
+        }
+
+        // La plus récente saison du club qui a des équipes actives.
+        // Le format AAAA-AAAA se trie alphabétiquement = chronologiquement.
+        $saisons = $this->equipeRepositorySocle->saisonsDisponibles($club);
+        rsort($saisons);
+        foreach ($saisons as $s) {
+            if (is_string($s) && $s !== '') {
+                return $s;
+            }
+        }
+        return $saisonActive;
+    }
+
     /**
      * [VC-7 bugfix] Le super-admin n'a AUCUN UserClubRole : sur le web, le
      * ClubVoter le court-circuite, mais cette API raisonnait uniquement en

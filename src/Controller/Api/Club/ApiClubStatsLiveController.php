@@ -212,7 +212,8 @@ final class ApiClubStatsLiveController extends ApiClubController
         $estDirigeant = in_array(\App\Entity\Core\UserClubRole::ROLE_DIRIGEANT, $roles, true)
             || in_array('ROLE_SUPER_ADMIN', $user->getRoles(), true);
 
-        $saison = $this->saisonService->getSaisonActive();
+        // [VC-8] Même repli de saison que partout ailleurs.
+        $saison = $this->saisonAvecEquipes($club, $this->saisonService->getSaisonActive());
 
         if ($estDirigeant) {
             $equipes = $this->equipeRepository->findBy(['club' => $club, 'saison' => $saison, 'isActive' => true]);

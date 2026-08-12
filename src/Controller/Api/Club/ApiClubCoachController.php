@@ -59,7 +59,9 @@ final class ApiClubCoachController extends ApiClubController
         $club = $this->clubCourant($request);
         $this->exigerEncadrement($club);
 
-        $saison = $this->saisonService->getSaisonActive();
+        // [VC-8] Repli : la saison active si elle a des équipes, sinon la
+        // dernière qui en a (passage de saison pas encore appliqué).
+        $saison = $this->saisonAvecEquipes($club, $this->saisonService->getSaisonActive());
         $equipes = $this->equipesAccessibles($this->utilisateur(), $club, $saison);
 
         $sortie = [];
@@ -101,7 +103,7 @@ final class ApiClubCoachController extends ApiClubController
         $club = $this->clubCourant($request);
         $this->exigerEncadrement($club);
 
-        $saison = $this->saisonService->getSaisonActive();
+        $saison = $this->saisonAvecEquipes($club, $this->saisonService->getSaisonActive());
         $equipes = $this->equipesAccessibles($this->utilisateur(), $club, $saison);
 
         // Whitelist des équipes : c'est ELLE qui borne la requête, jamais un

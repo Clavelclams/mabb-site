@@ -101,13 +101,23 @@ final class ApiClubMoiController extends ApiClubController
         $clubs = [];
         foreach ($parClub as $entree) {
             $club = $entree['club'];
-            $vues = $this->vuesDisponibles($user, $club, $entree['roles'], $saison);
+            // [VC-8] Saison des ÉQUIPES : l'active si elle en a, sinon la plus
+            // récente qui en a (passage de saison pas encore appliqué).
+            $saisonClub = $this->saisonAvecEquipes($club, $saison);
+            $vues = $this->vuesDisponibles($user, $club, $entree['roles'], $saisonClub);
             $clubs[] = [
                 'id'     => $club->getId(),
                 'nom'    => $club->getNom(),
                 'roles'  => $entree['roles'],
                 'vues'   => $vues,
                 'courant' => $club->getId() === $clubCourant->getId(),
+                // [VC-8] L'identité visuelle du club : personnalisable par le
+                // dirigeant (à terme), MABB par défaut. L'app applique ces
+                // couleurs à son thème — même DA que le site du club.
+                'couleurs' => [
+                    'primaire'   => $club->getCouleurPrimaire() ?? '#FC702A',
+                    'secondaire' => $club->getCouleurSecondaire() ?? '#0062A8',
+                ],
             ];
         }
 
