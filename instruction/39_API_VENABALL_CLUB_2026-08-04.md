@@ -168,11 +168,40 @@ présentation** aux visiteurs anonymes (`templates/manager/decouvrir.html.twig`,
 Route `^/$` passée en PUBLIC_ACCESS sur les deux hosts ; les connectés vont
 tout droit à leur dashboard, rien ne change pour eux.
 
+## VC-6 / VCA-5 — La saisie Stats Live NATIVE ✅ (première version)
+
+Le pari Easy Stats, tenu : **deux taps par action** sur téléphone.
+
+**API** (`ApiClubSaisieController`) — le miroir Bearer de la saisie web :
+`GET /saisie` (tout l'état : effectif convoqué ou équipe, points, présences,
+score, session courante, dernières actions), `POST /saisie/action`,
+`DELETE /saisie/action/{id}` (uniquement SA session), `POST /saisie/terrain`
+(entrée/sortie → minutes réelles), `POST /saisie/score-adverse`,
+`POST /saisie/terminer` (session COMPLETE → part dans « à valider »).
+Les sessions passent par `SessionStatsLivePromoteur`, le même service que le
+web : chaque saisisseur a la sienne, la validation (VC-5) reste le juge.
+
+**App** (`app/saisie/[id].tsx`) — le flux : grille joueuses (numéro énorme,
+points, fautes ; les 5 sur le terrain d'abord) → tap → grille de GROSSES
+touches d'action colorées par famille (vert marqué, rouge raté, bleu jeu,
+or fautes) → retour automatique. Bandeau « Annuler la dernière action »
+permanent. Chrono local tolérant (tap start/pause, sélecteur de période),
+score adverse +1/+2/+3, **appui long = entrée/sortie du terrain** (le geste
+rare a le geste lent). Fermer l'app en plein match et revenir : l'état est
+au serveur.
+
+**La boucle complète tient dans un téléphone** : convoquer → saisir →
+terminer → valider → les stats arrivent chez les joueuses.
+
+**Assumé pour plus tard** : le mode hors-ligne (file d'attente locale
+d'actions — les gymnases captent mal ; aujourd'hui un échec réseau propose
+« Réessayer », rien n'est perdu silencieusement mais rien n'est mis en
+file), le shot chart au doigt (le serveur accepte déjà positionX/Y), et le
+paysage tablette.
+
 ## Suite prévue
 
-- **VCA-5** : saisie Stats Live NATIVE sur téléphone (le chantier phare) —
-  maquette du flux d'abord, puis mode hors-ligne à évaluer (les gymnases
-  captent mal).
+- **VCA-6** : mode hors-ligne de la saisie (file d'attente + resynchro).
 - **VC-4** : pointage de séance.
 - **VC-5** : rappel au coach des sessions Stats Live non validées (voir doc 38
   point 11 : aucune session n'a jamais été promue en production, donc aucune
