@@ -181,6 +181,15 @@ composer install
 cp .env .env.local          # puis renseigner DATABASE_URL et APP_SECRET
 php bin/console doctrine:migrations:migrate
 ```
+
+⚠️ **Piège : mettre `APP_ENV=dev` dans `.env.local`.** Depuis le 26/07, le `.env`
+versionné porte `APP_ENV=prod` — c'est volontaire (le fichier est public : si
+`.env.local` venait à manquer sur le serveur, on ne veut surtout pas basculer en
+mode dev avec le profiler exposé). Conséquence : **sans cette ligne, ta machine
+locale tourne en mode production** — pas de profiler, pas de rechargement du
+conteneur, et des erreurs déroutantes du type
+« You have requested a non-existent parameter "app.host_domain" » quand le cache
+prod est périmé. Si ça t'arrive : ajoute `APP_ENV=dev`, puis `cache:clear`.
 Ajouter dans `/etc/hosts` (ou `C:\Windows\System32\drivers\etc\hosts`) :
 ```
 127.0.0.1  manager.localhost  pirb.localhost

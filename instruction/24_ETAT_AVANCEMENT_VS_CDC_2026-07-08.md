@@ -1,10 +1,49 @@
 # 24 — État d'avancement vs CDC fonctionnel V1
 
-> Créé le 2026-07-08. **Maintenu — dernière mise à jour : 2026-07-13** (après lecture
-> intégrale du code, cf. `31_ETAT_REEL_2026-07-13.md`).
+> Créé le 2026-07-08. **Maintenu — dernière mise à jour : 2026-08-04.**
+> (Voir la section 0-quater pour ce qui a bougé depuis le 13/07.)
 > Sources : CDC `CDC_FONCTIONNEL_MABB_ECOSYSTEME_v1.pdf` (26 pages) + scan du code
 > réel (`mabb-site` : 88 contrôleurs, 67 entités ; `Pirb store` : app Expo).
 > **Confiance** : ✅ confirmé par le code · 🟡 estimé · ❓ à vérifier.
+
+---
+
+## 0-quater. Ce qui a avancé du 14/07 au 04/08
+
+**Secrétariat (§3.6 + §4.2) : ~50 % → ~90 %.** Le gros bloc de la période.
+Classeur licences par secteurs (Ouest/Étouvie, Nord, Sud), placement drag & drop,
+**pré-inscription publique sur mabb.fr** convertie en un clic (dossier + fiche +
+contact parent, anti-doublon visible), annuaire, responsables légaux, import des
+Excel existants, licence centralisée fiche ↔ classeur. Le §3.6 « Inscription /
+adhésion » du CDC passe de 50 % à ~85 % : le formulaire public existe, il ne
+manque que l'affichage des tarifs et la liste des pièces à fournir.
+
+**Stats live fiabilisées (point 9 de la liste priorisée) : FAIT pour l'essentiel.**
+- ✅ **Minutes jouées** : calcul réel depuis `PresenceTerrain` (entrées/sorties en
+  secondes), auto-clôture des présences au buzzer, vraie durée de période.
+  Commande de réparation `app:stats:regenerer-minutes`.
+- ✅ **Titulaires** : entrée à 0 s, plus l'heuristique « une action au QT1 ».
+- ✅ **Sources de stats séparées** : colonne `source` (`live`/`ffbb`/`manuel`) +
+  toggle sur la fiche joueuse. Une éval FFBB incomplète ne plombe plus l'éval FIBA.
+- ❌ Reste : promotion des sessions toujours **manuelle**, doublon
+  `EvaluationCalculator` / `JoueurStatsAggregator` toujours là.
+
+**Espace membre + guide première visite (§3.10, §4.1).** Le bénévole et le parent
+ont enfin un espace utile ; `/bienvenue` prend l'utilisateur par la main selon son
+rôle. Dashboard OTM en carte.
+
+**Sécurité (transverse).** Seconde passe d'audit sur la surface web (doc 34) :
+3 failles critiques trouvées **et corrigées** (fuite du fichier nominatif des
+mineures, fuite des e-mails de la plateforme, upload d'avatar sans validation).
+Fichiers sensibles retirés du dépôt. ⚠️ L'historique git les contient toujours et
+le dépôt est **toujours public**.
+
+**Playground v6** (côté app) : angles du corps, cibles ancrées, mains G/D, défis
+du jour. Feed highlights.
+
+⚠️ **Points 1, 2 et 3 de la liste priorisée (§7) restent OUVERTS** : dette RGPD
+des fichiers dans `public/`, aucune sauvegarde de la base, DKIM/SPF du mailer.
+Aucun n'a bougé depuis le 13/07.
 
 ---
 
