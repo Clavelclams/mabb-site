@@ -58,13 +58,14 @@ class ManagerLoginController extends AbstractController
         \App\Repository\Sport\AffectationMatchRepository $affectationRepository,
         \App\Repository\Sport\ParentJoueurRepository $parentJoueurRepository,
     ): Response {
-        // [V2.5 04/08] Visiteur anonyme → page de PRÉSENTATION, pas un login
-        // sec. Quelqu'un qui découvre l'outil doit comprendre ce que c'est et
-        // avoir envie d'essayer avant qu'on lui demande un mot de passe.
-        // (La route est PUBLIC_ACCESS dans security.yaml ; les connectés
-        // continuent tout droit vers leur dashboard.)
+        // [V2.5 04/08, révisé] Visiteur anonyme → connexion DIRECTE.
+        // Décision Clavel : manager.mabb.fr est le sous-domaine du club MABB,
+        // ses utilisateurs savent où ils vont — pas besoin de se vendre.
+        // La page de présentation (templates/manager/decouvrir.html.twig)
+        // est GARDÉE pour le futur domaine commercial (club.venaball.fr) :
+        // là, on parlera à des clubs qui ne connaissent pas l'outil.
         if ($this->getUser() === null) {
-            return $this->render('manager/decouvrir.html.twig');
+            return $this->redirectToRoute('manager_login');
         }
 
         $this->denyAccessUnlessGranted('ROLE_USER');

@@ -7,10 +7,12 @@ namespace App\Controller\Api\Club;
 use App\Entity\Core\Club;
 use App\Entity\Core\User;
 use App\Entity\Core\UserClubRole;
+use App\Repository\Core\ClubRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Contracts\Service\Attribute\Required;
 
 /**
  * [VC-1 04/08/2026] Socle commun de l'API Venaball Club (app staff/famille).
@@ -44,6 +46,31 @@ abstract class ApiClubController extends AbstractController
 {
     /** En-tête par lequel l'app déclare le club sur lequel elle travaille. */
     public const HEADER_CLUB = 'X-Club-Id';
+
+    /**
+     * [VC-7 bugfix] Injecté par setter (la classe est abstraite, les enfants
+     * ont chacun leur constructeur — l'attribut #[Required] évite de le
+     * répéter dans chacun). Sert au cas SUPER-ADMIN ci-dessous.
+     */
+    protected ClubRepository $clubRepository;
+
+    #[Required]
+    public function setClubRepository(ClubRepository $clubRepository): void
+    {
+        $this->clubRepository = $clubRepository;
+    }
+
+    /**
+     * [VC-7 bugfix] Le super-admin n'a AUCUN UserClubRole : sur le web, le
+     * ClubVoter le court-circuite, mais cette API raisonnait uniquement en
+     * rôles par club → il recevait « aucun club » (bug trouvé par Clavel au
+     * premier test Expo). Règle alignée sur le web : le super-admin voit
+     * tous les clubs.
+     */
+    protected function estSuperAdmin(User $user): bool
+    {
+        return in_array('ROLE_SUPER_ADMIN', $user->getRoles(), true);
+    }
 
     /**
      * Le compte authentifié par le jeton Bearer.
@@ -108,6 +135,26 @@ abstract class ApiClubController extends AbstractController
     {
         $user = $this->utilisateur();
         $parClub = $this->rolesParClub($user);
+
+        // Super-admin : accès à tous les clubs, comme sur le web.
+        if ($parClub === [] && $this->estSuperAdmin($user)) {
+            $demande = (int) $request->headers->get(self::HEADER_CLUB, '0');
+            if ($demande > 0) {
+                $club = $this->clubRepository->find($demande);
+                if ($club !== null) {
+                    return $club;
+                }
+                throw new ApiClubException('Club introuvable.', Response::HTTP_NOT_FOUND);
+            }
+            $tous = $this->clubRepository->findBy([], ['nom' => 'ASC']);
+            if (count($tous) === 1) {
+                return $tous[0];
+            }
+            throw new ApiClubException(
+                'Plusieurs clubs disponibles : précise lequel via l\'en-tête ' . self::HEADER_CLUB . '.',
+                Response::HTTP_BAD_REQUEST
+            );
+        }
 
         if ($parClub === []) {
             throw new ApiClubException(

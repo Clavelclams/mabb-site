@@ -8,6 +8,7 @@ use App\Entity\Core\Club;
 use App\Entity\Core\User;
 use App\Entity\Core\UserClubRole;
 use App\Repository\Sport\CoachEquipeRepository;
+use App\Repository\Sport\EquipeRepository;
 use App\Repository\Sport\JoueurRepository;
 use App\Repository\Sport\ParentJoueurRepository;
 use App\Service\SaisonService;
@@ -54,6 +55,7 @@ final class ApiClubMoiController extends ApiClubController
     public function __construct(
         private readonly SaisonService $saisonService,
         private readonly CoachEquipeRepository $coachEquipeRepository,
+        private readonly EquipeRepository $equipeRepository,
         private readonly JoueurRepository $joueurRepository,
         private readonly ParentJoueurRepository $parentJoueurRepository,
     ) {}
@@ -63,6 +65,20 @@ final class ApiClubMoiController extends ApiClubController
     {
         $user = $this->utilisateur();
         $parClub = $this->rolesParClub($user);
+
+        // [VC-7 bugfix] Super-admin : aucun UserClubRole, mais accès à tous
+        // les clubs (même règle que le web). On lui fabrique la même
+        // structure que pour un membre normal, avec un rôle synthétique
+        // DIRIGEANT : c'est ce que le reste de l'API lui accorde déjà
+        // (equipesAccessibles, exigerEncadrement via le court-circuit).
+        if ($parClub === [] && $this->estSuperAdmin($user)) {
+            foreach ($this->clubRepository->findBy([], ['nom' => 'ASC']) as $club) {
+                $parClub[(int) $club->getId()] = [
+                    'club'  => $club,
+                    'roles' => [UserClubRole::ROLE_DIRIGEANT],
+                ];
+            }
+        }
 
         if ($parClub === []) {
             return $this->erreur(
@@ -136,13 +152,22 @@ final class ApiClubMoiController extends ApiClubController
     {
         $vues = [];
 
-        $encadrant = array_intersect($roles, [
+        $estDirigeant = in_array(UserClubRole::ROLE_DIRIGEANT, $roles, true)
+            || $this->estSuperAdmin($user);
+        $encadrant = $estDirigeant || array_intersect($roles, [
             UserClubRole::ROLE_COACH,
-            UserClubRole::ROLE_DIRIGEANT,
             UserClubRole::ROLE_STAFF,
         ]) !== [];
 
-        if ($encadrant && $this->compteEquipesEncadrees($user, $club, $saison) > 0) {
+        // [VC-7 bugfix] Un DIRIGEANT (et le super-admin) voit TOUTES les
+        // équipes du club sans lien CoachEquipe : sa vue coach existe dès
+        // que le club a une équipe active. Le lien CoachEquipe ne borne
+        // que les coachs et le staff.
+        $aDesEquipes = $estDirigeant
+            ? $this->equipeRepository->count(['club' => $club, 'saison' => $saison, 'isActive' => true]) > 0
+            : $this->compteEquipesEncadrees($user, $club, $saison) > 0;
+
+        if ($encadrant && $aDesEquipes) {
             $vues[] = 'coach';
         }
 
