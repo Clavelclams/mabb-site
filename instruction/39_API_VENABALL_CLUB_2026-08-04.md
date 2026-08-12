@@ -134,8 +134,45 @@ du bruit sans effet.
 est retiré. L'app doit donc toujours transmettre la liste complète, jamais un
 delta. C'est le même comportement que les cases à cocher du web.
 
+## VC-5 — Stats Live : la validation depuis le téléphone ✅
+
+Le constat : en production, **aucune session Stats Live n'avait jamais été
+promue officielle** — tout le travail des bénévoles dormait, faute d'un
+ordinateur sous la main pour le geste de validation.
+
+- `GET /api/club/stats-live/a-valider` : les rencontres de mes équipes ayant
+  des sessions non archivées et **aucune officielle**, avec pour chaque
+  session le nombre d'actions (une requête groupée, pas de N+1), le
+  saisisseur et le statut. Sert l'écran phare de l'app et le compteur
+  d'alerte de l'accueil.
+- `POST /api/club/sessions/{id}/promouvoir` : promeut en OFFICIELLE via
+  `SessionStatsLivePromoteur` — le MÊME service que le web (rétrogradation
+  de l'ancienne officielle, clôture des présences terrain, génération des
+  EvaluationMatch). Zéro logique dupliquée. Un état incompatible (déjà
+  officielle, archivée) renvoie 409 ; un manque de droits renvoie 404.
+
+Côté app : écran `stats-live.tsx` (sessions triées par nombre d'actions, la
+plus complète marquée ★, garde-fou quand on valide une session moins remplie
+qu'une autre) + alerte jaune sur l'accueil coach tant que `total > 0`.
+
+**Décision produit actée avec Clavel** : la SAISIE native sur téléphone
+(style Easy Stats — flux 2 taps, grosses cibles, paysage) est un chantier à
+part entière, à maquetter avant de coder. La validation, elle, est le
+chaînon qui manquait : elle est livrée.
+
+## Landings publiques (même session, hors API)
+
+`manager.mabb.fr/` et `pirb.mabb.fr/` montrent désormais une **page de
+présentation** aux visiteurs anonymes (`templates/manager/decouvrir.html.twig`,
+`templates/pirb/decouvrir.html.twig`) au lieu de rediriger vers un login sec.
+Route `^/$` passée en PUBLIC_ACCESS sur les deux hosts ; les connectés vont
+tout droit à leur dashboard, rien ne change pour eux.
+
 ## Suite prévue
 
+- **VCA-5** : saisie Stats Live NATIVE sur téléphone (le chantier phare) —
+  maquette du flux d'abord, puis mode hors-ligne à évaluer (les gymnases
+  captent mal).
 - **VC-4** : pointage de séance.
 - **VC-5** : rappel au coach des sessions Stats Live non validées (voir doc 38
   point 11 : aucune session n'a jamais été promue en production, donc aucune

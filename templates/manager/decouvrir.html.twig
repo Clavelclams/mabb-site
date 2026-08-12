@@ -1,0 +1,157 @@
+{# [V2.5 04/08/2026] Page de DÉCOUVERTE — ce que voit un visiteur anonyme sur
+   manager.mabb.fr. Avant : un formulaire de login sec, zéro contexte, zéro
+   envie. Maintenant : ce que fait l'outil, pour qui, et deux portes d'entrée
+   claires (se connecter / créer son club).
+   Page autonome (n'étend pas la base : la base suppose une navbar de
+   connecté). Aucun script, aucun cookie → pas de bandeau à gérer. #}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venaball Club : tout votre club, un seul outil</title>
+    <meta name="description" content="Licences, convocations, stats en direct, trésorerie, bénévoles : Venaball Club remplace les fichiers Excel et les feuilles volantes. Déjà utilisé en production par un club réel.">
+    <style>
+        :root {
+            --bleu: #1d7dc4; --bleu-vif: #3b97dd; --fond: #0b0f1a; --fond2: #111827;
+            --carte: #161e2e; --bord: #26324a; --texte: #eef2f8; --muted: #94a3b8;
+            --vert: #4ade80;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--fond); color: var(--texte); line-height: 1.6;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+        header { padding: 70px 0 55px; text-align: center; position: relative; }
+        header::before {
+            content: ''; position: absolute; inset: 0; z-index: -1;
+            background: radial-gradient(ellipse 65% 55% at 50% 0%, rgba(29,125,196,.2), transparent);
+        }
+        .badge {
+            display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .08em;
+            text-transform: uppercase; color: var(--vert); border: 1px solid rgba(74,222,128,.35);
+            border-radius: 999px; padding: 5px 14px; margin-bottom: 20px;
+            background: rgba(74,222,128,.07);
+        }
+        .logo { font-weight: 900; font-size: 1.15rem; letter-spacing: .02em; margin-bottom: 26px; }
+        .logo span { color: var(--bleu-vif); }
+        .logo small { color: var(--muted); font-weight: 700; }
+        h1 { font-size: clamp(2rem, 5.5vw, 3.4rem); font-weight: 900; letter-spacing: -.03em; line-height: 1.08; margin-bottom: 16px; }
+        h1 em { font-style: normal; color: var(--bleu-vif); }
+        .sub { color: var(--muted); max-width: 620px; margin: 0 auto 30px; font-size: 1.05rem; }
+        .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            display: inline-block; background: var(--bleu); color: #fff; text-decoration: none;
+            padding: 13px 30px; border-radius: 999px; font-weight: 700; font-size: .95rem;
+            transition: background .2s, transform .15s;
+        }
+        .btn:hover { background: var(--bleu-vif); transform: translateY(-1px); }
+        .btn.ghost { background: transparent; border: 1px solid var(--bord); color: var(--texte); }
+        .btn.ghost:hover { background: var(--carte); }
+        .note-cta { margin-top: 14px; font-size: .8rem; color: var(--muted); }
+        section { padding: 55px 0; }
+        section.alt { background: var(--fond2); }
+        h2 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+        .lead { color: var(--muted); max-width: 640px; margin-bottom: 30px; }
+        .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+        .carte {
+            background: var(--carte); border: 1px solid var(--bord); border-radius: 14px; padding: 22px;
+        }
+        .carte .ico { font-size: 1.5rem; display: block; margin-bottom: 10px; }
+        .carte h3 { font-size: 1rem; margin-bottom: 6px; }
+        .carte p { font-size: .86rem; color: var(--muted); }
+        .preuve {
+            border-left: 3px solid var(--bleu); background: var(--carte); border-radius: 0 12px 12px 0;
+            padding: 20px 24px; max-width: 720px;
+        }
+        .preuve strong { color: var(--bleu-vif); }
+        footer { border-top: 1px solid var(--bord); padding: 30px 0; text-align: center; font-size: .82rem; color: var(--muted); }
+        footer a { color: var(--muted); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="logo">VENA<span>BALL</span> <small>CLUB</small></div>
+        <div class="badge">Utilisé chaque semaine par un club réel</div>
+        <h1>Tout votre club.<br><em>Un seul outil.</em></h1>
+        <p class="sub">
+            Licences, convocations, stats en direct pendant les matchs, trésorerie,
+            bénévoles, réunions : fini les fichiers Excel éparpillés et les feuilles
+            volantes. Un espace unique, pensé pour les bénévoles.
+        </p>
+        <div class="cta">
+            <a class="btn" href="{{ path('manager_login') }}">Se connecter</a>
+            <a class="btn ghost" href="{{ path('manager_creer_club') }}">Créer mon club</a>
+        </div>
+        <p class="note-cta">
+            Membre d'un club déjà équipé ? <a href="{{ path('manager_inscription') }}" style="color:var(--bleu-vif);">Créez votre compte</a> et rejoignez-le.
+        </p>
+    </div>
+</header>
+
+<section class="alt">
+    <div class="container">
+        <h2>Ce que l'outil fait pour vous</h2>
+        <p class="lead">Chaque écran existe parce qu'une vraie personne du club en avait besoin : la secrétaire, le coach, le trésorier, les parents.</p>
+        <div class="grille">
+            <div class="carte">
+                <span class="ico">📊</span>
+                <h3>Stats live à la table de marque</h3>
+                <p>Saisie tactile pendant le match, positions de tirs, temps de jeu réel. Les stats validées remontent directement chez les joueuses, dans leur app.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">📣</span>
+                <h3>Convocations qui arrivent</h3>
+                <p>Le coach coche son effectif, les joueuses reçoivent une notification et répondent. Le coach sait qui vient avant samedi.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">🗂️</span>
+                <h3>Secrétariat sans Excel</h3>
+                <p>Classeur licences par secteurs, pré-inscriptions en ligne converties en un clic, relances, annuaire.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">🤝</span>
+                <h3>Bénévoles organisés</h3>
+                <p>Postes de match, candidatures en un clic, vue d'ensemble du week-end. Qui tient la buvette samedi ? Réponse en deux secondes.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">💶</span>
+                <h3>Trésorerie suivie</h3>
+                <p>Cotisations, notes de frais avec validation, subventions, exports pour le comptable.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">🏛️</span>
+                <h3>Vie associative</h3>
+                <p>Réunions convoquées par mail, PV archivés, événements avec inscriptions et décharges.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section>
+    <div class="container">
+        <div class="preuve">
+            <p>
+                <strong>Né sur le terrain, pas dans un bureau.</strong> Venaball Club
+                fait tourner l'Amiens Métropole Basket Ball : environ 200 licenciées,
+                trois gymnases, des dizaines de bénévoles, chaque semaine. Données
+                hébergées en France, conformité RGPD pensée pour les mineures.
+            </p>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        Venaball Club, fait à Amiens ·
+        <a href="{{ path('manager_login') }}">Connexion</a> ·
+        <a href="{{ path('manager_creer_club') }}">Créer un club</a> ·
+        <a href="mailto:admin@mabb.fr">Contact</a>
+    </div>
+</footer>
+
+</body>
+</html>

@@ -58,6 +58,15 @@ class ManagerLoginController extends AbstractController
         \App\Repository\Sport\AffectationMatchRepository $affectationRepository,
         \App\Repository\Sport\ParentJoueurRepository $parentJoueurRepository,
     ): Response {
+        // [V2.5 04/08] Visiteur anonyme → page de PRÉSENTATION, pas un login
+        // sec. Quelqu'un qui découvre l'outil doit comprendre ce que c'est et
+        // avoir envie d'essayer avant qu'on lui demande un mot de passe.
+        // (La route est PUBLIC_ACCESS dans security.yaml ; les connectés
+        // continuent tout droit vers leur dashboard.)
+        if ($this->getUser() === null) {
+            return $this->render('manager/decouvrir.html.twig');
+        }
+
         $this->denyAccessUnlessGranted('ROLE_USER');
 
         // Récupération du club actif pour alimenter le dashboard

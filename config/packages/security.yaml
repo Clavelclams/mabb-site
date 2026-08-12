@@ -221,6 +221,10 @@ security:
         # -----------------------------------------------------------------
         # Manager manager.mabb.fr
         # -----------------------------------------------------------------
+        # [V2.5 04/08] La RACINE est publique : un visiteur anonyme voit une
+        # page de présentation (envie d'essayer), pas un login sec. Le
+        # controller sert le dashboard aux connectés, la vitrine aux autres.
+        - { path: ^/$, host: '^manager\.', roles: PUBLIC_ACCESS }
         # Page login manager : publique (même logique anti-boucle)
         - { path: ^/login$, host: '^manager\.', roles: PUBLIC_ACCESS }
         # Page inscription manager : publique (signup multi-club)
@@ -244,6 +248,9 @@ security:
         # -----------------------------------------------------------------
         # PIRB pirb.mabb.fr
         # -----------------------------------------------------------------
+        # [V2.5 04/08] Racine publique : présentation Venaball pour les
+        # anonymes (le controller distingue connecté / visiteur).
+        - { path: ^/$, host: '^pirb\.', roles: PUBLIC_ACCESS }
         # Page login PIRB : publique
         - { path: ^/login$, host: '^pirb\.', roles: PUBLIC_ACCESS }
         # SSO app → web [UX V1 10/07] : publique par nécessité (la WebView

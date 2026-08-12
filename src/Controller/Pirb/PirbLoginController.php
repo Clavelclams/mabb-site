@@ -72,6 +72,13 @@ class PirbLoginController extends AbstractController
         AffectationMatchRepository $affectationRepo,
         EntityManagerInterface $em,
     ): Response {
+        // [V2.5 04/08] Visiteur anonyme → présentation Venaball. Une joueuse
+        // à qui on parle de l'app doit pouvoir taper l'adresse, comprendre,
+        // et avoir envie. Le login vient APRÈS l'envie.
+        if ($this->getUser() === null) {
+            return $this->render('pirb/decouvrir.html.twig');
+        }
+
         /** @var User $user */
         $user = $this->getUser();
 

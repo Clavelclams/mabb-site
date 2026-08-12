@@ -1,0 +1,142 @@
+{# [V2.5 04/08/2026] Page de DÉCOUVERTE Venaball — ce que voit une visiteuse
+   anonyme sur pirb.mabb.fr. Une joueuse à qui une copine parle de l'app doit
+   pouvoir taper l'adresse, comprendre en dix secondes, et avoir envie.
+   Le login vient APRÈS l'envie. Ton : on parle À la joueuse (tutoiement).
+   Page autonome, aucun script, aucun cookie. #}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venaball : ton jeu, tes stats, ta progression</title>
+    <meta name="description" content="Venaball, l'espace des joueuses : tes vraies stats de match, ton shot chart, tes badges, et le Playground caméra qui compte tes tirs tout seul.">
+    <style>
+        :root {
+            --orange: #ff6b2c; --orange2: #ff8a4d; --fond: #0a0e14; --fond2: #111823;
+            --carte: #161e2e; --bord: #27354a; --texte: #f2f0eb; --muted: #8c96a3;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--fond); color: var(--texte); line-height: 1.6;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+        header { padding: 70px 0 55px; text-align: center; position: relative; }
+        header::before {
+            content: ''; position: absolute; inset: 0; z-index: -1;
+            background: radial-gradient(ellipse 65% 55% at 50% 0%, rgba(255,107,44,.16), transparent);
+        }
+        .logo { font-weight: 900; font-size: 1.15rem; letter-spacing: .02em; margin-bottom: 26px; }
+        .logo span { color: var(--orange); }
+        h1 { font-size: clamp(2rem, 5.5vw, 3.4rem); font-weight: 900; letter-spacing: -.03em; line-height: 1.08; margin-bottom: 16px; }
+        h1 em { font-style: normal; color: var(--orange); }
+        .sub { color: var(--muted); max-width: 600px; margin: 0 auto 30px; font-size: 1.05rem; }
+        .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            display: inline-block; background: var(--orange); color: #fff; text-decoration: none;
+            padding: 13px 30px; border-radius: 999px; font-weight: 700; font-size: .95rem;
+            transition: background .2s, transform .15s;
+        }
+        .btn:hover { background: var(--orange2); transform: translateY(-1px); }
+        .note-cta { margin-top: 14px; font-size: .8rem; color: var(--muted); }
+        section { padding: 55px 0; }
+        section.alt { background: var(--fond2); }
+        h2 { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 800; letter-spacing: -.02em; margin-bottom: 8px; }
+        .lead { color: var(--muted); max-width: 640px; margin-bottom: 30px; }
+        .grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+        .carte { background: var(--carte); border: 1px solid var(--bord); border-radius: 14px; padding: 22px; }
+        .carte .ico { font-size: 1.5rem; display: block; margin-bottom: 10px; }
+        .carte h3 { font-size: 1rem; margin-bottom: 6px; }
+        .carte p { font-size: .86rem; color: var(--muted); }
+        .confiance {
+            border-left: 3px solid var(--orange); background: var(--carte); border-radius: 0 12px 12px 0;
+            padding: 20px 24px; max-width: 720px;
+        }
+        .confiance strong { color: var(--orange); }
+        footer { border-top: 1px solid var(--bord); padding: 30px 0; text-align: center; font-size: .82rem; color: var(--muted); }
+        footer a { color: var(--muted); }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <div class="logo">VENA<span>BALL</span></div>
+        <h1>Ton jeu. Tes stats.<br><em>Ta progression.</em></h1>
+        <p class="sub">
+            Tes vraies stats de match, saisies par ton club. Ton shot chart, tes
+            badges, ton bilan de coach. Et bientôt le Playground caméra qui compte
+            tes tirs tout seul.
+        </p>
+        <div class="cta">
+            <a class="btn" href="{{ path('pirb_login') }}">Je me connecte</a>
+        </div>
+        <p class="note-cta">
+            Pas encore de compte ? Il se crée avec ton club : parles-en à ton coach.
+        </p>
+    </div>
+</header>
+
+<section class="alt">
+    <div class="container">
+        <h2>Ce que tu trouves ici</h2>
+        <p class="lead">Pas des stats inventées : celles que ton club saisit à la table de marque, match après match.</p>
+        <div class="grille">
+            <div class="carte">
+                <span class="ico">📊</span>
+                <h3>Ta saison en chiffres</h3>
+                <p>Points, rebonds, minutes réelles, ta meilleure éval, et ta zone chaude sur le terrain.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">🎯</span>
+                <h3>Ton shot chart</h3>
+                <p>Chaque tir placé sur le demi-terrain. Tu vois d'où tu marques et d'où tu forces.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">🔔</span>
+                <h3>Tes convocations</h3>
+                <p>Ton prochain match arrive tout seul. Tu réponds présente ou absente en un clic, ton coach le sait.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">📝</span>
+                <h3>Ton bilan de coach</h3>
+                <p>Ce que ton coach a écrit sur toi, à lire tranquillement. Visible par toi et tes parents, personne d'autre.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">🏅</span>
+                <h3>Badges et niveaux</h3>
+                <p>Chaque match, chaque séance fait monter ton XP. De Rookie à Légende.</p>
+            </div>
+            <div class="carte">
+                <span class="ico">🔒</span>
+                <h3>Toi seule décides</h3>
+                <p>Ton profil est privé par défaut. Tu choisis exactement qui voit quoi.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section>
+    <div class="container">
+        <div class="confiance">
+            <p>
+                <strong>Construit pour toi, pensé avec les familles.</strong>
+                Profil privé par défaut, liens parents validés par le club, données
+                hébergées en France. Et l'app mobile Venaball arrive sur l'App Store
+                et Google Play.
+            </p>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="container">
+        Venaball, fait à Amiens ·
+        <a href="{{ path('pirb_login') }}">Connexion</a> ·
+        <a href="https://mabb.fr/politique-confidentialite">Confidentialité</a> ·
+        <a href="mailto:admin@mabb.fr">Contact</a>
+    </div>
+</footer>
+
+</body>
+</html>
