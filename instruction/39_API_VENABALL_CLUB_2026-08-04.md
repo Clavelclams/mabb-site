@@ -199,8 +199,27 @@ d'actions — les gymnases captent mal ; aujourd'hui un échec réseau propose
 file), le shot chart au doigt (le serveur accepte déjà positionX/Y), et le
 paysage tablette.
 
+## VC-9 — Vue bénévole ✅ (13/08)
+
+`GET /api/club/vie` : événements publiés à venir (avec mon état
+d'inscription) + mes missions OTM confirmées + mes candidatures en attente,
+bornés au club courant. `POST /api/club/evenements/{id}/participation`
+(`inscrire`/`desinscrire`) : mêmes règles que le web (publié, pas complet,
+pas de doublon). App : `components/VueBenevole.tsx` — inscription en un tap.
+
+## VC-10 — Vue Direction ✅ (13/08)
+
+`GET /api/club/pilotage` (DIRIGEANT ou TRESORIER) : effectif, licences
+payées/en attente, **les attentes** (adhésions, liens parents, candidatures
+OTM — dirigeant seulement), synthèse cotisations + notes de frais.
+**Des COUNT/SUM, jamais de listes nominatives** : l'app est le radar, le web
+le cockpit. Nouvelle vue `direction` dans le switch (après coach : un
+dirigeant-coach ouvre sur son équipe, un dirigeant pur sur son radar).
+App : `components/VueDirection.tsx`.
+
 ## Suite prévue
 
+- **Vue parent** (le prochain bloc) : les matchs et convocations de sa fille.
 - **VCA-6** : mode hors-ligne de la saisie (file d'attente + resynchro).
 - **VC-4** : pointage de séance.
 - **VC-5** : rappel au coach des sessions Stats Live non validées (voir doc 38

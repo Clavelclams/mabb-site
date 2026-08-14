@@ -49,8 +49,13 @@ use Symfony\Component\Routing\Attribute\Route;
  */
 final class ApiClubMoiController extends ApiClubController
 {
-    /** Les vues possibles de l'app, par ordre de priorité d'ouverture. */
-    private const VUES_ORDONNEES = ['coach', 'benevole', 'parent', 'joueuse'];
+    /**
+     * Les vues possibles de l'app, par ordre de priorité d'ouverture.
+     * [VC-10] `direction` = le pilotage (dirigeant/trésorier). Placée APRÈS
+     * coach : un dirigeant qui entraîne ouvre sur son équipe (le geste du
+     * week-end), un dirigeant pur ouvre sur son radar.
+     */
+    private const VUES_ORDONNEES = ['coach', 'direction', 'benevole', 'parent', 'joueuse'];
 
     public function __construct(
         private readonly SaisonService $saisonService,
@@ -179,6 +184,12 @@ final class ApiClubMoiController extends ApiClubController
 
         if ($encadrant && $aDesEquipes) {
             $vues[] = 'coach';
+        }
+
+        // [VC-10] Le pilotage : dirigeant et trésorier (mêmes droits que la
+        // trésorerie web). Toujours du contenu (les chiffres du club).
+        if ($estDirigeant || in_array(UserClubRole::ROLE_TRESORIER, $roles, true)) {
+            $vues[] = 'direction';
         }
 
         // Tout membre du club accède à la vie associative
