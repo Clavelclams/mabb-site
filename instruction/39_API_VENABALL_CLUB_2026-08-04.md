@@ -217,14 +217,86 @@ le cockpit. Nouvelle vue `direction` dans le switch (après coach : un
 dirigeant-coach ouvre sur son équipe, un dirigeant pur sur son radar).
 App : `components/VueDirection.tsx`.
 
+## VC-11 — Orga de match ✅ (15/08)
+
+Le kanban web des postes (chrono, e-marque, buvette…), version tap mobile.
+`ApiClubOrgaController` :
+
+- `GET /rencontres/{id}/orga` : les 9 postes avec titulaire / renforts /
+  candidatures, la fenêtre (J-7 → mercredi soir), le vivier des membres non
+  placés (**encadrement seulement** — un bénévole ne voit pas l'annuaire).
+- `POST /rencontres/{id}/orga/placer` : `{userId, role}` place un membre
+  (`role: null` = retour au vivier), `{nomLibre, role, heureRdv}` = saisie
+  libre service civique/externe (encadrement). Un membre simple ne place QUE
+  lui-même → statut CANDIDAT ; l'encadrement → ASSIGNE.
+- `POST /orga/affectations/{aid}/valider|rejeter` : les candidatures.
+
+**Zéro règle dupliquée : tout passe par `OtmService`** (fenêtre,
+interdictions, poste pris, anti-répétition 2×/jour). Valider une candidature
+titulaire évince les autres candidatures TITULAIRES du poste, les renforts
+cohabitent. App : `app/orga/[id].tsx`, bouton 🗂️ Orga sur les cartes
+rencontres. Limite assumée : retirer une saisie libre = geste web.
+
+## VC-4 — Pointage de séance ✅ (15/08)
+
+Le geste du mardi soir. `ApiClubSeanceController` :
+
+- `GET /seances?periode=avenir|recentes` (±7 jours) avec `appelFait` +
+  compteurs — l'app marque ⚠️ les séances passées sans appel.
+- `GET/POST /seances/{id}/pointage` : grille des joueuses ACTIVES de
+  l'équipe, upsert complet (liste entière, une omise = absente — contrat des
+  checkbox web), motif seulement si absente, source `manuel`.
+- Après flush : sync badges gamification isolée par joueuse (bugfix B21 du
+  web reproduit : un badge qui plante ne casse jamais l'appel).
+
+Accès : coach de l'équipe (CoachEquipe) ou dirigeant/super-admin, 404
+uniforme. App : `app/seances.tsx` + `app/pointage/[id].tsx` — la grille
+démarre TOUT COCHÉ si l'appel n'a jamais été fait (on décoche les absentes,
+deux taps au lieu de douze). Accès : bouton « ✅ Séances & appel » (accueil
+coach).
+
+## VC-12 — Vue Parent ✅ (15/08)
+
+Le public n°1 d'un club de jeunes. `ApiClubParentController` :
+
+- `GET /parent` : mes enfants (liens ParentJoueur **ACTIVE uniquement**,
+  joueuses actives, club courant) + leurs convocations à venir.
+- `POST /parent/convocations/{id}/repondre` : `{reponse, motif?}` au nom de
+  l'enfant. Mêmes verrous que la réponse joueuse (Pirb) : anti-IDOR par le
+  lien (404 uniforme + log), pas de réponse après la date du match, réponse
+  ∈ {present, absent, incertain}.
+
+App : `components/VueParent.tsx` — ✅/❌/🤔 par convocation, motif demandé
+via Alert.prompt (iOS ; Android envoie sans motif, assumé). [VCA-12] La vue
+`joueuse` est une carte de renvoi franche vers l'app Venaball — on ne
+duplique pas ses écrans ici.
+
+## VCA-13 — Saisie hors ligne ✅ (15/08) — CÔTÉ APP UNIQUEMENT
+
+LE chantier robustesse : un gymnase sans 4G est le cas nominal, pas
+l'exception. Aucun changement serveur — tout est dans l'app :
+
+- `src/services/fileAttente.ts` : file FIFO persistée (AsyncStorage ~2.2.0,
+  nouvelle dépendance — survit à la fermeture de l'app). Erreur RÉSEAU
+  (ApiError status 0) → on garde et on retente (tick 15 s + tap manuel).
+  Erreur SERVEUR (4xx/5xx) → l'élément est rejeté et compté : la file ne se
+  bloque jamais. Transporte : action, terrain, score adverse, terminer.
+- `app/saisie/[id].tsx` : quand le réseau lâche, l'action part en file, la
+  mise à jour locale continue (barème POINTS_ACTION, même valeurs que le
+  PHP), AUCUNE alerte — un bandeau 📴 compte ce qui attend. « Annuler
+  dernière » d'une action en file = simple retrait local (jamais partie au
+  serveur). « Terminer » vide la file d'abord, et se met LUI-MÊME en file
+  s'il n'y a toujours pas de réseau (FIFO : il part après les actions).
+
+Limite assumée : si deux saisies simultanées (deux téléphones) sont hors
+ligne sur le même match, chacune resynchronise SA session — le mécanisme
+« ★ la plus complète » de l'écran de validation arbitre déjà ce cas.
+
 ## Suite prévue
 
-- **Vue parent** (le prochain bloc) : les matchs et convocations de sa fille.
-- **VCA-6** : mode hors-ligne de la saisie (file d'attente + resynchro).
-- **VC-4** : pointage de séance.
-- **VC-5** : rappel au coach des sessions Stats Live non validées (voir doc 38
-  point 11 : aucune session n'a jamais été promue en production, donc aucune
-  statistique n'est jamais remontée aux joueuses).
+- **VC-5 bis** : rappel au coach des sessions Stats Live non validées (voir
+  doc 38 point 11 : aucune session n'a jamais été promue en production,
+  donc aucune statistique n'est jamais remontée aux joueuses).
 
 Non décidé, à trancher avant d'aller plus loin : le rôle **TECHNICIEN** du
 cadrage doc 32. Il n'est **pas nécessaire** au périmètre V1 — inutile de
