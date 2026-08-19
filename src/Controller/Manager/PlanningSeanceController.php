@@ -5,8 +5,11 @@ namespace App\Controller\Manager;
 use App\Entity\Sport\Equipe;
 use App\Entity\Sport\PlanningSeance;
 use App\Form\Manager\PlanningSeanceType;
+use App\Repository\Sport\EquipeRepository;
+use App\Security\Tenant\TenantResolver;
 use App\Security\Voter\ClubVoter;
 use App\Service\GenerateurSeancesService;
+use App\Service\SaisonService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +28,9 @@ class PlanningSeanceController extends AbstractController
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly GenerateurSeancesService $generateur,
+        private readonly TenantResolver $tenantResolver,
+        private readonly EquipeRepository $equipeRepository,
+        private readonly SaisonService $saisonService,
     ) {}
 
     /**
@@ -146,5 +152,85 @@ class PlanningSeanceController extends AbstractController
         }
 
         return $this->redirectToRoute('manager_equipe_show', ['id' => $equipe->getId()]);
+    }
+
+    /**
+     * [R-2 reprise 2026] Génération des séances pour TOUTES les équipes du
+     * club d'un coup.
+     *
+     * LE CAS D'USAGE : la reprise de saison. Le club vient de reconduire ses
+     * 15 équipes et de poser ses créneaux — cliquer « générer » quinze fois,
+     * équipe par équipe, c'est le genre de friction qui fait abandonner
+     * l'outil la première semaine. Un clic, tout le club a ses séances.
+     *
+     * Sans danger à relancer : le générateur ignore les doublons (date+équipe),
+     * exactement comme la génération par équipe.
+     *
+     *   POST /plannings/generer-club
+     */
+    #[Route('/plannings/generer-club', name: 'manager_planning_generer_club', methods: ['POST'])]
+    public function genererClub(Request $request): Response
+    {
+        $club = $this->tenantResolver->getCurrentClub();
+        if ($club === null) {
+            return $this->redirectToRoute('manager_dashboard');
+        }
+        $this->denyAccessUnlessGranted(ClubVoter::CLUB_STAFF, $club);
+
+        $token = (string) $request->request->get('_token', '');
+        if (!$this->isCsrfTokenValid('generer_seances_club', $token)) {
+            $this->addFlash('error', 'Jeton de sécurité invalide.');
+            return $this->redirectToRoute('manager_planning_index');
+        }
+
+        $equipes = $this->equipeRepository->findBy([
+            'club'     => $club,
+            'saison'   => $this->saisonService->getSaisonActive(),
+            'isActive' => true,
+        ]);
+
+        if ($equipes === []) {
+            $this->addFlash('warning', sprintf(
+                'Aucune équipe active en %s. Reconduis d\'abord les équipes (passage de saison), puis reviens ici.',
+                $this->saisonService->getSaisonActive()
+            ));
+            return $this->redirectToRoute('manager_planning_index');
+        }
+
+        [$du, $au] = GenerateurSeancesService::bornesSaisonCourante();
+
+        $totalCreees = 0;
+        $equipesServies = 0;
+        $equipesSansCreneau = [];
+        foreach ($equipes as $equipe) {
+            $stats = $this->generateur->genererPourEquipe($equipe, $du, $au);
+            if ($stats['plannings'] === 0) {
+                $equipesSansCreneau[] = (string) $equipe->getNom();
+                continue;
+            }
+            $totalCreees += $stats['cree'];
+            $equipesServies++;
+        }
+
+        if ($totalCreees > 0) {
+            $this->addFlash('success', sprintf(
+                '%d séance(s) générée(s) pour %d équipe(s), du %s au %s.',
+                $totalCreees,
+                $equipesServies,
+                $du->format('d/m/Y'),
+                $au->format('d/m/Y')
+            ));
+        } else {
+            $this->addFlash('info', 'Aucune nouvelle séance à créer : tout était déjà généré.');
+        }
+
+        if ($equipesSansCreneau !== []) {
+            $this->addFlash('warning', sprintf(
+                'Sans créneau récurrent (rien généré) : %s. Ajoute leurs créneaux depuis leur fiche équipe.',
+                implode(', ', $equipesSansCreneau)
+            ));
+        }
+
+        return $this->redirectToRoute('manager_planning_index');
     }
 }

@@ -102,9 +102,20 @@
             <p class="subtitle">Vue d'ensemble des créneaux hebdomadaires d'entraînement de toutes les équipes.</p>
         </div>
         {% if is_granted('CLUB_STAFF', club) %}
-            <a href="{{ path('manager_planning_global_new') }}" class="btn-mabb-orange">
-                <i class="bi bi-plus-lg"></i> Ajouter un créneau
-            </a>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                {# [R-2 reprise 2026] Un clic = les séances de la saison pour TOUT
+                   le club. Sans danger à relancer (les doublons sont ignorés). #}
+                <form method="post" action="{{ path('manager_planning_generer_club') }}" style="margin:0;"
+                      onsubmit="return confirm('Générer les séances de la saison pour TOUTES les équipes du club, à partir de leurs créneaux récurrents ?\n\nLes séances déjà existantes ne seront pas dupliquées.');">
+                    <input type="hidden" name="_token" value="{{ csrf_token('generer_seances_club') }}">
+                    <button type="submit" class="btn-mabb-ghost">
+                        <i class="bi bi-calendar-plus"></i> Générer les séances du club
+                    </button>
+                </form>
+                <a href="{{ path('manager_planning_global_new') }}" class="btn-mabb-orange">
+                    <i class="bi bi-plus-lg"></i> Ajouter un créneau
+                </a>
+            </div>
         {% endif %}
     </div>
 

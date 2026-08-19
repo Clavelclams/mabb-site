@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Entity\Sport\CoachEquipe;
 use App\Entity\Sport\Equipe;
 use App\Entity\Sport\Joueur;
 use App\Entity\Sport\JoueurEquipe;
@@ -45,6 +46,15 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * Une U15 qui jouait aussi en U18 doit continuer à jouer dans les deux. Les affectations
  * secondaires (surclassement, doublage, réserve) sont reportées sur les équipes
  * correspondantes de la nouvelle saison.
+ *
+ * ELLE RECONDUIT LES COACHS [R-1 16/08/2026]
+ * ------------------------------------------
+ * Découvert à la reprise 2026 : la commande reconduisait les équipes et les joueuses
+ * mais PAS les liens CoachEquipe. Résultat : au premier entraînement de la saison,
+ * chaque coach ouvrait une app et un espace web VIDES (« aucune équipe encadrée »)
+ * alors que ses équipes existaient. Le coach de la U15 A reste coach de la U15 A :
+ * on reporte chaque lien sur l'équipe correspondante, même rôle (principal/assistant),
+ * sans doublon si la commande est relancée.
  *
  * ELLE N'ÉCRIT RIEN SANS --apply. Le dry-run est le mode par défaut, et il doit le rester.
  *
@@ -284,19 +294,81 @@ class PassageSaisonCommand extends Command
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        // 2 bis. Les coachs. [R-1] Sans ce report, chaque coach démarre la
+        // saison devant des écrans vides : l'app et le web ne montrent QUE les
+        // équipes liées par CoachEquipe.
+        // ─────────────────────────────────────────────────────────────────────
+        $ceRepo = $this->em->getRepository(CoachEquipe::class);
+
+        // Ce qui existe déjà en saison cible → relance sans doublon.
+        $lienExiste = [];
+        foreach ($ceRepo->findBy(['saison' => $to]) as $ce) {
+            $lienExiste[$ce->getUser()?->getId() . '|' . $ce->getEquipe()?->getId()] = true;
+        }
+
+        $coachsReconduits = [];
+        $coachsIgnores = 0;
+        foreach ($ceRepo->findBy(['saison' => $from]) as $lien) {
+            $equipeSrc = $lien->getEquipe();
+            $user      = $lien->getUser();
+            if ($equipeSrc === null || $user === null) {
+                continue;
+            }
+            if ($clubId !== null && $equipeSrc->getClub()?->getId() !== $clubId) {
+                continue;
+            }
+            // L'équipe source doit avoir un équivalent en saison cible.
+            $cible = $mapSourceVersCible[$equipeSrc->getId()] ?? null;
+            if ($cible === null) {
+                $coachsIgnores++;
+                continue;
+            }
+            if (isset($lienExiste[$user->getId() . '|' . $cible->getId()])) {
+                continue; // déjà relié (relance, ou fait à la main entre-temps)
+            }
+
+            $nouveau = (new CoachEquipe())
+                ->setUser($user)
+                ->setEquipe($cible)
+                ->setRoleCoach($lien->getRoleCoach())
+                ->setSaison($to);
+
+            if ($apply) {
+                $this->em->persist($nouveau);
+            }
+            $lienExiste[$user->getId() . '|' . $cible->getId()] = true;
+            $coachsReconduits[] = [
+                trim(($user->getPrenom() ?? '') . ' ' . ($user->getNom() ?? '')),
+                $cible->getNom(),
+                $lien->getRoleCoach(),
+            ];
+        }
+
+        if ($apply) {
+            $this->em->flush();
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // 3. Le rapport. Il doit se lire vite, et dire où porter l'attention.
         // ─────────────────────────────────────────────────────────────────────
         $io->newLine();
         $io->success(sprintf(
-            '%d équipe(s) créée(s). %d joueuse(s) reconduites dans leur équipe, %d montée(s) de catégorie, %d à vérifier, %d à traiter à la main. %d surclassement(s) reporté(s).%s',
+            '%d équipe(s) créée(s). %d joueuse(s) reconduites dans leur équipe, %d montée(s) de catégorie, %d à vérifier, %d à traiter à la main. %d surclassement(s) reporté(s). %d coach(s) reconduit(s)%s.%s',
             $nbCreees,
             \count($reconduites),
             \count($montees),
             \count($aVerifier),
             \count($aArbitrer),
             $surclassements,
+            \count($coachsReconduits),
+            $coachsIgnores > 0 ? " ({$coachsIgnores} lien(s) sans équipe cible, ignorés)" : '',
             $apply ? '' : "\nSimulation : relancer avec --apply pour écrire."
         ));
+
+        if ($coachsReconduits !== []) {
+            $io->section('Coachs reconduits sur leurs équipes');
+            $io->table(['Coach', 'Équipe ' . $to, 'Rôle'], $coachsReconduits);
+        }
 
         if ($montees !== []) {
             $io->section('Montées de catégorie (à survoler)');
