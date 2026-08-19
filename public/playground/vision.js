@@ -53,7 +53,11 @@ export function estOrange(r, g, b) {
   if (r < 90) return false;              // trop sombre : on ne devine pas
   if (r <= g + 18) return false;         // pas assez rouge par rapport au vert
   if (r <= b + 45) return false;         // pas assez rouge par rapport au bleu
-  if (g < b) return false;               // orange = vert AU-DESSUS du bleu (sinon c'est du rose/violet)
+  // [v7] g < b rejetait les arceaux ROUGES (paniers extérieurs : rouge vif,
+  // où le vert passe parfois un poil SOUS le bleu). Retour terrain 27/07 :
+  // panier extérieur rouge jamais accroché par la détection auto. On tolère
+  // une petite marge — le rose/violet franc (b >> g) reste rejeté.
+  if (g + 14 < b) return false;
   const max = Math.max(r, g, b), min = Math.min(r, g, b);
   if (max - min < 40) return false;      // gris : pas de couleur franche
   return true;

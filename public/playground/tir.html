@@ -341,6 +341,18 @@ let frameN = 0, detIntervalle = 1, detDureeMoy = 30;
 // Machine à états du TIR : repos → en_vol → décision → cooldown.
 let tir = { etat: "repos", depuis: 0 };
 
+// [v7] LE TEMPS DE LÂCHER — la métrique « quickness » des apps pro (le 0.65s
+// de Kosspro) : le temps entre le ballon EN BAS (sous les hanches, position
+// de menace) et le départ du tir. Un lâcher rapide = un tir difficile à
+// contester. On note l'instant du dernier passage bas ; la différence se
+// fait au lâcher.
+let derniereBalleBasseT = 0;
+let tempsLacherS = null;      // celui du tir en cours / dernier tir
+// [v7] Confiance de la détection auto de l'arceau (0..1), null si posé à la
+// main — affichée en badge, comme les apps qui « font IA ». C'est cosmétique
+// ET honnête : le chiffre existe déjà, on le montrait juste pas.
+let arceauConf = null;
+
 // ---------- Géométrie de l'arceau -------------------------------------------------
 // Côté signé du point p par rapport à la DROITE (a→b) : négatif = AU-DESSUS
 // de l'arceau à l'écran, positif = en dessous (a.x < b.x garanti au tap).
@@ -629,6 +641,7 @@ function boucle() {
       if (propo && propo.confiance > 0.45) {
         arceau = { a: propo.a, b: propo.b, len: propo.len };
         arceauAuto = true;
+        arceauConf = propo.confiance; // [v7] pour le badge à l'écran
         if (debutSeance === 0) debutSeance = performance.now();
         phase = "jeu";
         flottants.push({
@@ -691,9 +704,18 @@ function boucle() {
           bx: b.originX + b.width / 2, by: b.originY + b.height / 2,
           r: Math.max(b.width, b.height) / 2,
           vueA: t, x: b.originX, oy: b.originY, w: b.width, h: b.height,
+          conf: meilleure.categories[0].score, // [v7] pour le badge %
         };
         suiveur.confirmerDetection(balleVue.bx, balleVue.by, balleVue.r, t);
         trainee.push({ x: balleVue.bx, y: balleVue.by, t, src: "modele" });
+
+        // [v7] Le ballon est-il EN BAS (position de menace, avant l'armé) ?
+        // Sous les hanches si la pose voit le corps, sinon sous 62 % de
+        // l'écran. C'est le point zéro du chrono de lâcher.
+        if (tir.etat === "repos") {
+          const seuilBas = (pose.disponible ? pose.hancheY() : null) ?? canvas.height * 0.62;
+          if (balleVue.by > seuilBas) derniereBalleBasseT = t;
+        }
       } else {
         // 2. Trou de détection → le suiveur de mouvement prend le relais
         //    (c'est LUI qui rend la trajectoire continue à distance de shoot).
@@ -712,6 +734,7 @@ function boucle() {
       dessinerParabole(t);                     // [v5] la courbe LISSE, par-dessus les points
       dessinerTrainee(t);
       dessinerBallon(t);
+      dessinerHudCentral(t);                   // [v7] score, chrono, métriques, minimap
       dessinerFlottants(t);
     }
   }
@@ -765,6 +788,12 @@ function avancerTir(t) {
       tir = { etat: "en_vol", depuis: t };
       arcVol = [];       // on repart d'un arc vierge : c'est LUI qu'on ajustera
       paraboleVol = null;
+      // [v7] Le TEMPS DE LÂCHER : du dernier passage bas du ballon jusqu'à
+      // maintenant. Plus de 3 s = elle tenait le ballon en discutant, pas
+      // une mesure de quickness → on ne dit rien plutôt que dire faux.
+      tempsLacherS = derniereBalleBasseT > 0 && (t - derniereBalleBasseT) < 3000
+        ? (t - derniereBalleBasseT) / 1000
+        : null;
       // [v6] Photo du CORPS à l'instant du lâcher : le coude maintenant,
       // les genoux = le minimum accumulé pendant la préparation.
       corpsLacher = {
@@ -870,10 +899,141 @@ function calculerMetriques(t) {
     apexEnArceaux: Math.round(apexEnArceaux * 10) / 10,
     coudeLacher: coude,     // [v6] 180 = extension complète
     genouxFlexion: genoux,  // [v6] plus petit = plus fléchi
+    // [v7] La quickness : bornée au plausible (0,15 s à 2,5 s), null sinon.
+    tempsLacherS: tempsLacherS !== null && tempsLacherS >= 0.15 && tempsLacherS <= 2.5
+      ? Math.round(tempsLacherS * 100) / 100
+      : null,
   };
 }
 
 // ---------- Dessins ---------------------------------------------------------------------
+
+/**
+ * [v7] LE HUD CENTRAL — la mise en scène qui manquait.
+ *
+ * Constat (reels Kosspro / Ball AI) : notre détection était au niveau, notre
+ * AFFICHAGE non. Le score vivait caché dans un menu ; les apps concurrentes
+ * mettent le compteur ÉNORME au centre, le chrono au-dessus, l'angle et le
+ * temps de lâcher dessous, des badges de confiance sur ce qui est détecté et
+ * une minimap des tirs. C'est ce qui donne envie de filmer son écran — et
+ * une joueuse qui filme son écran, c'est le produit qui se vend tout seul.
+ *
+ * Tout est dessiné sur le canvas existant : AUCUN coût de détection ajouté.
+ */
+function dessinerHudCentral(t) {
+  const W = canvas.width, H = canvas.height;
+
+  // ── Le bloc central : chrono, score énorme, métriques du dernier tir ──
+  const cx = W / 2;
+  ctx.textAlign = "center";
+
+  // Chrono de séance (mm:ss.d — le dixième donne la sensation « live »)
+  const s = Math.max(0, (t - debutSeance) / 1000);
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(Math.floor(s % 60)).padStart(2, "0");
+  const d  = Math.floor((s % 1) * 10);
+  ctx.fillStyle = "rgba(255,255,255,0.75)";
+  ctx.font = "700 " + Math.round(H * 0.030) + "px system-ui";
+  ctx.fillText(`${mm}:${ss}.${d}`, cx, H * 0.40);
+
+  // Le compteur, ÉNORME — lisible depuis la ligne des lancers francs.
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.strokeStyle = "rgba(10,14,20,0.55)";
+  ctx.lineWidth = Math.max(3, H * 0.008);
+  ctx.font = "800 " + Math.round(H * 0.11) + "px system-ui";
+  const texteScore = `${reussis} / ${tentes}`;
+  ctx.strokeText(texteScore, cx, H * 0.52);
+  ctx.fillText(texteScore, cx, H * 0.52);
+
+  // Les métriques du dernier tir : angle d'entrée · temps de lâcher.
+  const m = derniereMetrique;
+  if (m && (m.angleEntree || m.tempsLacherS)) {
+    const morceaux = [];
+    if (m.angleEntree) morceaux.push(`${m.angleEntree}°`);
+    if (m.tempsLacherS) morceaux.push(`${m.tempsLacherS.toFixed(2)}s`);
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.font = "700 " + Math.round(H * 0.032) + "px system-ui";
+    ctx.fillText(morceaux.join("  |  "), cx, H * 0.575);
+  }
+  ctx.textAlign = "left";
+
+  // ── Badge de confiance sur le BALLON (comme les apps « IA ») ──
+  if (balleVue && (t - balleVue.vueA) < 200 && balleVue.conf) {
+    const pct = Math.round(balleVue.conf * 100);
+    dessinerBadge(balleVue.bx, balleVue.oy - 12, `${pct}%`, "255,107,44");
+  }
+
+  // ── Badge de confiance sur l'ARCEAU (détection auto uniquement) ──
+  if (arceau && arceauConf !== null) {
+    const ax = (arceau.a.x + arceau.b.x) / 2;
+    const ay = Math.min(arceau.a.y, arceau.b.y) - 14;
+    dessinerBadge(ax, ay, `${Math.round(arceauConf * 100)}%`, "62,207,142");
+  }
+
+  // ── La minimap : le demi-terrain qui se remplit en direct ──
+  dessinerMinimap(t);
+}
+
+// [v7] roundRect n'existe que depuis Safari 16 / Chrome 99. Les téléphones
+// des joueuses ne sont pas tous de cette décennie : repli en rectangle
+// simple plutôt qu'un écran noir.
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h) {
+    this.rect(x, y, w, h);
+    return this;
+  };
+}
+
+/** Petit badge « pastille » façon overlay IA : texte sur fond coloré arrondi. */
+function dessinerBadge(x, y, texte, rgb) {
+  ctx.font = "700 13px system-ui";
+  const w = ctx.measureText(texte).width + 14;
+  ctx.fillStyle = `rgba(${rgb},0.88)`;
+  ctx.beginPath();
+  ctx.roundRect(x - w / 2, y - 11, w, 20, 10);
+  ctx.fill();
+  ctx.fillStyle = "#fff";
+  ctx.textAlign = "center";
+  ctx.fillText(texte, x, y + 4);
+  ctx.textAlign = "left";
+}
+
+/**
+ * [v7] La minimap demi-terrain, coin bas-droit : chaque tir pose son point
+ * (vert = dedans, rouge = raté) À CHAUD. Avant, le demi-terrain n'existait
+ * qu'au débrief — la joueuse ne voyait pas sa carte se construire.
+ * Réutilise ZONE_CENTRES (x 0..1, y 0 = ligne de fond) : zéro nouveau calcul.
+ */
+function dessinerMinimap(t) {
+  if (tirsSeance.length === 0) return;
+  const W = canvas.width, H = canvas.height;
+  const mw = Math.min(190, W * 0.24), mh = mw * 0.72;
+  const mx = W - mw - 12, my = H - mh - 12;
+
+  // Fond + cadre
+  ctx.fillStyle = "rgba(10,14,20,0.72)";
+  ctx.beginPath(); ctx.roundRect(mx, my, mw, mh, 10); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 1.5;
+
+  // Le terrain, minimal : ligne de fond en haut, raquette, arc 3 points.
+  const ligneFondY = my + mh * 0.10;
+  ctx.beginPath(); ctx.moveTo(mx + 6, ligneFondY); ctx.lineTo(mx + mw - 6, ligneFondY); ctx.stroke();
+  ctx.strokeRect(mx + mw * 0.36, ligneFondY, mw * 0.28, mh * 0.34); // raquette
+  ctx.beginPath(); // arc 3 pts
+  ctx.arc(mx + mw / 2, ligneFondY, mw * 0.44, Math.PI * 0.08, Math.PI * 0.92);
+  ctx.stroke();
+
+  // Les tirs : ZONE_CENTRES → coordonnées minimap (y de zone 0..1 vers le bas).
+  for (const tirX of tirsSeance) {
+    const c = ZONE_CENTRES[tirX.zone] ?? [0.5, 0.44];
+    const px = mx + 8 + c[0] * (mw - 16);
+    const py = ligneFondY + c[1] * (mh - (ligneFondY - my) - 10);
+    ctx.fillStyle = tirX.reussi ? "rgba(62,207,142,0.95)" : "rgba(232,93,76,0.95)";
+    ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
 function dessinerCalibration(t) {
   ctx.fillStyle = "rgba(10,14,20,0.45)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);

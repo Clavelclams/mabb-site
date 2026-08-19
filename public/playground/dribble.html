@@ -662,6 +662,7 @@ function boucle() {
       pose.dessiner(ctx, true, canvas.width);
 
       dessinerCibles(t);
+      dessinerHudDribble(t, reste); // [v7] score + temps VISIBLES pendant le jeu
       dessinerFlottants(t);
     }
 
@@ -669,6 +670,35 @@ function boucle() {
     if (t - fpsT >= 1000) { $("vFps").textContent = fpsN; fpsN = 0; fpsT = t; }
   }
   requestAnimationFrame(boucle);
+}
+
+/**
+ * [v7] LE HUD PENDANT LE JEU — score et temps, gros, en haut au centre.
+ *
+ * Avant, le score vivait dans le menu hamburger : pendant la partie, la
+ * joueuse jouait À L'AVEUGLE. Un score qu'on ne voit pas monter ne motive
+ * personne — c'est tout l'intérêt d'un score.
+ */
+function dessinerHudDribble(t, reste) {
+  const W = canvas.width, H = canvas.height;
+  ctx.textAlign = "center";
+
+  // Le temps restant : gros quand tout va bien, ROUGE et plus gros sur les
+  // 10 dernières secondes (le sprint final, comme un chrono de match).
+  const urgent = reste <= 10;
+  ctx.fillStyle = urgent ? "rgba(232,93,76,0.95)" : "rgba(255,255,255,0.85)";
+  ctx.strokeStyle = "rgba(10,14,20,0.55)";
+  ctx.lineWidth = 3;
+  ctx.font = "800 " + Math.round(H * (urgent ? 0.075 : 0.06)) + "px system-ui";
+  ctx.strokeText(String(reste), W / 2, H * 0.10);
+  ctx.fillText(String(reste), W / 2, H * 0.10);
+
+  // Le score + le niveau, juste dessous.
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = "800 " + Math.round(H * 0.038) + "px system-ui";
+  ctx.strokeText(`${score} pts · niv ${niveau}`, W / 2, H * 0.155);
+  ctx.fillText(`${score} pts · niv ${niveau}`, W / 2, H * 0.155);
+  ctx.textAlign = "left";
 }
 
 function dessinerCibles(t) {
