@@ -69,6 +69,20 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class PassageSaisonCommand extends Command
 {
+    /**
+     * [Bugfix 19/08/2026] Les paires (joueuse, équipe) déjà affectées PENDANT
+     * CETTE exécution. Indispensable : `findOneBy` interroge la BASE, il ne
+     * voit pas les entités persistées mais pas encore flushées. Sans ce
+     * registre, une joueuse reconduite en principale dans l'équipe X dont le
+     * doublage pointait vers une équipe source aboutissant à la MÊME cible X
+     * était persistée deux fois → violation de l'unique
+     * (joueur, equipe, saison) au flush, et tout le passage échouait.
+     * Constaté en prod le 19/08 (doublon 79-14-2026-2027).
+     *
+     * @var array<string, true>
+     */
+    private array $affectationsFaites = [];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly CategorieCalculator $calculator,
@@ -87,6 +101,7 @@ class PassageSaisonCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->affectationsFaites = [];
         $io = new SymfonyStyle($input, $output);
 
         $to = (string) $input->getOption('to');
@@ -469,10 +484,20 @@ class PassageSaisonCommand extends Command
             return;
         }
 
-        $deja = $jeRepo->findOneBy(['joueur' => $j, 'equipe' => $equipe, 'saison' => $saison]);
-        if ($deja !== null) {
+        // Doublon dans CETTE exécution (pas encore flushé, invisible pour
+        // findOneBy) : première affectation gagne, on ne persiste pas deux fois.
+        $cle = $j->getId() . '|' . ($equipe->getId() ?? spl_object_id($equipe)) . '|' . $saison;
+        if (isset($this->affectationsFaites[$cle])) {
             return;
         }
+
+        $deja = $jeRepo->findOneBy(['joueur' => $j, 'equipe' => $equipe, 'saison' => $saison]);
+        if ($deja !== null) {
+            $this->affectationsFaites[$cle] = true;
+            return;
+        }
+
+        $this->affectationsFaites[$cle] = true;
 
         $je = new JoueurEquipe();
         $je->setJoueur($j);
