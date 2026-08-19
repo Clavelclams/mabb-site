@@ -78,9 +78,27 @@
   /* HUD (stats + contrôles) : caché, sauf quand le menu hamburger est ouvert. */
   body:not(.menu-ouvert) #hud { display: none; }
   body.menu-ouvert #hud { position: fixed; left: 10px; right: 10px; bottom: 10px; z-index: 45; margin: 0; }
+  /* [v7] Guide d'orientation : le tir se joue en PAYSAGE — il faut l'arceau
+     ET la joueuse dans le même cadre, impossible en vertical. Tant que le
+     viewport est portrait pendant le jeu, cette consigne recouvre tout. */
+  #tournez { display: none; position: fixed; inset: 0; z-index: 90;
+    background: rgba(10,14,20,0.93); color: #fff; text-align: center;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; padding: 24px; font-size: 19px; font-weight: 700; }
+  #tournez .rot { font-size: 54px; transform: rotate(90deg); }
+  #tournez small { font-weight: 400; opacity: 0.75; font-size: 14px; line-height: 1.5; }
+  @media (orientation: portrait) {
+    body.jeu-actif #tournez { display: flex; }
+  }
 </style>
 </head>
 <body>
+  <div id="tournez">
+    <div class="rot">📱</div>
+    Tourne le téléphone en PAYSAGE
+    <small>Si l'écran ne tourne pas : déverrouille la rotation<br>
+    dans le centre de contrôle de ton téléphone.</small>
+  </div>
   <div id="accueil">
     <h1>VENABALL TIR <span>tracker de shoot</span></h1>
     <p class="hint">
