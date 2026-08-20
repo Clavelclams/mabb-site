@@ -138,7 +138,10 @@ import { creerSuiveur } from "./tracker.js";
 // [v5, 13/07] Vérification COULEUR du ballon : le modèle est généraliste, il
 // appelle « sports ball » tout ce qui est rond et clair (une tête, un genou,
 // un plot). Sans ce filtre, on donnait des points au hasard.
-import { scoreOrange } from "./vision.js";
+import { scoreOrange, chercherBallonCouleur } from "./vision.js";
+// [v11] La version, AFFICHÉE à l'écran pendant le jeu : fini le doute
+// « est-ce que je teste bien la dernière ? » (cache, déploiement).
+const VERSION = "v12";
 // [v5] La joueuse : sans elle, le jeu ne sait pas si le ballon détecté est
 // CELUI QU'ELLE TIENT ou un ballon qui traîne au fond du gymnase.
 import { creerPose } from "./pose.js";
@@ -598,18 +601,43 @@ function boucle() {
         // ATTENTION MIROIR : le suiveur lit la vidéo BRUTE (non inversée),
         // on lui donne donc la position non-miroir (b.originX + w/2).
         suiveur.confirmerDetection(b.originX + b.width / 2, balleVue.by, balleVue.r, t);
-      } else if (balleVue) {
-        // Trou de détection → suivi au mouvement (coordonnées brutes),
-        // puis re-miroir pour rester dans le repère affiché à l'écran.
-        const p = suiveur.suivreParMouvement(t);
-        if (p) {
-          const bx = canvas.width - p.x;
+      } else {
+        // [v11] LE CANAL COULEUR — le modèle ne voit presque jamais un ballon
+        // dribblé de face (flou vertical + main). Sa COULEUR, si. On cherche
+        // le plus gros blob orange plausible, en EXCLUANT le torse (les
+        // maillots MABB sont orange aussi).
+        let exclusion = null;
+        const corps = pose.corps;
+        if (corps?.epauleG && corps?.epauleD) {
+          const exG = Math.min(corps.epauleG.x, corps.epauleD.x) * ECHELLE_VERIF;
+          const exD = Math.max(corps.epauleG.x, corps.epauleD.x) * ECHELLE_VERIF;
+          const exY = Math.min(corps.epauleG.y, corps.epauleD.y) * ECHELLE_VERIF;
+          const hy = (pose.hancheY() ?? corps.epauleG.y + 260) * ECHELLE_VERIF;
+          const marge = (exD - exG) * 0.3;
+          exclusion = { x: exG - marge, y: exY - marge, w: (exD - exG) + 2 * marge, h: (hy - exY) + marge };
+        }
+        const blob = chercherBallonCouleur(cxVerif, exclusion);
+        if (blob) {
+          // Coords demi-résolution → pleine, puis miroir pour l'affichage.
+          const rx = blob.x / ECHELLE_VERIF, ry = blob.y / ECHELLE_VERIF, rr = blob.r / ECHELLE_VERIF;
+          const bx = canvas.width - rx;
           balleVue = {
-            ...balleVue,
-            bx, by: p.y, vueA: t, mvt: true,
-            x: bx - balleVue.r, oy: p.y - balleVue.r,
-            w: balleVue.r * 2, h: balleVue.r * 2,
+            bx, by: ry, r: rr, vueA: t, mvt: false, couleur: true,
+            x: bx - rr, oy: ry - rr, w: rr * 2, h: rr * 2,
           };
+          suiveur.confirmerDetection(rx, ry, rr, t);
+        } else if (balleVue) {
+          // Trou total → suivi au mouvement (coordonnées brutes), re-miroir.
+          const p = suiveur.suivreParMouvement(t);
+          if (p) {
+            const bx = canvas.width - p.x;
+            balleVue = {
+              ...balleVue,
+              bx, by: p.y, vueA: t, mvt: true,
+              x: bx - balleVue.r, oy: p.y - balleVue.r,
+              w: balleVue.r * 2, h: balleVue.r * 2,
+            };
+          }
         }
       }
 
@@ -689,12 +717,16 @@ function boucle() {
           const dist = segFrais
             ? distanceAuSegment(c.x, c.y, pointPrec.x, pointPrec.y, balleVue.bx, balleVue.by)
             : Math.hypot(balleVue.bx - c.x, balleVue.by - c.y);
-          // [v7] Tolérance 0.7 → 1.0 rayon de ballon : « la balle est dessus »
-          // doit TOUJOURS compter. Un jeu qui vole des hits perd la joueuse
-          // en trois parties ; un hit généreux ne coûte rien.
-          if (dist < c.r + balleVue.r) {
+          // [v12 — le BON critère, enfin] Historique (Clavel) : le contact a
+          // toujours testé « la BOÎTE du ballon touche l'icône » → une grosse
+          // boîte floue touchait de loin (trop sensible), et les durcissements
+          // successifs (0.75→0.35→…→1.0) n'ont fait qu'osciller entre trop et
+          // pas assez. Le critère juste : le CENTRE du ballon DANS la pastille
+          // (+25 % de marge). Dessus = oui, un peu à côté = non — quelle que
+          // soit la taille de la boîte de détection.
+          if (dist < c.r * 1.25) {
             toucher(c, t);
-          } else if (dist < (c.r + balleVue.r) * 1.9) {
+          } else if (dist < c.r * 2.4) {
             // [v7] HALO DE PROXIMITÉ : la cible « sent » le ballon approcher.
             // La joueuse VOIT que la machine la voit — c'est ce feedback qui
             // manquait quand « rien ne se passait » : elle saura désormais si
@@ -712,13 +744,18 @@ function boucle() {
       // pastille TIENT le ballon : si un poignet touche la cible ET que le
       // ballon a été vu il y a moins de 2 s (anti main-vide), c'est un hit.
       // Le jeu devient tolérant aux trous de détection sans devenir trichable.
-      if (pose.disponible && pose.corps && balleVue && t - balleVue.vueA < 2000) {
+      // [v11] Main SANS condition ballon : mieux vaut un jeu qui marche
+      // qu'un anti-triche parfait sur un exercice d'entraînement. La joueuse
+      // qui « triche » à la main vide ne triche que sur elle-même.
+      if (pose.disponible && pose.corps) {
         for (const poignet of [pose.corps.poignetG, pose.corps.poignetD]) {
           if (!poignet) continue;
           const mx = canvas.width - poignet.x; // coords brutes → miroir affiché
           for (const c of cibles) {
             if (c.etat !== "live") continue;
-            if (Math.hypot(mx - c.x, poignet.y - c.y) < c.r + 30) {
+            // [v12] Même sémantique que le ballon : le poignet DANS la
+            // pastille (légère marge), pas « à proximité ».
+            if (Math.hypot(mx - c.x, poignet.y - c.y) < c.r * 1.1) {
               toucher(c, t);
             }
           }
@@ -729,7 +766,12 @@ function boucle() {
       ctx.fillStyle = balleActive ? (balleVue.mvt ? "#F5C542" : "#3ECF8E") : "rgba(255,255,255,0.35)";
       ctx.beginPath(); ctx.arc(26, 30, 8, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "#fff"; ctx.font = "600 15px system-ui"; ctx.textAlign = "left";
-      ctx.fillText(balleActive ? (balleVue.mvt ? "suivi au mouvement" : "ballon suivi") : "montre le ballon…", 42, 35);
+      ctx.fillText(
+        (balleActive
+          ? (balleVue.couleur ? "ballon (couleur)" : balleVue.mvt ? "suivi au mouvement" : "ballon (modèle)")
+          : "montre le ballon…") + "  ·  " + VERSION,
+        42, 35,
+      );
 
       // [v5] La cadence de dribble : le vrai indicateur technique. Un bon
       // dribble est RÉGULIER et BAS. Le chiffre s'affiche discrètement, il ne

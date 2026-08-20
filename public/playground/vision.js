@@ -386,3 +386,75 @@ export function erreurParabole(pts, par) {
   }
   return somme / pts.length;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// [v11] LE BALLON PAR SA COULEUR — le canal qui ne dépend PAS du modèle.
+//
+// Retour terrain (20/08) : de face, un ballon dribblé est FLOU (mouvement
+// vertical rapide) et coupé par la main — le détecteur généraliste le rate
+// presque toujours, quels que soient les seuils. Mais sa COULEUR, elle,
+// survit au flou. On balaye l'image de vérification (demi-résolution) en
+// grille, on garde les cellules orange, on prend la plus grande composante
+// connexe de taille plausible. C'est la technique des apps équivalentes :
+// l'orange du ballon est un invariant.
+//
+// `exclusion` : la boîte du TORSE (les maillots MABB sont orange aussi —
+// sans ça, le buste de la joueuse deviendrait « le ballon »).
+// Coordonnées : celles du contexte fourni (demi-résolution) — l'appelant
+// remet à l'échelle.
+// ───────────────────────────────────────────────────────────────────────────
+export function chercherBallonCouleur(ctx, exclusion = null) {
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  if (w < 8 || h < 8) return null;
+  const PAS = 4; // une cellule = 4×4 px : précis assez, 20× moins cher
+  const gw = Math.floor(w / PAS), gh = Math.floor(h / PAS);
+  const d = ctx.getImageData(0, 0, w, h).data;
+  const grille = new Uint8Array(gw * gh);
+
+  for (let gy = 0; gy < gh; gy++) {
+    for (let gx = 0; gx < gw; gx++) {
+      const x = gx * PAS + (PAS >> 1), y = gy * PAS + (PAS >> 1);
+      if (exclusion && x >= exclusion.x && x <= exclusion.x + exclusion.w
+        && y >= exclusion.y && y <= exclusion.y + exclusion.h) continue;
+      const i = (y * w + x) * 4;
+      if (estOrange(d[i], d[i + 1], d[i + 2])) grille[gy * gw + gx] = 1;
+    }
+  }
+
+  // Plus grande composante connexe (BFS 4-voisins).
+  let meilleur = null;
+  const vus = new Uint8Array(gw * gh);
+  const pile = new Int32Array(gw * gh);
+  for (let dep = 0; dep < gw * gh; dep++) {
+    if (!grille[dep] || vus[dep]) continue;
+    let n = 0, taille = 0, sx = 0, sy = 0;
+    let minX = gw, maxX = 0, minY = gh, maxY = 0;
+    pile[n++] = dep; vus[dep] = 1;
+    while (n > 0) {
+      const c = pile[--n];
+      const cx = c % gw, cy = (c / gw) | 0;
+      taille++; sx += cx; sy += cy;
+      if (cx < minX) minX = cx; if (cx > maxX) maxX = cx;
+      if (cy < minY) minY = cy; if (cy > maxY) maxY = cy;
+      for (const v of [c - 1, c + 1, c - gw, c + gw]) {
+        if (v < 0 || v >= gw * gh || vus[v] || !grille[v]) continue;
+        // pas de wrap horizontal
+        if ((v === c - 1 && cx === 0) || (v === c + 1 && cx === gw - 1)) continue;
+        vus[v] = 1; pile[n++] = v;
+      }
+    }
+    const bw = maxX - minX + 1, bh = maxY - minY + 1;
+    const ratio = bw / bh;
+    // Un ballon (même flou, donc étiré verticalement) : ratio 0.35–2,
+    // taille 8–45 % de la petite dimension, et pas une ligne de terrain.
+    const diam = Math.max(bw, bh) * PAS;
+    const minDiam = Math.min(w, h) * 0.05, maxDiam = Math.min(w, h) * 0.45;
+    if (ratio < 0.35 || ratio > 2 || diam < minDiam || diam > maxDiam) continue;
+    // Densité : un vrai blob est plein, une clôture orange non.
+    if (taille / (bw * bh) < 0.4) continue;
+    if (!meilleur || taille > meilleur.taille) {
+      meilleur = { taille, x: (sx / taille) * PAS, y: (sy / taille) * PAS, r: diam / 2 };
+    }
+  }
+  return meilleur; // {x, y, r} en coords du canvas de vérification, ou null
+}
