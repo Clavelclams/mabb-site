@@ -308,3 +308,12 @@ n'en dépend.
 Cette API est le bon endroit pour commencer les tests attendus au jury CDA
 (doc 38, point 6) : elle est neuve, isolée, et son enjeu — l'isolation
 multi-club — est précisément ce qu'un jury demande à voir tester.
+
+## VC-13 — Renfort en cascade V1 ✅ (21/08)
+GET/POST /api/club/rencontres/{id}/vivier : joueuses actives du club NON
+convoquées ce jour-là (anti double-booking par construction), hors équipe de
+la rencontre, avec équipe d'origine affichée. POST = convocation NORMALE
+(refusable). Décisions V1 selon les instincts du cadrage 13/07 : vivier auto,
+le coach pioche, pas de blocage. App : lien 🔄 dans l'écran convocation
+(UI V1 en alerte — un vrai écran de sélection est le raffinement suivant).
+
