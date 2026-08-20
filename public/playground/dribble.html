@@ -25,6 +25,14 @@
   #stage { position: relative; width: min(94vw, 880px); aspect-ratio: 4/3;
            border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: #000; }
   video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* [v10 — LE fix du contact fantôme] En plein écran portrait, max-width
+     clampe le stage : son ratio n'est plus 4:3. La vidéo était CROPPÉE
+     (cover) mais le canvas était ÉTIRÉ → les pastilles dessinées n'étaient
+     PLUS là où le jeu les calculait. La balle « dessus » à l'écran était
+     ailleurs dans le repère de calcul — hit impossible, quelle que soit la
+     distance. object-fit s'applique aussi aux canvas : même crop que la
+     vidéo = superposition exacte, zéro changement JS. */
+  canvas { object-fit: cover; }
   video { object-fit: cover; transform: scaleX(-1); }
   #hud { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: center;
          background: var(--surface); border: 1px solid var(--border);
@@ -696,6 +704,25 @@ function boucle() {
           }
         }
         pointPrec = { x: balleVue.bx, y: balleVue.by, t };
+      }
+
+      // [v10] CONTACT PAR LA MAIN — le second canal. La pose est désormais
+      // fiable (retour terrain) alors que le ballon échappe encore au modèle
+      // par moments (occlusion par la main, flou). Or la main qui va sur la
+      // pastille TIENT le ballon : si un poignet touche la cible ET que le
+      // ballon a été vu il y a moins de 2 s (anti main-vide), c'est un hit.
+      // Le jeu devient tolérant aux trous de détection sans devenir trichable.
+      if (pose.disponible && pose.corps && balleVue && t - balleVue.vueA < 2000) {
+        for (const poignet of [pose.corps.poignetG, pose.corps.poignetD]) {
+          if (!poignet) continue;
+          const mx = canvas.width - poignet.x; // coords brutes → miroir affiché
+          for (const c of cibles) {
+            if (c.etat !== "live") continue;
+            if (Math.hypot(mx - c.x, poignet.y - c.y) < c.r + 30) {
+              toucher(c, t);
+            }
+          }
+        }
       }
 
       // Indicateur : vert = modèle, jaune = suivi mouvement, gris = rien.
