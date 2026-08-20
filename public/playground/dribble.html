@@ -280,17 +280,26 @@ async function chargerModele() {
   const vision = await FilesetResolver.forVisionTasks(
     "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
   );
-  detector = await ObjectDetector.createFromOptions(vision, {
+  // [v9, retour terrain 20/08] lite0 (entrée 320 px) PERDAIT le ballon — le
+  // TIR est passé en lite2 (448 px) pour exactement ce symptôme, le dribble
+  // était resté sur le petit modèle. Même stratégie : lite2 d'abord, repli
+  // lite0 si l'appareil ne suit pas. La détection adaptative (1 frame sur N)
+  // absorbe déjà le surcoût.
+  const options = (modele) => ({
     baseOptions: {
-      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite",
+      modelAssetPath: `https://storage.googleapis.com/mediapipe-models/object_detector/${modele}/float16/1/${modele}.tflite`,
       delegate: "GPU",
     },
     // [v7] Seuil 0.3 → 0.22 : un ballon TENU EN MAIN est à moitié couvert et
-    // le modèle le note mal — c'était LE moment où la détection lâchait
-    // (retour terrain : « la balle est sur la cible, rien ne se passe »).
+    // le modèle le note mal — c'était LE moment où la détection lâchait.
     // Les faux positifs sont filtrés derrière (couleur + proximité du corps).
     runningMode: "VIDEO", scoreThreshold: 0.22, maxResults: 4,
   });
+  try {
+    detector = await ObjectDetector.createFromOptions(vision, options("efficientdet_lite2"));
+  } catch {
+    detector = await ObjectDetector.createFromOptions(vision, options("efficientdet_lite0"));
+  }
 
   // [v5] La pose, en plus. Si elle échoue (vieux tel, réseau, WebGL absent),
   // `charger()` renvoie false SANS jeter : le jeu tourne quand même, avec les
@@ -310,8 +319,12 @@ $("btn").addEventListener("click", async () => {
     // (scaleX(-1), logique selfie). Avant, sans facingMode, iOS choisissait
     // parfois l'arrière → image inversée par rapport au réel, cibles
     // « décalées » inexplicables. On rend le choix déterministe.
+    // [v9] 960×720 → 1280×960 : même résolution que le tir. À 2-3 m, le
+    // ballon fait ~40 px en 720p — trop peu pour un détecteur généraliste
+    // (retour terrain : « détecté une fois sur 6-7 »). Plus de pixels sur le
+    // ballon = plus de détections ; l'adaptatif absorbe le surcoût.
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "user" }, width: 960, height: 720 },
+      video: { facingMode: { ideal: "user" }, width: 1280, height: 960 },
     });
     video.srcObject = stream;
     await new Promise((ok) => (video.onloadeddata = ok));
@@ -554,7 +567,13 @@ function boucle() {
           // ce filtre, on comptait des cibles touchées par un ballon fantôme.
           // (Coordonnées BRUTES : la pose ne connaît pas le miroir.)
           const centre = { x: b.originX + b.width / 2, y: b.originY + b.height / 2, r: Math.max(b.width, b.height) / 2 };
-          if (!pose.balleAElle(centre, 2.2)) continue;
+          // [v9] Le filtre « ballon à elle » tuait de VRAIS ballons : quand la
+          // pose voit mal le corps (gymnase sombre), son échelle px/mètre est
+          // fausse et le seuil devient absurde. Deux assouplissements :
+          //   1. marge 2,2 m → 3,5 m (une joueuse qui dribble large reste elle) ;
+          //   2. un ballon que le MODÈLE note fort (≥ 0,5) passe même si la
+          //      pose le dit « loin » — on fait confiance au plus sûr des deux.
+          if (d.categories[0].score < 0.5 && !pose.balleAElle(centre, 3.5)) continue;
 
           const score = d.categories[0].score * (0.6 + 0.4 * Math.min(1, orange * 3));
           if (score > meilleurScore) { meilleurScore = score; meilleure = d; }
