@@ -85,7 +85,29 @@
     background: rgba(10,14,20,0.93); color: #fff; text-align: center;
     flex-direction: column; align-items: center; justify-content: center;
     gap: 12px; padding: 24px; font-size: 19px; font-weight: 700; }
-  #tournez .rot { font-size: 54px; transform: rotate(90deg); }
+  /* [v8] Les puces de choix du son de panier (écran de fin). */
+  #sonChips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 4px 0 14px; }
+  .chipSon { background: transparent; border: 1px solid var(--border); color: var(--muted);
+    border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .chipSon.actif { border-color: #FF6B2C; color: #FF6B2C; background: rgba(255,107,44,0.08); }
+  /* [v8] Zones du débrief : une ligne par zone, chiffres à droite. */
+  #recapZones { width: 100%; max-width: 520px; margin: 6px auto 10px; }
+  #recapZones .zoneRow { display: flex; justify-content: space-between; gap: 10px;
+    padding: 6px 4px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  #recapZones .zoneRow b { font-variant-numeric: tabular-nums; }
+  #recapCourbe { width: 100%; max-width: 520px; }
+  /* [v8] L'icône ANIMÉE : un téléphone qui pivote vers le paysage — le geste
+     à faire, montré plutôt qu'écrit. Pure CSS, zéro asset. */
+  #tournez .telIcone { width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; }
+  #tournez .tel { width: 36px; height: 64px; border: 3px solid #fff; border-radius: 9px;
+    position: relative; animation: pivotePaysage 1.8s ease-in-out infinite; }
+  #tournez .tel::after { content: ""; position: absolute; bottom: 5px; left: 50%;
+    transform: translateX(-50%); width: 12px; height: 3px; border-radius: 2px; background: #fff; }
+  @keyframes pivotePaysage {
+    0%, 20%  { transform: rotate(0deg); }
+    60%, 90% { transform: rotate(-90deg); }
+    100%     { transform: rotate(-90deg); }
+  }
   #tournez small { font-weight: 400; opacity: 0.75; font-size: 14px; line-height: 1.5; }
   @media (orientation: portrait) {
     body.jeu-actif #tournez { display: flex; }
@@ -94,10 +116,11 @@
 </head>
 <body>
   <div id="tournez">
-    <div class="rot">📱</div>
+    <div class="telIcone"><div class="tel"></div></div>
     Tourne le téléphone en PAYSAGE
-    <small>Si l'écran ne tourne pas : déverrouille la rotation<br>
-    dans le centre de contrôle de ton téléphone.</small>
+    <small>Pose-le de profil par rapport au panier : on doit voir<br>
+    l'arceau ET toi. Si l'écran ne tourne pas, déverrouille la<br>
+    rotation dans le centre de contrôle du téléphone.</small>
   </div>
   <div id="accueil">
     <h1>VENABALL TIR <span>tracker de shoot</span></h1>
@@ -127,7 +150,14 @@
       <p class="gros" id="courtTitre" hidden>D'où tu as tiré (estimé, ajuste si besoin)</p>
       <canvas id="recapCourt" hidden></canvas>
       <div id="recapListe"></div>
+      <p class="gros" id="courbeTitre" hidden>Ton adresse au fil de la séance</p>
+      <canvas id="recapCourbe" hidden></canvas>
+      <div id="recapZones"></div>
       <p id="finDetail"></p>
+      <!-- [v8] Le son du panier : choisi ICI, à froid, avec préécoute.
+           Persisté sur le téléphone — le choix survit aux séances. -->
+      <p class="gros">Ton son de panier</p>
+      <div id="sonChips"></div>
       <div id="finBoutons">
         <button id="btnValider" hidden>Valider la séance ✓</button>
         <button id="btnRejouer" class="ghost">Nouvelle séance</button>
@@ -353,6 +383,14 @@ let tempsLacherS = null;      // celui du tir en cours / dernier tir
 // ET honnête : le chiffre existe déjà, on le montrait juste pas.
 let arceauConf = null;
 
+// [v8] LA POSITION DU TIREUR sur la minimap, EN DIRECT. Le shooteur BOUGE
+// pendant la séance (demande Clavel) : sans repère, il ne sait pas d'où il
+// tire. Même géométrie qu'estimerZone (distance par l'échelle du corps,
+// latéral par l'angle à l'arceau), recalculée au plus toutes les 300 ms —
+// coût nul, la pose est déjà calculée.
+let posTireur = null;       // { xN: 0..1, yN: 0..1 } dans le repère du demi-terrain
+let posTireurCalcA = 0;
+
 // ---------- Géométrie de l'arceau -------------------------------------------------
 // Côté signé du point p par rapport à la DROITE (a→b) : négatif = AU-DESSUS
 // de l'arceau à l'écran, positif = en dessous (a.x < b.x garanti au tap).
@@ -394,8 +432,59 @@ function jouer(freqDebut, freqFin, dureeS, type = "sine", gainMax = 0.25) {
   osc.connect(gain).connect(audio.destination);
   osc.start(); osc.stop(audio.currentTime + dureeS);
 }
-const sonPanier = () => { jouer(880, 1560, 0.22); jouer(1320, 1760, 0.3, "sine", 0.15); };
+// [v8] LE SON DE PANIER AU CHOIX. Le son du panier est LA récompense du jeu :
+// chaque joueuse doit pouvoir choisir la sienne (et la couper). Cinq styles,
+// tous générés en WebAudio (zéro asset à télécharger), persistés sur le
+// téléphone. Préécoute au tap dans l'écran de fin.
+function bruitSwish() {
+  // Le « swish » du filet : bruit blanc court, aigu, qui s'éteint vite.
+  if (!audio) return;
+  const n = Math.round(audio.sampleRate * 0.22);
+  const buf = audio.createBuffer(1, n, audio.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2.2);
+  const src = audio.createBufferSource(); src.buffer = buf;
+  const filtre = audio.createBiquadFilter(); filtre.type = "highpass"; filtre.frequency.value = 2400;
+  const g = audio.createGain(); g.gain.value = 0.6;
+  src.connect(filtre).connect(g).connect(audio.destination);
+  src.start();
+}
+const SONS_PANIER = {
+  classique: { nom: "🎵 Classique", jouer: () => { jouer(880, 1560, 0.22); jouer(1320, 1760, 0.3, "sine", 0.15); } },
+  swish:     { nom: "🪣 Swish",     jouer: () => { bruitSwish(); } },
+  arcade:    { nom: "👾 Arcade",    jouer: () => { jouer(523, 1046, 0.09, "square", 0.16); setTimeout(() => jouer(784, 1568, 0.12, "square", 0.16), 80); } },
+  fanfare:   { nom: "🎺 Fanfare",   jouer: () => { jouer(523, 523, 0.12); setTimeout(() => jouer(659, 659, 0.12), 110); setTimeout(() => jouer(784, 1046, 0.28), 220); } },
+  muet:      { nom: "🔇 Muet",      jouer: () => {} },
+};
+const CLE_SON = "pirb.tir.son.v1";
+let sonChoisi = (() => {
+  try { const v = localStorage.getItem(CLE_SON); return SONS_PANIER[v] ? v : "classique"; }
+  catch { return "classique"; }
+})();
+const sonPanier = () => SONS_PANIER[sonChoisi].jouer();
 const sonRate  = () => jouer(190, 130, 0.25, "square", 0.12);
+
+// Les puces de choix : construites une fois, préécoute au tap. On initialise
+// l'audio au tap si besoin (exigence navigateurs : premier geste utilisateur).
+function construireChipsSon() {
+  const conteneur = $("sonChips");
+  if (!conteneur || conteneur.childElementCount > 0) return;
+  for (const [cle, sonDef] of Object.entries(SONS_PANIER)) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chipSon" + (cle === sonChoisi ? " actif" : "");
+    chip.textContent = sonDef.nom;
+    chip.addEventListener("click", () => {
+      sonChoisi = cle;
+      try { localStorage.setItem(CLE_SON, cle); } catch { /* stockage privé */ }
+      initAudio();
+      sonDef.jouer(); // préécoute immédiate : on choisit avec les oreilles
+      for (const c of conteneur.children) c.classList.toggle("actif", c === chip);
+    });
+    conteneur.appendChild(chip);
+  }
+}
+construireChipsSon();
 
 // ---------- Pont vers l'app PIRB (WebView) ------------------------------------------
 function envoyerALApp() {
@@ -666,6 +755,20 @@ function boucle() {
       // [v5] La joueuse (cadence réduite, se coupe toute seule si trop lente).
       pose.analyser(video, t);
 
+      // [v8] Où est le tireur sur le terrain ? (throttlé : 3 fois/seconde)
+      if (arceau && t - posTireurCalcA > 300 && pose.disponible && pose.corps?.centre) {
+        posTireurCalcA = t;
+        const cxA = (arceau.a.x + arceau.b.x) / 2, cyA = (arceau.a.y + arceau.b.y) / 2;
+        const corps = pose.corps.centre;
+        const distPx = Math.hypot(corps.x - cxA, corps.y - cyA);
+        const metres = pose.distanceMetres({ x: cxA, y: cyA }) ?? (distPx * 0.45) / arceau.len;
+        const lateral = Math.max(-1, Math.min(1, (corps.x - cxA) / Math.max(1, distPx)));
+        posTireur = {
+          xN: Math.max(0.05, Math.min(0.95, 0.5 + lateral * 0.42)),
+          yN: Math.max(0.04, Math.min(0.95, metres / 7.5)), // ~7,5 m = fond de la minimap
+        };
+      }
+
       // 1. Détection MODÈLE (elle fait foi quand elle voit le ballon) —
       //    adaptative : 1 frame sur detIntervalle, forcée si ballon perdu.
       frameN++;
@@ -927,14 +1030,16 @@ function dessinerHudCentral(t) {
   const cx = W / 2;
   ctx.textAlign = "center";
 
-  // Chrono de séance (mm:ss.d — le dixième donne la sensation « live »)
+  // Chrono de séance (mm:ss.d — le dixième donne la sensation « live »),
+  // avec l'adresse live à partir de 3 tirs (avant, le % ment).
   const s = Math.max(0, (t - debutSeance) / 1000);
   const mm = String(Math.floor(s / 60)).padStart(2, "0");
   const ss = String(Math.floor(s % 60)).padStart(2, "0");
   const d  = Math.floor((s % 1) * 10);
+  const pctLive = tentes >= 3 ? `  ·  ${Math.round((reussis / tentes) * 100)}%` : "";
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.font = "700 " + Math.round(H * 0.030) + "px system-ui";
-  ctx.fillText(`${mm}:${ss}.${d}`, cx, H * 0.40);
+  ctx.fillText(`${mm}:${ss}.${d}${pctLive}`, cx, H * 0.40);
 
   // Le compteur, ÉNORME — lisible depuis la ligne des lancers francs.
   ctx.fillStyle = "rgba(255,255,255,0.92)";
@@ -954,6 +1059,15 @@ function dessinerHudCentral(t) {
     ctx.fillStyle = "rgba(255,255,255,0.7)";
     ctx.font = "700 " + Math.round(H * 0.032) + "px system-ui";
     ctx.fillText(morceaux.join("  |  "), cx, H * 0.575);
+  }
+
+  // [v8] LA SÉRIE EN COURS — à partir de 2 paniers d'affilée, elle s'affiche
+  // et grossit avec la flamme. C'est le moteur émotionnel du jeu : on ne
+  // shoote plus « pour la séance », on shoote pour ne pas casser la série.
+  if (serie >= 2) {
+    ctx.fillStyle = "rgba(245,197,66,0.95)";
+    ctx.font = "800 " + Math.round(H * (serie >= 5 ? 0.048 : 0.038)) + "px system-ui";
+    ctx.fillText(`🔥 série ×${serie}`, cx, H * 0.635);
   }
   ctx.textAlign = "left";
 
@@ -1005,7 +1119,9 @@ function dessinerBadge(x, y, texte, rgb) {
  * Réutilise ZONE_CENTRES (x 0..1, y 0 = ligne de fond) : zéro nouveau calcul.
  */
 function dessinerMinimap(t) {
-  if (tirsSeance.length === 0) return;
+  // [v8] La minimap vit dès qu'on sait où est le tireur — plus besoin
+  // d'attendre le premier tir : elle sert justement à SE PLACER avant.
+  if (tirsSeance.length === 0 && !posTireur) return;
   const W = canvas.width, H = canvas.height;
   const mw = Math.min(190, W * 0.24), mh = mw * 0.72;
   const mx = W - mw - 12, my = H - mh - 12;
@@ -1031,6 +1147,21 @@ function dessinerMinimap(t) {
     const py = ligneFondY + c[1] * (mh - (ligneFondY - my) - 10);
     ctx.fillStyle = tirX.reussi ? "rgba(62,207,142,0.95)" : "rgba(232,93,76,0.95)";
     ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // [v8] TOI : le point blanc qui pulse — ta position estimée, en direct.
+  if (posTireur) {
+    const px = mx + 8 + posTireur.xN * (mw - 16);
+    const py = ligneFondY + posTireur.yN * (mh - (ligneFondY - my) - 10);
+    const pulse = 1 + 0.25 * Math.sin(t / 220);
+    ctx.strokeStyle = "rgba(255,255,255,0.85)";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(px, py, 7 * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.font = "700 10px system-ui"; ctx.textAlign = "center";
+    ctx.fillText("toi", px, py + 18);
+    ctx.textAlign = "left";
   }
 }
 
@@ -1270,22 +1401,95 @@ function finirSeance() {
   envoyerEtat("fini");
 }
 
+/**
+ * [v8] LA COURBE D'ADRESSE CUMULÉE — l'histoire de la séance en une ligne.
+ * Chaque point = un tir ; la hauteur = ton % d'adresse À CE MOMENT-LÀ.
+ * On y lit les passages chauds (la ligne monte) et les trous d'air (elle
+ * plonge) — c'est la « forme » de la séance, ce que le score final cache.
+ */
+function dessinerCourbeAdresse() {
+  const cv = $("recapCourbe");
+  cv.width = 640; cv.height = 180;
+  const c2 = cv.getContext("2d");
+  c2.clearRect(0, 0, cv.width, cv.height);
+  const padG = 34, padD = 12, padH = 14, padB = 24;
+  const w = cv.width - padG - padD, h = cv.height - padH - padB;
+
+  // Lignes de repère : 0, 50, 100 %.
+  c2.strokeStyle = "rgba(255,255,255,0.14)"; c2.lineWidth = 1;
+  c2.fillStyle = "rgba(255,255,255,0.5)"; c2.font = "600 11px system-ui"; c2.textAlign = "right";
+  for (const pct of [0, 50, 100]) {
+    const y = padH + h * (1 - pct / 100);
+    c2.beginPath(); c2.moveTo(padG, y); c2.lineTo(padG + w, y); c2.stroke();
+    c2.fillText(pct + "%", padG - 6, y + 4);
+  }
+
+  // La courbe cumulée + un point coloré par tir (vert dedans, rouge raté).
+  let cumul = 0;
+  const pts = tirsSeance.map((tirS, i) => {
+    if (tirS.reussi) cumul++;
+    return {
+      x: padG + (tirsSeance.length === 1 ? w / 2 : (i / (tirsSeance.length - 1)) * w),
+      y: padH + h * (1 - (cumul / (i + 1))),
+      reussi: tirS.reussi,
+    };
+  });
+  c2.strokeStyle = "#FF6B2C"; c2.lineWidth = 2.5; c2.beginPath();
+  pts.forEach((p, i) => (i === 0 ? c2.moveTo(p.x, p.y) : c2.lineTo(p.x, p.y)));
+  c2.stroke();
+  for (const p of pts) {
+    c2.fillStyle = p.reussi ? "#3ECF8E" : "#E85D4C";
+    c2.beginPath(); c2.arc(p.x, p.y, 4, 0, Math.PI * 2); c2.fill();
+  }
+  c2.fillStyle = "rgba(255,255,255,0.5)"; c2.textAlign = "center";
+  c2.fillText("tirs, dans l'ordre de la séance →", padG + w / 2, cv.height - 6);
+  c2.textAlign = "left";
+}
+
+/**
+ * [v8] TES CHANCES DE MARQUER, PAR ZONE — le % de la séance, zone par zone,
+ * avec une barre. C'est la réponse à « d'où je dois shooter ? » : la donnée
+ * qui transforme la séance suivante.
+ */
+function construireZonesPct() {
+  const parZone = {};
+  for (const tirS of tirsSeance) {
+    (parZone[tirS.zone] ??= { in: 0, tot: 0 });
+    parZone[tirS.zone].tot++;
+    if (tirS.reussi) parZone[tirS.zone].in++;
+  }
+  const conteneur = $("recapZones");
+  // Trié par volume : ta zone la plus travaillée en premier.
+  for (const [zone, s] of Object.entries(parZone).sort((a, b) => b[1].tot - a[1].tot)) {
+    const pct = Math.round((s.in / s.tot) * 100);
+    const row = document.createElement("div");
+    row.className = "zoneRow";
+    row.innerHTML =
+      `<span>${ZONE_NOMS[zone] ?? zone}</span>` +
+      `<b>${s.in}/${s.tot} · ${pct}%</b>`;
+    conteneur.appendChild(row);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Le RÉCAP de fin (v4) : trajectoires superposées + demi-terrain + liste
 // ─────────────────────────────────────────────────────────────────────────
 
 function construireRecap() {
   const aDesTirs = tirsSeance.length > 0;
-  for (const id of ["recapTitre", "recapTraj", "courtTitre", "recapCourt", "btnValider"]) {
+  for (const id of ["recapTitre", "recapTraj", "courtTitre", "recapCourt", "btnValider", "courbeTitre", "recapCourbe"]) {
     $(id).hidden = !aDesTirs;
   }
   $("btnValider").disabled = false;
   $("btnValider").textContent = "Valider la séance ✓";
   $("recapListe").innerHTML = "";
+  $("recapZones").innerHTML = "";
   if (!aDesTirs) return;
 
   dessinerRecapTraj();
   dessinerRecapCourt();
+  dessinerCourbeAdresse();   // [v8] l'adresse cumulée, tir après tir
+  construireZonesPct();      // [v8] tes « chances de marquer » par zone
 
   // La liste : réussite VERROUILLÉE (affichage seul), zone ajustable ◀ ▶.
   tirsSeance.forEach((tirS, i) => {

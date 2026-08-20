@@ -66,7 +66,18 @@
     background: rgba(10,14,20,0.93); color: #fff; text-align: center;
     flex-direction: column; align-items: center; justify-content: center;
     gap: 12px; padding: 24px; font-size: 19px; font-weight: 700; }
-  #tournez .rot { font-size: 54px; }
+  /* [v8] L'icône ANIMÉE : le téléphone couché qui se redresse — le geste à
+     faire, montré plutôt qu'écrit. Pure CSS, zéro asset. */
+  #tournez .telIcone { width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; }
+  #tournez .tel { width: 36px; height: 64px; border: 3px solid #fff; border-radius: 9px;
+    position: relative; animation: pivoteDebout 1.8s ease-in-out infinite; }
+  #tournez .tel::after { content: ""; position: absolute; bottom: 5px; left: 50%;
+    transform: translateX(-50%); width: 12px; height: 3px; border-radius: 2px; background: #fff; }
+  @keyframes pivoteDebout {
+    0%, 20%  { transform: rotate(90deg); }
+    60%, 90% { transform: rotate(0deg); }
+    100%     { transform: rotate(0deg); }
+  }
   #tournez small { font-weight: 400; opacity: 0.75; font-size: 14px; line-height: 1.5; }
   @media (orientation: landscape) {
     body.jeu-actif #tournez { display: flex; }
@@ -75,7 +86,7 @@
 </head>
 <body>
   <div id="tournez">
-    <div class="rot">📱</div>
+    <div class="telIcone"><div class="tel"></div></div>
     Tiens le téléphone DEBOUT (vertical)
     <small>Pose-le contre un sac ou une gourde, caméra vers toi,<br>
     et recule de 2-3 mètres pour être visible en entier.</small>
@@ -182,6 +193,14 @@ const SEUIL_ORANGE = 0.08; // [v7] 0.14 → 0.08 : en gymnase sombre / contre-jo
 let dribbles = 0;
 let dernierRebondA = 0;
 let yPrec = null, descendait = false;
+
+// [v8] LE COMBO : des cibles touchées à moins de 3 s d'écart s'enchaînent.
+// À partir de ×3, les points DOUBLENT. C'est le moteur d'intensité : on ne
+// touche plus des cibles, on tient une série — et on dribble plus vite pour
+// ne pas la casser (exactement le comportement qu'un coach veut créer).
+let combo = 0, comboMax = 0, dernierHitA = 0;
+const COMBO_FENETRE_MS = 3000;
+const COMBO_SEUIL_X2 = 3;
 const REBOND_MIN_MS = 180;  // en dessous, c'est du bruit, pas un rebond
 
 // [Jeu v3, 10/07] ------------------------------------------------------------
@@ -349,6 +368,7 @@ function lancerPartie() {
   // précédente polluerait celle-ci).
   dribbles = 0; dernierRebondA = 0; yPrec = null; descendait = false;
   rebondsG = 0; rebondsD = 0; rebondsHauts = 0; sommetDepuisRebond = null; // [v6]
+  combo = 0; comboMax = 0; dernierHitA = 0; // [v8]
   defiReleve = false; defiAnnonce = false; // [Défis] re-tentable à chaque partie
   // Entrée en jeu : plein écran, menu fermé, et on demande le PAYSAGE à l'app.
   document.body.classList.add("jeu-actif");
@@ -392,7 +412,8 @@ function faireApparaitre(t) {
       const dansCadre = x > R && x < canvas.width - R && y > R && y < canvas.height - R;
       const sousEpaules = !isFinite(epauleY) || y > epauleY;
       if (dansCadre && sousEpaules) {
-        cibles.push({ x, y, r: R, neeA: t, dureeMs: configNiveau(niveau).dureeMs, etat: "live", hitA: 0 });
+        const doree = tirerDoree();
+        cibles.push({ x, y, r: R, neeA: t, dureeMs: configNiveau(niveau).dureeMs * (doree ? 0.7 : 1), etat: "live", hitA: 0, doree });
         apparues++;
         return;
       }
@@ -400,21 +421,42 @@ function faireApparaitre(t) {
   }
 
   // Repli (pas de corps détecté, ou aucun candidat valable) : l'ancien spawn.
+  const doree = tirerDoree();
   cibles.push({
     x: (0.14 + Math.random() * 0.72) * canvas.width,
     y: (0.2 + Math.random() * 0.62) * canvas.height,
-    r: R, neeA: t, dureeMs: configNiveau(niveau).dureeMs, etat: "live", hitA: 0,
+    r: R, neeA: t, dureeMs: configNiveau(niveau).dureeMs * (doree ? 0.7 : 1), etat: "live", hitA: 0, doree,
   });
   apparues++;
+}
+
+/**
+ * [v8] LA CIBLE DORÉE : rare (12 %, à partir du niveau 2), points ×3, mais
+ * elle vit MOINS longtemps (70 % de la durée normale). Le petit événement
+ * qui casse la routine — on la voit, on accélère, on se dépasse. Un jeu
+ * sans surprise devient un exercice ; les cibles dorées sont la surprise.
+ */
+function tirerDoree() {
+  return niveau >= 2 && Math.random() < 0.12;
 }
 
 function toucher(cible, t) {
   cible.etat = "hit"; cible.hitA = t;
   hits++;
-  const points = 10 * niveau;
+
+  // [v8] Le combo : hit dans la fenêtre → la chaîne continue, sinon repart.
+  combo = t - dernierHitA < COMBO_FENETRE_MS ? combo + 1 : 1;
+  dernierHitA = t;
+  comboMax = Math.max(comboMax, combo);
+  const multiplicateur = (combo >= COMBO_SEUIL_X2 ? 2 : 1) * (cible.doree ? 3 : 1);
+
+  const points = 10 * niveau * multiplicateur;
   score += points;
-  flottants.push({ x: cible.x, y: cible.y - cible.r, t0: t, texte: `+${points}` });
+  const suffixe = cible.doree ? " ⭐ BONUS" : combo >= COMBO_SEUIL_X2 ? ` ×2 combo` : "";
+  flottants.push({ x: cible.x, y: cible.y - cible.r, t0: t, texte: `+${points}${suffixe}` });
   sonHit(); // [v3] le hit S'ENTEND — feedback sans regarder l'écran
+  // [v8] Et se SENT : petite vibration (Android ; iOS l'ignore sans casser).
+  try { navigator.vibrate?.(cible.doree ? [30, 40, 30] : 25); } catch { /* pas supporté */ }
   const nouveau = Math.floor(hits / HITS_PAR_NIVEAU) + 1;
   if (nouveau > niveau) {
     niveau = nouveau;
@@ -698,6 +740,15 @@ function dessinerHudDribble(t, reste) {
   ctx.font = "800 " + Math.round(H * 0.038) + "px system-ui";
   ctx.strokeText(`${score} pts · niv ${niveau}`, W / 2, H * 0.155);
   ctx.fillText(`${score} pts · niv ${niveau}`, W / 2, H * 0.155);
+
+  // [v8] Le combo en cours : visible dès ×2, doré dès que les points doublent.
+  if (combo >= 2 && t - dernierHitA < COMBO_FENETRE_MS) {
+    const double = combo >= COMBO_SEUIL_X2;
+    ctx.fillStyle = double ? "rgba(245,197,66,0.95)" : "rgba(255,255,255,0.8)";
+    ctx.font = "800 " + Math.round(H * 0.032) + "px system-ui";
+    ctx.strokeText(`🔥 combo ×${combo}${double ? " · points ×2" : ""}`, W / 2, H * 0.20);
+    ctx.fillText(`🔥 combo ×${combo}${double ? " · points ×2" : ""}`, W / 2, H * 0.20);
+  }
   ctx.textAlign = "left";
 }
 
@@ -714,13 +765,25 @@ function dessinerCibles(t) {
         ctx.lineWidth = 8;
         ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 1.28, 0, Math.PI * 2); ctx.stroke();
       }
-      ctx.strokeStyle = "#FF6B2C"; ctx.lineWidth = 5;
+      // [v8] La cible DORÉE scintille : impossible à confondre, impossible
+      // à ignorer — c'est le but.
+      const couleurTrait = c.doree ? "#F5C542" : "#FF6B2C";
+      const couleurFond = c.doree
+        ? `rgba(245,197,66,${0.7 + 0.3 * Math.sin(t / 90)})`
+        : "rgba(255,107,44,0.85)";
+      ctx.strokeStyle = couleurTrait; ctx.lineWidth = c.doree ? 6 : 5;
       ctx.beginPath(); ctx.arc(c.x, c.y, c.r * pop * Math.max(0.15, resteFrac), 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = "rgba(255,107,44,0.85)";
+      ctx.fillStyle = couleurFond;
       ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 0.42 * pop, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = "#0A0E14"; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.moveTo(c.x - c.r * 0.42, c.y); ctx.lineTo(c.x + c.r * 0.42, c.y); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(c.x, c.y - c.r * 0.42); ctx.lineTo(c.x, c.y + c.r * 0.42); ctx.stroke();
+      if (c.doree) {
+        ctx.fillStyle = "#0A0E14"; ctx.font = "800 " + Math.round(c.r * 0.5) + "px system-ui";
+        ctx.textAlign = "center"; ctx.fillText("★", c.x, c.y + c.r * 0.18); ctx.textAlign = "left";
+      }
+      if (!c.doree) { // la dorée porte son ★, pas la croix
+        ctx.strokeStyle = "#0A0E14"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(c.x - c.r * 0.42, c.y); ctx.lineTo(c.x + c.r * 0.42, c.y); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(c.x, c.y - c.r * 0.42); ctx.lineTo(c.x, c.y + c.r * 0.42); ctx.stroke();
+      }
     } else {
       const k = (t - c.hitA) / 380;
       ctx.strokeStyle = `rgba(62,207,142,${1 - k})`; ctx.lineWidth = 7;
@@ -790,7 +853,10 @@ function finirPartie() {
   // Dans l'app : on annonce l'enregistrement (récompense visible = boucle
   // d'engagement qui se referme). Hors app : pas de promesse.
   const dansApp = typeof window.ReactNativeWebView !== "undefined";
-  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%).${ligneRecord}${conseil}${ligneDefi} Compté par la caméra, pas par toi.`
+  // [v8] Le meilleur combo de la partie — la stat de fierté.
+  const ligneCombo = comboMax >= 3 ? ` 🔥 Meilleur combo : ×${comboMax}.` : "";
+
+  $("finDetail").textContent = `${hits} cibles touchées sur ${apparues} (${pct}%).${ligneCombo}${ligneRecord}${conseil}${ligneDefi} Compté par la caméra, pas par toi.`
     + (dansApp ? " Séance enregistrée dans ton Playground ✓" : "");
   $("fin").style.display = "flex";
   // Fin de partie : on rend la main à l'app (retour PORTRAIT + header réaffiché
